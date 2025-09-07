@@ -6,15 +6,18 @@ import { HapticTab } from "@/components/HapticTab";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: Colors.dark.tint,
+        tabBarInactiveTintColor: Colors.dark.muted,
+        tabBarLabelStyle: {
+          fontFamily: 'SpaceMono',
+          fontSize: 12,
+          fontWeight: '500',
+        },
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
@@ -22,8 +25,12 @@ export default function TabLayout() {
           ios: {
             // Use a transparent background on iOS to show the blur effect
             position: "absolute",
+            backgroundColor: 'rgba(0, 0, 0, 0.1)', // Subtle dark tint for glass effect
           },
-          default: {},
+          default: {
+            backgroundColor: Colors.dark.surface,
+            borderTopColor: Colors.dark.border,
+          },
         }),
       }}
     >
