@@ -17,7 +17,10 @@ export const Typography = StyleSheet.create({
   },
   h3: {
     fontSize: 24,
-    fontWeight: "600",
+    // Added explicit lineHeight to avoid glyph clipping (SpaceMono ascenders)
+    lineHeight: 30,
+    // Removed fontWeight: "600" because custom font likely only has regular weight,
+    // synthetic bolding can cause vertical clipping on some platforms.
     fontFamily: "SpaceMono",
     color: Colors.dark.text,
   },
