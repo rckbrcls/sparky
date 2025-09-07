@@ -14,9 +14,9 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.dark.tint,
         tabBarInactiveTintColor: Colors.dark.muted,
         tabBarLabelStyle: {
-          fontFamily: 'SpaceMono',
+          fontFamily: "SpaceMono",
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: "500",
         },
         headerShown: false,
         tabBarButton: HapticTab,
@@ -25,7 +25,7 @@ export default function TabLayout() {
           ios: {
             // Use a transparent background on iOS to show the blur effect
             position: "absolute",
-            backgroundColor: 'rgba(0, 0, 0, 0.1)', // Subtle dark tint for glass effect
+            backgroundColor: "rgba(0, 0, 0, 0.1)", // Subtle dark tint for glass effect
           },
           default: {
             backgroundColor: Colors.dark.surface,
@@ -44,7 +44,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="settings"
         options={{
           title: "Settings",
           tabBarIcon: ({ color }) => (
