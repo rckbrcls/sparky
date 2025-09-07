@@ -285,6 +285,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         let chosenFolderId = parsed.folderId || "all";
         const createFolderInfo = SmartTextParser.extractCreateFolderName(text);
         const deleteFolderMatch = /\/deletefolder\s+([^\n]+)/i.exec(text);
+        let commandOnly = false; // true when only folder management commands present (no content for note)
         try {
           if (createFolderInfo.id) {
             // Check if folder exists
@@ -306,31 +307,55 @@ export const SmartInput: React.FC<SmartInputProps> = ({
           }
           if (deleteFolderMatch) {
             const raw = deleteFolderMatch[1].trim();
-            if (raw && raw.toLowerCase() !== 'all') {
-              const delId = raw
+            if (raw && raw.toLowerCase() !== "all") {
+              const slug = raw
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-+|-+$/g, "")
                 .substring(0, 32);
-              if (delId) {
-                await database.deleteFolder(delId);
-                if (chosenFolderId === delId) chosenFolderId = 'all';
+              const existing = await database.getAllFolders();
+              const target = existing.find(
+                (f) =>
+                  f.id === raw ||
+                  f.id === slug ||
+                  f.name.toLowerCase() === raw.toLowerCase() ||
+                  f.name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, "")
+                    .substring(0, 32) === slug
+              );
+              if (target && !target.isDefault) {
+                await database.deleteFolder(target.id);
+                if (chosenFolderId === target.id) chosenFolderId = "all";
+              } else {
+                console.log("Delete folder: alvo não encontrado ou é default", raw);
               }
             }
           }
+          // Determine if text has only folder management commands (no note content)
+          const remaining = text
+            .replace(/\/deletefolder[^\n]*/gi, "")
+            .replace(/\/createfolder[^\n]*/gi, "")
+            .replace(/\/folder[^\n]*/gi, "")
+            .trim();
+          if (!remaining) commandOnly = true;
         } catch (e) {
           console.warn("Folder creation failed:", e);
         }
-
-        await database.createQuickNote({
-          content: parsed.body
-            ? `${parsed.title}\n${parsed.body}`
-            : parsed.title,
-          folderId: chosenFolderId,
-          tags: JSON.stringify(parsed.tags),
-          isPinned: parsed.priority === 3,
-        });
-        console.log("Quick note created successfully");
+        if (!commandOnly) {
+          await database.createQuickNote({
+            content: parsed.body
+              ? `${parsed.title}\n${parsed.body}`
+              : parsed.title,
+            folderId: chosenFolderId,
+            tags: JSON.stringify(parsed.tags),
+            isPinned: parsed.priority === 3,
+          });
+          console.log("Quick note created successfully");
+        } else {
+          console.log("Somente comandos de pasta processados; nenhuma nota criada");
+        }
       } else {
         // Create reminder
         const reminderId = await ReminderService.createReminder({

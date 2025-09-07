@@ -247,7 +247,11 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
       <View style={styles.filterContainer}>
         <FlatList
           horizontal
-          data={folders.some(f => f.id === 'all') ? folders : [{ id: 'all', name: 'All' }, ...folders]}
+          data={
+            folders.some((f) => f.id === "all")
+              ? folders
+              : [{ id: "all", name: "All" }, ...folders]
+          }
           renderItem={({ item }) => renderFolderFilter(item)}
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}

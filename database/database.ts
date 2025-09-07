@@ -229,10 +229,10 @@ class Database {
       CREATE INDEX IF NOT EXISTS idx_quick_notes_content ON quick_notes (content);
     `);
 
-  // Migrate legacy default folders (default, work, personal, health) into 'all'
-  await this.migrateLegacyFolders();
-  // Ensure minimal default folder
-  await this.insertDefaultFolders();
+    // Migrate legacy default folders (default, work, personal, health) into 'all'
+    await this.migrateLegacyFolders();
+    // Ensure minimal default folder
+    await this.insertDefaultFolders();
   }
 
   async getAllReminders(): Promise<Reminder[]> {
@@ -633,8 +633,11 @@ class Database {
     // Check if legacy folders exist
     const legacyIds = ["default", "work", "personal", "health"];
     const existing = (await this.db.getAllAsync(
-      `SELECT id FROM folders WHERE id IN (${legacyIds.map(() => '?').join(',')})`
-    , legacyIds)) as { id: string }[];
+      `SELECT id FROM folders WHERE id IN (${legacyIds
+        .map(() => "?")
+        .join(",")})`,
+      legacyIds
+    )) as { id: string }[];
     if (!existing.length) return;
     // Ensure 'all' exists early
     const now = new Date().toISOString();
@@ -645,16 +648,20 @@ class Database {
     );
     // Repoint any reminders / notes referencing legacy folders to 'all'
     await this.db.runAsync(
-      `UPDATE reminders SET folderId = 'all' WHERE folderId IN (${legacyIds.map(() => '?').join(',')})`,
+      `UPDATE reminders SET folderId = 'all' WHERE folderId IN (${legacyIds
+        .map(() => "?")
+        .join(",")})`,
       legacyIds
     );
     await this.db.runAsync(
-      `UPDATE quick_notes SET folderId = 'all' WHERE folderId IN (${legacyIds.map(() => '?').join(',')})`,
+      `UPDATE quick_notes SET folderId = 'all' WHERE folderId IN (${legacyIds
+        .map(() => "?")
+        .join(",")})`,
       legacyIds
     );
     // Delete legacy folders
     await this.db.runAsync(
-      `DELETE FROM folders WHERE id IN (${legacyIds.map(() => '?').join(',')})`,
+      `DELETE FROM folders WHERE id IN (${legacyIds.map(() => "?").join(",")})`,
       legacyIds
     );
   }
