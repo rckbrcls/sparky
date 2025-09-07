@@ -39,14 +39,18 @@ export class SmartTextParser {
     /falar\s+com\s+([a-záàâãéèêíìîóòôõúùû\s]+)/gi,
     /encontrar\s+([a-záàâãéèêíìîóòôõúùû\s]+)/gi,
     /meet\s+with\s+([a-záàâãéèêíìîóòôõúùû\s]+)/gi,
+    /when\s+(.+?)\s+(calls?|arrives?|comes?)/gi,
+    /quando\s+(.+?)\s+(ligar|chegar|vir)/gi,
   ];
 
   private static readonly LOCATION_PATTERNS = [
-    /when\s+(.+?)\s+home/gi,
+    /when\s+(.+?)\s+(home|work|office)/gi,
     /quando\s+(.+?)\s+(casa|trabalho|escritório)/gi,
-    /at\s+(home|work|office|gym|store|market)/gi,
+    /at\s+(home|work|office|gym|store|market|casa|trabalho|academia)/gi,
     /no\s+(trabalho|escritório|casa|mercado|supermercado)/gi,
     /na\s+(academia|farmácia|escola|universidade)/gi,
+    /when\s+(home|work|office|gym)/gi,
+    /quando\s+(em\s+casa|no\s+trabalho|na\s+academia)/gi,
   ];
 
   private static readonly PROJECT_PATTERNS = [
@@ -149,12 +153,16 @@ export class SmartTextParser {
     else if (person || location) {
       result.type = "trigger";
 
-      if (person) {
+      if (person && location) {
+        // If both person and location are mentioned, prioritize person
+        result.triggerType = "person";
+        result.triggerConfig = { contactName: person, location };
+      } else if (person) {
         result.triggerType = "person";
         result.triggerConfig = { contactName: person };
       } else if (location) {
         result.triggerType = "location";
-        result.triggerConfig = { address: location };
+        result.triggerConfig = { location: location };
       }
     }
 
@@ -231,6 +239,7 @@ export class SmartTextParser {
 
   private static extractPerson(input: string): string | undefined {
     for (const pattern of this.PERSON_PATTERNS) {
+      pattern.lastIndex = 0; // Reset regex state
       const match = pattern.exec(input);
       if (match && match[1]) {
         return match[1].trim();
@@ -241,11 +250,21 @@ export class SmartTextParser {
 
   private static extractLocation(input: string): string | undefined {
     for (const pattern of this.LOCATION_PATTERNS) {
+      pattern.lastIndex = 0; // Reset regex state
       const match = pattern.exec(input);
       if (match && match[1]) {
         return match[1].trim();
       }
     }
+    
+    // Check for direct location mentions
+    const directLocations = ['casa', 'home', 'trabalho', 'work', 'office', 'escritório', 'academia', 'gym'];
+    for (const location of directLocations) {
+      if (input.toLowerCase().includes(location)) {
+        return location;
+      }
+    }
+    
     return undefined;
   }
 

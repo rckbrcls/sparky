@@ -28,21 +28,27 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const [text, setText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [preview, setPreview] = useState<ParsedReminder | null>(null);
-  const fadeAnim = new Animated.Value(0);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   const handleTextChange = (newText: string) => {
     setText(newText);
 
     if (newText.trim().length > 3) {
-      const parsed = SmartTextParser.parseText(newText);
-      setPreview(parsed);
+      try {
+        const parsed = SmartTextParser.parseText(newText);
+        console.log("Parsed text:", parsed);
+        setPreview(parsed);
 
-      // Animate preview appearance
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+        // Animate preview appearance
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      } catch (error) {
+        console.error("Error parsing text:", error);
+        setPreview(null);
+      }
     } else {
       setPreview(null);
       Animated.timing(fadeAnim, {
@@ -60,6 +66,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
     try {
       const parsed = SmartTextParser.parseText(text);
+      console.log("Submitting parsed text:", parsed);
 
       if (parsed.type === "note") {
         // Create quick note
@@ -69,9 +76,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({
           tags: JSON.stringify(parsed.tags),
           isPinned: parsed.priority === 3,
         });
+        console.log("Quick note created successfully");
       } else {
         // Create reminder
-        await ReminderService.createReminder({
+        const reminderId = await ReminderService.createReminder({
           title: parsed.title,
           person: parsed.person,
           project: parsed.project,
@@ -84,11 +92,21 @@ export const SmartInput: React.FC<SmartInputProps> = ({
               : "by_person_project",
           fireAt: parsed.fireAt,
         });
+        console.log("Reminder created with ID:", reminderId);
 
         // Create triggers if needed
-        if (parsed.type === "trigger" && parsed.triggerConfig) {
-          // This would need the reminder ID, so we'd need to modify the service
-          // For now, we'll handle triggers in the ReminderService
+        if (
+          parsed.type === "trigger" &&
+          parsed.triggerConfig &&
+          parsed.triggerType
+        ) {
+          const triggerId = await database.createTrigger({
+            reminderId,
+            type: parsed.triggerType,
+            config: JSON.stringify(parsed.triggerConfig),
+            isActive: true,
+          });
+          console.log("Trigger created with ID:", triggerId);
         }
       }
 
@@ -116,7 +134,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       ]).start();
     } catch (error) {
       console.error("Error creating reminder:", error);
-      Alert.alert("Error", "Failed to create reminder");
+      const errorMessage =
+        error instanceof Error ? error.message : "Erro desconhecido";
+      Alert.alert("Erro", `Falha ao criar lembrete: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
