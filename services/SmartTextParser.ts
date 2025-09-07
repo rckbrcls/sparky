@@ -314,10 +314,19 @@ export class SmartTextParser {
             j++;
           }
         } else {
-          while (j < tokens.length && !tokens[j].startsWith("/")) {
-            parts.push(tokens[j]);
-            consumed[j] = true;
-            j++;
+          // For folder management commands restrict to a single word (no spaces)
+          if (["folder", "createfolder", "deletefolder"].includes(name)) {
+            if (j < tokens.length && !tokens[j].startsWith("/")) {
+              parts.push(tokens[j]);
+              consumed[j] = true;
+              j++;
+            }
+          } else {
+            while (j < tokens.length && !tokens[j].startsWith("/")) {
+              parts.push(tokens[j]);
+              consumed[j] = true;
+              j++;
+            }
           }
         }
         consumed[i] = true;
@@ -447,6 +456,11 @@ export class SmartTextParser {
     // project removal skipped
     for (const { pattern } of this.PRIORITY_PATTERNS)
       cleaned = cleaned.replace(pattern, "");
+    // Remove slash commands for folder management and their single-word args
+    cleaned = cleaned.replace(
+      /\/(folder|createfolder|deletefolder)\s+\S+/gi,
+      ""
+    );
     cleaned = cleaned.replace(/\s+/g, " ").trim();
     return cleaned || input;
   }

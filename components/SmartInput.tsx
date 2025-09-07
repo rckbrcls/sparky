@@ -132,6 +132,22 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const [segments, setSegments] = useState<ReturnType<typeof buildSegments>>(
     []
   );
+  // Folder map for preview naming
+  const [folderMap, setFolderMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const folders = await database.getAllFolders();
+        const map: Record<string, string> = {};
+        folders.forEach((f) => (map[f.id] = f.name));
+        setFolderMap(map);
+      } catch (e) {
+        // DB pode não estar pronto ainda
+        if (__DEV__) console.debug("Folders load skipped", e);
+      }
+    })();
+  }, []);
 
   // buildSegments já vem do engine único
 
@@ -140,27 +156,43 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     updateContext(newText);
     setSegments(buildSegments(newText));
 
-    if (newText.trim().length > 3) {
-      try {
-        const parsed = SmartTextParser.parseText(newText);
-        console.log("Parsed text:", parsed);
-        setPreview(parsed);
+    const trimmed = newText.trim();
+    // Consider only create/delete as comandos puramente de sistema
+    const strippedForPreview = trimmed
+      .replace(/\/createfolder\s+\S+/gi, "")
+      .replace(/\/deletefolder\s+\S+/gi, "")
+      .trim();
+    const hasOnlySystemCommands =
+      strippedForPreview.length === 0 &&
+      /\/createfolder\s+\S+|\/deletefolder\s+\S+/i.test(trimmed) &&
+      !/\/folder\s+\S+/i.test(trimmed); // manter /folder exibindo preview
 
-        // Animate preview appearance
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      } catch (error) {
-        console.error("Error parsing text:", error);
-        setPreview(null);
-      }
-    } else {
+    if (hasOnlySystemCommands || strippedForPreview.length <= 3) {
+      // Não mostra preview para comandos de gerenciamento isolados
       setPreview(null);
       Animated.timing(fadeAnim, {
         toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    try {
+      const parsed = SmartTextParser.parseText(newText);
+      console.log("Parsed text:", parsed);
+      setPreview(parsed);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
         duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } catch (error) {
+      console.error("Error parsing text:", error);
+      setPreview(null);
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
         useNativeDriver: true,
       }).start();
     }
@@ -283,8 +315,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         // Create quick note
         // Handle folder commands (only for notes)
         let chosenFolderId = parsed.folderId || "all";
+        // Detect explicit /folder single-word
+        const explicitFolderMatch = /\/folder\s+(\S+)/i.exec(text);
         const createFolderInfo = SmartTextParser.extractCreateFolderName(text);
-        const deleteFolderMatch = /\/deletefolder\s+([^\n]+)/i.exec(text);
+        const deleteFolderMatch = /\/deletefolder\s+(\S+)/i.exec(text);
         let commandOnly = false; // true when only folder management commands present (no content for note)
         try {
           if (createFolderInfo.id) {
@@ -303,6 +337,29 @@ export const SmartInput: React.FC<SmartInputProps> = ({
             // If no explicit /folder provided, use newly created folder
             if (!parsed.folderId && createFolderInfo.id) {
               chosenFolderId = createFolderInfo.id;
+            }
+          }
+          // Auto-create folder if referenced only by /folder (single word) and not existing
+          if (explicitFolderMatch) {
+            const folderRaw = explicitFolderMatch[1];
+            const folderSlug = folderRaw
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "")
+              .substring(0, 32);
+            if (folderSlug && folderSlug !== "all") {
+              const existing = await database.getAllFolders();
+              const exists = existing.some((f) => f.id === folderSlug);
+              if (!exists) {
+                await database.createFolder({
+                  name: folderRaw,
+                  color: "#777777",
+                  icon: "",
+                  isDefault: false,
+                  sortOrder: existing.length + 1,
+                });
+              }
+              chosenFolderId = folderSlug;
             }
           }
           if (deleteFolderMatch) {
@@ -329,32 +386,45 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                 await database.deleteFolder(target.id);
                 if (chosenFolderId === target.id) chosenFolderId = "all";
               } else {
-                console.log("Delete folder: alvo não encontrado ou é default", raw);
+                console.log(
+                  "Delete folder: alvo não encontrado ou é default",
+                  raw
+                );
               }
             }
           }
           // Determine if text has only folder management commands (no note content)
           const remaining = text
-            .replace(/\/deletefolder[^\n]*/gi, "")
-            .replace(/\/createfolder[^\n]*/gi, "")
-            .replace(/\/folder[^\n]*/gi, "")
+            .replace(/\/deletefolder\s+\S+/gi, "")
+            .replace(/\/createfolder\s+\S+/gi, "")
+            .replace(/\/folder\s+\S+/gi, "")
             .trim();
           if (!remaining) commandOnly = true;
         } catch (e) {
           console.warn("Folder creation failed:", e);
         }
         if (!commandOnly) {
+          // Remove folder management commands from persisted content
+          const cleanedTitle = parsed.title
+            .replace(/\/(folder|createfolder|deletefolder)\s+\S+/gi, "")
+            .trim();
+          const cleanedBody = (parsed.body || "")
+            .replace(/\/(folder|createfolder|deletefolder)\s+\S+/gi, "")
+            .trim();
+          const combined = cleanedBody
+            ? `${cleanedTitle}\n${cleanedBody}`
+            : cleanedTitle;
           await database.createQuickNote({
-            content: parsed.body
-              ? `${parsed.title}\n${parsed.body}`
-              : parsed.title,
+            content: combined,
             folderId: chosenFolderId,
             tags: JSON.stringify(parsed.tags),
             isPinned: parsed.priority === 3,
           });
           console.log("Quick note created successfully");
         } else {
-          console.log("Somente comandos de pasta processados; nenhuma nota criada");
+          console.log(
+            "Somente comandos de pasta processados; nenhuma nota criada"
+          );
         }
       } else {
         // Create reminder
@@ -650,6 +720,28 @@ export const SmartInput: React.FC<SmartInputProps> = ({
               }
               onContentSizeChange={(_, h) => setPreviewContentHeight(h)}
             >
+              {preview.type === "note" &&
+                (() => {
+                  const folderCmd = /\/folder\s+(\S+)/i.exec(text || "");
+                  const createFolderCmd = /\/createfolder\s+(\S+)/i.exec(
+                    text || ""
+                  );
+                  let folderName: string | undefined;
+                  if (folderCmd && folderCmd[1].trim()) {
+                    folderName = folderCmd[1].trim();
+                  } else if (createFolderCmd && createFolderCmd[1].trim()) {
+                    folderName = createFolderCmd[1].trim();
+                  } else if (preview.folderId) {
+                    folderName =
+                      folderMap[preview.folderId] ||
+                      (preview.folderId === "all"
+                        ? "All"
+                        : preview.folderId.replace(/-/g, " "));
+                  }
+                  return folderName ? (
+                    <Text style={styles.previewDetail}>📁 {folderName}</Text>
+                  ) : null;
+                })()}
               {preview.body && (
                 <Text style={styles.previewBody}>{preview.body}</Text>
               )}
