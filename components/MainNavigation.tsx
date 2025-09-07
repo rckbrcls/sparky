@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
+import { useColorScheme } from "../hooks/useColorScheme";
 
 interface ViewMode {
   id: "date" | "triggers" | "notes";
@@ -32,6 +33,8 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
   activeMode,
   onModeChange,
 }) => {
+  const scheme = useColorScheme() ?? "dark";
+  const themeColors = Colors[scheme];
   const [indicatorAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -49,9 +52,19 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
       {/* Navigation Header */}
-      <View style={styles.navigation}>
+      <View
+        style={[
+          styles.navigation,
+          {
+            backgroundColor: themeColors.surface,
+            borderBottomColor: themeColors.border,
+          },
+        ]}
+      >
         <View style={styles.navContainer}>
           {VIEW_MODES.map((mode, index) => (
             <TouchableOpacity
@@ -65,7 +78,11 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
               <Text
                 style={[
                   styles.navIcon,
-                  activeMode === mode.id && styles.navIconActive,
+                  { opacity: 0.6, color: themeColors.muted },
+                  activeMode === mode.id && {
+                    opacity: 1,
+                    color: themeColors.tint,
+                  },
                 ]}
               >
                 {mode.icon}
@@ -73,7 +90,8 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
               <Text
                 style={[
                   styles.navText,
-                  activeMode === mode.id && styles.navTextActive,
+                  { color: themeColors.muted },
+                  activeMode === mode.id && { color: themeColors.tint },
                 ]}
               >
                 {mode.title}
@@ -86,6 +104,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
             style={[
               styles.indicator,
               {
+                backgroundColor: themeColors.tint,
                 transform: [
                   {
                     translateX: indicatorAnim.interpolate({
@@ -109,12 +128,9 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
   },
   navigation: {
-    backgroundColor: Colors.dark.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
     paddingTop: 8,
   },
   navContainer: {
@@ -141,19 +157,13 @@ const styles = StyleSheet.create({
   },
   navText: {
     ...Typography.caption,
-    color: Colors.dark.muted,
     fontWeight: "500",
-  },
-  navTextActive: {
-    color: Colors.dark.tint,
-    fontWeight: "600",
   },
   indicator: {
     position: "absolute",
     bottom: 0,
     height: 3,
     width: 40,
-    backgroundColor: Colors.dark.tint,
     borderRadius: 2,
     marginLeft: 40, // Center the indicator within the navItem
   },

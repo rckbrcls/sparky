@@ -4,13 +4,17 @@ import { Alert, SafeAreaView, StyleSheet, View } from "react-native";
 import { MainNavigation } from "../../components/MainNavigation";
 import { NotesView } from "../../components/NotesView";
 import { SmartInput } from "../../components/SmartInput";
+import { ThemedText } from "../../components/ThemedText";
 import { TimelineView } from "../../components/TimelineView";
 import { TriggersView } from "../../components/TriggersView";
 import { Colors } from "../../constants/Colors";
+import { Typography } from "../../constants/Typography";
 import { database } from "../../database/database";
+import { useColorScheme } from "../../hooks/useColorScheme";
 import { NotificationService } from "../../services/NotificationService";
 
 export default function HomeScreen() {
+  const scheme = useColorScheme() ?? "dark"; // fallback dark
   const [activeMode, setActiveMode] = useState<"date" | "triggers" | "notes">(
     "date"
   );
@@ -72,11 +76,31 @@ export default function HomeScreen() {
     }
   };
 
+  const themeColors = Colors[scheme];
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
       <View style={styles.content}>
-        {/* Smart Input */}
-        <View style={styles.inputSection}>
+        <View
+          style={[
+            styles.inputSection,
+            {
+              backgroundColor: themeColors.background,
+              borderBottomColor: themeColors.border,
+            },
+          ]}
+        >
+          <ThemedText
+            style={[
+              Typography.h3,
+              styles.inlineTitle,
+              { color: themeColors.text },
+            ]}
+          >
+            i cant miss
+          </ThemedText>
           <SmartInput
             onReminderCreated={handleReminderCreated}
             placeholder={
@@ -88,8 +112,6 @@ export default function HomeScreen() {
             }
           />
         </View>
-
-        {/* Main Navigation and Views */}
         <MainNavigation activeMode={activeMode} onModeChange={setActiveMode}>
           {renderActiveView()}
         </MainNavigation>
@@ -101,16 +123,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
   },
   content: {
     flex: 1,
   },
+  inlineTitle: {
+    marginBottom: 8,
+  },
   inputSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: Colors.dark.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
   },
 });

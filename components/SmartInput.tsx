@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: Colors.dark.surface,
+    backgroundColor: Colors.dark.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.dark.border,
