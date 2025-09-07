@@ -30,9 +30,12 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const [preview, setPreview] = useState<ParsedReminder | null>(null);
   const [commandQuery, setCommandQuery] = useState<string | null>(null);
   const [showCommands, setShowCommands] = useState(false);
+  const [forcedSuggestions, setForcedSuggestions] = useState<any[] | null>(
+    null
+  );
 
-  const COMMANDS = useMemo(
-    () => [
+  const COMMANDS = useMemo(() => {
+    const list = [
       {
         cmd: "/date",
         label: "date",
@@ -105,30 +108,71 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         desc: "Lista de comandos",
         insert: "/help",
       },
-    ],
-    []
-  );
+      // closing commands for suggestions
+      {
+        cmd: "/endtags",
+        label: "endtags",
+        desc: "Fechar bloco de tags",
+        insert: "/endtags",
+      },
+      {
+        cmd: "/endpeople",
+        label: "endpeople",
+        desc: "Fechar bloco de pessoas",
+        insert: "/endpeople",
+      },
+      {
+        cmd: "/endlocations",
+        label: "endlocations",
+        desc: "Fechar bloco de locais",
+        insert: "/endlocations",
+      },
+    ];
+    return list;
+  }, []);
 
   const filteredCommands = useMemo(() => {
-    if (!commandQuery) return COMMANDS;
+    if (forcedSuggestions) return forcedSuggestions;
+    if (!commandQuery) return COMMANDS.filter((c) => !c.cmd.startsWith("/end")); // hide end* by default unless queried
     const q = commandQuery.toLowerCase();
-    return COMMANDS.filter(
+    const base = COMMANDS.filter(
       (c) => c.cmd.startsWith(`/${q}`) || c.label.includes(q)
     );
-  }, [COMMANDS, commandQuery]);
+    // ensure closing commands show on explicit query /end
+    return base;
+  }, [COMMANDS, commandQuery, forcedSuggestions]);
 
-  const detectCommandContext = useCallback((value: string) => {
-    // Pega o token atual (após último espaço ou nova linha)
-    const cursorToken = value.split(/\s+/).pop() || "";
-    if (cursorToken.startsWith("/")) {
-      const q = cursorToken.slice(1); // sem barra
-      setCommandQuery(q);
-      setShowCommands(true);
-    } else {
-      setShowCommands(false);
-      setCommandQuery(null);
-    }
-  }, []);
+  const detectCommandContext = useCallback(
+    (value: string) => {
+      const tokens = value.split(/\s+/).filter(Boolean);
+      const cursorToken = tokens.length ? tokens[tokens.length - 1] : "";
+      const BLOCK_STARTS: Record<string, string> = {
+        "/tags": "/endtags",
+        "/people": "/endpeople",
+        "/locations": "/endlocations",
+      };
+      if (cursorToken.startsWith("/")) {
+        setShowCommands(true);
+        setCommandQuery(cursorToken.slice(1));
+        if (BLOCK_STARTS[cursorToken]) {
+          // show only closing command suggestion
+          const endCmd = BLOCK_STARTS[cursorToken];
+          const found = COMMANDS.find((c) => c.cmd === endCmd);
+          if (found) setForcedSuggestions([found]);
+          else setForcedSuggestions(null);
+        } else if (cursorToken.startsWith("/end")) {
+          setForcedSuggestions(null);
+        } else {
+          setForcedSuggestions(null);
+        }
+      } else {
+        setShowCommands(false);
+        setCommandQuery(null);
+        setForcedSuggestions(null);
+      }
+    },
+    [COMMANDS]
+  );
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   // Highlight segments
