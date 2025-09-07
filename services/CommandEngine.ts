@@ -174,7 +174,8 @@ export function filterCommandList(
 }
 
 // --- Highlight ------------------------------------------------------------
-const TAG_REGEX = /#[a-zA-Z\u00C0-\u017F0-9_]+/g;
+// Markdown mode: disable previous hashtag tag detection so # is free for headings
+const TAG_REGEX = /$^/; // matches nothing
 
 function splitTags(
   textChunk: string,

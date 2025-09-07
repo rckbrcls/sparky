@@ -45,7 +45,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const BASE_MIN_HEIGHT = 68;
   const BULLET = "•";
   const INDENT = "  ";
-  const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
+  const [selection, setSelection] = useState<{ start: number; end: number }>({
+    start: 0,
+    end: 0,
+  });
 
   // Importa engine única
   const COMMANDS = useMemo<CommandDef[]>(() => getCommands(), []);
@@ -121,7 +124,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     let value = text;
 
     // TAB => indent or start bullet list
-    if (key === 'Tab') {
+    if (key === "Tab") {
       e.preventDefault?.();
       const { line } = getCurrentLineInfo(value, cursor);
       let insert = INDENT;
@@ -134,7 +137,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       return;
     }
 
-  // Enter behavior handled post-change in effect to avoid double newlines
+    // Enter behavior handled post-change in effect to avoid double newlines
   };
 
   // Transform start-of-line markers like "- " or "* " into bullet automatically
@@ -143,8 +146,12 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     const { start } = selection;
     const { line, lineStart } = getCurrentLineInfo(text, start);
     if (/^(?:-|\*)\s$/.test(line)) {
-      const newValue = text.slice(0, lineStart) + BULLET + ' ' + text.slice(lineStart + line.length);
-      const newCursor = lineStart + (BULLET + ' ').length;
+      const newValue =
+        text.slice(0, lineStart) +
+        BULLET +
+        " " +
+        text.slice(lineStart + line.length);
+      const newCursor = lineStart + (BULLET + " ").length;
       if (newValue !== text) {
         setTextAndSelection(newValue, newCursor);
       }
@@ -161,10 +168,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       return;
     }
     const prev = prevTextRef.current;
-    if (text.length > prev.length && text.endsWith('\n')) {
+    if (text.length > prev.length && text.endsWith("\n")) {
       // User pressed Enter
       const beforeNewline = text.slice(0, -1); // remove last \n
-      const lines = beforeNewline.split('\n');
+      const lines = beforeNewline.split("\n");
       const lastLine = lines[lines.length - 1]; // line before the newline
       const trimmed = lastLine.trim();
       const isBullet = trimmed.startsWith(BULLET);
@@ -172,14 +179,14 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         const afterBullet = trimmed.slice(BULLET.length).trim();
         if (afterBullet.length > 0) {
           // Continue list: append bullet to new empty line
-            const withNext = text + BULLET + ' ';
-            transformingRef.current = true;
-            setText(withNext);
-            setSelection({ start: withNext.length, end: withNext.length });
+          const withNext = text + BULLET + " ";
+          transformingRef.current = true;
+          setText(withNext);
+          setSelection({ start: withNext.length, end: withNext.length });
         } else {
           // Bullet line was empty -> end list (remove bullet chars from that empty line)
           // Remove previous bullet markers from empty bullet line (replace that entire lastLine with '')
-          const cleanedLine = lastLine.replace(/\s*•\s?/, '');
+          const cleanedLine = lastLine.replace(/\s*•\s?/, "");
           if (cleanedLine.length === 0) {
             // Replace lines array last element with '' (already empty). Do nothing; just leave blank line.
             // But if we inserted two consecutive Enters, we already have a blank line; nothing to do.
@@ -213,7 +220,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       if (parsed.type === "note") {
         // Create quick note
         await database.createQuickNote({
-          content: parsed.body ? `${parsed.title}\n${parsed.body}` : parsed.title,
+          content: parsed.body
+            ? `${parsed.title}\n${parsed.body}`
+            : parsed.title,
           folderId: parsed.folderId,
           tags: JSON.stringify(parsed.tags),
           isPinned: parsed.priority === 3,
@@ -453,16 +462,11 @@ export const SmartInput: React.FC<SmartInputProps> = ({
             />
           </View>
 
-          {preview.type === 'note' && (preview.body || text.includes('\n')) ? (
-            <Text style={styles.previewMultiline}>
-              {[preview.title, ...(preview.body ? preview.body.split('\n') : [])].map((ln, i, arr) => (
-                <Text key={i} style={i === 0 ? styles.previewTitle : styles.previewLine}>
-                  {ln || ' '}{i < arr.length - 1 ? '\n' : ''}
-                </Text>
-              ))}
+          <Text style={styles.previewTitle}>{preview.title}</Text>
+          {preview.body && (
+            <Text style={styles.previewBody} numberOfLines={6}>
+              {preview.body}
             </Text>
-          ) : (
-            <Text style={styles.previewTitle}>{preview.title}</Text>
           )}
 
           {preview.fireAt && (
@@ -633,13 +637,19 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.dark.text,
     marginBottom: 4,
-    fontWeight: '600',
+    fontWeight: "600",
     // preserve whitespace indentation (RN Text collapses multiple spaces unless we keep them; using unicode no-break space replacement optional)
   },
   previewLine: {
     ...Typography.body,
     color: Colors.dark.text,
-    fontWeight: '600',
+    fontWeight: "600",
+  },
+  previewBody: {
+    ...Typography.caption,
+    color: Colors.dark.text,
+    marginBottom: 4,
+    opacity: 0.85,
   },
   previewDetail: {
     ...Typography.caption,

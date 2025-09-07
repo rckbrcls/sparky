@@ -51,7 +51,6 @@ export class SmartTextParser {
   private static readonly PROJECT_PATTERNS = [
     /projeto\s+([a-záàâãéèêíìîóòôõúùû\s]+)/gi,
     /project\s+([a-zA-Z\s]+)/gi,
-    /#([a-záàâãéèêíìîóòôõúùû]+)/gi,
   ];
 
   private static readonly PRIORITY_PATTERNS = [
@@ -106,12 +105,13 @@ export class SmartTextParser {
     const location = this.extractLocation(base);
     const project = this.extractProject(base);
     const priority = this.extractPriority(base);
-    const tags = this.extractTags(base);
+    const tags: string[] = []; // deprecated hashtag tags in markdown mode
 
     if (commands.tags) {
+      // still allow explicit /tags block but no leading # stripping now
       const extra = commands.tags
         .split(/[\s,;]+/)
-        .map((t) => t.replace(/^#/, "").toLowerCase())
+        .map((t) => t.toLowerCase())
         .filter(Boolean);
       for (const t of extra) if (!tags.includes(t)) tags.push(t);
     }
@@ -135,22 +135,61 @@ export class SmartTextParser {
       location,
     };
 
-    // Derive title/body for multiline notes (if not explicitly overridden by commands)
     if (!commands.note && !commands.title) {
-      const rawLines = input.split(/\n+/); // keep original newlines
-      const cleanedLines = rawLines.map((l) => l.replace(/^\s*[•\-*]\s?/, '').trimEnd());
-      // Find first non-empty line for title
-      const firstIdx = cleanedLines.findIndex((l) => l.trim().length > 0);
-      if (firstIdx >= 0) {
-        const titleLine = cleanedLines[firstIdx].trim();
-        const bodyLines = cleanedLines.slice(firstIdx + 1);
-        const bodyJoined = bodyLines.filter((l, i, arr) => {
-          // Preserve intentional blank lines between content but trim leading empty lines
-          if (i === 0 && l.trim().length === 0) return false;
-          return true;
-        }).join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
-        if (titleLine) result.title = titleLine;
-        if (bodyJoined.length) result.body = bodyJoined;
+      const lines = input.split(/\n/);
+      const cleanedLines: string[] = [];
+      let skipBlock: string | null = null; // 'tags' | 'people' | 'locations'
+      const BLOCK_START: Record<string, string> = {
+        "/tags": "tags",
+        "/people": "people",
+        "/locations": "locations",
+      };
+      const BLOCK_END: Record<string, string> = {
+        "/endtags": "tags",
+        "/endpeople": "people",
+        "/endlocations": "locations",
+      };
+      for (const rawLine of lines) {
+        const line = rawLine; // preserve indentation for bullets
+        const trimmed = line.trim();
+        if (skipBlock) {
+          // Inside a block until we find its end marker
+          const lower = trimmed.toLowerCase();
+          if (BLOCK_END[lower] === skipBlock) {
+            skipBlock = null; // stop skipping after end marker line
+          }
+          continue; // skip block content and end marker line itself
+        }
+        // Detect block start
+        const lower = trimmed.toLowerCase();
+        if (BLOCK_START[lower]) {
+          skipBlock = BLOCK_START[lower];
+          continue; // skip the start marker line
+        }
+        // Remove inline single-line commands with their arguments (until next /command or EOL)
+        // Commands covered: /date /person /location /project /priority /title /note
+        let processed = line
+          .replace(
+            /\/(date|person|location|project|priority|title|note)\b[^/\n]*/gi,
+            ""
+          )
+          .trimEnd();
+        // If line becomes only a command residue or empty after trimming, skip unless it's a bullet marker
+        if (processed.trim().length === 0) {
+          if (/^\s*[•\-*]\s*$/.test(line)) continue; // ignore stray bullet markers
+        }
+        cleanedLines.push(processed);
+      }
+      // Simple: first non-empty line => title; rest => body
+      const firstNonEmpty = cleanedLines.find((l) => l.trim().length > 0);
+      if (firstNonEmpty) {
+        result.title = firstNonEmpty.replace(/^\s*[•\-*]\s?/, "").trim();
+        const idx = cleanedLines.indexOf(firstNonEmpty);
+        const rest = cleanedLines
+          .slice(idx + 1)
+          .join("\n")
+          .trim();
+        if (rest) result.body = rest;
       }
     }
 
@@ -395,13 +434,7 @@ export class SmartTextParser {
     }
     return 1;
   }
-  private static extractTags(input: string): string[] {
-    const r = /#([a-záàâãéèêíìîóòôõúùû]+)/gi;
-    const out: string[] = [];
-    let m: RegExpExecArray | null;
-    while ((m = r.exec(input)) !== null) out.push(m[1].toLowerCase());
-    return out;
-  }
+  // extractTags removed for markdown mode
   private static determineFolderId(input: string): string {
     const lower = input.toLowerCase();
     for (const [fid, keywords] of Object.entries(this.FOLDER_KEYWORDS)) {
