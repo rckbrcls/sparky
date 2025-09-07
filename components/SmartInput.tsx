@@ -58,10 +58,26 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         insert: "/person ",
       },
       {
+        cmd: "/people",
+        label: "people",
+        desc: "Bloco de pessoas: /people João; Maria /endpeople",
+        insert: "/people ",
+        type: "block",
+        end: "/endpeople",
+      },
+      {
         cmd: "/location",
         label: "location",
         desc: "Local: /location escritório",
         insert: "/location ",
+      },
+      {
+        cmd: "/locations",
+        label: "locations",
+        desc: "Bloco de locais: /locations escritório; casa /endlocations",
+        insert: "/locations ",
+        type: "block",
+        end: "/endlocations",
       },
       {
         cmd: "/project",
@@ -80,12 +96,8 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         label: "tags",
         desc: "Tags: /tags urgente backend",
         insert: "/tags ",
-      },
-      {
-        cmd: "/trigger",
-        label: "trigger",
-        desc: "Criar trigger: /trigger person João",
-        insert: "/trigger ",
+        type: "block",
+        end: "/endtags",
       },
       {
         cmd: "/help",
@@ -205,11 +217,22 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     }
   };
 
-  const handleSelectCommand = (command: { cmd: string; insert: string }) => {
+  const handleSelectCommand = (command: {
+    cmd: string;
+    insert: string;
+    type?: string;
+    end?: string;
+  }) => {
     // Substitui o token atual pelo comando escolhido
     const parts = text.split(/\s+/);
     if (parts.length === 0) {
-      setText(command.insert);
+      let base = command.insert;
+      if (command.type === "block" && command.end) {
+        base = base + command.end; // /tags /endtags
+        // Coloca cursor lógico antes do end adicionando espaço
+        base = base.replace(command.end, "") + command.end; // já posicionado
+      }
+      setText(base);
     } else {
       // Encontrar índice do ultimo token real (não vazio)
       let idx = parts.length - 1;
@@ -220,7 +243,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       } else {
         parts.push(command.insert.trimEnd());
       }
-      const newValue = parts.filter(Boolean).join(" ") + " ";
+      let newValue = parts.filter(Boolean).join(" ") + " ";
+      if (command.type === "block" && command.end) {
+        newValue = newValue + command.end + " ";
+      }
       setText(newValue);
     }
     setShowCommands(false);
@@ -265,20 +291,52 @@ export const SmartInput: React.FC<SmartInputProps> = ({
           fireAt: parsed.fireAt,
         });
         console.log("Reminder created with ID:", reminderId);
-
-        // Create triggers if needed
-        if (
-          parsed.type === "trigger" &&
-          parsed.triggerConfig &&
-          parsed.triggerType
-        ) {
-          const triggerId = await database.createTrigger({
-            reminderId,
-            type: parsed.triggerType,
-            config: JSON.stringify(parsed.triggerConfig),
-            isActive: true,
-          });
-          console.log("Trigger created with ID:", triggerId);
+        // Create triggers (singular or plural)
+        if (parsed.type === "trigger") {
+          const triggerPromises: Promise<string>[] = [];
+          if (parsed.persons && parsed.persons.length) {
+            for (const p of parsed.persons) {
+              triggerPromises.push(
+                database.createTrigger({
+                  reminderId,
+                  type: "person",
+                  config: JSON.stringify({ contactName: p }),
+                  isActive: true,
+                })
+              );
+            }
+          } else if (parsed.person) {
+            triggerPromises.push(
+              database.createTrigger({
+                reminderId,
+                type: "person",
+                config: JSON.stringify({ contactName: parsed.person }),
+                isActive: true,
+              })
+            );
+          }
+          if (parsed.locations && parsed.locations.length) {
+            for (const loc of parsed.locations) {
+              triggerPromises.push(
+                database.createTrigger({
+                  reminderId,
+                  type: "location",
+                  config: JSON.stringify({ location: loc }),
+                  isActive: true,
+                })
+              );
+            }
+          } else if (parsed.location) {
+            triggerPromises.push(
+              database.createTrigger({
+                reminderId,
+                type: "location",
+                config: JSON.stringify({ location: parsed.location }),
+                isActive: true,
+              })
+            );
+          }
+          await Promise.all(triggerPromises);
         }
       }
 
@@ -448,9 +506,19 @@ export const SmartInput: React.FC<SmartInputProps> = ({
           {preview.person && (
             <Text style={styles.previewDetail}>👤 {preview.person}</Text>
           )}
+          {preview.persons && preview.persons.length > 0 && (
+            <Text style={styles.previewDetail}>
+              👥 {preview.persons.join(", ")}
+            </Text>
+          )}
 
           {preview.location && (
             <Text style={styles.previewDetail}>📍 {preview.location}</Text>
+          )}
+          {preview.locations && preview.locations.length > 0 && (
+            <Text style={styles.previewDetail}>
+              🗺️ {preview.locations.join(", ")}
+            </Text>
           )}
 
           {preview.project && (
