@@ -40,6 +40,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const [commandQuery, setCommandQuery] = useState<string | null>(null);
   const [showCommands, setShowCommands] = useState(false);
   const [openBlock, setOpenBlock] = useState<string | null>(null);
+  // Dynamic height state (base min 68)
+  const [autoHeight, setAutoHeight] = useState<number>(68);
+  const BASE_MIN_HEIGHT = 68;
 
   // Importa engine única
   const COMMANDS = useMemo<CommandDef[]>(() => getCommands(), []);
@@ -252,11 +255,19 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { minHeight: autoHeight }]}>
         <View style={styles.composedInput}>
           <View style={styles.highlightLayer} pointerEvents="none">
             {text.length === 0 ? (
-              <Text style={styles.placeholderText}>{placeholder}</Text>
+              <Text
+                style={styles.placeholderText}
+                onLayout={(e) => {
+                  const h = e.nativeEvent.layout.height;
+                  setAutoHeight((prev) => Math.max(BASE_MIN_HEIGHT, h + 28)); // padding compensation
+                }}
+              >
+                {placeholder}
+              </Text>
             ) : (
               <Text style={styles.highlightText}>
                 {segments.map((s: Segment, idx: number) => (
@@ -286,7 +297,12 @@ export const SmartInput: React.FC<SmartInputProps> = ({
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
             editable={!isProcessing}
-            // Evitar autoCap que atrapalha comandos
+            onContentSizeChange={(e) => {
+              const h = e.nativeEvent.contentSize.height;
+              setAutoHeight((prev) =>
+                Math.max(BASE_MIN_HEIGHT, Math.min(h + 28, 220))
+              ); // cap growth
+            }}
             autoCapitalize="none"
             autoCorrect={false}
           />

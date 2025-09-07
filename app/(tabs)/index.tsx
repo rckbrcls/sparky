@@ -104,11 +104,7 @@ export default function HomeScreen() {
           <SmartInput
             onReminderCreated={handleReminderCreated}
             placeholder={
-              activeMode === "notes"
-                ? "Capture a quick thought..."
-                : activeMode === "triggers"
-                ? "Create trigger: 'Call John when home'"
-                : "Add reminder: 'Meeting tomorrow 2pm'"
+              "Type text. Use /commands or #tags (e.g. /date /note /person)"
             }
           />
         </View>
