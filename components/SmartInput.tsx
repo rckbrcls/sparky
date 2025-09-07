@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -52,6 +52,44 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   });
   const [isOverflowing, setIsOverflowing] = useState(false);
   const MAX_HEIGHT = 220;
+  const PREVIEW_MAX_HEIGHT = 180;
+  // Refs para sincronizar scroll
+  const inputScrollRef = useRef<ScrollView | null>(null);
+  const previewScrollRef = useRef<ScrollView | null>(null);
+  const syncingRef = useRef(false);
+  const lastSourceRef = useRef<"input" | "preview" | null>(null);
+  const [inputContentHeight, setInputContentHeight] = useState(0);
+  const [previewContentHeight, setPreviewContentHeight] = useState(0);
+  const [inputViewportHeight, setInputViewportHeight] = useState(0);
+  const [previewViewportHeight, setPreviewViewportHeight] = useState(0);
+
+  const syncScroll = useCallback(
+    (source: "input" | "preview", y: number) => {
+      if (syncingRef.current) return;
+      const inputScrollable = Math.max(0, inputContentHeight - inputViewportHeight);
+      const previewScrollable = Math.max(0, previewContentHeight - previewViewportHeight);
+      if (inputScrollable === 0 && previewScrollable === 0) return;
+      // Normaliza posição da origem
+      let normalized = 0;
+      if (source === "input") {
+        normalized = inputScrollable ? y / inputScrollable : 0;
+      } else {
+        normalized = previewScrollable ? y / previewScrollable : 0;
+      }
+      normalized = Math.min(1, Math.max(0, normalized));
+      const targetY = source === "input" ? normalized * previewScrollable : normalized * inputScrollable;
+      const targetRef = source === "input" ? previewScrollRef.current : inputScrollRef.current;
+      if (!targetRef) return;
+      syncingRef.current = true;
+      lastSourceRef.current = source;
+      targetRef.scrollTo({ y: targetY, animated: false });
+      // pequeno timeout para liberar
+      requestAnimationFrame(() => {
+        syncingRef.current = false;
+      });
+    },
+    [inputContentHeight, previewContentHeight, inputViewportHeight, previewViewportHeight]
+  );
 
   // Importa engine única
   const COMMANDS = useMemo<CommandDef[]>(() => getCommands(), []);
@@ -362,11 +400,18 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       <View style={[styles.inputContainer, { minHeight: autoHeight }]}>
         <View style={styles.composedInput}>
           <ScrollView
+            ref={inputScrollRef}
             style={[styles.scrollArea, { maxHeight: MAX_HEIGHT - 28 }]}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={isOverflowing}
             scrollEnabled={isOverflowing}
+            onScroll={(e) => {
+              const y = e.nativeEvent.contentOffset.y;
+              syncScroll("input", y);
+            }}
+            scrollEventThrottle={16}
+            onLayout={(e) => setInputViewportHeight(e.nativeEvent.layout.height)}
           >
             <View style={styles.layeredInput}>
               <View style={styles.highlightLayer} pointerEvents="none">
@@ -403,7 +448,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                   </Text>
                 )}
               </View>
-              <TextInput
+        <TextInput
                 style={styles.inputOverlay}
                 value={text}
                 onChangeText={handleTextChange}
@@ -413,6 +458,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                 editable={!isProcessing}
                 onContentSizeChange={(e) => {
                   const h = e.nativeEvent.contentSize.height;
+          setInputContentHeight(h + 28);
                   if (h + 28 <= MAX_HEIGHT) {
                     setIsOverflowing(false);
                     setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
@@ -480,51 +526,65 @@ export const SmartInput: React.FC<SmartInputProps> = ({
               ]}
             />
           </View>
-
           <Text style={styles.previewTitle}>{preview.title}</Text>
-          {preview.body && (
-            <Text style={styles.previewBody} numberOfLines={6}>
-              {preview.body}
-            </Text>
-          )}
-
-          {preview.fireAt && (
-            <Text style={styles.previewDetail}>
-              📅 {preview.fireAt.toLocaleDateString()}{" "}
-              {preview.fireAt.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
-          )}
-
-          {preview.person && (
-            <Text style={styles.previewDetail}>👤 {preview.person}</Text>
-          )}
-          {preview.persons && preview.persons.length > 0 && (
-            <Text style={styles.previewDetail}>
-              👥 {preview.persons.join(", ")}
-            </Text>
-          )}
-
-          {preview.location && (
-            <Text style={styles.previewDetail}>📍 {preview.location}</Text>
-          )}
-          {preview.locations && preview.locations.length > 0 && (
-            <Text style={styles.previewDetail}>
-              🗺️ {preview.locations.join(", ")}
-            </Text>
-          )}
-
-          {preview.project && (
-            <Text style={styles.previewDetail}>🏷️ {preview.project}</Text>
-          )}
-
-          {preview.tags.length > 0 && (
-            <Text style={styles.previewDetail}>
-              🏷️ {preview.tags.map((tag) => `#${tag}`).join(" ")}
-            </Text>
-          )}
+          <View
+            style={[
+              styles.previewScrollableWrapper,
+              { maxHeight: PREVIEW_MAX_HEIGHT },
+            ]}
+          >
+            <ScrollView
+              ref={previewScrollRef}
+              style={styles.previewScroll}
+              contentContainerStyle={styles.previewScrollContent}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+              onScroll={(e) => {
+                const y = e.nativeEvent.contentOffset.y;
+                syncScroll("preview", y);
+              }}
+              scrollEventThrottle={16}
+              onLayout={(e) => setPreviewViewportHeight(e.nativeEvent.layout.height)}
+              onContentSizeChange={(_, h) => setPreviewContentHeight(h)}
+            >
+              {preview.body && (
+                <Text style={styles.previewBody}>{preview.body}</Text>
+              )}
+              {preview.fireAt && (
+                <Text style={styles.previewDetail}>
+                  📅 {preview.fireAt.toLocaleDateString()}{" "}
+                  {preview.fireAt.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              )}
+              {preview.person && (
+                <Text style={styles.previewDetail}>👤 {preview.person}</Text>
+              )}
+              {preview.persons && preview.persons.length > 0 && (
+                <Text style={styles.previewDetail}>
+                  👥 {preview.persons.join(", ")}
+                </Text>
+              )}
+              {preview.location && (
+                <Text style={styles.previewDetail}>📍 {preview.location}</Text>
+              )}
+              {preview.locations && preview.locations.length > 0 && (
+                <Text style={styles.previewDetail}>
+                  🗺️ {preview.locations.join(", ")}
+                </Text>
+              )}
+              {preview.project && (
+                <Text style={styles.previewDetail}>🏷️ {preview.project}</Text>
+              )}
+              {preview.tags.length > 0 && (
+                <Text style={styles.previewDetail}>
+                  🏷️ {preview.tags.map((tag) => `#${tag}`).join(" ")}
+                </Text>
+              )}
+            </ScrollView>
+          </View>
         </Animated.View>
       )}
     </View>
@@ -628,6 +688,17 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: Colors.dark.border,
+  },
+  previewScrollableWrapper: {
+    marginTop: 4,
+    overflow: "hidden",
+    borderRadius: 6,
+  },
+  previewScroll: {
+    width: "100%",
+  },
+  previewScrollContent: {
+    paddingBottom: 4,
   },
   previewHeader: {
     flexDirection: "row",
