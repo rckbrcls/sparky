@@ -3,36 +3,39 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-const tintColorLight = "#339AF0";
-const tintColorDark = "#00D2FF";
+// Accent (tint) for light mode changed to black as requested
+const tintColorLight = "#000000";
+// Accent (tint) for dark mode changed to white as requested
+const tintColorDark = "#FFFFFF";
 
 export const Colors = {
   light: {
-    text: "#1A1A1A",
-    background: "#F8F9FA",
+    text: "#000000",
+    background: "#FFFFFF",
     tint: tintColorLight,
-    icon: "#6C757D",
-    tabIconDefault: "#6C757D",
+    icon: "#5E5E5E",
+    tabIconDefault: "#6E6E6E",
     tabIconSelected: tintColorLight,
     surface: "#FFFFFF",
-    border: "#E9ECEF",
+    border: "#F0F0F0",
     success: "#51CF66",
     warning: "#FFD43B",
     error: "#FF6B6B",
-    muted: "#ADB5BD",
+    muted: "#C4C4C4",
   },
   dark: {
-    text: "#E4E6EA",
-    background: "#0D1117",
+    // Dark palette now much closer to pure black
+    text: "#F2F2F2",
+    background: "#000000",
     tint: tintColorDark,
-    icon: "#7D8590",
-    tabIconDefault: "#7D8590",
+    icon: "#9AA0A6",
+    tabIconDefault: "#6E6E6E",
     tabIconSelected: tintColorDark,
-    surface: "#161B22",
-    border: "#30363D",
-    success: "#3FB950",
+    surface: "#0A0A0A",
+    border: "#1A1A1A",
+    success: "#3FB950", // keeping semantic colors for status
     warning: "#D29922",
     error: "#F85149",
-    muted: "#6E7681",
+    muted: "#5A5F66",
   },
 };
