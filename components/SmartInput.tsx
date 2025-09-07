@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Animated,
@@ -119,9 +119,57 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   }, []);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
+  // Highlight segments
+  interface Segment {
+    text: string;
+    kind: "command" | "commandArg" | "tag" | "normal";
+  }
+  const [segments, setSegments] = useState<Segment[]>([]);
+
+  const splitTags = useCallback((textChunk: string, baseKind: Segment["kind"] = "normal"): Segment[] => {
+    if (!textChunk) return [];
+    const tagRegex = /#[a-zA-Z\u00C0-\u017F0-9_]+/g; // inclui acentos
+    const segs: Segment[] = [];
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = tagRegex.exec(textChunk)) !== null) {
+      if (m.index > last) segs.push({ text: textChunk.slice(last, m.index), kind: baseKind });
+      segs.push({ text: m[0], kind: "tag" });
+      last = m.index + m[0].length;
+    }
+    if (last < textChunk.length) segs.push({ text: textChunk.slice(last), kind: baseKind });
+    return segs;
+  }, []);
+
+  const buildSegments = useCallback((value: string): Segment[] => {
+    if (!value) return [];
+
+    const result: Segment[] = [];
+    const regex = /(\/[a-zA-Z]+)([\s\S]*?)(?=(?:\s\/[a-zA-Z]+)|$)/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(value)) !== null) {
+      if (match.index > lastIndex) {
+        const normalChunk = value.slice(lastIndex, match.index);
+        result.push(...splitTags(normalChunk));
+      }
+      const commandToken = match[1];
+      const argText = match[2] || "";
+      result.push({ text: commandToken, kind: "command" });
+      if (argText) result.push(...splitTags(argText, "commandArg"));
+      lastIndex = match.index + commandToken.length + argText.length;
+    }
+    if (lastIndex < value.length) {
+      const tail = value.slice(lastIndex);
+      result.push(...splitTags(tail));
+    }
+    return result;
+  }, [splitTags]);
+
   const handleTextChange = (newText: string) => {
     setText(newText);
     detectCommandContext(newText);
+    setSegments(buildSegments(newText));
 
     if (newText.trim().length > 3) {
       try {
@@ -170,6 +218,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     setShowCommands(false);
     setCommandQuery(null);
   };
+
+  useEffect(() => {
+    setSegments(buildSegments(text));
+  }, [text, buildSegments]);
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
@@ -286,17 +338,44 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={handleTextChange}
-          placeholder={placeholder}
-          placeholderTextColor={Colors.dark.muted}
-          multiline
-          returnKeyType="done"
-          onSubmitEditing={handleSubmit}
-          editable={!isProcessing}
-        />
+        <View style={styles.composedInput}>
+          <View style={styles.highlightLayer} pointerEvents="none">
+            {text.length === 0 ? (
+              <Text style={styles.placeholderText}>{placeholder}</Text>
+            ) : (
+              <Text style={styles.highlightText}>
+                {segments.map((s, idx) => (
+                  <Text
+                    key={idx}
+                    style={
+                      s.kind === "command"
+                        ? styles.hlCommand
+                        : s.kind === "commandArg"
+                        ? styles.hlCommandArg
+                        : s.kind === "tag"
+                        ? styles.hlTag
+                        : styles.hlNormal
+                    }
+                  >
+                    {s.text}
+                  </Text>
+                ))}
+              </Text>
+            )}
+          </View>
+          <TextInput
+            style={styles.inputOverlay}
+            value={text}
+            onChangeText={handleTextChange}
+            multiline
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+            editable={!isProcessing}
+            // Evitar autoCap que atrapalha comandos
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
 
         {text.trim().length > 0 && (
           <TouchableOpacity
@@ -401,6 +480,49 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.dark.text,
     maxHeight: 120,
+  },
+  composedInput: {
+    flex: 1,
+    minHeight: 20,
+    justifyContent: "flex-start",
+  },
+  highlightLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  highlightText: {
+    ...Typography.body,
+    color: Colors.dark.text,
+  },
+  inputOverlay: {
+    ...Typography.body,
+    color: 'transparent',
+    maxHeight: 120,
+    // Garante alinhamento
+    includeFontPadding: false,
+    padding: 0,
+  },
+  placeholderText: {
+    ...Typography.body,
+    color: Colors.dark.muted,
+  },
+  hlNormal: {
+    color: Colors.dark.text,
+  },
+  hlCommand: {
+    color: Colors.dark.tint,
+    fontWeight: '600',
+  },
+  hlCommandArg: {
+    color: Colors.dark.icon,
+  },
+  hlTag: {
+    color: Colors.dark.success,
+    fontWeight: '500',
   },
   submitButton: {
     marginLeft: 12,

@@ -266,16 +266,37 @@ export class SmartTextParser {
     const commands: Record<string, string> = {};
     let i = 0;
     const consumed: boolean[] = new Array(tokens.length).fill(false);
+    const isDateToken = (t: string) => {
+      const tl = t.toLowerCase();
+      if (!tl) return false;
+      if (/^(hoje|today|amanhã|amanha|tomorrow|next|próximo|proximo)$/.test(tl)) return true;
+      if (/^(segunda|terça|terca|quarta|quinta|sexta|sábado|sabado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/.test(tl)) return true;
+      if (/^\d{1,2}\/\d{1,2}$/.test(tl)) return true; // dd/mm
+      if (/^\d{1,2}:\d{2}$/.test(tl)) return true; // hh:mm
+      if (/^\d{1,2}h(\d{2})?$/.test(tl)) return true; // 18h30
+      if (/^\d{1,2}(am|pm)$/.test(tl)) return true; // 6am / 6pm
+      if (/^(às|as)$/.test(tl)) return true;
+      return false;
+    };
     while (i < tokens.length) {
       const tok = tokens[i];
       if (tok.startsWith("/")) {
         const cmd = tok.slice(1).toLowerCase();
         let j = i + 1;
         const valueParts: string[] = [];
-        while (j < tokens.length && !tokens[j].startsWith("/")) {
-          valueParts.push(tokens[j]);
-          consumed[j] = true;
-          j++;
+        if (cmd === 'date') {
+          // Consumir somente tokens reconhecidos como parte de data/hora
+            while (j < tokens.length && !tokens[j].startsWith('/') && isDateToken(tokens[j])) {
+              valueParts.push(tokens[j]);
+              consumed[j] = true;
+              j++;
+            }
+        } else {
+          while (j < tokens.length && !tokens[j].startsWith("/")) {
+            valueParts.push(tokens[j]);
+            consumed[j] = true;
+            j++;
+          }
         }
         consumed[i] = true;
         commands[cmd] = valueParts.join(" ");
