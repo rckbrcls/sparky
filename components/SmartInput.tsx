@@ -121,7 +121,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
   const handleTextChange = (newText: string) => {
     setText(newText);
-  detectCommandContext(newText);
+    detectCommandContext(newText);
 
     if (newText.trim().length > 3) {
       try {
