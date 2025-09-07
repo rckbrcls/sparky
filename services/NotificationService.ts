@@ -1,5 +1,5 @@
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 
 export class NotificationService {
   static async initialize(): Promise<void> {
@@ -16,18 +16,18 @@ export class NotificationService {
 
     // Request permissions
     const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      throw new Error('Notification permissions not granted');
+    if (status !== "granted") {
+      throw new Error("Notification permissions not granted");
     }
 
     // Configure notification channel for Android
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('reminders', {
-        name: 'Reminders',
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("reminders", {
+        name: "Reminders",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-        sound: 'default',
+        lightColor: "#FF231F7C",
+        sound: "default",
       });
     }
   }
@@ -43,9 +43,9 @@ export class NotificationService {
       content: {
         title,
         body,
-        sound: 'default',
+        sound: "default",
         priority: Notifications.AndroidNotificationPriority.HIGH,
-        categoryIdentifier: 'reminder',
+        categoryIdentifier: "reminder",
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -64,7 +64,9 @@ export class NotificationService {
     await Notifications.cancelAllScheduledNotificationsAsync();
   }
 
-  static async getAllScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
+  static async getAllScheduledNotifications(): Promise<
+    Notifications.NotificationRequest[]
+  > {
     return await Notifications.getAllScheduledNotificationsAsync();
   }
 
@@ -76,7 +78,7 @@ export class NotificationService {
   ): Promise<string> {
     // Cancel the old notification
     await this.cancelNotification(identifier);
-    
+
     // Schedule a new one
     return await this.scheduleNotification(title, body, fireAt, identifier);
   }

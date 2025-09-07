@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { ReminderForm } from "../../components/ReminderForm";
 import { ReminderItem } from "../../components/ReminderItem";
+import { Colors } from "../../constants/Colors";
+import { Typography } from "../../constants/Typography";
 import { database, Reminder } from "../../database/database";
 import { NotificationService } from "../../services/NotificationService";
 import { ReminderService } from "../../services/ReminderService";
@@ -234,10 +236,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: Colors.dark.background,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.dark.surface,
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -245,33 +247,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#E9ECEF",
+    borderBottomColor: Colors.dark.border,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#1A1A1A",
+    ...Typography.h2,
   },
   addButton: {
     width: 44,
     height: 44,
-    backgroundColor: "#339AF0",
+    backgroundColor: Colors.dark.tint,
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
   },
   addButtonText: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    ...Typography.h3,
+    color: Colors.dark.background,
   },
   filterContainer: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.dark.surface,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#E9ECEF",
+    borderBottomColor: Colors.dark.border,
   },
   filterButton: {
     flex: 1,
@@ -279,28 +278,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
     marginHorizontal: 4,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: Colors.dark.background,
   },
   filterButtonActive: {
-    backgroundColor: "#339AF0",
+    backgroundColor: Colors.dark.tint,
   },
   filterText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6C757D",
+    ...Typography.bodySmall,
+    color: Colors.dark.muted,
     textAlign: "center",
   },
   filterTextActive: {
-    color: "#FFFFFF",
+    color: Colors.dark.background,
   },
   content: {
     flex: 1,
     padding: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1A1A1A",
+    ...Typography.h4,
     marginBottom: 16,
   },
   emptyState: {
@@ -310,22 +306,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: "#6C757D",
+    ...Typography.body,
+    color: Colors.dark.muted,
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 24,
   },
   emptyStateButton: {
-    backgroundColor: "#339AF0",
+    backgroundColor: Colors.dark.tint,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
   },
   emptyStateButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    ...Typography.button,
+    color: Colors.dark.background,
   },
   listContainer: {
     paddingBottom: 100,

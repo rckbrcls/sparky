@@ -1,36 +1,43 @@
-import React, { useState } from 'react';
+import DateTimePicker from "@react-native-community/datetimepicker";
+import React, { useState } from "react";
 import {
-  View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Alert,
-  Switch,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { ReminderService } from '../services/ReminderService';
+  View,
+} from "react-native";
+import { Colors } from "../constants/Colors";
+import { Typography } from "../constants/Typography";
+import { ReminderService } from "../services/ReminderService";
 
 interface ReminderFormProps {
   onSave: () => void;
   onCancel: () => void;
 }
 
-export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) => {
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const [person, setPerson] = useState('');
-  const [project, setProject] = useState('');
-  const [location, setLocation] = useState('');
-  const [type] = useState<'once' | 'recurring' | 'by_person_project' | 'by_location'>('once');
+export const ReminderForm: React.FC<ReminderFormProps> = ({
+  onSave,
+  onCancel,
+}) => {
+  const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
+  const [person, setPerson] = useState("");
+  const [project, setProject] = useState("");
+  const [location, setLocation] = useState("");
+  const [type] = useState<
+    "once" | "recurring" | "by_person_project" | "by_location"
+  >("once");
   const [fireAt, setFireAt] = useState<Date | undefined>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Title is required');
+      Alert.alert("Error", "Title is required");
       return;
     }
 
@@ -41,28 +48,32 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
         person: person.trim() || undefined,
         project: project.trim() || undefined,
         location: location.trim() || undefined,
-        type: isRecurring ? 'recurring' : type,
+        type: isRecurring ? "recurring" : type,
         rrule: isRecurring ? generateRRule() : undefined,
         fireAt,
       });
 
       onSave();
     } catch {
-      Alert.alert('Error', 'Unable to save reminder');
+      Alert.alert("Error", "Unable to save reminder");
     }
   };
 
   const generateRRule = () => {
     // Simple daily recurrence for now
     // In a real app, you'd have a more sophisticated RRULE builder
-    return 'FREQ=DAILY;INTERVAL=1';
+    return "FREQ=DAILY;INTERVAL=1";
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return (
+      date.toLocaleDateString("pt-BR") +
+      " " +
+      date.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
   };
 
   return (
@@ -135,8 +146,10 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
             <Switch
               value={isRecurring}
               onValueChange={setIsRecurring}
-              trackColor={{ false: '#E9ECEF', true: '#339AF0' }}
-              thumbColor={isRecurring ? '#FFFFFF' : '#ADB5BD'}
+              trackColor={{ false: Colors.dark.border, true: Colors.dark.tint }}
+              thumbColor={
+                isRecurring ? Colors.dark.background : Colors.dark.muted
+              }
             />
           </View>
         </View>
@@ -149,7 +162,7 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
               onPress={() => setShowDatePicker(true)}
             >
               <Text style={styles.dateButtonText}>
-                {fireAt ? formatDate(fireAt) : 'Select date and time'}
+                {fireAt ? formatDate(fireAt) : "Select date and time"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -173,7 +186,7 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
           <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
             <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
@@ -186,19 +199,17 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: Colors.dark.background,
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.dark.surface,
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: Colors.dark.border,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    textAlign: 'center',
+    ...Typography.h3,
+    textAlign: "center",
   },
   form: {
     padding: 20,
@@ -207,67 +218,60 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#343A40',
+    ...Typography.h6,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    ...Typography.input,
+    backgroundColor: Colors.dark.surface,
     borderRadius: 12,
     padding: 16,
-    fontSize: 16,
     borderWidth: 1,
-    borderColor: '#DEE2E6',
-    color: '#1A1A1A',
+    borderColor: Colors.dark.border,
   },
   textArea: {
     height: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   dateButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.dark.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#DEE2E6',
+    borderColor: Colors.dark.border,
   },
   dateButtonText: {
-    fontSize: 16,
-    color: '#343A40',
+    ...Typography.body,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 20,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#6C757D',
+    backgroundColor: Colors.dark.muted,
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...Typography.button,
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#339AF0',
+    backgroundColor: Colors.dark.tint,
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...Typography.button,
+    color: Colors.dark.background,
   },
 });

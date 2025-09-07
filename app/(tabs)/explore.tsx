@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Colors } from "../../constants/Colors";
+import { Typography } from "../../constants/Typography";
 import { ReminderService } from "../../services/ReminderService";
 
 export default function SettingsScreen() {
@@ -220,20 +222,18 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: Colors.dark.background,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.dark.surface,
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E9ECEF",
+    borderBottomColor: Colors.dark.border,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#1A1A1A",
+    ...Typography.h2,
     textAlign: "center",
   },
   content: {
@@ -243,14 +243,12 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1A1A1A",
+    ...Typography.h4,
     marginBottom: 8,
   },
   sectionDescription: {
-    fontSize: 14,
-    color: "#6C757D",
+    ...Typography.bodySmall,
+    color: Colors.dark.muted,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -261,53 +259,47 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   primaryButton: {
-    backgroundColor: "#339AF0",
+    backgroundColor: Colors.dark.tint,
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    ...Typography.button,
+    color: Colors.dark.background,
   },
   secondaryButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.dark.surface,
     borderWidth: 2,
-    borderColor: "#339AF0",
+    borderColor: Colors.dark.tint,
   },
   secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#339AF0",
+    ...Typography.button,
+    color: Colors.dark.tint,
   },
   dangerButton: {
-    backgroundColor: "#FF6B6B",
+    backgroundColor: Colors.dark.error,
   },
   dangerButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    ...Typography.button,
+    color: Colors.dark.background,
   },
   infoCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.dark.surface,
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#E9ECEF",
+    borderColor: Colors.dark.border,
   },
   infoTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1A1A1A",
+    ...Typography.h5,
     marginBottom: 8,
   },
   infoDescription: {
-    fontSize: 14,
-    color: "#6C757D",
+    ...Typography.bodySmall,
+    color: Colors.dark.muted,
     lineHeight: 20,
     marginBottom: 16,
   },
   infoFeatures: {
-    fontSize: 14,
-    color: "#495057",
+    ...Typography.bodySmall,
     lineHeight: 22,
   },
 });
