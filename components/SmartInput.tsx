@@ -11,6 +11,15 @@ import {
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { database } from "../database/database";
+import {
+  applyCommandInsert,
+  buildSegments,
+  CommandDef,
+  detectContext,
+  filterCommandList,
+  getCommands,
+  Segment,
+} from "../services/CommandEngine";
 import { ReminderService } from "../services/ReminderService";
 import { ParsedReminder, SmartTextParser } from "../services/SmartTextParser";
 
@@ -32,227 +41,32 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const [showCommands, setShowCommands] = useState(false);
   const [openBlock, setOpenBlock] = useState<string | null>(null);
 
-  const COMMANDS = useMemo(() => {
-    const list = [
-      {
-        cmd: "/date",
-        label: "date",
-        desc: "Definir data/hora: /date amanhã 18:00",
-        insert: "/date ",
-      },
-      {
-        cmd: "/note",
-        label: "note",
-        desc: "Título rápido da nota: /note Comprar leite",
-        insert: "/note ",
-      },
-      {
-        cmd: "/title",
-        label: "title",
-        desc: "Definir título: /title Reunião equipe",
-        insert: "/title ",
-      },
-      {
-        cmd: "/person",
-        label: "person",
-        desc: "Pessoa relacionada: /person João",
-        insert: "/person ",
-      },
-      {
-        cmd: "/people",
-        label: "people",
-        desc: "Bloco de pessoas: /people João; Maria /endpeople",
-        insert: "/people ",
-        type: "block",
-        end: "/endpeople",
-      },
-      {
-        cmd: "/location",
-        label: "location",
-        desc: "Local: /location escritório",
-        insert: "/location ",
-      },
-      {
-        cmd: "/locations",
-        label: "locations",
-        desc: "Bloco de locais: /locations escritório; casa /endlocations",
-        insert: "/locations ",
-        type: "block",
-        end: "/endlocations",
-      },
-      {
-        cmd: "/project",
-        label: "project",
-        desc: "Projeto: /project Novo App",
-        insert: "/project ",
-      },
-      {
-        cmd: "/priority",
-        label: "priority",
-        desc: "Prioridade: /priority !!! | !! | ! | 1..3",
-        insert: "/priority ",
-      },
-      {
-        cmd: "/tags",
-        label: "tags",
-        desc: "Tags: /tags urgente backend",
-        insert: "/tags ",
-        type: "block",
-        end: "/endtags",
-      },
-      {
-        cmd: "/help",
-        label: "help",
-        desc: "Lista de comandos",
-        insert: "/help",
-      },
-      // closing commands for suggestions
-      {
-        cmd: "/endtags",
-        label: "endtags",
-        desc: "Fechar bloco de tags",
-        insert: "/endtags",
-      },
-      {
-        cmd: "/endpeople",
-        label: "endpeople",
-        desc: "Fechar bloco de pessoas",
-        insert: "/endpeople",
-      },
-      {
-        cmd: "/endlocations",
-        label: "endlocations",
-        desc: "Fechar bloco de locais",
-        insert: "/endlocations",
-      },
-    ];
-    return list;
-  }, []);
+  // Importa engine única
+  const COMMANDS = useMemo<CommandDef[]>(() => getCommands(), []);
 
-  const filteredCommands = useMemo(() => {
-    const q = commandQuery ? commandQuery.toLowerCase() : "";
-    // Map of blocks -> closing command string
-    const closeMap: Record<string, string> = {
-      tags: "/endtags",
-      people: "/endpeople",
-      locations: "/endlocations",
-    };
-    // Se há um bloco aberto, só permitir o comando de fechamento (nenhum outro comando pode ser iniciado)
-    if (openBlock) {
-      const closingCmd = closeMap[openBlock];
-      const obj = COMMANDS.find((c) => c.cmd === closingCmd);
-      return obj ? [obj] : [];
-    }
-    // Fora de bloco: funcionamento normal de filtro
-    if (!q) {
-      return COMMANDS.filter((c) => !c.cmd.startsWith("/end"));
-    }
-    return COMMANDS.filter(
-      (c) =>
-        (c.cmd.startsWith(`/${q}`) || c.label.includes(q)) &&
-        !c.cmd.startsWith("/end")
-    );
-  }, [COMMANDS, commandQuery, openBlock]);
+  const filteredCommands = useMemo(
+    () => filterCommandList(COMMANDS, openBlock, commandQuery),
+    [COMMANDS, openBlock, commandQuery]
+  );
 
-  const detectCommandContext = useCallback((value: string) => {
-    const tokens = value.split(/\s+/).filter(Boolean);
-    const cursorToken = tokens.length ? tokens[tokens.length - 1] : "";
-
-    const blockStartMap: Record<string, string> = {
-      "/tags": "tags",
-      "/people": "people",
-      "/locations": "locations",
-    };
-    const blockEndMap: Record<string, string> = {
-      "/endtags": "tags",
-      "/endpeople": "people",
-      "/endlocations": "locations",
-    };
-
-    const stack: string[] = [];
-    for (const t of tokens) {
-      if (blockStartMap[t]) stack.push(blockStartMap[t]);
-      else if (blockEndMap[t]) {
-        const blk = blockEndMap[t];
-        for (let i = stack.length - 1; i >= 0; i--) {
-          if (stack[i] === blk) {
-            stack.splice(i, 1);
-            break;
-          }
-        }
-      }
-    }
-    const currentOpen = stack.length ? stack[stack.length - 1] : null;
-    setOpenBlock(currentOpen);
-
-    if (cursorToken.startsWith("/")) {
-      setShowCommands(true);
-      setCommandQuery(cursorToken.slice(1));
-    } else {
-      setShowCommands(false);
-      setCommandQuery(null);
-    }
+  const updateContext = useCallback((value: string) => {
+    const ctx = detectContext(value);
+    setOpenBlock(ctx.openBlock);
+    setShowCommands(ctx.showCommands);
+    setCommandQuery(ctx.query);
   }, []);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   // Highlight segments
-  interface Segment {
-    text: string;
-    kind: "command" | "commandArg" | "tag" | "normal";
-  }
-  const [segments, setSegments] = useState<Segment[]>([]);
-
-  const splitTags = useCallback(
-    (textChunk: string, baseKind: Segment["kind"] = "normal"): Segment[] => {
-      if (!textChunk) return [];
-      const tagRegex = /#[a-zA-Z\u00C0-\u017F0-9_]+/g; // inclui acentos
-      const segs: Segment[] = [];
-      let last = 0;
-      let m: RegExpExecArray | null;
-      while ((m = tagRegex.exec(textChunk)) !== null) {
-        if (m.index > last)
-          segs.push({ text: textChunk.slice(last, m.index), kind: baseKind });
-        segs.push({ text: m[0], kind: "tag" });
-        last = m.index + m[0].length;
-      }
-      if (last < textChunk.length)
-        segs.push({ text: textChunk.slice(last), kind: baseKind });
-      return segs;
-    },
+  const [segments, setSegments] = useState<ReturnType<typeof buildSegments>>(
     []
   );
 
-  const buildSegments = useCallback(
-    (value: string): Segment[] => {
-      if (!value) return [];
-
-      const result: Segment[] = [];
-      const regex = /(\/[a-zA-Z]+)([\s\S]*?)(?=(?:\s\/[a-zA-Z]+)|$)/g;
-      let lastIndex = 0;
-      let match: RegExpExecArray | null;
-      while ((match = regex.exec(value)) !== null) {
-        if (match.index > lastIndex) {
-          const normalChunk = value.slice(lastIndex, match.index);
-          result.push(...splitTags(normalChunk));
-        }
-        const commandToken = match[1];
-        const argText = match[2] || "";
-        result.push({ text: commandToken, kind: "command" });
-        if (argText) result.push(...splitTags(argText, "commandArg"));
-        lastIndex = match.index + commandToken.length + argText.length;
-      }
-      if (lastIndex < value.length) {
-        const tail = value.slice(lastIndex);
-        result.push(...splitTags(tail));
-      }
-      return result;
-    },
-    [splitTags]
-  );
+  // buildSegments já vem do engine único
 
   const handleTextChange = (newText: string) => {
     setText(newText);
-    detectCommandContext(newText);
+    updateContext(newText);
     setSegments(buildSegments(newText));
 
     if (newText.trim().length > 3) {
@@ -281,38 +95,16 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     }
   };
 
-  const handleSelectCommand = (command: {
-    cmd: string;
-    insert: string;
-    type?: string;
-    end?: string;
-  }) => {
-    // Substitui o token atual pelo comando escolhido
-    const parts = text.split(/\s+/);
-    if (parts.length === 0) {
-      setText(command.insert);
-    } else {
-      // Encontrar índice do ultimo token real (não vazio)
-      let idx = parts.length - 1;
-      // Remover tokens vazios no final
-      while (idx >= 0 && parts[idx] === "") idx--;
-      if (idx >= 0 && parts[idx].startsWith("/")) {
-        parts[idx] = command.insert.trimEnd();
-      } else {
-        parts.push(command.insert.trimEnd());
-      }
-      const newValue =
-        parts.filter(Boolean).join(" ") +
-        (command.insert.endsWith(" ") ? "" : " ");
-      setText(newValue);
-    }
+  const handleSelectCommand = (command: any) => {
+    const newValue = applyCommandInsert(text, command);
+    setText(newValue);
     setShowCommands(false);
     setCommandQuery(null);
   };
 
   useEffect(() => {
     setSegments(buildSegments(text));
-  }, [text, buildSegments]);
+  }, [text]);
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
@@ -467,7 +259,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
               <Text style={styles.placeholderText}>{placeholder}</Text>
             ) : (
               <Text style={styles.highlightText}>
-                {segments.map((s, idx) => (
+                {segments.map((s: Segment, idx: number) => (
                   <Text
                     key={idx}
                     style={
@@ -518,7 +310,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
       {showCommands && filteredCommands.length > 0 && (
         <View style={styles.commandPalette}>
-          {filteredCommands.map((c) => (
+          {filteredCommands.map((c: CommandDef) => (
             <TouchableOpacity
               key={c.cmd}
               style={styles.commandItem}
