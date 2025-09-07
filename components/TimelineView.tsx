@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
+import { useApp } from "../context/AppContext";
 import { database, Folder, Reminder } from "../database/database";
 
 interface ReminderWithFolder extends Reminder {
@@ -22,6 +23,7 @@ interface TimelineViewProps {
 }
 
 export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
+  const { isInitialized, error: initError, initializeApp } = useApp();
   const [reminders, setReminders] = useState<ReminderWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<
@@ -29,10 +31,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
   >("all");
 
   useEffect(() => {
-    loadReminders();
-  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isInitialized) {
+      loadReminders();
+    }
+  }, [filter, isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadReminders = async () => {
+    if (!isInitialized) return; // evita erro de inicialização
     setLoading(true);
     try {
       let data: ReminderWithFolder[] = [];
@@ -61,6 +66,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
   };
 
   const handleRefresh = () => {
+    if (!isInitialized) {
+      initializeApp();
+      return;
+    }
     loadReminders();
     onRefresh?.();
   };
@@ -196,6 +205,20 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
 
   return (
     <View style={styles.container}>
+      {!isInitialized && (
+        <View style={styles.initializingBox}>
+          <Text style={styles.initializingText}>
+            {initError
+              ? `Erro: ${initError}`
+              : "Inicializando banco de dados..."}
+          </Text>
+          {initError && (
+            <TouchableOpacity style={styles.retryBtn} onPress={initializeApp}>
+              <Text style={styles.retryBtnText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       {/* Filter Bar */}
       <View style={styles.filterBar}>
         {renderFilterButton("all", "All")}
@@ -209,6 +232,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
         data={reminders}
         renderItem={renderReminderCard}
         keyExtractor={(item) => item.id}
+        ListEmptyComponent={
+          isInitialized && !loading ? (
+            <Text style={styles.emptyText}>Nenhum lembrete encontrado.</Text>
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -260,6 +288,32 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
+  },
+  initializingBox: {
+    padding: 16,
+    alignItems: "center",
+  },
+  initializingText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    marginBottom: 8,
+  },
+  retryBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: Colors.dark.tint,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    ...Typography.caption,
+    color: Colors.dark.background,
+    fontWeight: "600",
+  },
+  emptyText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    textAlign: "center",
+    marginTop: 32,
   },
   card: {
     backgroundColor: Colors.dark.surface,

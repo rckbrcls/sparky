@@ -281,11 +281,52 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
       if (parsed.type === "note") {
         // Create quick note
+        // Handle folder commands (only for notes)
+        let chosenFolderId = parsed.folderId || "all";
+        const createFolderInfo = SmartTextParser.extractCreateFolderName(text);
+        const deleteFolderMatch = /\/deletefolder\s+([^\n]+)/i.exec(text);
+        try {
+          if (createFolderInfo.id) {
+            // Check if folder exists
+            const existing = await database.getAllFolders();
+            const exists = existing.some((f) => f.id === createFolderInfo.id);
+            if (!exists && createFolderInfo.id !== "all") {
+              await database.createFolder({
+                name: createFolderInfo.raw || createFolderInfo.id,
+                color: "#777777",
+                icon: "",
+                isDefault: false,
+                sortOrder: existing.length + 1,
+              });
+            }
+            // If no explicit /folder provided, use newly created folder
+            if (!parsed.folderId && createFolderInfo.id) {
+              chosenFolderId = createFolderInfo.id;
+            }
+          }
+          if (deleteFolderMatch) {
+            const raw = deleteFolderMatch[1].trim();
+            if (raw && raw.toLowerCase() !== 'all') {
+              const delId = raw
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .substring(0, 32);
+              if (delId) {
+                await database.deleteFolder(delId);
+                if (chosenFolderId === delId) chosenFolderId = 'all';
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Folder creation failed:", e);
+        }
+
         await database.createQuickNote({
           content: parsed.body
             ? `${parsed.title}\n${parsed.body}`
             : parsed.title,
-          folderId: parsed.folderId,
+          folderId: chosenFolderId,
           tags: JSON.stringify(parsed.tags),
           isPinned: parsed.priority === 3,
         });

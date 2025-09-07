@@ -48,10 +48,7 @@ export class SmartTextParser {
     /na\s+(academia|farmácia|escola|universidade)/gi,
   ];
 
-  private static readonly PROJECT_PATTERNS = [
-    /projeto\s+([a-záàâãéèêíìîóòôõúùû\s]+)/gi,
-    /project\s+([a-zA-Z\s]+)/gi,
-  ];
+  // PROJECT_PATTERNS removed
 
   private static readonly PRIORITY_PATTERNS = [
     { pattern: /(!{3}|urgent|urgente|importante)/gi, priority: 3 },
@@ -103,7 +100,7 @@ export class SmartTextParser {
     const dateInfo = this.extractDate(base);
     const person = this.extractPerson(base);
     const location = this.extractLocation(base);
-    const project = this.extractProject(base);
+    // project extraction removed
     const priority = this.extractPriority(base);
     const tags: string[] = []; // deprecated hashtag tags in markdown mode
 
@@ -116,22 +113,19 @@ export class SmartTextParser {
       for (const t of extra) if (!tags.includes(t)) tags.push(t);
     }
 
-    const folderId = this.determineFolderId(base);
+    let folderId = this.determineFolderId(base);
+    if (commands.folder) {
+      const folderName = commands.folder.trim();
+      if (folderName) folderId = this.normalizeFolderId(folderName);
+    }
+    // /createfolder does not assign automatically; it's for creation action only (handled elsewhere)
     const result: ParsedReminder = {
-      title: this.cleanTitle(
-        base,
-        timeInfo,
-        dateInfo,
-        person,
-        location,
-        project
-      ),
+      title: this.cleanTitle(base, timeInfo, dateInfo, person, location),
       type: "note",
       priority,
       tags,
       folderId,
       person,
-      project,
       location,
     };
 
@@ -167,10 +161,10 @@ export class SmartTextParser {
           continue; // skip the start marker line
         }
         // Remove inline single-line commands with their arguments (until next /command or EOL)
-        // Commands covered: /date /person /location /project /priority /title /note
+        // Commands covered: /date /person /location /priority /title /note /folders
         let processed = line
           .replace(
-            /\/(date|person|location|project|priority|title|note)\b[^/\n]*/gi,
+            /\/(date|person|location|priority|title|note|folders)\b[^\/\n]*/gi,
             ""
           )
           .trimEnd();
@@ -223,7 +217,7 @@ export class SmartTextParser {
     }
     if (commands.person) result.person = commands.person.trim();
     if (commands.location) result.location = commands.location.trim();
-    if (commands.project) result.project = commands.project.trim();
+    // project command removed
 
     if (commands.date) {
       const d = this.extractDate(commands.date);
@@ -419,14 +413,7 @@ export class SmartTextParser {
     for (const l of direct) if (input.toLowerCase().includes(l)) return l;
     return undefined;
   }
-  private static extractProject(input: string): string | undefined {
-    for (const p of this.PROJECT_PATTERNS) {
-      p.lastIndex = 0;
-      const m = p.exec(input);
-      if (m && m[1]) return m[1].trim();
-    }
-    return undefined;
-  }
+  // extractProject function removed
   private static extractPriority(input: string): 1 | 2 | 3 {
     for (const { pattern, priority } of this.PRIORITY_PATTERNS) {
       pattern.lastIndex = 0;
@@ -440,15 +427,15 @@ export class SmartTextParser {
     for (const [fid, keywords] of Object.entries(this.FOLDER_KEYWORDS)) {
       if (keywords.some((k) => lower.includes(k))) return fid;
     }
-    return "default";
+    return "all";
   }
   private static cleanTitle(
     input: string,
     _time: any,
     _date: any,
     person?: string,
-    location?: string,
-    project?: string
+    location?: string
+    // project parameter removed
   ): string {
     let cleaned = input;
     for (const p of this.TIME_PATTERNS) cleaned = cleaned.replace(p, "");
@@ -457,8 +444,7 @@ export class SmartTextParser {
       for (const p of this.PERSON_PATTERNS) cleaned = cleaned.replace(p, "");
     if (location)
       for (const p of this.LOCATION_PATTERNS) cleaned = cleaned.replace(p, "");
-    if (project)
-      for (const p of this.PROJECT_PATTERNS) cleaned = cleaned.replace(p, "");
+    // project removal skipped
     for (const { pattern } of this.PRIORITY_PATTERNS)
       cleaned = cleaned.replace(pattern, "");
     cleaned = cleaned.replace(/\s+/g, " ").trim();
@@ -479,5 +465,23 @@ export class SmartTextParser {
         timeInfo.minute
       );
     return base;
+  }
+
+  private static normalizeFolderId(name: string): string {
+    return (
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .substring(0, 32) || "all"
+    );
+  }
+
+  static extractCreateFolderName(input: string): { raw?: string; id?: string } {
+    const m = /\/createfolder\s+([^\n]+)/i.exec(input);
+    if (!m) return {};
+    const raw = m[1].trim();
+    if (!raw) return {};
+    return { raw, id: this.normalizeFolderId(raw) };
   }
 }

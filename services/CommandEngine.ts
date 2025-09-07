@@ -71,10 +71,22 @@ export function getCommands(): CommandDef[] {
       end: "/endlocations",
     },
     {
-      cmd: "/project",
-      label: "project",
-      desc: "Projeto: /project Novo App",
-      insert: "/project ",
+      cmd: "/createfolder",
+      label: "createfolder",
+      desc: "Criar pasta: /createfolder nome-da-pasta",
+      insert: "/createfolder ",
+    },
+    {
+      cmd: "/folder",
+      label: "folder",
+      desc: "Atribuir nota/lembrete a pasta: /folder nome",
+      insert: "/folder ",
+    },
+    {
+      cmd: "/deletefolder",
+      label: "deletefolder",
+      desc: "Excluir pasta: /deletefolder nome",
+      insert: "/deletefolder ",
     },
     {
       cmd: "/priority",

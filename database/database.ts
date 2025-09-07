@@ -229,8 +229,10 @@ class Database {
       CREATE INDEX IF NOT EXISTS idx_quick_notes_content ON quick_notes (content);
     `);
 
-    // Insert default folders
-    await this.insertDefaultFolders();
+  // Migrate legacy default folders (default, work, personal, health) into 'all'
+  await this.migrateLegacyFolders();
+  // Ensure minimal default folder
+  await this.insertDefaultFolders();
   }
 
   async getAllReminders(): Promise<Reminder[]> {
@@ -618,61 +620,43 @@ class Database {
 
   private async insertDefaultFolders(): Promise<void> {
     if (!this.db) throw new Error("Database not initialized");
+    const now = new Date().toISOString();
+    await this.db.runAsync(
+      `INSERT OR IGNORE INTO folders (id, name, color, icon, isDefault, sortOrder, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ["all", "All", "#777777", "", 1, 0, now, now]
+    );
+  }
 
-    const defaultFolders = [
-      {
-        id: "default",
-        name: "General",
-        color: "#00D2FF",
-        icon: "📋",
-        isDefault: 1,
-        sortOrder: 0,
-      },
-      {
-        id: "work",
-        name: "Work",
-        color: "#F85149",
-        icon: "💼",
-        isDefault: 0,
-        sortOrder: 1,
-      },
-      {
-        id: "personal",
-        name: "Personal",
-        color: "#3FB950",
-        icon: "🏠",
-        isDefault: 0,
-        sortOrder: 2,
-      },
-      {
-        id: "health",
-        name: "Health",
-        color: "#D29922",
-        icon: "🏥",
-        isDefault: 0,
-        sortOrder: 3,
-      },
-    ];
-
-    for (const folder of defaultFolders) {
-      const now = new Date().toISOString();
-      await this.db.runAsync(
-        `
-        INSERT OR IGNORE INTO folders (id, name, color, icon, isDefault, sortOrder, createdAt, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-        [
-          folder.id,
-          folder.name,
-          folder.color,
-          folder.icon,
-          folder.isDefault,
-          folder.sortOrder,
-          now,
-          now,
-        ]
-      );
-    }
+  private async migrateLegacyFolders(): Promise<void> {
+    if (!this.db) throw new Error("Database not initialized");
+    // Check if legacy folders exist
+    const legacyIds = ["default", "work", "personal", "health"];
+    const existing = (await this.db.getAllAsync(
+      `SELECT id FROM folders WHERE id IN (${legacyIds.map(() => '?').join(',')})`
+    , legacyIds)) as { id: string }[];
+    if (!existing.length) return;
+    // Ensure 'all' exists early
+    const now = new Date().toISOString();
+    await this.db.runAsync(
+      `INSERT OR IGNORE INTO folders (id, name, color, icon, isDefault, sortOrder, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ["all", "All", "#777777", "", 1, 0, now, now]
+    );
+    // Repoint any reminders / notes referencing legacy folders to 'all'
+    await this.db.runAsync(
+      `UPDATE reminders SET folderId = 'all' WHERE folderId IN (${legacyIds.map(() => '?').join(',')})`,
+      legacyIds
+    );
+    await this.db.runAsync(
+      `UPDATE quick_notes SET folderId = 'all' WHERE folderId IN (${legacyIds.map(() => '?').join(',')})`,
+      legacyIds
+    );
+    // Delete legacy folders
+    await this.db.runAsync(
+      `DELETE FROM folders WHERE id IN (${legacyIds.map(() => '?').join(',')})`,
+      legacyIds
+    );
   }
 
   // FOLDER METHODS
@@ -732,11 +716,11 @@ class Database {
     // Move reminders to default folder before deleting
     await this.db.runAsync(
       "UPDATE reminders SET folderId = ? WHERE folderId = ?",
-      ["default", id]
+      ["all", id]
     );
     await this.db.runAsync(
       "UPDATE quick_notes SET folderId = ? WHERE folderId = ?",
-      ["default", id]
+      ["all", id]
     );
     await this.db.runAsync(
       "DELETE FROM folders WHERE id = ? AND isDefault = 0",

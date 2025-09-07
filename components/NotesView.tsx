@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
+import { useApp } from "../context/AppContext";
 import { database, Folder, QuickNote } from "../database/database";
 
 interface QuickNoteWithFolder extends QuickNote {
@@ -22,6 +23,7 @@ interface NotesViewProps {
 }
 
 export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
+  const { isInitialized, error: initError, initializeApp } = useApp();
   const [notes, setNotes] = useState<QuickNoteWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,15 +31,20 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
   const [folders, setFolders] = useState<Folder[]>([]);
 
   useEffect(() => {
-    loadFolders();
-    loadNotes();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isInitialized) {
+      loadFolders();
+      loadNotes();
+    }
+  }, [isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    loadNotes();
-  }, [searchTerm, selectedFolder]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isInitialized) {
+      loadNotes();
+    }
+  }, [searchTerm, selectedFolder, isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadFolders = async () => {
+    if (!isInitialized) return;
     try {
       const folderData = await database.getAllFolders();
       setFolders(folderData);
@@ -47,6 +54,7 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
   };
 
   const loadNotes = async () => {
+    if (!isInitialized) return;
     setLoading(true);
     try {
       let noteData: QuickNote[] = [];
@@ -79,6 +87,10 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
   };
 
   const handleRefresh = () => {
+    if (!isInitialized) {
+      initializeApp();
+      return;
+    }
     loadNotes();
     onRefresh?.();
   };
@@ -124,53 +136,54 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
     }
   };
 
-  const renderNoteCard = ({ item }: { item: QuickNoteWithFolder }) => (
-    <TouchableOpacity style={[styles.card, item.isPinned && styles.pinnedCard]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardInfo}>
-          {item.isPinned && <Text style={styles.pinIcon}>📌</Text>}
-          {item.folder && (
-            <View
-              style={[
-                styles.folderBadge,
-                { backgroundColor: item.folder.color },
-              ]}
+  const renderNoteCard = ({ item }: { item: QuickNoteWithFolder }) => {
+    const pinned = !!item.isPinned; // normaliza possível 0/1 vindo do DB
+    return (
+      <TouchableOpacity style={[styles.card, pinned && styles.pinnedCard]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardInfo}>
+            {pinned && <Text style={styles.pinIcon}>📌</Text>}
+            {item.folder && (
+              <View
+                style={[
+                  styles.folderBadge,
+                  { backgroundColor: item.folder.color },
+                ]}
+              />
+            )}
+          </View>
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleTogglePin(item)}
             >
-              <Text style={styles.folderIcon}>{item.folder.icon}</Text>
-            </View>
+              <Text style={styles.actionIcon}>{pinned ? "📌" : "📍"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleDeleteNote(item.id)}
+            >
+              <Text style={styles.actionIcon}>🗑️</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <Text style={styles.noteContent}>{item.content}</Text>
+
+        <View style={styles.cardFooter}>
+          <Text style={styles.noteDate}>
+            {new Date(item.updatedAt).toLocaleDateString()}
+          </Text>
+          {formatTags(item.tags) && (
+            <Text style={styles.noteTags}>{formatTags(item.tags)}</Text>
           )}
         </View>
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleTogglePin(item)}
-          >
-            <Text style={styles.actionIcon}>{item.isPinned ? "📌" : "📍"}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleDeleteNote(item.id)}
-          >
-            <Text style={styles.actionIcon}>🗑️</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <Text style={styles.noteContent}>{item.content}</Text>
-
-      <View style={styles.cardFooter}>
-        <Text style={styles.noteDate}>
-          {new Date(item.updatedAt).toLocaleDateString()}
-        </Text>
-        {formatTags(item.tags) && (
-          <Text style={styles.noteTags}>{formatTags(item.tags)}</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderFolderFilter = (
-    folder: Folder | { id: string; name: string; icon: string }
+    folder: Folder | { id: string; name: string; icon?: string }
   ) => (
     <TouchableOpacity
       key={folder.id}
@@ -180,7 +193,6 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
       ]}
       onPress={() => setSelectedFolder(folder.id)}
     >
-      <Text style={styles.filterIcon}>{folder.icon}</Text>
       <Text
         style={[
           styles.filterButtonText,
@@ -206,6 +218,20 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
 
   return (
     <View style={styles.container}>
+      {!isInitialized && (
+        <View style={styles.initializingBox}>
+          <Text style={styles.initializingText}>
+            {initError
+              ? `Erro: ${initError}`
+              : "Inicializando banco de dados..."}
+          </Text>
+          {initError && (
+            <TouchableOpacity style={styles.retryBtn} onPress={initializeApp}>
+              <Text style={styles.retryBtnText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -221,7 +247,7 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
       <View style={styles.filterContainer}>
         <FlatList
           horizontal
-          data={[{ id: "all", name: "All", icon: "📋" }, ...folders]}
+          data={folders.some(f => f.id === 'all') ? folders : [{ id: 'all', name: 'All' }, ...folders]}
           renderItem={({ item }) => renderFolderFilter(item)}
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
@@ -237,6 +263,11 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
           data={notes}
           renderItem={renderNoteCard}
           keyExtractor={(item) => item.id}
+          ListEmptyComponent={
+            isInitialized && !loading ? (
+              <Text style={styles.emptyListText}>Nenhuma nota.</Text>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={loading}
@@ -347,9 +378,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  folderIcon: {
-    fontSize: 12,
-  },
   cardActions: {
     flexDirection: "row",
   },
@@ -403,5 +431,31 @@ const styles = StyleSheet.create({
     color: Colors.dark.muted,
     textAlign: "center",
     lineHeight: 24,
+  },
+  initializingBox: {
+    padding: 16,
+    alignItems: "center",
+  },
+  initializingText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    marginBottom: 8,
+  },
+  retryBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: Colors.dark.tint,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    ...Typography.caption,
+    color: Colors.dark.background,
+    fontWeight: "600",
+  },
+  emptyListText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    textAlign: "center",
+    marginTop: 24,
   },
 });
