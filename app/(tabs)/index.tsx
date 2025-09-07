@@ -43,7 +43,7 @@ export default function HomeScreen() {
       await NotificationService.initialize();
       await loadReminders();
     } catch (error) {
-      Alert.alert("Erro", "Erro ao inicializar o aplicativo");
+      Alert.alert("Error", "Error initializing the application");
       console.error("Initialization error:", error);
     }
   };
@@ -73,7 +73,7 @@ export default function HomeScreen() {
           break;
       }
     } catch (error) {
-      Alert.alert("Erro", "Erro ao carregar lembretes");
+      Alert.alert("Error", "Error loading reminders");
       console.error("Load reminders error:", error);
     }
   };
@@ -92,13 +92,13 @@ export default function HomeScreen() {
   const getFilterTitle = () => {
     switch (filter) {
       case "today":
-        return "Hoje";
+        return "Today";
       case "overdue":
-        return "Atrasados";
+        return "Overdue";
       case "upcoming":
-        return "Próximos";
+        return "Upcoming";
       default:
-        return "Lembretes";
+        return "Reminders";
     }
   };
 
@@ -152,7 +152,7 @@ export default function HomeScreen() {
               filter === "today" && styles.filterTextActive,
             ]}
           >
-            Hoje ({todayReminders.length})
+            Today ({todayReminders.length})
           </Text>
         </TouchableOpacity>
 
@@ -169,7 +169,7 @@ export default function HomeScreen() {
               filter === "overdue" && styles.filterTextActive,
             ]}
           >
-            Atrasados ({overdueReminders.length})
+            Overdue ({overdueReminders.length})
           </Text>
         </TouchableOpacity>
 
@@ -186,7 +186,7 @@ export default function HomeScreen() {
               filter === "upcoming" && styles.filterTextActive,
             ]}
           >
-            Próximos
+            Upcoming
           </Text>
         </TouchableOpacity>
       </View>
@@ -200,16 +200,16 @@ export default function HomeScreen() {
         {reminders.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
-              {filter === "today" && "Nenhum lembrete para hoje"}
-              {filter === "overdue" && "Nenhum lembrete atrasado"}
-              {filter === "upcoming" && "Nenhum lembrete próximo"}
+              {filter === "today" && "No reminders for today"}
+              {filter === "overdue" && "No overdue reminders"}
+              {filter === "upcoming" && "No upcoming reminders"}
             </Text>
             <TouchableOpacity
               style={styles.emptyStateButton}
               onPress={() => setShowForm(true)}
             >
               <Text style={styles.emptyStateButtonText}>
-                Criar Primeiro Lembrete
+                Create First Reminder
               </Text>
             </TouchableOpacity>
           </View>

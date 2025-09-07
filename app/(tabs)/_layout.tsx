@@ -30,7 +30,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Lembretes",
+          title: "Reminders",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="list.bullet" color={color} />
           ),
@@ -39,7 +39,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Configurações",
+          title: "Settings",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="gear" color={color} />
           ),

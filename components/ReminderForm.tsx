@@ -30,7 +30,7 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Erro', 'O título é obrigatório');
+      Alert.alert('Error', 'Title is required');
       return;
     }
 
@@ -48,7 +48,7 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
 
       onSave();
     } catch {
-      Alert.alert('Erro', 'Não foi possível salvar o lembrete');
+      Alert.alert('Error', 'Unable to save reminder');
     }
   };
 
@@ -68,28 +68,28 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Novo Lembrete</Text>
+        <Text style={styles.headerTitle}>New Reminder</Text>
       </View>
 
       <View style={styles.form}>
         <View style={styles.field}>
-          <Text style={styles.label}>Título *</Text>
+          <Text style={styles.label}>Title *</Text>
           <TextInput
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder="Digite o título do lembrete"
+            placeholder="Enter reminder title"
             maxLength={100}
           />
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Notas</Text>
+          <Text style={styles.label}>Notes</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Adicione mais detalhes (opcional)"
+            placeholder="Add more details (optional)"
             multiline
             numberOfLines={4}
             maxLength={500}
@@ -97,41 +97,41 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Pessoa</Text>
+          <Text style={styles.label}>Person</Text>
           <TextInput
             style={styles.input}
             value={person}
             onChangeText={setPerson}
-            placeholder="Pessoa relacionada (opcional)"
+            placeholder="Related person (optional)"
             maxLength={50}
           />
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Projeto</Text>
+          <Text style={styles.label}>Project</Text>
           <TextInput
             style={styles.input}
             value={project}
             onChangeText={setProject}
-            placeholder="Projeto relacionado (opcional)"
+            placeholder="Related project (optional)"
             maxLength={50}
           />
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Local</Text>
+          <Text style={styles.label}>Location</Text>
           <TextInput
             style={styles.input}
             value={location}
             onChangeText={setLocation}
-            placeholder="Local relacionado (opcional)"
+            placeholder="Related location (optional)"
             maxLength={100}
           />
         </View>
 
         <View style={styles.field}>
           <View style={styles.switchRow}>
-            <Text style={styles.label}>Lembrete recorrente</Text>
+            <Text style={styles.label}>Recurring reminder</Text>
             <Switch
               value={isRecurring}
               onValueChange={setIsRecurring}
@@ -143,13 +143,13 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
 
         {!isRecurring && (
           <View style={styles.field}>
-            <Text style={styles.label}>Data e Hora</Text>
+            <Text style={styles.label}>Date and Time</Text>
             <TouchableOpacity
               style={styles.dateButton}
               onPress={() => setShowDatePicker(true)}
             >
               <Text style={styles.dateButtonText}>
-                {fireAt ? formatDate(fireAt) : 'Selecionar data e hora'}
+                {fireAt ? formatDate(fireAt) : 'Select date and time'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -171,11 +171,11 @@ export const ReminderForm: React.FC<ReminderFormProps> = ({ onSave, onCancel }) 
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Salvar</Text>
+            <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
       </View>

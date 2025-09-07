@@ -21,7 +21,7 @@ export default function SettingsScreen() {
       setIsExporting(true);
       const jsonData = await ReminderService.exportData();
 
-      const fileName = `lembretes_backup_${
+      const fileName = `reminders_backup_${
         new Date().toISOString().split("T")[0]
       }.json`;
       const fileUri = FileSystem.documentDirectory + fileName;
@@ -30,12 +30,12 @@ export default function SettingsScreen() {
 
       await Share.share({
         url: fileUri,
-        title: "Exportar Lembretes",
+        title: "Export Reminders",
       });
 
-      Alert.alert("Sucesso", "Dados exportados com sucesso!");
+      Alert.alert("Success", "Data exported successfully!");
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível exportar os dados");
+      Alert.alert("Error", "Unable to export data");
       console.error("Export error:", error);
     } finally {
       setIsExporting(false);
@@ -47,7 +47,7 @@ export default function SettingsScreen() {
       setIsExporting(true);
       const csvData = await ReminderService.exportCSV();
 
-      const fileName = `lembretes_${
+      const fileName = `reminders_${
         new Date().toISOString().split("T")[0]
       }.csv`;
       const fileUri = FileSystem.documentDirectory + fileName;
@@ -56,12 +56,12 @@ export default function SettingsScreen() {
 
       await Share.share({
         url: fileUri,
-        title: "Exportar Lembretes CSV",
+        title: "Export Reminders CSV",
       });
 
-      Alert.alert("Sucesso", "Dados exportados em CSV com sucesso!");
+      Alert.alert("Success", "Data exported as CSV successfully!");
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível exportar os dados em CSV");
+      Alert.alert("Error", "Unable to export data as CSV");
       console.error("Export CSV error:", error);
     } finally {
       setIsExporting(false);
@@ -83,19 +83,19 @@ export default function SettingsScreen() {
         );
 
         Alert.alert(
-          "Confirmar Importação",
-          "Isso irá substituir todos os seus lembretes atuais. Tem certeza?",
+          "Confirm Import",
+          "This will replace all your current reminders. Are you sure?",
           [
-            { text: "Cancelar", style: "cancel" },
+            { text: "Cancel", style: "cancel" },
             {
-              text: "Importar",
+              text: "Import",
               style: "destructive",
               onPress: async () => {
                 try {
                   await ReminderService.importData(fileContent);
-                  Alert.alert("Sucesso", "Dados importados com sucesso!");
+                  Alert.alert("Success", "Data imported successfully!");
                 } catch {
-                  Alert.alert("Erro", "Arquivo inválido ou corrompido");
+                  Alert.alert("Error", "Invalid or corrupted file");
                 }
               },
             },
@@ -103,7 +103,7 @@ export default function SettingsScreen() {
         );
       }
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível importar os dados");
+      Alert.alert("Error", "Unable to import data");
       console.error("Import error:", error);
     } finally {
       setIsImporting(false);
@@ -112,19 +112,19 @@ export default function SettingsScreen() {
 
   const handleClearAllData = () => {
     Alert.alert(
-      "Apagar Todos os Dados",
-      "Esta ação não pode ser desfeita. Todos os seus lembretes serão perdidos permanentemente.",
+      "Delete All Data",
+      "This action cannot be undone. All your reminders will be permanently lost.",
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: "Cancel", style: "cancel" },
         {
-          text: "Apagar Tudo",
+          text: "Delete All",
           style: "destructive",
           onPress: async () => {
             try {
               // Here you would implement a method to clear all data
-              Alert.alert("Sucesso", "Todos os dados foram apagados");
+              Alert.alert("Success", "All data has been deleted");
             } catch {
-              Alert.alert("Erro", "Não foi possível apagar os dados");
+              Alert.alert("Error", "Unable to delete data");
             }
           },
         },
@@ -135,14 +135,14 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Configurações</Text>
+        <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
       <View style={styles.content}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Exportar Dados</Text>
+          <Text style={styles.sectionTitle}>Export Data</Text>
           <Text style={styles.sectionDescription}>
-            Faça backup dos seus lembretes para não perdê-los
+            Back up your reminders so you don&apos;t lose them
           </Text>
 
           <TouchableOpacity
@@ -151,7 +151,7 @@ export default function SettingsScreen() {
             disabled={isExporting}
           >
             <Text style={styles.primaryButtonText}>
-              {isExporting ? "Exportando..." : "Exportar como JSON"}
+              {isExporting ? "Exporting..." : "Export as JSON"}
             </Text>
           </TouchableOpacity>
 
@@ -161,15 +161,15 @@ export default function SettingsScreen() {
             disabled={isExporting}
           >
             <Text style={styles.secondaryButtonText}>
-              {isExporting ? "Exportando..." : "Exportar como CSV"}
+              {isExporting ? "Exporting..." : "Export as CSV"}
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Importar Dados</Text>
+          <Text style={styles.sectionTitle}>Import Data</Text>
           <Text style={styles.sectionDescription}>
-            Restaure seus lembretes de um backup anterior
+            Restore your reminders from a previous backup
           </Text>
 
           <TouchableOpacity
@@ -178,39 +178,38 @@ export default function SettingsScreen() {
             disabled={isImporting}
           >
             <Text style={styles.primaryButtonText}>
-              {isImporting ? "Importando..." : "Importar JSON"}
+              {isImporting ? "Importing..." : "Import JSON"}
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sobre o App</Text>
+          <Text style={styles.sectionTitle}>About the App</Text>
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>I Can&apos;t Miss</Text>
             <Text style={styles.infoDescription}>
-              Um app de lembretes inteligente que te ajuda a nunca mais esquecer
-              das coisas importantes.
+              A smart reminder app that helps you never forget important things
+              again.
             </Text>
             <Text style={styles.infoFeatures}>
-              • Lembretes únicos e recorrentes{"\n"}• Sistema de soneca
-              inteligente{"\n"}• Revisão espaçada para tarefas importantes{"\n"}
-              • Datas importantes com notificações antecipadas{"\n"}• Backup e
-              sincronização dos dados
+              • One-time and recurring reminders{"\n"}• Smart snooze system
+              {"\n"}• Spaced review for important tasks{"\n"}• Important dates
+              with advance notifications{"\n"}• Data backup and synchronization
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Zona de Perigo</Text>
+          <Text style={styles.sectionTitle}>Danger Zone</Text>
           <Text style={styles.sectionDescription}>
-            Ações irreversíveis que afetam todos os seus dados
+            Irreversible actions that affect all your data
           </Text>
 
           <TouchableOpacity
             style={[styles.button, styles.dangerButton]}
             onPress={handleClearAllData}
           >
-            <Text style={styles.dangerButtonText}>Apagar Todos os Dados</Text>
+            <Text style={styles.dangerButtonText}>Delete All Data</Text>
           </TouchableOpacity>
         </View>
       </View>

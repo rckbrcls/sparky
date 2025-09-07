@@ -35,7 +35,7 @@ export class ReminderService {
     if (nextFireAt) {
       const notificationId = await NotificationService.scheduleNotification(
         reminderData.title,
-        reminderData.notes || 'Lembrete',
+        reminderData.notes || 'Reminder',
         nextFireAt,
         `reminder_${reminderId}`
       );
@@ -91,7 +91,7 @@ export class ReminderService {
     if (nextFireAt) {
       const notificationId = await NotificationService.scheduleNotification(
         updates.title || reminder.title,
-        updates.notes || reminder.notes || 'Lembrete',
+        updates.notes || reminder.notes || 'Reminder',
         nextFireAt,
         `reminder_${reminderId}`
       );
@@ -119,7 +119,7 @@ export class ReminderService {
       if (nextFireAt) {
         const notificationId = await NotificationService.scheduleNotification(
           reminder.title,
-          reminder.notes || 'Lembrete',
+          reminder.notes || 'Reminder',
           nextFireAt,
           `reminder_${reminderId}`
         );
@@ -192,7 +192,7 @@ export class ReminderService {
     // Schedule new notification
     const notificationId = await NotificationService.scheduleNotification(
       reminder.title,
-      reminder.notes || 'Lembrete',
+      reminder.notes || 'Reminder',
       newFireAt,
       `reminder_${reminderId}`
     );
@@ -223,7 +223,7 @@ export class ReminderService {
     // Schedule new notification
     const notificationId = await NotificationService.scheduleNotification(
       reminder.title,
-      reminder.notes || 'Lembrete',
+      reminder.notes || 'Reminder',
       newFireAt,
       `reminder_${reminderId}`
     );
@@ -267,7 +267,7 @@ export class ReminderService {
     // Schedule new notification
     const notificationId = await NotificationService.scheduleNotification(
       reminder.title,
-      reminder.notes || 'Lembrete',
+      reminder.notes || 'Reminder',
       newFireAt,
       `reminder_${reminderId}`
     );
@@ -400,7 +400,7 @@ export class ReminderService {
 
         await NotificationService.scheduleNotification(
           title,
-          dateData.description || `Lembrete de ${dateData.type}`,
+          dateData.description || `${dateData.type} reminder`,
           reminderDate,
           `important_date_${dateId}_${leadTimeDays}`
         );
@@ -439,8 +439,8 @@ export class ReminderService {
     const reminders = await database.getAllReminders();
     
     const headers = [
-      'ID', 'Título', 'Notas', 'Pessoa', 'Projeto', 'Local', 'Tipo', 
-      'Próximo Disparo', 'Status', 'Criado em', 'Atualizado em'
+      'ID', 'Title', 'Notes', 'Person', 'Project', 'Location', 'Type', 
+      'Next Fire At', 'Status', 'Created At', 'Updated At'
     ];
     
     const rows = reminders.map(reminder => [
@@ -487,7 +487,7 @@ export class ReminderService {
         if (fireAt > now) {
           const notificationId = await NotificationService.scheduleNotification(
             reminder.title,
-            reminder.notes || 'Lembrete',
+            reminder.notes || 'Reminder',
             fireAt,
             `reminder_${reminder.id}`
           );

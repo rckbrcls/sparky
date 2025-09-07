@@ -29,26 +29,26 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ reminder, onRefresh 
   const getStatusText = () => {
     switch (reminder.status) {
       case 'overdue':
-        return 'Atrasado';
+        return 'Overdue';
       case 'completed':
-        return 'Concluído';
+        return 'Completed';
       case 'active':
-        return 'Ativo';
+        return 'Active';
       case 'archived':
-        return 'Arquivado';
+        return 'Archived';
       default:
-        return 'Ativo';
+        return 'Active';
     }
   };
 
   const formatFireDate = () => {
-    if (!reminder.nextFireAt) return 'Sem data';
+    if (!reminder.nextFireAt) return 'No date';
     
     try {
       const date = parseISO(reminder.nextFireAt);
       return format(date, 'dd/MM/yyyy HH:mm', { locale: ptBR });
     } catch {
-      return 'Data inválida';
+      return 'Invalid date';
     }
   };
 
@@ -57,7 +57,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ reminder, onRefresh 
       await ReminderService.completeReminder(reminder.id);
       onRefresh();
     } catch {
-      Alert.alert('Erro', 'Não foi possível marcar como concluído');
+      Alert.alert('Error', 'Unable to mark as completed');
     }
   };
 
@@ -66,7 +66,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ reminder, onRefresh 
       await ReminderService.snoozeReminder(reminder.id);
       onRefresh();
     } catch {
-      Alert.alert('Erro', 'Não foi possível adiar o lembrete');
+      Alert.alert('Error', 'Unable to snooze reminder');
     }
   };
 
@@ -75,25 +75,25 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ reminder, onRefresh 
       await ReminderService.remindLater(reminder.id);
       onRefresh();
     } catch {
-      Alert.alert('Erro', 'Não foi possível reagendar o lembrete');
+      Alert.alert('Error', 'Unable to reschedule reminder');
     }
   };
 
   const handleArchive = async () => {
     Alert.alert(
-      'Arquivar Lembrete',
-      'Tem certeza que deseja arquivar este lembrete?',
+      'Archive Reminder',
+      'Are you sure you want to archive this reminder?',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Arquivar',
+          text: 'Archive',
           style: 'destructive',
           onPress: async () => {
             try {
               await ReminderService.archiveReminder(reminder.id);
               onRefresh();
             } catch {
-              Alert.alert('Erro', 'Não foi possível arquivar o lembrete');
+              Alert.alert('Error', 'Unable to archive reminder');
             }
           },
         },
@@ -102,20 +102,20 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ reminder, onRefresh 
   };
 
   const showActionSheet = () => {
-    const options: Array<{text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive'}> = [];
+    const options: {text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive'}[] = [];
     
     if (reminder.status === 'active' || reminder.status === 'overdue') {
       options.push(
-        { text: 'Marcar como Concluído', onPress: handleComplete },
-        { text: 'Soneca', onPress: handleSnooze },
-        { text: 'Lembrar Depois', onPress: handleRemindLater },
-        { text: 'Arquivar', onPress: handleArchive, style: 'destructive' }
+        { text: 'Mark as Completed', onPress: handleComplete },
+        { text: 'Snooze', onPress: handleSnooze },
+        { text: 'Remind Later', onPress: handleRemindLater },
+        { text: 'Archive', onPress: handleArchive, style: 'destructive' }
       );
     }
     
-    options.push({ text: 'Cancelar', style: 'cancel' });
+    options.push({ text: 'Cancel', style: 'cancel' });
 
-    Alert.alert('Ações', 'O que você gostaria de fazer?', options);
+    Alert.alert('Actions', 'What would you like to do?', options);
   };
 
   return (
@@ -154,13 +154,13 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({ reminder, onRefresh 
 const getTypeText = (type: string) => {
   switch (type) {
     case 'once':
-      return 'Única';
+      return 'One-time';
     case 'recurring':
-      return 'Recorrente';
+      return 'Recurring';
     case 'by_person_project':
-      return 'Por Pessoa/Projeto';
+      return 'By Person/Project';
     case 'by_location':
-      return 'Por Localização';
+      return 'By Location';
     default:
       return type;
   }

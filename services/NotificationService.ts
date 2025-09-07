@@ -23,7 +23,7 @@ export class NotificationService {
     // Configure notification channel for Android
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('reminders', {
-        name: 'Lembretes',
+        name: 'Reminders',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
