@@ -30,9 +30,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const [preview, setPreview] = useState<ParsedReminder | null>(null);
   const [commandQuery, setCommandQuery] = useState<string | null>(null);
   const [showCommands, setShowCommands] = useState(false);
-  const [forcedSuggestions, setForcedSuggestions] = useState<any[] | null>(
-    null
-  );
+  const [openBlock, setOpenBlock] = useState<string | null>(null);
 
   const COMMANDS = useMemo(() => {
     const list = [
@@ -132,47 +130,69 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   }, []);
 
   const filteredCommands = useMemo(() => {
-    if (forcedSuggestions) return forcedSuggestions;
-    if (!commandQuery) return COMMANDS.filter((c) => !c.cmd.startsWith("/end")); // hide end* by default unless queried
-    const q = commandQuery.toLowerCase();
-    const base = COMMANDS.filter(
-      (c) => c.cmd.startsWith(`/${q}`) || c.label.includes(q)
+    const q = commandQuery ? commandQuery.toLowerCase() : "";
+    // Map of blocks -> closing command string
+    const closeMap: Record<string, string> = {
+      tags: "/endtags",
+      people: "/endpeople",
+      locations: "/endlocations",
+    };
+    // Se há um bloco aberto, só permitir o comando de fechamento (nenhum outro comando pode ser iniciado)
+    if (openBlock) {
+      const closingCmd = closeMap[openBlock];
+      const obj = COMMANDS.find((c) => c.cmd === closingCmd);
+      return obj ? [obj] : [];
+    }
+    // Fora de bloco: funcionamento normal de filtro
+    if (!q) {
+      return COMMANDS.filter((c) => !c.cmd.startsWith("/end"));
+    }
+    return COMMANDS.filter(
+      (c) =>
+        (c.cmd.startsWith(`/${q}`) || c.label.includes(q)) &&
+        !c.cmd.startsWith("/end")
     );
-    // ensure closing commands show on explicit query /end
-    return base;
-  }, [COMMANDS, commandQuery, forcedSuggestions]);
+  }, [COMMANDS, commandQuery, openBlock]);
 
-  const detectCommandContext = useCallback(
-    (value: string) => {
-      const tokens = value.split(/\s+/).filter(Boolean);
-      const cursorToken = tokens.length ? tokens[tokens.length - 1] : "";
-      const BLOCK_STARTS: Record<string, string> = {
-        "/tags": "/endtags",
-        "/people": "/endpeople",
-        "/locations": "/endlocations",
-      };
-      if (cursorToken.startsWith("/")) {
-        setShowCommands(true);
-        setCommandQuery(cursorToken.slice(1));
-        if (BLOCK_STARTS[cursorToken]) {
-          // show only closing command suggestion
-          const endCmd = BLOCK_STARTS[cursorToken];
-          const found = COMMANDS.find((c) => c.cmd === endCmd);
-          if (found) setForcedSuggestions([found]);
-          else setForcedSuggestions(null);
-        } else if (cursorToken.startsWith("/end")) {
-          setForcedSuggestions(null);
-        } else {
-          setForcedSuggestions(null);
+  const detectCommandContext = useCallback((value: string) => {
+    const tokens = value.split(/\s+/).filter(Boolean);
+    const cursorToken = tokens.length ? tokens[tokens.length - 1] : "";
+
+    const blockStartMap: Record<string, string> = {
+      "/tags": "tags",
+      "/people": "people",
+      "/locations": "locations",
+    };
+    const blockEndMap: Record<string, string> = {
+      "/endtags": "tags",
+      "/endpeople": "people",
+      "/endlocations": "locations",
+    };
+
+    const stack: string[] = [];
+    for (const t of tokens) {
+      if (blockStartMap[t]) stack.push(blockStartMap[t]);
+      else if (blockEndMap[t]) {
+        const blk = blockEndMap[t];
+        for (let i = stack.length - 1; i >= 0; i--) {
+          if (stack[i] === blk) {
+            stack.splice(i, 1);
+            break;
+          }
         }
-      } else {
-        setShowCommands(false);
-        setCommandQuery(null);
-        setForcedSuggestions(null);
       }
-    },
-    [COMMANDS]
-  );
+    }
+    const currentOpen = stack.length ? stack[stack.length - 1] : null;
+    setOpenBlock(currentOpen);
+
+    if (cursorToken.startsWith("/")) {
+      setShowCommands(true);
+      setCommandQuery(cursorToken.slice(1));
+    } else {
+      setShowCommands(false);
+      setCommandQuery(null);
+    }
+  }, []);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   // Highlight segments
@@ -270,13 +290,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     // Substitui o token atual pelo comando escolhido
     const parts = text.split(/\s+/);
     if (parts.length === 0) {
-      let base = command.insert;
-      if (command.type === "block" && command.end) {
-        base = base + command.end; // /tags /endtags
-        // Coloca cursor lógico antes do end adicionando espaço
-        base = base.replace(command.end, "") + command.end; // já posicionado
-      }
-      setText(base);
+      setText(command.insert);
     } else {
       // Encontrar índice do ultimo token real (não vazio)
       let idx = parts.length - 1;
@@ -287,10 +301,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       } else {
         parts.push(command.insert.trimEnd());
       }
-      let newValue = parts.filter(Boolean).join(" ") + " ";
-      if (command.type === "block" && command.end) {
-        newValue = newValue + command.end + " ";
-      }
+      const newValue =
+        parts.filter(Boolean).join(" ") +
+        (command.insert.endsWith(" ") ? "" : " ");
       setText(newValue);
     }
     setShowCommands(false);
