@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   Animated,
@@ -66,8 +72,14 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const syncScroll = useCallback(
     (source: "input" | "preview", y: number) => {
       if (syncingRef.current) return;
-      const inputScrollable = Math.max(0, inputContentHeight - inputViewportHeight);
-      const previewScrollable = Math.max(0, previewContentHeight - previewViewportHeight);
+      const inputScrollable = Math.max(
+        0,
+        inputContentHeight - inputViewportHeight
+      );
+      const previewScrollable = Math.max(
+        0,
+        previewContentHeight - previewViewportHeight
+      );
       if (inputScrollable === 0 && previewScrollable === 0) return;
       // Normaliza posição da origem
       let normalized = 0;
@@ -77,8 +89,12 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         normalized = previewScrollable ? y / previewScrollable : 0;
       }
       normalized = Math.min(1, Math.max(0, normalized));
-      const targetY = source === "input" ? normalized * previewScrollable : normalized * inputScrollable;
-      const targetRef = source === "input" ? previewScrollRef.current : inputScrollRef.current;
+      const targetY =
+        source === "input"
+          ? normalized * previewScrollable
+          : normalized * inputScrollable;
+      const targetRef =
+        source === "input" ? previewScrollRef.current : inputScrollRef.current;
       if (!targetRef) return;
       syncingRef.current = true;
       lastSourceRef.current = source;
@@ -88,7 +104,12 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         syncingRef.current = false;
       });
     },
-    [inputContentHeight, previewContentHeight, inputViewportHeight, previewViewportHeight]
+    [
+      inputContentHeight,
+      previewContentHeight,
+      inputViewportHeight,
+      previewViewportHeight,
+    ]
   );
 
   // Importa engine única
@@ -411,7 +432,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
               syncScroll("input", y);
             }}
             scrollEventThrottle={16}
-            onLayout={(e) => setInputViewportHeight(e.nativeEvent.layout.height)}
+            onLayout={(e) =>
+              setInputViewportHeight(e.nativeEvent.layout.height)
+            }
           >
             <View style={styles.layeredInput}>
               <View style={styles.highlightLayer} pointerEvents="none">
@@ -448,7 +471,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                   </Text>
                 )}
               </View>
-        <TextInput
+              <TextInput
                 style={styles.inputOverlay}
                 value={text}
                 onChangeText={handleTextChange}
@@ -458,7 +481,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                 editable={!isProcessing}
                 onContentSizeChange={(e) => {
                   const h = e.nativeEvent.contentSize.height;
-          setInputContentHeight(h + 28);
+                  setInputContentHeight(h + 28);
                   if (h + 28 <= MAX_HEIGHT) {
                     setIsOverflowing(false);
                     setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
@@ -497,16 +520,28 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
       {showCommands && filteredCommands.length > 0 && (
         <View style={styles.commandPalette}>
-          {filteredCommands.map((c: CommandDef) => (
-            <TouchableOpacity
-              key={c.cmd}
-              style={styles.commandItem}
-              onPress={() => handleSelectCommand(c)}
-            >
-              <Text style={styles.commandName}>{c.cmd}</Text>
-              <Text style={styles.commandDesc}>{c.desc}</Text>
-            </TouchableOpacity>
-          ))}
+          <ScrollView
+            style={styles.commandScroll}
+            contentContainerStyle={styles.commandScrollContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            {filteredCommands.map((c: CommandDef, idx: number) => (
+              <TouchableOpacity
+                key={c.cmd}
+                style={[
+                  styles.commandItem,
+                  idx === filteredCommands.length - 1 && {
+                    borderBottomWidth: 0,
+                  },
+                ]}
+                onPress={() => handleSelectCommand(c)}
+              >
+                <Text style={styles.commandName}>{c.cmd}</Text>
+                <Text style={styles.commandDesc}>{c.desc}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -544,7 +579,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                 syncScroll("preview", y);
               }}
               scrollEventThrottle={16}
-              onLayout={(e) => setPreviewViewportHeight(e.nativeEvent.layout.height)}
+              onLayout={(e) =>
+                setPreviewViewportHeight(e.nativeEvent.layout.height)
+              }
               onContentSizeChange={(_, h) => setPreviewContentHeight(h)}
             >
               {preview.body && (
@@ -755,6 +792,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.dark.border,
     overflow: "hidden",
+  },
+  commandScroll: {
+    maxHeight: 220,
+    width: "100%",
+  },
+  commandScrollContent: {
+    flexGrow: 1,
   },
   commandItem: {
     paddingVertical: 10,
