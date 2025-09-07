@@ -126,45 +126,53 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   }
   const [segments, setSegments] = useState<Segment[]>([]);
 
-  const splitTags = useCallback((textChunk: string, baseKind: Segment["kind"] = "normal"): Segment[] => {
-    if (!textChunk) return [];
-    const tagRegex = /#[a-zA-Z\u00C0-\u017F0-9_]+/g; // inclui acentos
-    const segs: Segment[] = [];
-    let last = 0;
-    let m: RegExpExecArray | null;
-    while ((m = tagRegex.exec(textChunk)) !== null) {
-      if (m.index > last) segs.push({ text: textChunk.slice(last, m.index), kind: baseKind });
-      segs.push({ text: m[0], kind: "tag" });
-      last = m.index + m[0].length;
-    }
-    if (last < textChunk.length) segs.push({ text: textChunk.slice(last), kind: baseKind });
-    return segs;
-  }, []);
-
-  const buildSegments = useCallback((value: string): Segment[] => {
-    if (!value) return [];
-
-    const result: Segment[] = [];
-    const regex = /(\/[a-zA-Z]+)([\s\S]*?)(?=(?:\s\/[a-zA-Z]+)|$)/g;
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(value)) !== null) {
-      if (match.index > lastIndex) {
-        const normalChunk = value.slice(lastIndex, match.index);
-        result.push(...splitTags(normalChunk));
+  const splitTags = useCallback(
+    (textChunk: string, baseKind: Segment["kind"] = "normal"): Segment[] => {
+      if (!textChunk) return [];
+      const tagRegex = /#[a-zA-Z\u00C0-\u017F0-9_]+/g; // inclui acentos
+      const segs: Segment[] = [];
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = tagRegex.exec(textChunk)) !== null) {
+        if (m.index > last)
+          segs.push({ text: textChunk.slice(last, m.index), kind: baseKind });
+        segs.push({ text: m[0], kind: "tag" });
+        last = m.index + m[0].length;
       }
-      const commandToken = match[1];
-      const argText = match[2] || "";
-      result.push({ text: commandToken, kind: "command" });
-      if (argText) result.push(...splitTags(argText, "commandArg"));
-      lastIndex = match.index + commandToken.length + argText.length;
-    }
-    if (lastIndex < value.length) {
-      const tail = value.slice(lastIndex);
-      result.push(...splitTags(tail));
-    }
-    return result;
-  }, [splitTags]);
+      if (last < textChunk.length)
+        segs.push({ text: textChunk.slice(last), kind: baseKind });
+      return segs;
+    },
+    []
+  );
+
+  const buildSegments = useCallback(
+    (value: string): Segment[] => {
+      if (!value) return [];
+
+      const result: Segment[] = [];
+      const regex = /(\/[a-zA-Z]+)([\s\S]*?)(?=(?:\s\/[a-zA-Z]+)|$)/g;
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(value)) !== null) {
+        if (match.index > lastIndex) {
+          const normalChunk = value.slice(lastIndex, match.index);
+          result.push(...splitTags(normalChunk));
+        }
+        const commandToken = match[1];
+        const argText = match[2] || "";
+        result.push({ text: commandToken, kind: "command" });
+        if (argText) result.push(...splitTags(argText, "commandArg"));
+        lastIndex = match.index + commandToken.length + argText.length;
+      }
+      if (lastIndex < value.length) {
+        const tail = value.slice(lastIndex);
+        result.push(...splitTags(tail));
+      }
+      return result;
+    },
+    [splitTags]
+  );
 
   const handleTextChange = (newText: string) => {
     setText(newText);
@@ -466,14 +474,14 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
     backgroundColor: Colors.dark.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.dark.border,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 48,
+    paddingVertical: 14,
+    minHeight: 68,
   },
   input: {
     ...Typography.body,
@@ -483,7 +491,7 @@ const styles = StyleSheet.create({
   },
   composedInput: {
     flex: 1,
-    minHeight: 20,
+    minHeight: 40,
     justifyContent: "flex-start",
   },
   highlightLayer: {
@@ -491,17 +499,23 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    paddingTop: 0,
     flexDirection: "row",
     flexWrap: "wrap",
   },
   highlightText: {
     ...Typography.body,
     color: Colors.dark.text,
+    lineHeight: 22,
   },
   inputOverlay: {
     ...Typography.body,
-    color: 'transparent',
-    maxHeight: 120,
+    color: "transparent",
+    maxHeight: 160,
+    lineHeight: 22,
+    textAlignVertical: "top",
+    flexGrow: 1,
+    width: "100%",
     // Garante alinhamento
     includeFontPadding: false,
     padding: 0,
@@ -509,20 +523,21 @@ const styles = StyleSheet.create({
   placeholderText: {
     ...Typography.body,
     color: Colors.dark.muted,
+    lineHeight: 22,
   },
   hlNormal: {
     color: Colors.dark.text,
   },
   hlCommand: {
     color: Colors.dark.tint,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   hlCommandArg: {
     color: Colors.dark.icon,
   },
   hlTag: {
     color: Colors.dark.success,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   submitButton: {
     marginLeft: 12,
