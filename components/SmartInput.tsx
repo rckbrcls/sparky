@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Animated,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -49,6 +50,8 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     start: 0,
     end: 0,
   });
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const MAX_HEIGHT = 220;
 
   // Importa engine única
   const COMMANDS = useMemo<CommandDef[]>(() => getCommands(), []);
@@ -358,62 +361,78 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     <View style={[styles.container, style]}>
       <View style={[styles.inputContainer, { minHeight: autoHeight }]}>
         <View style={styles.composedInput}>
-          <View style={styles.highlightLayer} pointerEvents="none">
-            {text.length === 0 ? (
-              <Text
-                style={styles.placeholderText}
-                onLayout={(e) => {
-                  const h = e.nativeEvent.layout.height;
-                  setAutoHeight((prev) => Math.max(BASE_MIN_HEIGHT, h + 28)); // padding compensation
-                }}
-              >
-                {placeholder}
-              </Text>
-            ) : (
-              <Text style={styles.highlightText}>
-                {segments.map((s: Segment, idx: number) => (
+          <ScrollView
+            style={[styles.scrollArea, { maxHeight: MAX_HEIGHT - 28 }]}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={isOverflowing}
+            scrollEnabled={isOverflowing}
+          >
+            <View style={styles.layeredInput}>
+              <View style={styles.highlightLayer} pointerEvents="none">
+                {text.length === 0 ? (
                   <Text
-                    key={idx}
-                    style={
-                      s.kind === "command"
-                        ? styles.hlCommand
-                        : s.kind === "commandArg"
-                        ? styles.hlCommandArg
-                        : s.kind === "tag"
-                        ? styles.hlTag
-                        : styles.hlNormal
-                    }
+                    style={styles.placeholderText}
+                    onLayout={(e) => {
+                      const h = e.nativeEvent.layout.height;
+                      setAutoHeight((prev) =>
+                        Math.max(BASE_MIN_HEIGHT, Math.min(h + 28, MAX_HEIGHT))
+                      );
+                    }}
                   >
-                    {s.text}
+                    {placeholder}
                   </Text>
-                ))}
-              </Text>
-            )}
-          </View>
-          <TextInput
-            style={styles.inputOverlay}
-            value={text}
-            onChangeText={handleTextChange}
-            multiline
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-            editable={!isProcessing}
-            onContentSizeChange={(e) => {
-              const h = e.nativeEvent.contentSize.height;
-              setAutoHeight((prev) =>
-                Math.max(BASE_MIN_HEIGHT, Math.min(h + 28, 220))
-              ); // cap growth
-            }}
-            onSelectionChange={(e) => {
-              const { start, end } = e.nativeEvent.selection;
-              setSelection({ start, end });
-            }}
-            onKeyPress={handleKeyPress}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+                ) : (
+                  <Text style={styles.highlightText}>
+                    {segments.map((s: Segment, idx: number) => (
+                      <Text
+                        key={idx}
+                        style={
+                          s.kind === "command"
+                            ? styles.hlCommand
+                            : s.kind === "commandArg"
+                            ? styles.hlCommandArg
+                            : s.kind === "tag"
+                            ? styles.hlTag
+                            : styles.hlNormal
+                        }
+                      >
+                        {s.text}
+                      </Text>
+                    ))}
+                  </Text>
+                )}
+              </View>
+              <TextInput
+                style={styles.inputOverlay}
+                value={text}
+                onChangeText={handleTextChange}
+                multiline
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+                editable={!isProcessing}
+                onContentSizeChange={(e) => {
+                  const h = e.nativeEvent.contentSize.height;
+                  if (h + 28 <= MAX_HEIGHT) {
+                    setIsOverflowing(false);
+                    setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
+                  } else {
+                    setIsOverflowing(true);
+                    setAutoHeight(MAX_HEIGHT);
+                  }
+                }}
+                onSelectionChange={(e) => {
+                  const { start, end } = e.nativeEvent.selection;
+                  setSelection({ start, end });
+                }}
+                onKeyPress={handleKeyPress}
+                autoCapitalize="none"
+                autoCorrect={false}
+                scrollEnabled={false}
+              />
+            </View>
+          </ScrollView>
         </View>
-
         {text.trim().length > 0 && (
           <TouchableOpacity
             style={[
@@ -525,8 +544,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    minHeight: 68,
+    justifyContent: "flex-start",
   },
+  scrollArea: { width: "100%" },
+  scrollContent: { flexGrow: 1 },
+  layeredInput: { position: "relative", width: "100%" },
   input: {
     ...Typography.body,
     flex: 1,
@@ -555,7 +577,6 @@ const styles = StyleSheet.create({
   inputOverlay: {
     ...Typography.body,
     color: "transparent",
-    maxHeight: 160,
     lineHeight: 22,
     textAlignVertical: "top",
     flexGrow: 1,
