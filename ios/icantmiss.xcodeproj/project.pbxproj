@@ -342,6 +342,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = icantmiss/icantmiss.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -360,7 +361,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.anonymous.i-cant-miss";
+				PRODUCT_BUNDLE_IDENTIFIER = com.erickpolterware.test;
 				PRODUCT_NAME = icantmiss;
 				SWIFT_OBJC_BRIDGING_HEADER = "icantmiss/icantmiss-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -378,6 +379,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = icantmiss/icantmiss.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				INFOPLIST_FILE = icantmiss/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -391,7 +393,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.anonymous.i-cant-miss";
+				PRODUCT_BUNDLE_IDENTIFIER = com.erickpolterware.test;
 				PRODUCT_NAME = icantmiss;
 				SWIFT_OBJC_BRIDGING_HEADER = "icantmiss/icantmiss-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
