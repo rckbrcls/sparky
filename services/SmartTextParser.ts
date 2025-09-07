@@ -102,7 +102,11 @@ export class SmartTextParser {
   };
 
   static parseText(input: string): ParsedReminder {
-    const cleanInput = input.trim();
+    const originalInput = input.trim();
+
+    // 1. Extrair comandos com barra antes de qualquer outra detecção
+    const { commands, remainingText } = this.parseSlashCommands(originalInput);
+    const cleanInput = remainingText.trim();
 
     // Extract time information
     const timeInfo = this.extractTime(cleanInput);
@@ -118,6 +122,15 @@ export class SmartTextParser {
 
     // Extract tags
     const tags = this.extractTags(cleanInput);
+
+    // Merge tags com /tags
+    if (commands.tags) {
+      const extraTags = commands.tags
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .map((t) => t.replace(/^#/, "").toLowerCase());
+      for (const t of extraTags) if (!tags.includes(t)) tags.push(t);
+    }
 
     // Determine folder
     const folderId = this.determineFolderId(cleanInput);
@@ -144,6 +157,77 @@ export class SmartTextParser {
       location,
     };
 
+    // 2. Aplicar comandos explícitos que sobrescrevem detecções automáticas
+    // /note ou /title define título explicitamente
+    if (commands.note) {
+      result.title = commands.note.trim();
+    } else if (commands.title) {
+      result.title = commands.title.trim();
+    }
+
+    // /priority sobrescreve prioridade
+    if (commands.priority) {
+      const pMap: Record<string, 1 | 2 | 3> = {
+        low: 1,
+        baixa: 1,
+        normal: 1,
+        1: 1,
+        "!": 1,
+        medium: 2,
+        medio: 2,
+        médio: 2,
+        2: 2,
+        "!!": 2,
+        high: 3,
+        alta: 3,
+        urgent: 3,
+        urgente: 3,
+        3: 3,
+        "!!!": 3,
+      };
+      const key = commands.priority.toLowerCase();
+      if (pMap[key] !== undefined) {
+        result.priority = pMap[key];
+      }
+    }
+
+    // /person, /location, /project
+    if (commands.person) result.person = commands.person.trim();
+    if (commands.location) result.location = commands.location.trim();
+    if (commands.project) result.project = commands.project.trim();
+
+    // /date força tipo date (tentar extrair data/hora desse trecho também)
+    if (commands.date) {
+      const forcedDateInfo = this.extractDate(commands.date);
+      const forcedTimeInfo = this.extractTime(commands.date);
+      if (forcedDateInfo || forcedTimeInfo) {
+        result.fireAt = this.combineDateTime(forcedDateInfo, forcedTimeInfo);
+      }
+    }
+
+    // /trigger <tipo> [valor]
+    if (commands.trigger) {
+      const parts = commands.trigger.split(/\s+/).filter(Boolean);
+      const tType = parts.shift()?.toLowerCase();
+      const rest = parts.join(" ").trim();
+      if (tType === "person") {
+        if (rest) result.person = rest;
+        result.type = "trigger";
+        result.triggerType = "person";
+        result.triggerConfig = { contactName: result.person };
+      } else if (tType === "location") {
+        if (rest) result.location = rest;
+        result.type = "trigger";
+        result.triggerType = "location";
+        result.triggerConfig = { location: result.location };
+      } else if (tType === "project") {
+        if (rest) result.project = rest;
+        result.type = "trigger";
+        result.triggerType = "project";
+        result.triggerConfig = { projectName: result.project };
+      }
+    }
+
     // If we have date/time info, it's a date reminder
     if (dateInfo || timeInfo) {
       result.type = "date";
@@ -167,6 +251,38 @@ export class SmartTextParser {
     }
 
     return result;
+  }
+
+  // Extrai comandos iniciados com / e retorna texto restante
+  private static parseSlashCommands(input: string): {
+    commands: Record<string, string>;
+    remainingText: string;
+  } {
+    const tokens = input.split(/\s+/);
+    const commands: Record<string, string> = {};
+    let i = 0;
+    const consumed: boolean[] = new Array(tokens.length).fill(false);
+    while (i < tokens.length) {
+      const tok = tokens[i];
+      if (tok.startsWith("/")) {
+        const cmd = tok.slice(1).toLowerCase();
+        let j = i + 1;
+        const valueParts: string[] = [];
+        while (j < tokens.length && !tokens[j].startsWith("/")) {
+          valueParts.push(tokens[j]);
+          consumed[j] = true;
+          j++;
+        }
+        consumed[i] = true;
+        commands[cmd] = valueParts.join(" ");
+        i = j;
+      } else {
+        i++;
+      }
+    }
+    // Montar remainingText sem os tokens consumidos
+    const remainingText = tokens.filter((_, idx) => !consumed[idx]).join(" ");
+    return { commands, remainingText };
   }
 
   private static extractTime(
@@ -256,15 +372,24 @@ export class SmartTextParser {
         return match[1].trim();
       }
     }
-    
+
     // Check for direct location mentions
-    const directLocations = ['casa', 'home', 'trabalho', 'work', 'office', 'escritório', 'academia', 'gym'];
+    const directLocations = [
+      "casa",
+      "home",
+      "trabalho",
+      "work",
+      "office",
+      "escritório",
+      "academia",
+      "gym",
+    ];
     for (const location of directLocations) {
       if (input.toLowerCase().includes(location)) {
         return location;
       }
     }
-    
+
     return undefined;
   }
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Animated,
@@ -28,10 +28,100 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   const [text, setText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [preview, setPreview] = useState<ParsedReminder | null>(null);
+  const [commandQuery, setCommandQuery] = useState<string | null>(null);
+  const [showCommands, setShowCommands] = useState(false);
+
+  const COMMANDS = useMemo(
+    () => [
+      {
+        cmd: "/date",
+        label: "date",
+        desc: "Definir data/hora: /date amanhã 18:00",
+        insert: "/date ",
+      },
+      {
+        cmd: "/note",
+        label: "note",
+        desc: "Título rápido da nota: /note Comprar leite",
+        insert: "/note ",
+      },
+      {
+        cmd: "/title",
+        label: "title",
+        desc: "Definir título: /title Reunião equipe",
+        insert: "/title ",
+      },
+      {
+        cmd: "/person",
+        label: "person",
+        desc: "Pessoa relacionada: /person João",
+        insert: "/person ",
+      },
+      {
+        cmd: "/location",
+        label: "location",
+        desc: "Local: /location escritório",
+        insert: "/location ",
+      },
+      {
+        cmd: "/project",
+        label: "project",
+        desc: "Projeto: /project Novo App",
+        insert: "/project ",
+      },
+      {
+        cmd: "/priority",
+        label: "priority",
+        desc: "Prioridade: /priority !!! | !! | ! | 1..3",
+        insert: "/priority ",
+      },
+      {
+        cmd: "/tags",
+        label: "tags",
+        desc: "Tags: /tags urgente backend",
+        insert: "/tags ",
+      },
+      {
+        cmd: "/trigger",
+        label: "trigger",
+        desc: "Criar trigger: /trigger person João",
+        insert: "/trigger ",
+      },
+      {
+        cmd: "/help",
+        label: "help",
+        desc: "Lista de comandos",
+        insert: "/help",
+      },
+    ],
+    []
+  );
+
+  const filteredCommands = useMemo(() => {
+    if (!commandQuery) return COMMANDS;
+    const q = commandQuery.toLowerCase();
+    return COMMANDS.filter(
+      (c) => c.cmd.startsWith(`/${q}`) || c.label.includes(q)
+    );
+  }, [COMMANDS, commandQuery]);
+
+  const detectCommandContext = useCallback((value: string) => {
+    // Pega o token atual (após último espaço ou nova linha)
+    const cursorToken = value.split(/\s+/).pop() || "";
+    if (cursorToken.startsWith("/")) {
+      const q = cursorToken.slice(1); // sem barra
+      setCommandQuery(q);
+      setShowCommands(true);
+    } else {
+      setShowCommands(false);
+      setCommandQuery(null);
+    }
+  }, []);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   const handleTextChange = (newText: string) => {
     setText(newText);
+  detectCommandContext(newText);
 
     if (newText.trim().length > 3) {
       try {
@@ -57,6 +147,28 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         useNativeDriver: true,
       }).start();
     }
+  };
+
+  const handleSelectCommand = (command: { cmd: string; insert: string }) => {
+    // Substitui o token atual pelo comando escolhido
+    const parts = text.split(/\s+/);
+    if (parts.length === 0) {
+      setText(command.insert);
+    } else {
+      // Encontrar índice do ultimo token real (não vazio)
+      let idx = parts.length - 1;
+      // Remover tokens vazios no final
+      while (idx >= 0 && parts[idx] === "") idx--;
+      if (idx >= 0 && parts[idx].startsWith("/")) {
+        parts[idx] = command.insert.trimEnd();
+      } else {
+        parts.push(command.insert.trimEnd());
+      }
+      const newValue = parts.filter(Boolean).join(" ") + " ";
+      setText(newValue);
+    }
+    setShowCommands(false);
+    setCommandQuery(null);
   };
 
   const handleSubmit = async () => {
@@ -202,6 +314,21 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         )}
       </View>
 
+      {showCommands && filteredCommands.length > 0 && (
+        <View style={styles.commandPalette}>
+          {filteredCommands.map((c) => (
+            <TouchableOpacity
+              key={c.cmd}
+              style={styles.commandItem}
+              onPress={() => handleSelectCommand(c)}
+            >
+              <Text style={styles.commandName}>{c.cmd}</Text>
+              <Text style={styles.commandDesc}>{c.desc}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {preview && (
         <Animated.View style={[styles.preview, { opacity: fadeAnim }]}>
           <View style={styles.previewHeader}>
@@ -329,5 +456,29 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.dark.muted,
     marginVertical: 1,
+  },
+  commandPalette: {
+    marginTop: 6,
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    overflow: "hidden",
+  },
+  commandItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.dark.border,
+  },
+  commandName: {
+    ...Typography.body,
+    color: Colors.dark.tint,
+    fontWeight: "600",
+  },
+  commandDesc: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    marginTop: 2,
   },
 });
