@@ -1,75 +1,333 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { ReminderForm } from "../../components/ReminderForm";
+import { ReminderItem } from "../../components/ReminderItem";
+import { database, Reminder } from "../../database/database";
+import { NotificationService } from "../../services/NotificationService";
+import { ReminderService } from "../../services/ReminderService";
 
 export default function HomeScreen() {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [todayReminders, setTodayReminders] = useState<Reminder[]>([]);
+  const [overdueReminders, setOverdueReminders] = useState<Reminder[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<"today" | "overdue" | "upcoming">(
+    "today"
+  );
+
+  useEffect(() => {
+    initializeApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadReminders();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filter])
+  );
+
+  const initializeApp = async () => {
+    try {
+      await database.initialize();
+      await NotificationService.initialize();
+      await loadReminders();
+    } catch (error) {
+      Alert.alert("Erro", "Erro ao inicializar o aplicativo");
+      console.error("Initialization error:", error);
+    }
+  };
+
+  const loadReminders = async () => {
+    try {
+      await ReminderService.updateReminderStatuses();
+
+      const [today, overdue, upcoming] = await Promise.all([
+        ReminderService.getTodayReminders(),
+        ReminderService.getOverdueReminders(),
+        ReminderService.getUpcomingReminders(),
+      ]);
+
+      setTodayReminders(today);
+      setOverdueReminders(overdue);
+
+      switch (filter) {
+        case "today":
+          setReminders(today);
+          break;
+        case "overdue":
+          setReminders(overdue);
+          break;
+        case "upcoming":
+          setReminders(upcoming);
+          break;
+      }
+    } catch (error) {
+      Alert.alert("Erro", "Erro ao carregar lembretes");
+      console.error("Load reminders error:", error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadReminders();
+    setRefreshing(false);
+  };
+
+  const handleFormSave = () => {
+    setShowForm(false);
+    loadReminders();
+  };
+
+  const getFilterTitle = () => {
+    switch (filter) {
+      case "today":
+        return "Hoje";
+      case "overdue":
+        return "Atrasados";
+      case "upcoming":
+        return "Próximos";
+      default:
+        return "Lembretes";
+    }
+  };
+
+  const getFilterBadgeCount = () => {
+    switch (filter) {
+      case "today":
+        return todayReminders.length;
+      case "overdue":
+        return overdueReminders.length;
+      case "upcoming":
+        return reminders.length;
+      default:
+        return 0;
+    }
+  };
+
+  if (showForm) {
+    return (
+      <ReminderForm
+        onSave={handleFormSave}
+        onCancel={() => setShowForm(false)}
+      />
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>I Can&apos;t Miss</Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowForm(true)}
+        >
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Filters */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "today" && styles.filterButtonActive,
+          ]}
+          onPress={() => setFilter("today")}
+        >
+          <Text
+            style={[
+              styles.filterText,
+              filter === "today" && styles.filterTextActive,
+            ]}
+          >
+            Hoje ({todayReminders.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "overdue" && styles.filterButtonActive,
+          ]}
+          onPress={() => setFilter("overdue")}
+        >
+          <Text
+            style={[
+              styles.filterText,
+              filter === "overdue" && styles.filterTextActive,
+            ]}
+          >
+            Atrasados ({overdueReminders.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "upcoming" && styles.filterButtonActive,
+          ]}
+          onPress={() => setFilter("upcoming")}
+        >
+          <Text
+            style={[
+              styles.filterText,
+              filter === "upcoming" && styles.filterTextActive,
+            ]}
+          >
+            Próximos
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        <Text style={styles.sectionTitle}>
+          {getFilterTitle()} ({getFilterBadgeCount()})
+        </Text>
+
+        {reminders.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              {filter === "today" && "Nenhum lembrete para hoje"}
+              {filter === "overdue" && "Nenhum lembrete atrasado"}
+              {filter === "upcoming" && "Nenhum lembrete próximo"}
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => setShowForm(true)}
+            >
+              <Text style={styles.emptyStateButtonText}>
+                Criar Primeiro Lembrete
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={reminders}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <ReminderItem reminder={item} onRefresh={loadReminders} />
+            )}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.listContainer}
+          />
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  header: {
+    backgroundColor: "#FFFFFF",
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#1A1A1A",
+  },
+  addButton: {
+    width: 44,
+    height: 44,
+    backgroundColor: "#339AF0",
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButtonText: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  filterContainer: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    backgroundColor: "#F1F3F5",
+  },
+  filterButtonActive: {
+    backgroundColor: "#339AF0",
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#6C757D",
+    textAlign: "center",
+  },
+  filterTextActive: {
+    color: "#FFFFFF",
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1A1A1A",
+    marginBottom: 16,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#6C757D",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  emptyStateButton: {
+    backgroundColor: "#339AF0",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  emptyStateButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  listContainer: {
+    paddingBottom: 100,
   },
 });
