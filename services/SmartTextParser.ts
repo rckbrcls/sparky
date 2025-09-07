@@ -202,6 +202,10 @@ export class SmartTextParser {
       const forcedTimeInfo = this.extractTime(commands.date);
       if (forcedDateInfo || forcedTimeInfo) {
         result.fireAt = this.combineDateTime(forcedDateInfo, forcedTimeInfo);
+        result.type = "date"; // garante que preview mostre como lembrete de data
+      } else {
+        // Mesmo sem conseguir parsear, se usuário chamou /date, tratamos como date
+        result.type = "date";
       }
     }
 
@@ -228,25 +232,25 @@ export class SmartTextParser {
       }
     }
 
-    // If we have date/time info, it's a date reminder
-    if (dateInfo || timeInfo) {
-      result.type = "date";
-      result.fireAt = this.combineDateTime(dateInfo, timeInfo);
-    }
-    // If we have trigger patterns, it's a trigger reminder
-    else if (person || location) {
-      result.type = "trigger";
+    // Só aplica detecção automática se ainda não foi marcado como date por comandos
+    if (result.type !== "date") {
+      if (dateInfo || timeInfo) {
+        result.type = "date";
+        result.fireAt = this.combineDateTime(dateInfo, timeInfo);
+      } else if (person || location) {
+        result.type = "trigger";
 
-      if (person && location) {
-        // If both person and location are mentioned, prioritize person
-        result.triggerType = "person";
-        result.triggerConfig = { contactName: person, location };
-      } else if (person) {
-        result.triggerType = "person";
-        result.triggerConfig = { contactName: person };
-      } else if (location) {
-        result.triggerType = "location";
-        result.triggerConfig = { location: location };
+        if (person && location) {
+          // If both person and location are mentioned, prioritize person
+          result.triggerType = "person";
+          result.triggerConfig = { contactName: person, location };
+        } else if (person) {
+          result.triggerType = "person";
+          result.triggerConfig = { contactName: person };
+        } else if (location) {
+          result.triggerType = "location";
+          result.triggerConfig = { location: location };
+        }
       }
     }
 
