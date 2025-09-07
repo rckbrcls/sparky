@@ -14,6 +14,7 @@ export interface ParsedReminder {
   project?: string;
   location?: string;
   locations?: string[]; // plural block /locations
+  body?: string; // multiline remainder (notes)
 }
 
 export class SmartTextParser {
@@ -134,8 +135,30 @@ export class SmartTextParser {
       location,
     };
 
-    if (commands.note) result.title = commands.note.trim();
-    else if (commands.title) result.title = commands.title.trim();
+    // Derive title/body for multiline notes (if not explicitly overridden by commands)
+    if (!commands.note && !commands.title) {
+      const rawLines = input.split(/\n+/); // keep original newlines
+      const cleanedLines = rawLines.map((l) => l.replace(/^\s*[•\-*]\s?/, '').trimEnd());
+      // Find first non-empty line for title
+      const firstIdx = cleanedLines.findIndex((l) => l.trim().length > 0);
+      if (firstIdx >= 0) {
+        const titleLine = cleanedLines[firstIdx].trim();
+        const bodyLines = cleanedLines.slice(firstIdx + 1);
+        const bodyJoined = bodyLines.filter((l, i, arr) => {
+          // Preserve intentional blank lines between content but trim leading empty lines
+          if (i === 0 && l.trim().length === 0) return false;
+          return true;
+        }).join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
+        if (titleLine) result.title = titleLine;
+        if (bodyJoined.length) result.body = bodyJoined;
+      }
+    }
+
+    if (commands.note) {
+      result.title = commands.note.trim();
+    } else if (commands.title) {
+      result.title = commands.title.trim();
+    }
 
     if (commands.priority) {
       const map: Record<string, 1 | 2 | 3> = {

@@ -99,7 +99,7 @@ export default function HomeScreen() {
               { color: themeColors.text },
             ]}
           >
-            i cant miss
+            I Can't Miss
           </ThemedText>
           <SmartInput
             onReminderCreated={handleReminderCreated}

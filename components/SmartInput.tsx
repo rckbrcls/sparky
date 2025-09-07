@@ -43,6 +43,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   // Dynamic height state (base min 68)
   const [autoHeight, setAutoHeight] = useState<number>(68);
   const BASE_MIN_HEIGHT = 68;
+  const BULLET = "•";
+  const INDENT = "  ";
+  const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
 
   // Importa engine única
   const COMMANDS = useMemo<CommandDef[]>(() => getCommands(), []);
@@ -98,6 +101,95 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     }
   };
 
+  const setTextAndSelection = (newValue: string, cursor: number) => {
+    setText(newValue);
+    // Defer selection update slightly if needed (RN sometimes lags)
+    setSelection({ start: cursor, end: cursor });
+  };
+
+  const getCurrentLineInfo = (content: string, cursor: number) => {
+    const before = content.slice(0, cursor);
+    const lineStart = before.lastIndexOf("\n") + 1; // -1 returns 0
+    const line = content.slice(lineStart, cursor);
+    return { line, lineStart };
+  };
+
+  const handleKeyPress = (e: any) => {
+    const key = e.nativeEvent.key;
+    if (selection.start !== selection.end) return; // ignore range selection for now
+    const cursor = selection.start;
+    let value = text;
+
+    // TAB => indent or start bullet list
+    if (key === 'Tab') {
+      e.preventDefault?.();
+      const { line } = getCurrentLineInfo(value, cursor);
+      let insert = INDENT;
+      // If line empty -> start bullet automatically
+      if (line.trim().length === 0) {
+        insert = `${BULLET} `;
+      }
+      const newValue = value.slice(0, cursor) + insert + value.slice(cursor);
+      setTextAndSelection(newValue, cursor + insert.length);
+      return;
+    }
+
+  // Enter behavior handled post-change in effect to avoid double newlines
+  };
+
+  // Transform start-of-line markers like "- " or "* " into bullet automatically
+  useEffect(() => {
+    // Only act on latest line
+    const { start } = selection;
+    const { line, lineStart } = getCurrentLineInfo(text, start);
+    if (/^(?:-|\*)\s$/.test(line)) {
+      const newValue = text.slice(0, lineStart) + BULLET + ' ' + text.slice(lineStart + line.length);
+      const newCursor = lineStart + (BULLET + ' ').length;
+      if (newValue !== text) {
+        setTextAndSelection(newValue, newCursor);
+      }
+    }
+  }, [text, selection]);
+
+  // Bullet continuation / termination similar to word processors
+  const prevTextRef = React.useRef(text);
+  const transformingRef = React.useRef(false);
+  useEffect(() => {
+    if (transformingRef.current) {
+      transformingRef.current = false;
+      prevTextRef.current = text;
+      return;
+    }
+    const prev = prevTextRef.current;
+    if (text.length > prev.length && text.endsWith('\n')) {
+      // User pressed Enter
+      const beforeNewline = text.slice(0, -1); // remove last \n
+      const lines = beforeNewline.split('\n');
+      const lastLine = lines[lines.length - 1]; // line before the newline
+      const trimmed = lastLine.trim();
+      const isBullet = trimmed.startsWith(BULLET);
+      if (isBullet) {
+        const afterBullet = trimmed.slice(BULLET.length).trim();
+        if (afterBullet.length > 0) {
+          // Continue list: append bullet to new empty line
+            const withNext = text + BULLET + ' ';
+            transformingRef.current = true;
+            setText(withNext);
+            setSelection({ start: withNext.length, end: withNext.length });
+        } else {
+          // Bullet line was empty -> end list (remove bullet chars from that empty line)
+          // Remove previous bullet markers from empty bullet line (replace that entire lastLine with '')
+          const cleanedLine = lastLine.replace(/\s*•\s?/, '');
+          if (cleanedLine.length === 0) {
+            // Replace lines array last element with '' (already empty). Do nothing; just leave blank line.
+            // But if we inserted two consecutive Enters, we already have a blank line; nothing to do.
+          }
+        }
+      }
+    }
+    prevTextRef.current = text;
+  }, [text]);
+
   const handleSelectCommand = (command: any) => {
     const newValue = applyCommandInsert(text, command);
     setText(newValue);
@@ -121,7 +213,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
       if (parsed.type === "note") {
         // Create quick note
         await database.createQuickNote({
-          content: parsed.title,
+          content: parsed.body ? `${parsed.title}\n${parsed.body}` : parsed.title,
           folderId: parsed.folderId,
           tags: JSON.stringify(parsed.tags),
           isPinned: parsed.priority === 3,
@@ -303,6 +395,11 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                 Math.max(BASE_MIN_HEIGHT, Math.min(h + 28, 220))
               ); // cap growth
             }}
+            onSelectionChange={(e) => {
+              const { start, end } = e.nativeEvent.selection;
+              setSelection({ start, end });
+            }}
+            onKeyPress={handleKeyPress}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -356,7 +453,17 @@ export const SmartInput: React.FC<SmartInputProps> = ({
             />
           </View>
 
-          <Text style={styles.previewTitle}>{preview.title}</Text>
+          {preview.type === 'note' && (preview.body || text.includes('\n')) ? (
+            <Text style={styles.previewMultiline}>
+              {[preview.title, ...(preview.body ? preview.body.split('\n') : [])].map((ln, i, arr) => (
+                <Text key={i} style={i === 0 ? styles.previewTitle : styles.previewLine}>
+                  {ln || ' '}{i < arr.length - 1 ? '\n' : ''}
+                </Text>
+              ))}
+            </Text>
+          ) : (
+            <Text style={styles.previewTitle}>{preview.title}</Text>
+          )}
 
           {preview.fireAt && (
             <Text style={styles.previewDetail}>
@@ -521,6 +628,18 @@ const styles = StyleSheet.create({
     color: Colors.dark.text,
     fontWeight: "600",
     marginBottom: 4,
+  },
+  previewMultiline: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    marginBottom: 4,
+    fontWeight: '600',
+    // preserve whitespace indentation (RN Text collapses multiple spaces unless we keep them; using unicode no-break space replacement optional)
+  },
+  previewLine: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: '600',
   },
   previewDetail: {
     ...Typography.caption,
