@@ -314,9 +314,15 @@ export class SmartTextParser {
             j++;
           }
         } else {
-          // For folder management commands restrict to a single word (no spaces)
-          if (["folder", "createfolder", "deletefolder"].includes(name)) {
+          // For deletefolder keep single token; for folder/createfolder allow chained tokens until next /command
+          if (name === "deletefolder") {
             if (j < tokens.length && !tokens[j].startsWith("/")) {
+              parts.push(tokens[j]);
+              consumed[j] = true;
+              j++;
+            }
+          } else if (name === "folder" || name === "createfolder") {
+            while (j < tokens.length && !tokens[j].startsWith("/")) {
               parts.push(tokens[j]);
               consumed[j] = true;
               j++;

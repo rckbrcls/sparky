@@ -145,17 +145,23 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
   const ARG_HANDLERS = useMemo(
     () => ({
-      folder: (partial: string) =>
-        folders
+      folder: (partial: string) => {
+        const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
+        const np = norm(partial || "");
+        return folders
           .map((f) => f.name)
           .filter((n, i, a) => a.indexOf(n) === i)
-          .filter((n) => n.toLowerCase().includes(partial.toLowerCase())),
-      deletefolder: (partial: string) =>
-        folders
+          .filter((n) => !np || norm(n).includes(np));
+      },
+      deletefolder: (partial: string) => {
+        const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
+        const np = norm(partial || "");
+        return folders
           .filter((f) => f.id !== "all")
           .map((f) => f.name)
           .filter((n, i, a) => a.indexOf(n) === i)
-          .filter((n) => n.toLowerCase().includes(partial.toLowerCase())),
+          .filter((n) => !np || norm(n).includes(np));
+      },
     }),
     [folders]
   );
@@ -174,16 +180,16 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     (value: string, cursor: number): boolean => {
       try {
         const upto = value.slice(0, cursor);
-        // If already completed a single-word argument and a trailing space was typed, exit arg mode
-        if (/\/(folder|deletefolder)\s+\S+\s$/.test(upto)) {
-          if (argContext) {
+        // If already completed deletefolder argument (single word) and space typed, exit arg mode
+        if (/\/deletefolder\s+\S+\s$/.test(upto)) {
+          if (argContext?.command === "deletefolder") {
             setArgContext(null);
             setArgSuggestions([]);
           }
-          return false; // do not stay in arg mode
+          return false;
         }
         // Detect commands that take a single argument (extensible pattern)
-        const m = /\/(folder|deletefolder)\s+([^\s\n]*)$/.exec(upto); // allows empty partial
+        const m = /\/(folder|deletefolder)\s+([^\s\n]*)$/.exec(upto); // allows empty partial (hyphen slug in progress)
         if (m) {
           const command = m[1];
           const partial = m[2] || "";
@@ -220,7 +226,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     if (!argContext) return;
     const before = text.slice(0, argContext.replaceFrom);
     const after = text.slice(selection.start);
-  const inserted = `${name} `; // adiciona espaço para encerrar modo argumento
+    const inserted = `${name} `; // adiciona espaço para encerrar modo argumento
     const newValue = before + inserted + after;
     setText(newValue);
     const newPos = (before + inserted).length;
@@ -252,29 +258,54 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   // buildSegments já vem do engine único
 
   const handleTextChange = (newText: string) => {
-    setText(newText);
-    // First try to detect arg context using cursor at end (covers freshly typed space)
-    const inArg = detectArgContext(newText, newText.length);
+    // Live transform: for /folder or /createfolder arguments, replace internal spaces with '-'
+    let working = newText;
+    const multiArgMatch = /(\/(folder|createfolder)\s+)([^\n\/]*)$/.exec(
+      working
+    );
+    if (multiArgMatch) {
+      const prefix = multiArgMatch[1];
+      const rawArg = multiArgMatch[3];
+      if (rawArg.length > 0) {
+        const slugged = rawArg
+          // collapse leading/trailing spaces
+          .replace(/\s+/g, "-")
+          .replace(/-+/g, "-")
+          .replace(/^-/, "")
+          .replace(/-$/, "-"); // allow trailing hyphen while typing
+        if (slugged !== rawArg) {
+          working = working.slice(0, multiArgMatch.index) + prefix + slugged;
+        }
+      }
+    }
+    if (working !== newText) {
+      setText(working);
+    } else {
+      setText(newText);
+    }
+    // Use transformed text for context detection
+    const baseForCtx = working;
+    const inArg = detectArgContext(baseForCtx, baseForCtx.length);
     // Only update general command context if NOT inside an arg context
     if (!inArg) {
-      updateContext(newText);
+      updateContext(baseForCtx);
     }
-    setSegments(buildSegments(newText));
+    setSegments(buildSegments(baseForCtx));
 
     // Extra fallback (should rarely run now). Ensures suggestions when space just added.
-    if (!inArg && /\/(folder|deletefolder)\s+$/.test(newText)) {
-      const m = /\/(folder|deletefolder)\s+$/.exec(newText);
+    if (!inArg && /\/(folder|deletefolder)\s+$/.test(baseForCtx)) {
+      const m = /\/(folder|deletefolder)\s+$/.exec(baseForCtx);
       if (m) {
         const command = m[1];
         const handler = (ARG_HANDLERS as any)[command];
-        setArgContext({ command, partial: "", replaceFrom: newText.length });
+        setArgContext({ command, partial: "", replaceFrom: baseForCtx.length });
         setArgSuggestions(handler ? handler("").slice(0, 30) : []);
         setShowCommands(false);
         setCommandQuery(null);
       }
     }
 
-    const trimmed = newText.trim();
+    const trimmed = baseForCtx.trim();
     // Consider only create/delete as comandos puramente de sistema
     const strippedForPreview = trimmed
       .replace(/\/createfolder\s+\S+/gi, "")
@@ -297,7 +328,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     }
 
     try {
-      const parsed = SmartTextParser.parseText(newText);
+      const parsed = SmartTextParser.parseText(baseForCtx);
       console.log("Parsed text:", parsed);
       setPreview(parsed);
       Animated.timing(fadeAnim, {
@@ -411,12 +442,14 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
   const handleSelectCommand = (command: any) => {
     const newValue = applyCommandInsert(text, command);
-    setText(newValue);
-    setShowCommands(false);
+    // Usa pipeline padrão para atualizar preview/argContext
+    handleTextChange(newValue);
+    setShowCommands(false); // reforço
     setCommandQuery(null);
-  // Se comando inserido termina com espaço, prevenir reabertura até digitar algo novo
-  // Força reavaliação de arg context (ex: /folder )
-  detectArgContext(newValue, newValue.length);
+    // Move o cursor para o final após inserção
+    requestAnimationFrame(() =>
+      setSelection({ start: newValue.length, end: newValue.length })
+    );
   };
 
   useEffect(() => {
@@ -627,9 +660,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
       setText("");
       setPreview(null);
-  // Garantir limpeza total pós envio
-  setArgContext(null);
-  setArgSuggestions([]);
+      // Garantir limpeza total pós envio
+      setArgContext(null);
+      setArgSuggestions([]);
       onReminderCreated();
 
       // Success feedback
