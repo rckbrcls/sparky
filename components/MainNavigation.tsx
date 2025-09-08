@@ -119,7 +119,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
         </View>
       </View>
 
-      {/* Content Area */}
+      {/* Content Area (no responder handlers; global capture in root) */}
       <View style={styles.content}>{children}</View>
     </View>
   );

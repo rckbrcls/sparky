@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -12,6 +12,7 @@ import {
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
+import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database, Folder, QuickNote } from "../database/database";
 
 interface QuickNoteWithFolder extends QuickNote {
@@ -29,6 +30,19 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string>("all");
   const [folders, setFolders] = useState<Folder[]>([]);
+  const searchRef = useRef<TextInput | null>(null);
+  const blurSearch = () => searchRef.current?.blur();
+  const { register, unregister } = useGlobalTouchDismiss();
+
+  useEffect(() => {
+    const id = `notes-search`;
+    register(id, {
+      isFocused: () =>
+        !!searchRef.current && (searchRef.current as any).isFocused?.(),
+      blur: () => searchRef.current?.blur(),
+    });
+    return () => unregister(id);
+  }, [register, unregister]);
 
   useEffect(() => {
     if (isInitialized) {
@@ -191,7 +205,10 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
         styles.filterButton,
         selectedFolder === folder.id && styles.filterButtonActive,
       ]}
-      onPress={() => setSelectedFolder(folder.id)}
+      onPress={() => {
+        setSelectedFolder(folder.id);
+        blurSearch();
+      }}
     >
       <Text
         style={[
@@ -235,6 +252,7 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
+          ref={searchRef}
           style={styles.searchInput}
           value={searchTerm}
           onChangeText={setSearchTerm}
@@ -256,6 +274,7 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterList}
+          keyboardShouldPersistTaps="handled"
         />
       </View>
 
@@ -281,6 +300,8 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
           }
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={blurSearch}
+          keyboardShouldPersistTaps="handled"
         />
       )}
     </View>

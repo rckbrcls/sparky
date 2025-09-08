@@ -8,6 +8,7 @@ import React, {
 import {
   Alert,
   Animated,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ import {
 } from "react-native";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
+import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database } from "../database/database";
 import {
   applyCommandInsert,
@@ -737,119 +739,144 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
       focus: () => inputRef.current?.focus(),
     }));
 
+    const { register, unregister } = useGlobalTouchDismiss();
+
+    // Focar ao tocar em qualquer área vazia do bloco (placeholder multiline / espaços laterais)
+    const focusInput = useCallback(() => {
+      inputRef.current?.focus();
+    }, []);
+
+    // Register this input with global dismiss (focus detection based on internal ref)
+    useEffect(() => {
+      const id = `smart-input`;
+      register(id, {
+        isFocused: () =>
+          !!inputRef.current && (inputRef.current as any).isFocused?.(),
+        blur: () => inputRef.current?.blur(),
+      });
+      return () => unregister(id);
+    }, [register, unregister]);
+
     return (
       <View style={[styles.container, style]}>
         <View style={[styles.inputContainer, { minHeight: autoHeight }]}>
-          <View style={styles.composedInput}>
-            <ScrollView
-              ref={inputScrollRef}
-              style={[styles.scrollArea, { maxHeight: MAX_HEIGHT - 28 }]}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={isOverflowing}
-              scrollEnabled={isOverflowing}
-              onScroll={(e) => {
-                const y = e.nativeEvent.contentOffset.y;
-                syncScroll("input", y);
-              }}
-              scrollEventThrottle={16}
-              onLayout={(e) =>
-                setInputViewportHeight(e.nativeEvent.layout.height)
-              }
-            >
-              <View style={styles.layeredInput}>
-                <View style={styles.highlightLayer} pointerEvents="none">
-                  {text.length === 0 ? (
-                    <Text
-                      style={styles.placeholderText}
-                      onLayout={(e) => {
-                        const h = e.nativeEvent.layout.height;
-                        setAutoHeight((prev) =>
-                          Math.max(
-                            BASE_MIN_HEIGHT,
-                            Math.min(h + 28, MAX_HEIGHT)
-                          )
-                        );
-                      }}
-                    >
-                      {placeholder}
-                    </Text>
-                  ) : (
-                    <Text style={styles.highlightText}>
-                      {segments.map((s: Segment, idx: number) => (
-                        <Text
-                          key={idx}
-                          style={
-                            s.kind === "command"
-                              ? styles.hlCommand
-                              : s.kind === "commandArg"
-                              ? styles.hlCommandArg
-                              : s.kind === "tag"
-                              ? styles.hlTag
-                              : styles.hlNormal
-                          }
-                        >
-                          {s.text}
-                        </Text>
-                      ))}
-                    </Text>
-                  )}
-                </View>
-                <TextInput
-                  ref={inputRef}
-                  style={styles.inputOverlay}
-                  value={text}
-                  onChangeText={handleTextChange}
-                  multiline
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubmit}
-                  editable={!isProcessing}
-                  onContentSizeChange={(e) => {
-                    const h = e.nativeEvent.contentSize.height;
-                    setInputContentHeight(h + 28);
-                    if (h + 28 <= MAX_HEIGHT) {
-                      setIsOverflowing(false);
-                      setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
-                    } else {
-                      setIsOverflowing(true);
-                      setAutoHeight(MAX_HEIGHT);
-                    }
-                  }}
-                  onSelectionChange={(e) => {
-                    const { start, end } = e.nativeEvent.selection;
-                    setSelection({ start, end });
-                    const inArg = detectArgContext(text, start);
-                    if (inArg) return; // already handled & suppressed commands
-                    if (
-                      /\/(folder|deletefolder)\s+$/.test(text.slice(0, start))
-                    ) {
-                      const m = /\/(folder|deletefolder)\s+$/.exec(
-                        text.slice(0, start)
-                      );
-                      if (m) {
-                        const command = m[1];
-                        const handler = (ARG_HANDLERS as any)[command];
-                        setArgContext({
-                          command,
-                          partial: "",
-                          replaceFrom: start,
-                        });
-                        setArgSuggestions(
-                          handler ? handler("").slice(0, 30) : []
-                        );
-                        setShowCommands(false);
-                        setCommandQuery(null);
+          <Pressable
+            style={styles.tapWrapper}
+            onPress={focusInput}
+            hitSlop={{ top: 4, bottom: 4 }}
+            accessible={false} // evita elemento extra para leitores; foco vai direto ao TextInput
+          >
+            <View style={styles.composedInput}>
+              <ScrollView
+                ref={inputScrollRef}
+                style={[styles.scrollArea, { maxHeight: MAX_HEIGHT - 28 }]}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={isOverflowing}
+                scrollEnabled={isOverflowing}
+                onScroll={(e) => {
+                  const y = e.nativeEvent.contentOffset.y;
+                  syncScroll("input", y);
+                }}
+                scrollEventThrottle={16}
+                onLayout={(e) =>
+                  setInputViewportHeight(e.nativeEvent.layout.height)
+                }
+              >
+                <View style={styles.layeredInput}>
+                  <View style={styles.highlightLayer} pointerEvents="none">
+                    {text.length === 0 ? (
+                      <Text
+                        style={styles.placeholderText}
+                        onLayout={(e) => {
+                          const h = e.nativeEvent.layout.height;
+                          setAutoHeight((prev) =>
+                            Math.max(
+                              BASE_MIN_HEIGHT,
+                              Math.min(h + 28, MAX_HEIGHT)
+                            )
+                          );
+                        }}
+                      >
+                        {placeholder}
+                      </Text>
+                    ) : (
+                      <Text style={styles.highlightText}>
+                        {segments.map((s: Segment, idx: number) => (
+                          <Text
+                            key={idx}
+                            style={
+                              s.kind === "command"
+                                ? styles.hlCommand
+                                : s.kind === "commandArg"
+                                ? styles.hlCommandArg
+                                : s.kind === "tag"
+                                ? styles.hlTag
+                                : styles.hlNormal
+                            }
+                          >
+                            {s.text}
+                          </Text>
+                        ))}
+                      </Text>
+                    )}
+                  </View>
+                  <TextInput
+                    ref={inputRef}
+                    style={styles.inputOverlay}
+                    value={text}
+                    onChangeText={handleTextChange}
+                    multiline
+                    returnKeyType="done"
+                    onSubmitEditing={handleSubmit}
+                    editable={!isProcessing}
+                    onContentSizeChange={(e) => {
+                      const h = e.nativeEvent.contentSize.height;
+                      setInputContentHeight(h + 28);
+                      if (h + 28 <= MAX_HEIGHT) {
+                        setIsOverflowing(false);
+                        setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
+                      } else {
+                        setIsOverflowing(true);
+                        setAutoHeight(MAX_HEIGHT);
                       }
-                    }
-                  }}
-                  onKeyPress={handleKeyPress}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  scrollEnabled={false}
-                />
-              </View>
-            </ScrollView>
-          </View>
+                    }}
+                    onSelectionChange={(e) => {
+                      const { start, end } = e.nativeEvent.selection;
+                      setSelection({ start, end });
+                      const inArg = detectArgContext(text, start);
+                      if (inArg) return; // already handled & suppressed commands
+                      if (
+                        /\/(folder|deletefolder)\s+$/.test(text.slice(0, start))
+                      ) {
+                        const m = /\/(folder|deletefolder)\s+$/.exec(
+                          text.slice(0, start)
+                        );
+                        if (m) {
+                          const command = m[1];
+                          const handler = (ARG_HANDLERS as any)[command];
+                          setArgContext({
+                            command,
+                            partial: "",
+                            replaceFrom: start,
+                          });
+                          setArgSuggestions(
+                            handler ? handler("").slice(0, 30) : []
+                          );
+                          setShowCommands(false);
+                          setCommandQuery(null);
+                        }
+                      }
+                    }}
+                    onKeyPress={handleKeyPress}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    scrollEnabled={false}
+                  />
+                </View>
+              </ScrollView>
+            </View>
+          </Pressable>
           {text.trim().length > 0 && (
             <TouchableOpacity
               style={[
@@ -1061,6 +1088,10 @@ const styles = StyleSheet.create({
   composedInput: {
     flex: 1,
     minHeight: 40,
+    justifyContent: "flex-start",
+  },
+  tapWrapper: {
+    flex: 1,
     justifyContent: "flex-start",
   },
   highlightLayer: {

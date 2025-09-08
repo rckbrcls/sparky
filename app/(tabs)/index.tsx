@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useState } from "react";
-import { Alert, Pressable, SafeAreaView, StyleSheet, View } from "react-native";
+import { Alert, SafeAreaView, StyleSheet, View } from "react-native";
 import { MainNavigation } from "../../components/MainNavigation";
 import { NotesView } from "../../components/NotesView";
 import { SmartInput, SmartInputHandle } from "../../components/SmartInput";
@@ -9,6 +9,7 @@ import { TimelineView } from "../../components/TimelineView";
 import { TriggersView } from "../../components/TriggersView";
 import { Colors } from "../../constants/Colors";
 import { Typography } from "../../constants/Typography";
+import { useGlobalTouchDismiss } from "../../context/GlobalTouchDismissContext";
 import { database } from "../../database/database";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { NotificationService } from "../../services/NotificationService";
@@ -79,14 +80,15 @@ export default function HomeScreen() {
   const themeColors = Colors[scheme];
   const smartInputRef = React.useRef<SmartInputHandle>(null);
 
+  const { handleCapture } = useGlobalTouchDismiss();
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeColors.background }]}
+      // Use capture only; no nested onStartShouldSetResponder in children
+      onStartShouldSetResponderCapture={handleCapture}
     >
-      <Pressable
-        style={styles.content}
-        onPress={() => smartInputRef.current?.blur?.()}
-      >
+      <View style={styles.content}>
         <View
           style={[
             styles.inputSection,
@@ -116,7 +118,7 @@ export default function HomeScreen() {
         <MainNavigation activeMode={activeMode} onModeChange={setActiveMode}>
           {renderActiveView()}
         </MainNavigation>
-      </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
