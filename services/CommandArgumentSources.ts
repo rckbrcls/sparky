@@ -78,10 +78,6 @@ async function computePersons(): Promise<string[]> {
   const reminders = await fetchReminders();
   return uniqueFrom(reminders, (r) => r.person || undefined);
 }
-async function computeProjects(): Promise<string[]> {
-  const reminders = await fetchReminders();
-  return uniqueFrom(reminders, (r) => r.project || undefined);
-}
 async function computeLocations(): Promise<string[]> {
   const reminders = await fetchReminders();
   return uniqueFrom(reminders, (r) => r.location || undefined);
@@ -105,12 +101,11 @@ async function computeTags(): Promise<string[]> {
   return tags.sort((a, b) => a.localeCompare(b));
 }
 
-type SourceKey = "folders" | "persons" | "projects" | "locations" | "tags";
+type SourceKey = "folders" | "persons" | "locations" | "tags";
 
 const sourceFetchers: Record<SourceKey, () => Promise<string[]>> = {
   folders: fetchFolders,
   persons: computePersons,
-  projects: computeProjects,
   locations: computeLocations,
   tags: computeTags,
 };

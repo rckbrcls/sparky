@@ -143,7 +143,7 @@ export async function resolveArgumentSuggestions(
     if (argument.fetch) {
       const r = await argument.fetch();
       list = Array.isArray(r) ? r : [];
-    } else if (argument.source !== "custom") {
+    } else {
       list = await getSource(argument.source as any);
     }
     if (!list) list = [];

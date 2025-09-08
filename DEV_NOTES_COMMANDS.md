@@ -7,7 +7,7 @@ This document explains how to add or extend slash commands.
 Architecture layers:
 
 1. CommandRegistry.ts: register commands (name, description, argument metadata).
-2. CommandArgumentSources.ts: cached async entity providers (folders, persons, projects, locations, tags). 30s TTL with simple in-flight promise de-dupe.
+2. CommandArgumentSources.ts: cached async entity providers (folders, persons, locations, tags). 30s TTL with simple in-flight promise de-dupe.
 3. CommandContextEngine.ts: pure(ish) synchronous computeCommandState + async resolveArgumentSuggestions.
 4. CommandInsertion.ts: helpers to insert command or argument text into the input.
 5. SmartInput.tsx: UI wiring (renders command or argument palettes) consuming computed state.
@@ -15,9 +15,9 @@ Architecture layers:
 ## Adding a New Entity Command
 
 1. Decide a unique command name (without slash), e.g. `client`.
-2. If it maps to an existing source kind (folders, persons, projects, locations, tags) set `argument.source` accordingly. Otherwise use `source: 'custom'` and provide a `fetch` function.
-3. Call `registerCommand({ name: 'client', description: 'Associate a client', category: 'entity', argument: { source: 'custom', fetch: fetchClients, allowEmptyInitialList: true } })` early in app startup (any imported module).
-4. Ensure `fetchClients` returns a string array (unique values) — they will be filtered automatically.
+2. If it maps to an existing source kind (folders, persons, locations, tags) set `argument.source` accordingly.
+3. Call `registerCommand({ name: 'client', description: 'Associate a client', category: 'entity', argument: { source: 'folders', allowEmptyInitialList: true } })` early in app startup (any imported module).
+4. Ensure the underlying source returns a string array (unique values) — they will be filtered automatically.
 
 ## Argument Normalization
 

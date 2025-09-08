@@ -1,12 +1,6 @@
 import { defaultNormalize } from "../utils/slug";
 
-export type ArgumentSourceKind =
-  | "folders"
-  | "persons"
-  | "projects"
-  | "locations"
-  | "tags"
-  | "custom";
+export type ArgumentSourceKind = "folders" | "persons" | "locations" | "tags";
 
 export interface CommandDefinition {
   name: string; // without leading slash
@@ -66,12 +60,6 @@ function bootstrap() {
     description: "Link to a person trigger",
     category: "entity",
     argument: { source: "persons", allowEmptyInitialList: true },
-  });
-  registerCommand({
-    name: "project",
-    description: "Associate a project",
-    category: "entity",
-    argument: { source: "projects", allowEmptyInitialList: true },
   });
   registerCommand({
     name: "location",
