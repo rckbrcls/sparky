@@ -55,6 +55,13 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     const MAX_HEIGHT = 220;
     const PREVIEW_MAX_HEIGHT = 180;
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    // Previous text ref para detectar inserção de espaço em tempo real
+    const prevTextRef = useRef("");
+    // Ignorar próximo onChangeText quando já tratamos manualmente via onKeyPress
+    const ignoreNextChangeRef = useRef(false);
+
+    // Commands whose single argument should be slugified (spaces -> dashes) while typing
+    const slugArgCommands = useRef(new Set(["folder", "createfolder"])).current;
 
     // Scroll sync
     const inputScrollRef = useRef<ScrollView | null>(null);
@@ -127,10 +134,62 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     }, []);
 
     const handleTextChange = (val: string) => {
-      setText(val);
-      setSegments(buildSegments(val));
-      recompute(val, val.length);
-      const trimmed = val.trim();
+      if (ignoreNextChangeRef.current) {
+        ignoreNextChangeRef.current = false;
+        prevTextRef.current = val;
+        setText(val);
+        setSegments(buildSegments(val));
+        recompute(val, val.length);
+        return;
+      }
+      // Se acabou de adicionar UM espaço ao final enquanto está em arg mode de um comando slug
+      const prev = prevTextRef.current;
+      if (
+        val.length === prev.length + 1 &&
+        val.endsWith(" ") &&
+        commandState.inArgMode &&
+        commandState.activeCommand?.name &&
+        slugArgCommands.has(commandState.activeCommand.name) &&
+        commandState.argReplaceFrom != null
+      ) {
+        // Substitui espaço recém digitado por '-'
+        val = val.slice(0, -1) + "-";
+      }
+      let working = val;
+      // Preliminary command state to detect arg mode for immediate slug transform
+      try {
+        const preliminary = computeCommandState({
+          text: working,
+          cursor: working.length,
+          requestId: `pre-${requestCounterRef.current}`,
+        });
+        if (
+          preliminary.inArgMode &&
+          preliminary.activeCommand?.name &&
+          slugArgCommands.has(preliminary.activeCommand.name) &&
+          preliminary.argReplaceFrom != null
+        ) {
+          const argStart = preliminary.argReplaceFrom;
+          const cursorPos = working.length; // assume typing at end
+          if (cursorPos >= argStart) {
+            const argPortion = working.slice(argStart, cursorPos);
+            if (/\s/.test(argPortion)) {
+              const slugged = argPortion.replace(/\s+/g, "-");
+              if (slugged !== argPortion) {
+                // Preserve any remainder after the cursor (in case cursor isn't at end in future scenarios)
+                const remainder = working.slice(cursorPos);
+                working = working.slice(0, argStart) + slugged + remainder;
+              }
+            }
+          }
+        }
+      } catch {}
+
+      setText(working);
+      setSegments(buildSegments(working));
+      recompute(working, working.length);
+      prevTextRef.current = working; // atualizar histórico
+      const trimmed = working.trim();
       const stripped = trimmed
         .replace(/\/createfolder\s+\S+/gi, "")
         .replace(/\/deletefolder\s+\S+/gi, "")
@@ -149,7 +208,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
         return;
       }
       try {
-        const parsed = SmartTextParser.parseText(val);
+        const parsed = SmartTextParser.parseText(working);
         setPreview(parsed);
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -559,6 +618,30 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                       const { start, end } = e.nativeEvent.selection;
                       setSelection({ start, end });
                       recompute(text, start);
+                    }}
+                    onKeyPress={(e) => {
+                      const k = e.nativeEvent.key;
+                      if (
+                        (k === " " || k === "Spacebar") &&
+                        commandState.inArgMode &&
+                        commandState.activeCommand?.name &&
+                        slugArgCommands.has(commandState.activeCommand.name) &&
+                        commandState.argReplaceFrom != null
+                      ) {
+                        // Substituir espaço imediatamente por '-'
+                        const selStart = selection.start;
+                        const selEnd = selection.end;
+                        const before = text.slice(0, selStart);
+                        const after = text.slice(selEnd);
+                        const newText = before + "-" + after;
+                        ignoreNextChangeRef.current = true; // vamos ajustar manualmente
+                        setText(newText);
+                        setSegments(buildSegments(newText));
+                        prevTextRef.current = newText;
+                        const newCursor = selStart + 1;
+                        setSelection({ start: newCursor, end: newCursor });
+                        recompute(newText, newCursor);
+                      }
                     }}
                     autoCapitalize="none"
                     autoCorrect={false}
