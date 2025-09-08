@@ -315,51 +315,59 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         // Create quick note
         // Handle folder commands (only for notes)
         let chosenFolderId = parsed.folderId || "all";
-        // Detect explicit /folder single-word
         const explicitFolderMatch = /\/folder\s+(\S+)/i.exec(text);
         const createFolderInfo = SmartTextParser.extractCreateFolderName(text);
         const deleteFolderMatch = /\/deletefolder\s+(\S+)/i.exec(text);
         let commandOnly = false; // true when only folder management commands present (no content for note)
         try {
-          if (createFolderInfo.id) {
-            // Check if folder exists
-            const existing = await database.getAllFolders();
-            const exists = existing.some((f) => f.id === createFolderInfo.id);
-            if (!exists && createFolderInfo.id !== "all") {
-              await database.createFolder({
-                name: createFolderInfo.raw || createFolderInfo.id,
-                color: "#777777",
-                icon: "",
-                isDefault: false,
-                sortOrder: existing.length + 1,
-              });
-            }
-            // If no explicit /folder provided, use newly created folder
-            if (!parsed.folderId && createFolderInfo.id) {
-              chosenFolderId = createFolderInfo.id;
-            }
-          }
-          // Auto-create folder if referenced only by /folder (single word) and not existing
-          if (explicitFolderMatch) {
-            const folderRaw = explicitFolderMatch[1];
-            const folderSlug = folderRaw
+          const allFolders = await database.getAllFolders();
+          const slugify = (s: string) =>
+            s
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, "-")
               .replace(/^-+|-+$/g, "")
               .substring(0, 32);
-            if (folderSlug && folderSlug !== "all") {
-              const existing = await database.getAllFolders();
-              const exists = existing.some((f) => f.id === folderSlug);
-              if (!exists) {
-                await database.createFolder({
-                  name: folderRaw,
+          const slugToId: Record<string, string> = {};
+          allFolders.forEach((f) => (slugToId[slugify(f.name)] = f.id));
+          // /createfolder handling
+          if (createFolderInfo.id && createFolderInfo.id !== "all") {
+            let actual = slugToId[createFolderInfo.id];
+            if (!actual) {
+              const newId = await database.createFolder({
+                name: createFolderInfo.raw || createFolderInfo.id,
+                color: "#777777",
+                icon: "",
+                isDefault: false,
+                sortOrder: allFolders.length + 1,
+              });
+              slugToId[createFolderInfo.id] = newId;
+              actual = newId;
+              setFolderMap((prev) => ({
+                ...prev,
+                [newId]: (createFolderInfo.raw || createFolderInfo.id) ?? "",
+              }));
+            }
+            if (!parsed.folderId && actual) chosenFolderId = actual;
+          }
+          // /folder handling (assign & auto-create if needed)
+          if (explicitFolderMatch) {
+            const rawName = explicitFolderMatch[1];
+            const rawSlug = slugify(rawName);
+            if (rawSlug && rawSlug !== "all") {
+              let actual = slugToId[rawSlug];
+              if (!actual) {
+                const newId = await database.createFolder({
+                  name: rawName,
                   color: "#777777",
                   icon: "",
                   isDefault: false,
-                  sortOrder: existing.length + 1,
+                  sortOrder: allFolders.length + 1,
                 });
+                actual = newId;
+                slugToId[rawSlug] = newId;
+                setFolderMap((prev) => ({ ...prev, [newId]: rawName || "" }));
               }
-              chosenFolderId = folderSlug;
+              chosenFolderId = actual;
             }
           }
           if (deleteFolderMatch) {

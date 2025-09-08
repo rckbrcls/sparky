@@ -164,7 +164,7 @@ export class SmartTextParser {
         // Commands covered: /date /person /location /priority /title /note /folders
         let processed = line
           .replace(
-            /\/(date|person|location|priority|title|note|folders)\b[^\/\n]*/gi,
+            /\/(date|person|location|priority|title|note|folders|folder|createfolder|deletefolder)\b[^\/\n]*/gi,
             ""
           )
           .trimEnd();
