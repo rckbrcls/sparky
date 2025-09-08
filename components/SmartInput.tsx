@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Pressable,
+  findNodeHandle,
   ScrollView,
   StyleSheet,
   Text,
@@ -51,6 +51,8 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     const [selection, setSelection] = useState({ start: 0, end: 0 });
     const [autoHeight, setAutoHeight] = useState(68);
     const [isOverflowing, setIsOverflowing] = useState(false);
+    // Altura do placeholder (todas as linhas) para expandir a área clicável do TextInput quando vazio
+    const [placeholderHeight, setPlaceholderHeight] = useState(0);
     const BASE_MIN_HEIGHT = 68;
     const MAX_HEIGHT = 220;
     const PREVIEW_MAX_HEIGHT = 180;
@@ -284,7 +286,6 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     }));
 
     const { register, unregister } = useGlobalTouchDismiss();
-    const focusInput = useCallback(() => inputRef.current?.focus(), []);
     useEffect(() => {
       const id = "smart-input-refactored";
       register(id, {
@@ -531,161 +532,170 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
       }
     };
 
+    // added: container handle refs to avoid blur when tapping inside
+    const containerRef = useRef<View | null>(null);
+    const containerHandleRef = useRef<number | null>(null);
+    useEffect(() => {
+      containerHandleRef.current = findNodeHandle(containerRef.current) as
+        | number
+        | null;
+    });
+
     return (
-      <View style={[styles.container, style]}>
+      <View ref={containerRef} style={[styles.container, style]}>
         <View style={[styles.inputContainer, { minHeight: autoHeight }]}>
-          <Pressable
-            style={styles.tapWrapper}
-            onPress={focusInput}
-            hitSlop={{ top: 4, bottom: 4 }}
-            accessible={false}
-          >
-            <View style={styles.composedInput}>
-              <ScrollView
-                ref={inputScrollRef}
-                style={[styles.scrollArea, { maxHeight: MAX_HEIGHT - 28 }]}
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={isOverflowing}
-                scrollEnabled={isOverflowing}
-                onScroll={(e) =>
-                  syncScroll("input", e.nativeEvent.contentOffset.y)
-                }
-                scrollEventThrottle={16}
-                onLayout={(e) =>
-                  setInputViewportHeight(e.nativeEvent.layout.height)
-                }
-              >
-                <View style={styles.layeredInput}>
-                  <View style={styles.highlightLayer} pointerEvents="none">
-                    {text.length === 0 ? (
-                      <Text
-                        style={styles.placeholderText}
-                        onLayout={(e) => {
-                          const h = e.nativeEvent.layout.height;
-                          setAutoHeight((prev) =>
-                            Math.max(
-                              BASE_MIN_HEIGHT,
-                              Math.min(h + 28, MAX_HEIGHT)
-                            )
-                          );
-                        }}
-                      >
-                        {placeholder}
-                      </Text>
-                    ) : (
-                      <Text style={styles.highlightText}>
-                        {segments.map((s: Segment, idx) => (
-                          <Text
-                            key={idx}
-                            style={
-                              s.kind === "command"
-                                ? styles.hlCommand
-                                : s.kind === "commandArg"
-                                ? styles.hlCommandArg
-                                : s.kind === "tag"
-                                ? styles.hlTag
-                                : styles.hlNormal
-                            }
-                          >
-                            {s.text}
-                          </Text>
-                        ))}
-                      </Text>
-                    )}
-                  </View>
-                  <TextInput
-                    ref={inputRef}
-                    style={styles.inputOverlay}
-                    value={text}
-                    onChangeText={handleTextChange}
-                    multiline
-                    returnKeyType="done"
-                    onSubmitEditing={handleSubmit}
-                    editable={!isProcessing}
-                    onContentSizeChange={(e) => {
-                      const h = e.nativeEvent.contentSize.height;
-                      setInputContentHeight(h + 28);
-                      if (h + 28 <= MAX_HEIGHT) {
-                        setIsOverflowing(false);
-                        setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
-                      } else {
-                        setIsOverflowing(true);
-                        setAutoHeight(MAX_HEIGHT);
-                      }
-                    }}
-                    onSelectionChange={(e) => {
-                      const { start, end } = e.nativeEvent.selection;
-                      setSelection({ start, end });
-                      recompute(text, start);
-                    }}
-                    onKeyPress={(e) => {
-                      const k = e.nativeEvent.key;
-                      if (k === "/") {
-                        // Inserimos manualmente o '/' para exibir sugestões imediatamente
-                        const selStart = selection.start;
-                        const selEnd = selection.end;
+          <View style={styles.composedInput}>
+            <ScrollView
+              ref={inputScrollRef}
+              style={[styles.scrollArea, { maxHeight: MAX_HEIGHT - 28 }]}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={isOverflowing}
+              scrollEnabled={isOverflowing}
+              onScroll={(e) =>
+                syncScroll("input", e.nativeEvent.contentOffset.y)
+              }
+              scrollEventThrottle={16}
+              onLayout={(e) =>
+                setInputViewportHeight(e.nativeEvent.layout.height)
+              }
+            >
+              <View style={styles.layeredInput}>
+                <View style={styles.highlightLayer} pointerEvents="none">
+                  {text.length === 0 ? (
+                    <Text
+                      style={styles.placeholderText}
+                      onLayout={(e) => {
+                        const h = e.nativeEvent.layout.height; // altura real do placeholder multi-linha
+                        setPlaceholderHeight(h);
+                        setAutoHeight((prev) =>
+                          Math.max(
+                            BASE_MIN_HEIGHT,
+                            Math.min(h + 28, MAX_HEIGHT)
+                          )
+                        );
+                      }}
+                    >
+                      {placeholder}
+                    </Text>
+                  ) : (
+                    <Text style={styles.highlightText}>
+                      {segments.map((s: Segment, idx) => (
+                        <Text
+                          key={idx}
+                          style={
+                            s.kind === "command"
+                              ? styles.hlCommand
+                              : s.kind === "commandArg"
+                              ? styles.hlCommandArg
+                              : s.kind === "tag"
+                              ? styles.hlTag
+                              : styles.hlNormal
+                          }
+                        >
+                          {s.text}
+                        </Text>
+                      ))}
+                    </Text>
+                  )}
+                </View>
+                <TextInput
+                  ref={inputRef}
+                  style={[
+                    styles.inputOverlay,
+                    placeholderHeight > 0 && !text.length
+                      ? { minHeight: placeholderHeight }
+                      : null,
+                  ]}
+                  value={text}
+                  onChangeText={handleTextChange}
+                  multiline
+                  returnKeyType="done"
+                  onSubmitEditing={handleSubmit}
+                  editable={!isProcessing}
+                  // onFocus / onBlur handlers removidos (controle explícito não necessário agora)
+                  onContentSizeChange={(e) => {
+                    const h = e.nativeEvent.contentSize.height;
+                    setInputContentHeight(h + 28);
+                    if (h + 28 <= MAX_HEIGHT) {
+                      setIsOverflowing(false);
+                      setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
+                    } else {
+                      setIsOverflowing(true);
+                      setAutoHeight(MAX_HEIGHT);
+                    }
+                  }}
+                  onSelectionChange={(e) => {
+                    const { start, end } = e.nativeEvent.selection;
+                    setSelection({ start, end });
+                    recompute(text, start);
+                  }}
+                  onKeyPress={(e) => {
+                    const k = e.nativeEvent.key;
+                    if (k === "/") {
+                      // Inserimos manualmente o '/' para exibir sugestões imediatamente
+                      const selStart = selection.start;
+                      const selEnd = selection.end;
+                      const newText =
+                        text.slice(0, selStart) + "/" + text.slice(selEnd);
+                      ignoreNextChangeRef.current = true; // evitar recompute duplicado quando onChangeText vier
+                      setText(newText);
+                      setSegments(buildSegments(newText));
+                      const newCursor = selStart + 1;
+                      setSelection({ start: newCursor, end: newCursor });
+                      prevTextRef.current = newText;
+                      recompute(newText, newCursor);
+                      return; // já tratamos
+                    }
+                    if (k === "Backspace") {
+                      // Se vamos apagar um '/' imediatamente antes do cursor, fazemos manual para esconder palette instantaneamente
+                      if (
+                        selection.start === selection.end &&
+                        selection.start > 0 &&
+                        text.charAt(selection.start - 1) === "/"
+                      ) {
+                        const cutPos = selection.start - 1;
                         const newText =
-                          text.slice(0, selStart) + "/" + text.slice(selEnd);
-                        ignoreNextChangeRef.current = true; // evitar recompute duplicado quando onChangeText vier
+                          text.slice(0, cutPos) + text.slice(selection.start);
+                        ignoreNextChangeRef.current = true;
                         setText(newText);
                         setSegments(buildSegments(newText));
-                        const newCursor = selStart + 1;
+                        const newCursor = cutPos;
                         setSelection({ start: newCursor, end: newCursor });
                         prevTextRef.current = newText;
                         recompute(newText, newCursor);
                         return; // já tratamos
                       }
-                      if (k === "Backspace") {
-                        // Se vamos apagar um '/' imediatamente antes do cursor, fazemos manual para esconder palette instantaneamente
-                        if (
-                          selection.start === selection.end &&
-                          selection.start > 0 &&
-                          text.charAt(selection.start - 1) === "/"
-                        ) {
-                          const cutPos = selection.start - 1;
-                          const newText =
-                            text.slice(0, cutPos) + text.slice(selection.start);
-                          ignoreNextChangeRef.current = true;
-                          setText(newText);
-                          setSegments(buildSegments(newText));
-                          const newCursor = cutPos;
-                          setSelection({ start: newCursor, end: newCursor });
-                          prevTextRef.current = newText;
-                          recompute(newText, newCursor);
-                          return; // já tratamos
-                        }
-                      }
-                      if (
-                        (k === " " || k === "Spacebar") &&
-                        commandState.inArgMode &&
-                        commandState.activeCommand?.name &&
-                        slugArgCommands.has(commandState.activeCommand.name) &&
-                        commandState.argReplaceFrom != null
-                      ) {
-                        // Substituir espaço imediatamente por '-'
-                        const selStart = selection.start;
-                        const selEnd = selection.end;
-                        const before = text.slice(0, selStart);
-                        const after = text.slice(selEnd);
-                        const newText = before + "-" + after;
-                        ignoreNextChangeRef.current = true; // vamos ajustar manualmente
-                        setText(newText);
-                        setSegments(buildSegments(newText));
-                        prevTextRef.current = newText;
-                        const newCursor = selStart + 1;
-                        setSelection({ start: newCursor, end: newCursor });
-                        recompute(newText, newCursor);
-                      }
-                    }}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    scrollEnabled={false}
-                  />
-                </View>
-              </ScrollView>
-            </View>
-          </Pressable>
+                    }
+                    if (
+                      (k === " " || k === "Spacebar") &&
+                      commandState.inArgMode &&
+                      commandState.activeCommand?.name &&
+                      slugArgCommands.has(commandState.activeCommand.name) &&
+                      commandState.argReplaceFrom != null
+                    ) {
+                      // Substituir espaço imediatamente por '-'
+                      const selStart = selection.start;
+                      const selEnd = selection.end;
+                      const before = text.slice(0, selStart);
+                      const after = text.slice(selEnd);
+                      const newText = before + "-" + after;
+                      ignoreNextChangeRef.current = true; // vamos ajustar manualmente
+                      setText(newText);
+                      setSegments(buildSegments(newText));
+                      prevTextRef.current = newText;
+                      const newCursor = selStart + 1;
+                      setSelection({ start: newCursor, end: newCursor });
+                      recompute(newText, newCursor);
+                    }
+                  }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  scrollEnabled={false}
+                />
+              </View>
+            </ScrollView>
+          </View>
           {text.trim().length > 0 && (
             <TouchableOpacity
               style={[
