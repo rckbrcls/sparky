@@ -22,6 +22,7 @@ export interface ComputedCommandState {
   argSuggestions?: string[];
   segments: CommandStateSegment[]; // highlight info (kept simple for now)
   requestId?: string;
+  openBlockKind?: "tags" | "people" | "locations"; // legacy block support
 }
 
 // Basic synchronous computation; async suggestions resolved separately
@@ -57,6 +58,35 @@ export function computeCommandState(
   let argReplaceFrom: number | undefined;
   let commandMatches: CommandDefinition[] | undefined;
   let openCommandQuery: string | undefined;
+  let openBlockKind: ComputedCommandState["openBlockKind"];
+
+  // Detect open block by scanning tokens sequentially (simple stack for nested safety though only single level used)
+  const blockStack: string[] = [];
+  const BLOCK_START = new Set(["/tags", "/people", "/locations"]);
+  const BLOCK_END: Record<string, string> = {
+    "/endtags": "tags",
+    "/endpeople": "people",
+    "/endlocations": "locations",
+  };
+  const rawTokensForBlocks = text.split(/\s+/).filter(Boolean);
+  for (const tk of rawTokensForBlocks) {
+    if (BLOCK_START.has(tk))
+      blockStack.push(tk.slice(1)); // store kind without '/'
+    else if (BLOCK_END[tk]) {
+      const kind = BLOCK_END[tk];
+      for (let i = blockStack.length - 1; i >= 0; i--) {
+        if (blockStack[i] === kind) {
+          blockStack.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+  if (blockStack.length) {
+    const top = blockStack[blockStack.length - 1];
+    if (top === "tags" || top === "people" || top === "locations")
+      openBlockKind = top;
+  }
 
   if (activeRange) {
     const { token } = activeRange;
@@ -66,9 +96,19 @@ export function computeCommandState(
       if (!/\s/.test(partialName)) {
         openCommandQuery = partialName;
         const lower = partialName.toLowerCase();
-        commandMatches = commands.filter((c) =>
-          lower === "" ? true : c.name.startsWith(lower)
-        );
+        commandMatches = commands.filter((c) => {
+          if (openBlockKind) {
+            // inside a block, only show its closing command
+            const closing =
+              openBlockKind === "tags"
+                ? "endtags"
+                : openBlockKind === "people"
+                ? "endpeople"
+                : "endlocations";
+            if (c.name !== closing) return false;
+          }
+          return lower === "" ? true : c.name.startsWith(lower);
+        });
       } else {
         // token like /folder my-arg (not split yet due to simple splitting logic)
       }
@@ -114,9 +154,20 @@ export function computeCommandState(
         argReplaceFrom = cursor;
       }
     } else if (/\/$/.test(beforeCursor)) {
-      // Just a bare '/' at cursor end -> show all commands
+      // Just a bare '/' at cursor end -> show all commands (or only block closing if inside block)
       openCommandQuery = "";
-      commandMatches = commands.slice();
+      commandMatches = commands.filter((c) => {
+        if (openBlockKind) {
+          const closing =
+            openBlockKind === "tags"
+              ? "endtags"
+              : openBlockKind === "people"
+              ? "endpeople"
+              : "endlocations";
+          return c.name === closing;
+        }
+        return true;
+      });
     }
   }
 
@@ -130,6 +181,7 @@ export function computeCommandState(
     argSuggestions: [], // filled asynchronously
     segments,
     requestId: input.requestId,
+    openBlockKind,
   };
 }
 
