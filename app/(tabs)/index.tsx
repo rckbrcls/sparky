@@ -1,9 +1,9 @@
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useState } from "react";
-import { Alert, SafeAreaView, StyleSheet, View } from "react-native";
+import { Alert, Pressable, SafeAreaView, StyleSheet, View } from "react-native";
 import { MainNavigation } from "../../components/MainNavigation";
 import { NotesView } from "../../components/NotesView";
-import { SmartInput } from "../../components/SmartInput";
+import { SmartInput, SmartInputHandle } from "../../components/SmartInput";
 import { ThemedText } from "../../components/ThemedText";
 import { TimelineView } from "../../components/TimelineView";
 import { TriggersView } from "../../components/TriggersView";
@@ -77,12 +77,16 @@ export default function HomeScreen() {
   };
 
   const themeColors = Colors[scheme];
+  const smartInputRef = React.useRef<SmartInputHandle>(null);
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
-      <View style={styles.content}>
+      <Pressable
+        style={styles.content}
+        onPress={() => smartInputRef.current?.blur?.()}
+      >
         <View
           style={[
             styles.inputSection,
@@ -99,9 +103,10 @@ export default function HomeScreen() {
               { color: themeColors.text },
             ]}
           >
-            I Can't Miss
+            I Can&#39;t Miss
           </ThemedText>
           <SmartInput
+            ref={smartInputRef}
             onReminderCreated={handleReminderCreated}
             placeholder={
               "Type text. Use /commands or #tags (e.g. /date /note /person)"
@@ -111,7 +116,7 @@ export default function HomeScreen() {
         <MainNavigation activeMode={activeMode} onModeChange={setActiveMode}>
           {renderActiveView()}
         </MainNavigation>
-      </View>
+      </Pressable>
     </SafeAreaView>
   );
 }
