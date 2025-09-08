@@ -1,10 +1,5 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+// Clean refactored SmartInput implementation (modular command engine)
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -21,14 +16,15 @@ import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database } from "../database/database";
 import {
-  applyCommandInsert,
-  buildSegments,
-  CommandDef,
-  detectContext,
-  filterCommandList,
-  getCommands,
-  Segment,
-} from "../services/CommandEngine";
+  computeCommandState,
+  resolveArgumentSuggestions,
+} from "../services/CommandContextEngine";
+import { buildSegments, Segment } from "../services/CommandHighlights"; // extracted highlighter
+import {
+  applyArgumentInsert,
+  applyCommandInsert as applyNewCommandInsert,
+} from "../services/CommandInsertion";
+import { CommandDefinition } from "../services/CommandRegistry";
 import { ReminderService } from "../services/ReminderService";
 import { ParsedReminder, SmartTextParser } from "../services/SmartTextParser";
 
@@ -43,30 +39,27 @@ export interface SmartInputHandle {
 }
 
 export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
-  ({ onReminderCreated, placeholder = "Add reminder...", style }, ref) => {
+  (props, ref) => {
+    const { onReminderCreated, placeholder = "Add reminder...", style } = props;
+
     const [text, setText] = useState("");
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [segments, setSegments] = useState<ReturnType<typeof buildSegments>>(
+      []
+    );
     const [preview, setPreview] = useState<ParsedReminder | null>(null);
-    const [commandQuery, setCommandQuery] = useState<string | null>(null);
-    const [showCommands, setShowCommands] = useState(false);
-    const [openBlock, setOpenBlock] = useState<string | null>(null);
-    // Dynamic height state (base min 68)
-    const [autoHeight, setAutoHeight] = useState<number>(68);
-    const BASE_MIN_HEIGHT = 68;
-    const BULLET = "•";
-    const INDENT = "  ";
-    const [selection, setSelection] = useState<{ start: number; end: number }>({
-      start: 0,
-      end: 0,
-    });
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [selection, setSelection] = useState({ start: 0, end: 0 });
+    const [autoHeight, setAutoHeight] = useState(68);
     const [isOverflowing, setIsOverflowing] = useState(false);
+    const BASE_MIN_HEIGHT = 68;
     const MAX_HEIGHT = 220;
     const PREVIEW_MAX_HEIGHT = 180;
-    // Refs para sincronizar scroll
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    // Scroll sync
     const inputScrollRef = useRef<ScrollView | null>(null);
     const previewScrollRef = useRef<ScrollView | null>(null);
     const syncingRef = useRef(false);
-    const lastSourceRef = useRef<"input" | "preview" | null>(null);
     const [inputContentHeight, setInputContentHeight] = useState(0);
     const [previewContentHeight, setPreviewContentHeight] = useState(0);
     const [inputViewportHeight, setInputViewportHeight] = useState(0);
@@ -84,13 +77,10 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
           previewContentHeight - previewViewportHeight
         );
         if (inputScrollable === 0 && previewScrollable === 0) return;
-        // Normaliza posição da origem
         let normalized = 0;
-        if (source === "input") {
+        if (source === "input")
           normalized = inputScrollable ? y / inputScrollable : 0;
-        } else {
-          normalized = previewScrollable ? y / previewScrollable : 0;
-        }
+        else normalized = previewScrollable ? y / previewScrollable : 0;
         normalized = Math.min(1, Math.max(0, normalized));
         const targetY =
           source === "input"
@@ -102,9 +92,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
             : inputScrollRef.current;
         if (!targetRef) return;
         syncingRef.current = true;
-        lastSourceRef.current = source;
         targetRef.scrollTo({ y: targetY, animated: false });
-        // pequeno timeout para liberar
         requestAnimationFrame(() => {
           syncingRef.current = false;
         });
@@ -117,405 +105,158 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
       ]
     );
 
-    // Importa engine única
-    const COMMANDS = useMemo<CommandDef[]>(() => getCommands(), []);
-
-    const filteredCommands = useMemo(
-      () => filterCommandList(COMMANDS, openBlock, commandQuery),
-      [COMMANDS, openBlock, commandQuery]
-    );
-
-    const updateContext = useCallback((value: string) => {
-      const ctx = detectContext(value);
-      setOpenBlock(ctx.openBlock);
-      setShowCommands(ctx.showCommands);
-      setCommandQuery(ctx.query);
-    }, []);
-    const fadeAnim = React.useRef(new Animated.Value(0)).current;
-
-    // Highlight segments
-    const [segments, setSegments] = useState<ReturnType<typeof buildSegments>>(
-      []
-    );
-    // Folder map for preview naming
-    const [folderMap, setFolderMap] = useState<Record<string, string>>({});
-    const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
-    interface ArgContext {
-      command: string;
-      partial: string;
-      replaceFrom: number;
-    }
-    const [argContext, setArgContext] = useState<ArgContext | null>(null);
-    const [argSuggestions, setArgSuggestions] = useState<string[]>([]);
-
-    const ARG_HANDLERS = useMemo(
-      () => ({
-        folder: (partial: string) => {
-          const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
-          const np = norm(partial || "");
-          // Provide full (sorted) list when partial empty
-          const base = folders
-            .map((f) => f.name)
-            .filter((n, i, a) => a.indexOf(n) === i)
-            .sort((a, b) => a.localeCompare(b));
-          if (!np) return base;
-          return base.filter((n) => norm(n).includes(np));
-        },
-        deletefolder: (partial: string) => {
-          const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
-          const np = norm(partial || "");
-          const base = folders
-            .filter((f) => f.id !== "all")
-            .map((f) => f.name)
-            .filter((n, i, a) => a.indexOf(n) === i)
-            .sort((a, b) => a.localeCompare(b));
-          if (!np) return base;
-          return base.filter((n) => norm(n).includes(np));
-        },
-      }),
-      [folders]
-    );
-
-    // Recompute suggestions when folder list changes while user is already in arg context
-    useEffect(() => {
-      if (argContext) {
-        const handler = (ARG_HANDLERS as any)[argContext.command];
-        setArgSuggestions(
-          handler ? handler(argContext.partial).slice(0, 30) : []
-        );
-      }
-    }, [folders, ARG_HANDLERS, argContext]);
-
-    const detectArgContext = useCallback(
-      (value: string, cursor: number): boolean => {
-        try {
-          const upto = value.slice(0, cursor);
-          // If already completed deletefolder argument (single word) and space typed, exit arg mode
-          if (/\/deletefolder\s+\S+\s$/.test(upto)) {
-            if (argContext?.command === "deletefolder") {
-              setArgContext(null);
-              setArgSuggestions([]);
-            }
-            return false;
-          }
-          // Immediately show suggestions after typing the command (no space yet)
-          const justCmd = /\/(folder|deletefolder)$/.exec(upto);
-          if (justCmd) {
-            const command = justCmd[1];
-            setArgContext({ command, partial: "", replaceFrom: cursor });
-            const handler = (ARG_HANDLERS as any)[command];
-            setArgSuggestions(handler ? handler("").slice(0, 30) : []);
-            setShowCommands(false);
-            setCommandQuery(null);
-            return true;
-          }
-          // Detect commands that take a single argument (extensible pattern)
-          const m = /\/(folder|deletefolder)\s+([^\s\n]*)$/.exec(upto); // allows empty partial (hyphen slug in progress)
-          if (m) {
-            const command = m[1];
-            const partial = m[2] || "";
-            const replaceFrom = cursor - partial.length;
-            // Store arg context & suggestions
-            setArgContext({ command, partial, replaceFrom });
-            const handler = (ARG_HANDLERS as any)[command];
-            if (handler) {
-              const suggestions = handler(partial).slice(0, 30);
-              setArgSuggestions(suggestions);
-            } else {
-              setArgSuggestions([]);
-            }
-            // Immediately suppress command palette while in arg mode
-            setShowCommands(false);
-            setCommandQuery(null);
-            return true;
-          }
-          if (argContext) {
-            setArgContext(null);
-            setArgSuggestions([]);
-          }
-          return false;
-        } catch {
-          if (argContext) setArgContext(null);
-          setArgSuggestions([]);
-          return false;
-        }
-      },
-      [ARG_HANDLERS, argContext]
-    );
-
-    const handleSelectArgSuggestion = (name: string) => {
-      if (!argContext) return;
-      const before = text.slice(0, argContext.replaceFrom);
-      const after = text.slice(selection.start);
-      const inserted = `${name} `; // adiciona espaço para encerrar modo argumento
-      const newValue = before + inserted + after;
-      setText(newValue);
-      const newPos = (before + inserted).length;
-      setSelection({ start: newPos, end: newPos });
-      // Primeiro reparse para garantir que detectContext não reabre sugestões
-      handleTextChange(newValue);
-      // Garante limpeza (após possíveis estados batched)
-      requestAnimationFrame(() => {
-        setArgContext(null);
-        setArgSuggestions([]);
+    // Command engine
+    const [commandState, setCommandState] = useState<
+      import("../services/CommandContextEngine").ComputedCommandState
+    >({ inArgMode: false, segments: [] });
+    const requestCounterRef = useRef(0);
+    const recompute = useCallback((value: string, cursor: number) => {
+      const reqId = `${++requestCounterRef.current}`;
+      const base = computeCommandState({
+        text: value,
+        cursor,
+        requestId: reqId,
       });
+      setCommandState(base);
+      if (base.inArgMode && base.activeCommand?.argument) {
+        resolveArgumentSuggestions(base).then((resolved) => {
+          if (resolved.requestId === `${requestCounterRef.current}`)
+            setCommandState(resolved);
+        });
+      }
+    }, []);
+
+    const handleTextChange = (val: string) => {
+      setText(val);
+      setSegments(buildSegments(val));
+      recompute(val, val.length);
+      const trimmed = val.trim();
+      const stripped = trimmed
+        .replace(/\/createfolder\s+\S+/gi, "")
+        .replace(/\/deletefolder\s+\S+/gi, "")
+        .trim();
+      const onlySystem =
+        stripped.length === 0 &&
+        /\/createfolder\s+\S+|\/deletefolder\s+\S+/i.test(trimmed) &&
+        !/\/folder\s+\S+/i.test(trimmed);
+      if (onlySystem || stripped.length <= 3) {
+        setPreview(null);
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 120,
+          useNativeDriver: true,
+        }).start();
+        return;
+      }
+      try {
+        const parsed = SmartTextParser.parseText(val);
+        setPreview(parsed);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 160,
+          useNativeDriver: true,
+        }).start();
+      } catch {
+        setPreview(null);
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 120,
+          useNativeDriver: true,
+        }).start();
+      }
     };
 
+    // Folder names map (preview display only)
+    const [folderMap, setFolderMap] = useState<Record<string, string>>({});
     useEffect(() => {
       let cancelled = false;
-      const load = async () => {
-        for (let attempt = 0; attempt < 5 && !cancelled; attempt++) {
-          try {
-            // @ts-ignore internal check
-            if (!(database as any).db && (database as any).initialize) {
-              await (database as any).initialize();
-            }
-            const list = await database.getAllFolders();
-            if (cancelled) return;
-            setFolders(list);
-            const map: Record<string, string> = {};
-            list.forEach((f) => (map[f.id] = f.name));
-            setFolderMap(map);
-            return;
-          } catch {
-            await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
-          }
-        }
-      };
-      load();
+      (async () => {
+        try {
+          // @ts-ignore
+          if (!(database as any).db && (database as any).initialize)
+            await (database as any).initialize();
+          const folders = await database.getAllFolders();
+          if (cancelled) return;
+          const map: Record<string, string> = {};
+          folders.forEach((f) => {
+            map[f.id] = f.name;
+          });
+          setFolderMap(map);
+        } catch {}
+      })();
       return () => {
         cancelled = true;
       };
     }, []);
 
-    // buildSegments já vem do engine único
-
-    const handleTextChange = (newText: string) => {
-      // Live transform: for /folder or /createfolder arguments, replace internal spaces with '-'
-      let working = newText;
-      const multiArgMatch = /(\/(folder|createfolder)\s+)([^\n\/]*)$/.exec(
-        working
+    const handleSelectCommand = (cmd: CommandDefinition) => {
+      const { newText, newCursor } = applyNewCommandInsert(
+        text,
+        cmd,
+        selection.start
       );
-      if (multiArgMatch) {
-        const prefix = multiArgMatch[1];
-        const rawArg = multiArgMatch[3];
-        if (rawArg.length > 0) {
-          const slugged = rawArg
-            // collapse leading/trailing spaces
-            .replace(/\s+/g, "-")
-            .replace(/-+/g, "-")
-            .replace(/^-/, "")
-            .replace(/-$/, "-"); // allow trailing hyphen while typing
-          if (slugged !== rawArg) {
-            working = working.slice(0, multiArgMatch.index) + prefix + slugged;
-          }
-        }
-      }
-      if (working !== newText) {
-        setText(working);
-      } else {
-        setText(newText);
-      }
-      // Use transformed text for context detection
-      const baseForCtx = working;
-      const inArg = detectArgContext(baseForCtx, baseForCtx.length);
-      // Only update general command context if NOT inside an arg context
-      if (!inArg) {
-        updateContext(baseForCtx);
-      }
-      setSegments(buildSegments(baseForCtx));
-
-      // Extra fallback (should rarely run now). Ensures suggestions when space just added.
-      if (!inArg && /\/(folder|deletefolder)\s+$/.test(baseForCtx)) {
-        const m = /\/(folder|deletefolder)\s+$/.exec(baseForCtx);
-        if (m) {
-          const command = m[1];
-          const handler = (ARG_HANDLERS as any)[command];
-          setArgContext({
-            command,
-            partial: "",
-            replaceFrom: baseForCtx.length,
-          });
-          setArgSuggestions(handler ? handler("").slice(0, 30) : []);
-          setShowCommands(false);
-          setCommandQuery(null);
-        }
-      }
-
-      const trimmed = baseForCtx.trim();
-      // Consider only create/delete as comandos puramente de sistema
-      const strippedForPreview = trimmed
-        .replace(/\/createfolder\s+\S+/gi, "")
-        .replace(/\/deletefolder\s+\S+/gi, "")
-        .trim();
-      const hasOnlySystemCommands =
-        strippedForPreview.length === 0 &&
-        /\/createfolder\s+\S+|\/deletefolder\s+\S+/i.test(trimmed) &&
-        !/\/folder\s+\S+/i.test(trimmed); // manter /folder exibindo preview
-
-      if (hasOnlySystemCommands || strippedForPreview.length <= 3) {
-        // Não mostra preview para comandos de gerenciamento isolados
-        setPreview(null);
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }).start();
-        return;
-      }
-
-      try {
-        const parsed = SmartTextParser.parseText(baseForCtx);
-        console.log("Parsed text:", parsed);
-        setPreview(parsed);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      } catch (error) {
-        console.error("Error parsing text:", error);
-        setPreview(null);
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }).start();
-      }
+      setText(newText);
+      setSelection({ start: newCursor, end: newCursor });
+      setSegments(buildSegments(newText));
+      recompute(newText, newCursor);
     };
 
-    const setTextAndSelection = (newValue: string, cursor: number) => {
-      setText(newValue);
-      // Defer selection update slightly if needed (RN sometimes lags)
-      setSelection({ start: cursor, end: cursor });
-    };
-
-    const getCurrentLineInfo = (content: string, cursor: number) => {
-      const before = content.slice(0, cursor);
-      const lineStart = before.lastIndexOf("\n") + 1; // -1 returns 0
-      const line = content.slice(lineStart, cursor);
-      return { line, lineStart };
-    };
-
-    const handleKeyPress = (e: any) => {
-      const key = e.nativeEvent.key;
-      if (selection.start !== selection.end) return; // ignore range selection for now
-      const cursor = selection.start;
-      let value = text;
-
-      // TAB => indent or start bullet list
-      if (key === "Tab") {
-        e.preventDefault?.();
-        const { line } = getCurrentLineInfo(value, cursor);
-        let insert = INDENT;
-        // If line empty -> start bullet automatically
-        if (line.trim().length === 0) {
-          insert = `${BULLET} `;
-        }
-        const newValue = value.slice(0, cursor) + insert + value.slice(cursor);
-        setTextAndSelection(newValue, cursor + insert.length);
-        return;
-      }
-
-      // Enter behavior handled post-change in effect to avoid double newlines
-    };
-
-    // Transform start-of-line markers like "- " or "* " into bullet automatically
-    useEffect(() => {
-      // Only act on latest line
-      const { start } = selection;
-      const { line, lineStart } = getCurrentLineInfo(text, start);
-      if (/^(?:-|\*)\s$/.test(line)) {
-        const newValue =
-          text.slice(0, lineStart) +
-          BULLET +
-          " " +
-          text.slice(lineStart + line.length);
-        const newCursor = lineStart + (BULLET + " ").length;
-        if (newValue !== text) {
-          setTextAndSelection(newValue, newCursor);
-        }
-      }
-    }, [text, selection]);
-
-    // Bullet continuation / termination similar to word processors
-    const prevTextRef = React.useRef(text);
-    const transformingRef = React.useRef(false);
-    useEffect(() => {
-      if (transformingRef.current) {
-        transformingRef.current = false;
-        prevTextRef.current = text;
-        return;
-      }
-      const prev = prevTextRef.current;
-      if (text.length > prev.length && text.endsWith("\n")) {
-        // User pressed Enter
-        const beforeNewline = text.slice(0, -1); // remove last \n
-        const lines = beforeNewline.split("\n");
-        const lastLine = lines[lines.length - 1]; // line before the newline
-        const trimmed = lastLine.trim();
-        const isBullet = trimmed.startsWith(BULLET);
-        if (isBullet) {
-          const afterBullet = trimmed.slice(BULLET.length).trim();
-          if (afterBullet.length > 0) {
-            // Continue list: append bullet to new empty line
-            const withNext = text + BULLET + " ";
-            transformingRef.current = true;
-            setText(withNext);
-            setSelection({ start: withNext.length, end: withNext.length });
-          } else {
-            // Bullet line was empty -> end list (remove bullet chars from that empty line)
-            // Remove previous bullet markers from empty bullet line (replace that entire lastLine with '')
-            const cleanedLine = lastLine.replace(/\s*•\s?/, "");
-            if (cleanedLine.length === 0) {
-              // Replace lines array last element with '' (already empty). Do nothing; just leave blank line.
-              // But if we inserted two consecutive Enters, we already have a blank line; nothing to do.
-            }
-          }
-        }
-      }
-      prevTextRef.current = text;
-    }, [text]);
-
-    const handleSelectCommand = (command: any) => {
-      const newValue = applyCommandInsert(text, command);
-      // Usa pipeline padrão para atualizar preview/argContext
-      handleTextChange(newValue);
-      setShowCommands(false); // reforço
-      setCommandQuery(null);
-      // Move o cursor para o final após inserção
-      requestAnimationFrame(() =>
-        setSelection({ start: newValue.length, end: newValue.length })
+    const handleSelectArgSuggestion = (value: string) => {
+      if (!commandState.inArgMode || !commandState.activeCommand) return;
+      const { argReplaceFrom } = commandState;
+      if (argReplaceFrom == null) return;
+      const { newText, newCursor } = applyArgumentInsert(
+        text,
+        argReplaceFrom,
+        selection.start,
+        value,
+        commandState.activeCommand.finalizeOnSelect !== false
       );
+      setText(newText);
+      setSelection({ start: newCursor, end: newCursor });
+      setSegments(buildSegments(newText));
+      recompute(newText, newCursor);
     };
 
-    useEffect(() => {
-      setSegments(buildSegments(text));
-    }, [text]);
+    const inputRef = useRef<TextInput | null>(null);
+    React.useImperativeHandle(ref, () => ({
+      blur: () => inputRef.current?.blur(),
+      focus: () => inputRef.current?.focus(),
+    }));
 
+    const { register, unregister } = useGlobalTouchDismiss();
+    const focusInput = useCallback(() => inputRef.current?.focus(), []);
+    useEffect(() => {
+      const id = "smart-input-refactored";
+      register(id, {
+        isFocused: () =>
+          !!inputRef.current && (inputRef.current as any).isFocused?.(),
+        blur: () => inputRef.current?.blur(),
+        shouldBlur: () => {
+          if (
+            commandState.inArgMode ||
+            (commandState.commandMatches?.length || 0) > 0
+          )
+            return false;
+          return true;
+        },
+      });
+      return () => unregister(id);
+    }, [register, unregister, commandState]);
+
+    // Submit
     const handleSubmit = async () => {
       if (!text.trim()) return;
-      // Limpa qualquer contexto de argumento antes de processar
-      if (argContext) {
-        setArgContext(null);
-        setArgSuggestions([]);
-      }
-
       setIsProcessing(true);
-
       try {
         const parsed = SmartTextParser.parseText(text);
-        console.log("Submitting parsed text:", parsed);
-
         if (parsed.type === "note") {
-          // Create quick note
-          // Handle folder commands (only for notes)
           let chosenFolderId = parsed.folderId || "all";
           const explicitFolderMatch = /\/folder\s+(\S+)/i.exec(text);
           const createFolderInfo =
             SmartTextParser.extractCreateFolderName(text);
           const deleteFolderMatch = /\/deletefolder\s+(\S+)/i.exec(text);
-          let commandOnly = false; // true when only folder management commands present (no content for note)
+          let commandOnly = false;
           try {
             const allFolders = await database.getAllFolders();
             const slugify = (s: string) =>
@@ -526,7 +267,6 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                 .substring(0, 32);
             const slugToId: Record<string, string> = {};
             allFolders.forEach((f) => (slugToId[slugify(f.name)] = f.id));
-            // /createfolder handling
             if (createFolderInfo.id && createFolderInfo.id !== "all") {
               let actual = slugToId[createFolderInfo.id];
               if (!actual) {
@@ -539,14 +279,13 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                 });
                 slugToId[createFolderInfo.id] = newId;
                 actual = newId;
-                setFolderMap((prev) => ({
-                  ...prev,
+                setFolderMap((p) => ({
+                  ...p,
                   [newId]: (createFolderInfo.raw || createFolderInfo.id) ?? "",
                 }));
               }
               if (!parsed.folderId && actual) chosenFolderId = actual;
             }
-            // /folder handling (assign & auto-create if needed)
             if (explicitFolderMatch) {
               const rawName = explicitFolderMatch[1];
               const rawSlug = slugify(rawName);
@@ -562,7 +301,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                   });
                   actual = newId;
                   slugToId[rawSlug] = newId;
-                  setFolderMap((prev) => ({ ...prev, [newId]: rawName || "" }));
+                  setFolderMap((p) => ({ ...p, [newId]: rawName || "" }));
                 }
                 chosenFolderId = actual;
               }
@@ -590,26 +329,17 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                 if (target && !target.isDefault) {
                   await database.deleteFolder(target.id);
                   if (chosenFolderId === target.id) chosenFolderId = "all";
-                } else {
-                  console.log(
-                    "Delete folder: alvo não encontrado ou é default",
-                    raw
-                  );
                 }
               }
             }
-            // Determine if text has only folder management commands (no note content)
             const remaining = text
               .replace(/\/deletefolder\s+\S+/gi, "")
               .replace(/\/createfolder\s+\S+/gi, "")
               .replace(/\/folder\s+\S+/gi, "")
               .trim();
             if (!remaining) commandOnly = true;
-          } catch (e) {
-            console.warn("Folder creation failed:", e);
-          }
+          } catch {}
           if (!commandOnly) {
-            // Remove folder management commands from persisted content
             const cleanedTitle = parsed.title
               .replace(/\/(folder|createfolder|deletefolder)\s+\S+/gi, "")
               .trim();
@@ -625,14 +355,8 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
               tags: JSON.stringify(parsed.tags),
               isPinned: parsed.priority === 3,
             });
-            console.log("Quick note created successfully");
-          } else {
-            console.log(
-              "Somente comandos de pasta processados; nenhuma nota criada"
-            );
           }
         } else {
-          // Create reminder
           const reminderId = await ReminderService.createReminder({
             title: parsed.title,
             person: parsed.person,
@@ -646,12 +370,10 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                 : "by_person_project",
             fireAt: parsed.fireAt,
           });
-          console.log("Reminder created with ID:", reminderId);
-          // Create triggers (singular or plural)
           if (parsed.type === "trigger") {
             const triggerPromises: Promise<string>[] = [];
-            if (parsed.persons && parsed.persons.length) {
-              for (const p of parsed.persons) {
+            if (parsed.persons && parsed.persons.length)
+              parsed.persons.forEach((p) =>
                 triggerPromises.push(
                   database.createTrigger({
                     reminderId,
@@ -659,9 +381,9 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                     config: JSON.stringify({ contactName: p }),
                     isActive: true,
                   })
-                );
-              }
-            } else if (parsed.person) {
+                )
+              );
+            else if (parsed.person)
               triggerPromises.push(
                 database.createTrigger({
                   reminderId,
@@ -670,9 +392,8 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                   isActive: true,
                 })
               );
-            }
-            if (parsed.locations && parsed.locations.length) {
-              for (const loc of parsed.locations) {
+            if (parsed.locations && parsed.locations.length)
+              parsed.locations.forEach((loc) =>
                 triggerPromises.push(
                   database.createTrigger({
                     reminderId,
@@ -680,9 +401,9 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                     config: JSON.stringify({ location: loc }),
                     isActive: true,
                   })
-                );
-              }
-            } else if (parsed.location) {
+                )
+              );
+            else if (parsed.location)
               triggerPromises.push(
                 database.createTrigger({
                   reminderId,
@@ -691,41 +412,34 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                   isActive: true,
                 })
               );
-            }
             await Promise.all(triggerPromises);
           }
         }
-
         setText("");
         setPreview(null);
-        // Garantir limpeza total pós envio
-        setArgContext(null);
-        setArgSuggestions([]);
         onReminderCreated();
-
-        // Success feedback
         Animated.sequence([
           Animated.timing(fadeAnim, {
             toValue: 0,
-            duration: 100,
+            duration: 90,
             useNativeDriver: true,
           }),
           Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 100,
+            duration: 90,
             useNativeDriver: true,
           }),
           Animated.timing(fadeAnim, {
             toValue: 0,
-            duration: 100,
+            duration: 90,
             useNativeDriver: true,
           }),
         ]).start();
       } catch (error) {
         console.error("Error creating reminder:", error);
-        const errorMessage =
+        const msg =
           error instanceof Error ? error.message : "Erro desconhecido";
-        Alert.alert("Erro", `Falha ao criar lembrete: ${errorMessage}`);
+        Alert.alert("Erro", `Falha ao criar lembrete: ${msg}`);
       } finally {
         setIsProcessing(false);
       }
@@ -738,7 +452,6 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
       if (triggerType === "location") return "📍";
       return "📋";
     };
-
     const getTypeLabel = (type: string, triggerType?: string) => {
       if (type === "date") return "Date Reminder";
       if (type === "note") return "Quick Note";
@@ -746,49 +459,18 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
       if (triggerType === "location") return "Location Trigger";
       return "General Reminder";
     };
-
     const getPriorityColor = (priority: number) => {
       switch (priority) {
         case 3:
-          return Colors.dark.error; // High priority
+          return Colors.dark.error;
         case 2:
-          return Colors.dark.warning; // Medium priority
+          return Colors.dark.warning;
         case 1:
-          return Colors.dark.success; // Low priority
+          return Colors.dark.success;
         default:
           return Colors.dark.muted;
       }
     };
-
-    // Expose imperative handlers
-    const inputRef = useRef<TextInput | null>(null);
-    React.useImperativeHandle(ref, () => ({
-      blur: () => inputRef.current?.blur(),
-      focus: () => inputRef.current?.focus(),
-    }));
-
-    const { register, unregister } = useGlobalTouchDismiss();
-
-    // Focar ao tocar em qualquer área vazia do bloco (placeholder multiline / espaços laterais)
-    const focusInput = useCallback(() => {
-      inputRef.current?.focus();
-    }, []);
-
-    // Register this input with global dismiss (focus detection based on internal ref)
-    useEffect(() => {
-      const id = `smart-input`;
-      register(id, {
-        isFocused: () =>
-          !!inputRef.current && (inputRef.current as any).isFocused?.(),
-        blur: () => inputRef.current?.blur(),
-        shouldBlur: () => {
-          // Não desfoca se algum palette de sugestões/comandos ou arg estiver aberto
-          if (argContext || showCommands) return false;
-          return true;
-        },
-      });
-      return () => unregister(id);
-    }, [register, unregister, argContext, showCommands]);
 
     return (
       <View style={[styles.container, style]}>
@@ -797,7 +479,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
             style={styles.tapWrapper}
             onPress={focusInput}
             hitSlop={{ top: 4, bottom: 4 }}
-            accessible={false} // evita elemento extra para leitores; foco vai direto ao TextInput
+            accessible={false}
           >
             <View style={styles.composedInput}>
               <ScrollView
@@ -807,10 +489,9 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={isOverflowing}
                 scrollEnabled={isOverflowing}
-                onScroll={(e) => {
-                  const y = e.nativeEvent.contentOffset.y;
-                  syncScroll("input", y);
-                }}
+                onScroll={(e) =>
+                  syncScroll("input", e.nativeEvent.contentOffset.y)
+                }
                 scrollEventThrottle={16}
                 onLayout={(e) =>
                   setInputViewportHeight(e.nativeEvent.layout.height)
@@ -835,7 +516,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                       </Text>
                     ) : (
                       <Text style={styles.highlightText}>
-                        {segments.map((s: Segment, idx: number) => (
+                        {segments.map((s: Segment, idx) => (
                           <Text
                             key={idx}
                             style={
@@ -877,31 +558,8 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                     onSelectionChange={(e) => {
                       const { start, end } = e.nativeEvent.selection;
                       setSelection({ start, end });
-                      const inArg = detectArgContext(text, start);
-                      if (inArg) return; // already handled & suppressed commands
-                      if (
-                        /\/(folder|deletefolder)\s+$/.test(text.slice(0, start))
-                      ) {
-                        const m = /\/(folder|deletefolder)\s+$/.exec(
-                          text.slice(0, start)
-                        );
-                        if (m) {
-                          const command = m[1];
-                          const handler = (ARG_HANDLERS as any)[command];
-                          setArgContext({
-                            command,
-                            partial: "",
-                            replaceFrom: start,
-                          });
-                          setArgSuggestions(
-                            handler ? handler("").slice(0, 30) : []
-                          );
-                          setShowCommands(false);
-                          setCommandQuery(null);
-                        }
-                      }
+                      recompute(text, start);
                     }}
-                    onKeyPress={handleKeyPress}
                     autoCapitalize="none"
                     autoCorrect={false}
                     scrollEnabled={false}
@@ -926,7 +584,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
           )}
         </View>
 
-        {argContext && (
+        {commandState.inArgMode && commandState.activeCommand && (
           <View style={styles.commandPalette}>
             <ScrollView
               style={styles.commandScroll}
@@ -934,22 +592,24 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
               keyboardShouldPersistTaps="handled"
               nestedScrollEnabled
             >
-              {argSuggestions.map((s, idx) => (
+              {commandState.argSuggestions?.map((s, idx) => (
                 <TouchableOpacity
                   key={s}
                   style={[
                     styles.commandItem,
-                    idx === argSuggestions.length - 1 && {
+                    idx === commandState.argSuggestions!.length - 1 && {
                       borderBottomWidth: 0,
                     },
                   ]}
                   onPress={() => handleSelectArgSuggestion(s)}
                 >
                   <Text style={styles.commandName}>{s}</Text>
-                  <Text style={styles.commandDesc}>folder</Text>
+                  <Text style={styles.commandDesc}>
+                    {commandState.activeCommand?.name}
+                  </Text>
                 </TouchableOpacity>
               ))}
-              {argSuggestions.length === 0 && (
+              {(commandState.argSuggestions?.length || 0) === 0 && (
                 <View style={styles.commandItem}>
                   <Text style={styles.commandDesc}>Sem sugestões</Text>
                 </View>
@@ -958,32 +618,34 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
           </View>
         )}
 
-        {showCommands && filteredCommands.length > 0 && !argContext && (
-          <View style={styles.commandPalette}>
-            <ScrollView
-              style={styles.commandScroll}
-              contentContainerStyle={styles.commandScrollContent}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-            >
-              {filteredCommands.map((c: CommandDef, idx: number) => (
-                <TouchableOpacity
-                  key={c.cmd}
-                  style={[
-                    styles.commandItem,
-                    idx === filteredCommands.length - 1 && {
-                      borderBottomWidth: 0,
-                    },
-                  ]}
-                  onPress={() => handleSelectCommand(c)}
-                >
-                  <Text style={styles.commandName}>{c.cmd}</Text>
-                  <Text style={styles.commandDesc}>{c.desc}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        {!commandState.inArgMode &&
+          commandState.openCommandQuery != null &&
+          (commandState.commandMatches?.length || 0) > 0 && (
+            <View style={styles.commandPalette}>
+              <ScrollView
+                style={styles.commandScroll}
+                contentContainerStyle={styles.commandScrollContent}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+              >
+                {commandState.commandMatches!.map((c, idx) => (
+                  <TouchableOpacity
+                    key={c.name}
+                    style={[
+                      styles.commandItem,
+                      idx === commandState.commandMatches!.length - 1 && {
+                        borderBottomWidth: 0,
+                      },
+                    ]}
+                    onPress={() => handleSelectCommand(c)}
+                  >
+                    <Text style={styles.commandName}>{`/${c.name}`}</Text>
+                    <Text style={styles.commandDesc}>{c.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
         {preview && (
           <Animated.View style={[styles.preview, { opacity: fadeAnim }]}>
@@ -1014,10 +676,9 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                 contentContainerStyle={styles.previewScrollContent}
                 showsVerticalScrollIndicator
                 keyboardShouldPersistTaps="handled"
-                onScroll={(e) => {
-                  const y = e.nativeEvent.contentOffset.y;
-                  syncScroll("preview", y);
-                }}
+                onScroll={(e) =>
+                  syncScroll("preview", e.nativeEvent.contentOffset.y)
+                }
                 scrollEventThrottle={16}
                 onLayout={(e) =>
                   setPreviewViewportHeight(e.nativeEvent.layout.height)
@@ -1031,17 +692,16 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                       text || ""
                     );
                     let folderName: string | undefined;
-                    if (folderCmd && folderCmd[1].trim()) {
+                    if (folderCmd && folderCmd[1].trim())
                       folderName = folderCmd[1].trim();
-                    } else if (createFolderCmd && createFolderCmd[1].trim()) {
+                    else if (createFolderCmd && createFolderCmd[1].trim())
                       folderName = createFolderCmd[1].trim();
-                    } else if (preview.folderId) {
+                    else if (preview.folderId)
                       folderName =
                         folderMap[preview.folderId] ||
                         (preview.folderId === "all"
                           ? "All"
                           : preview.folderId.replace(/-/g, " "));
-                    }
                     return folderName ? (
                       <Text style={styles.previewDetail}>📁 {folderName}</Text>
                     ) : null;
@@ -1081,7 +741,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                 )}
                 {preview.tags.length > 0 && (
                   <Text style={styles.previewDetail}>
-                    🏷️ {preview.tags.map((tag) => `#${tag}`).join(" ")}
+                    🏷️ {preview.tags.map((t) => `#${t}`).join(" ")}
                   </Text>
                 )}
               </ScrollView>
@@ -1095,9 +755,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
 SmartInput.displayName = "SmartInput";
 
 const styles = StyleSheet.create({
-  container: {
-    marginVertical: 8,
-  },
+  container: { marginVertical: 8 },
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1112,27 +770,13 @@ const styles = StyleSheet.create({
   scrollArea: { width: "100%" },
   scrollContent: { flexGrow: 1 },
   layeredInput: { position: "relative", width: "100%" },
-  input: {
-    ...Typography.body,
-    flex: 1,
-    color: Colors.dark.text,
-    maxHeight: 120,
-  },
-  composedInput: {
-    flex: 1,
-    minHeight: 40,
-    justifyContent: "flex-start",
-  },
-  tapWrapper: {
-    flex: 1,
-    justifyContent: "flex-start",
-  },
+  composedInput: { flex: 1, minHeight: 40, justifyContent: "flex-start" },
+  tapWrapper: { flex: 1, justifyContent: "flex-start" },
   highlightLayer: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 0,
     flexDirection: "row",
     flexWrap: "wrap",
   },
@@ -1148,7 +792,6 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     flexGrow: 1,
     width: "100%",
-    // Garante alinhamento
     includeFontPadding: false,
     padding: 0,
   },
@@ -1157,20 +800,10 @@ const styles = StyleSheet.create({
     color: Colors.dark.muted,
     lineHeight: 22,
   },
-  hlNormal: {
-    color: Colors.dark.text,
-  },
-  hlCommand: {
-    color: Colors.dark.tint,
-    fontWeight: "600",
-  },
-  hlCommandArg: {
-    color: Colors.dark.icon,
-  },
-  hlTag: {
-    color: Colors.dark.success,
-    fontWeight: "500",
-  },
+  hlNormal: { color: Colors.dark.text },
+  hlCommand: { color: Colors.dark.tint, fontWeight: "600" },
+  hlCommandArg: { color: Colors.dark.icon },
+  hlTag: { color: Colors.dark.success, fontWeight: "500" },
   submitButton: {
     marginLeft: 12,
     width: 32,
@@ -1180,9 +813,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  submitButtonDisabled: {
-    backgroundColor: Colors.dark.muted,
-  },
+  submitButtonDisabled: { backgroundColor: Colors.dark.muted },
   submitButtonText: {
     ...Typography.body,
     color: Colors.dark.background,
@@ -1201,48 +832,21 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: 6,
   },
-  previewScroll: {
-    width: "100%",
-  },
-  previewScrollContent: {
-    paddingBottom: 4,
-  },
+  previewScroll: { width: "100%" },
+  previewScrollContent: { paddingBottom: 4 },
   previewHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
   },
-  previewIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  previewType: {
-    ...Typography.caption,
-    color: Colors.dark.muted,
-    flex: 1,
-  },
-  priorityIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
+  previewIcon: { fontSize: 16, marginRight: 8 },
+  previewType: { ...Typography.caption, color: Colors.dark.muted, flex: 1 },
+  priorityIndicator: { width: 8, height: 8, borderRadius: 4 },
   previewTitle: {
     ...Typography.body,
     color: Colors.dark.text,
     fontWeight: "600",
     marginBottom: 4,
-  },
-  previewMultiline: {
-    ...Typography.body,
-    color: Colors.dark.text,
-    marginBottom: 4,
-    fontWeight: "600",
-    // preserve whitespace indentation (RN Text collapses multiple spaces unless we keep them; using unicode no-break space replacement optional)
-  },
-  previewLine: {
-    ...Typography.body,
-    color: Colors.dark.text,
-    fontWeight: "600",
   },
   previewBody: {
     ...Typography.caption,
@@ -1263,13 +867,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.border,
     overflow: "hidden",
   },
-  commandScroll: {
-    maxHeight: 220,
-    width: "100%",
-  },
-  commandScrollContent: {
-    flexGrow: 1,
-  },
+  commandScroll: { maxHeight: 220, width: "100%" },
+  commandScrollContent: { flexGrow: 1 },
   commandItem: {
     paddingVertical: 10,
     paddingHorizontal: 14,
