@@ -174,6 +174,14 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     (value: string, cursor: number): boolean => {
       try {
         const upto = value.slice(0, cursor);
+        // If already completed a single-word argument and a trailing space was typed, exit arg mode
+        if (/\/(folder|deletefolder)\s+\S+\s$/.test(upto)) {
+          if (argContext) {
+            setArgContext(null);
+            setArgSuggestions([]);
+          }
+          return false; // do not stay in arg mode
+        }
         // Detect commands that take a single argument (extensible pattern)
         const m = /\/(folder|deletefolder)\s+([^\s\n]*)$/.exec(upto); // allows empty partial
         if (m) {
@@ -212,15 +220,18 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     if (!argContext) return;
     const before = text.slice(0, argContext.replaceFrom);
     const after = text.slice(selection.start);
-    const inserted = `${name}`;
+  const inserted = `${name} `; // adiciona espaço para encerrar modo argumento
     const newValue = before + inserted + after;
     setText(newValue);
-    // Move caret after inserted word
     const newPos = (before + inserted).length;
     setSelection({ start: newPos, end: newPos });
-    setArgContext(null);
-    setArgSuggestions([]);
-    handleTextChange(newValue); // reparse
+    // Primeiro reparse para garantir que detectContext não reabre sugestões
+    handleTextChange(newValue);
+    // Garante limpeza (após possíveis estados batched)
+    requestAnimationFrame(() => {
+      setArgContext(null);
+      setArgSuggestions([]);
+    });
   };
 
   useEffect(() => {
@@ -414,6 +425,11 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
+    // Limpa qualquer contexto de argumento antes de processar
+    if (argContext) {
+      setArgContext(null);
+      setArgSuggestions([]);
+    }
 
     setIsProcessing(true);
 
@@ -611,6 +627,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
       setText("");
       setPreview(null);
+  // Garantir limpeza total pós envio
+  setArgContext(null);
+  setArgSuggestions([]);
       onReminderCreated();
 
       // Success feedback
