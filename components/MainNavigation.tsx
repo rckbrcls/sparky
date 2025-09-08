@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   StyleSheet,
@@ -35,17 +35,40 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
 }) => {
   const scheme = useColorScheme() ?? "dark";
   const themeColors = Colors[scheme];
-  const [indicatorAnim] = useState(new Animated.Value(0));
+  // Layout info per nav item (x and width)
+  const [itemLayouts, setItemLayouts] = useState<
+    { x: number; width: number }[]
+  >([]);
+  const [allMeasured, setAllMeasured] = useState(false);
+  const indicatorX = useRef(new Animated.Value(0)).current;
+  const [indicatorWidth, setIndicatorWidth] = useState(0);
+
+  const handleItemLayout = (index: number, x: number, width: number) => {
+    setItemLayouts((prev) => {
+      const next = [...prev];
+      next[index] = { x, width };
+      if (next.filter(Boolean).length === VIEW_MODES.length) {
+        setAllMeasured(true);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
-    const activeIndex = VIEW_MODES.findIndex((mode) => mode.id === activeMode);
-    Animated.spring(indicatorAnim, {
-      toValue: activeIndex,
+    if (!allMeasured) return;
+    const activeIndex = VIEW_MODES.findIndex((m) => m.id === activeMode);
+    const layout = itemLayouts[activeIndex];
+    if (!layout) return;
+    const targetWidth = layout.width * 0.6; // 60% of item content width
+    const targetX = layout.x + (layout.width - targetWidth) / 2;
+    setIndicatorWidth(targetWidth); // update immediately (no width animation to avoid native driver issue)
+    Animated.spring(indicatorX, {
+      toValue: targetX,
       useNativeDriver: true,
-      tension: 100,
-      friction: 8,
+      tension: 160,
+      friction: 18,
     }).start();
-  }, [activeMode, indicatorAnim]);
+  }, [activeMode, allMeasured, itemLayouts, indicatorX]);
 
   const handleModePress = (mode: "date" | "triggers" | "notes") => {
     onModeChange(mode);
@@ -74,6 +97,13 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
                 activeMode === mode.id && styles.navItemActive,
               ]}
               onPress={() => handleModePress(mode.id)}
+              onLayout={(e) =>
+                handleItemLayout(
+                  index,
+                  e.nativeEvent.layout.x,
+                  e.nativeEvent.layout.width
+                )
+              }
             >
               <Text
                 style={[
@@ -105,12 +135,11 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
               styles.indicator,
               {
                 backgroundColor: themeColors.tint,
+                opacity: allMeasured ? 1 : 0,
+                width: indicatorWidth,
                 transform: [
                   {
-                    translateX: indicatorAnim.interpolate({
-                      inputRange: [0, 1, 2],
-                      outputRange: [0, 120, 240], // Adjust based on navItem width
-                    }),
+                    translateX: indicatorX,
                   },
                 ],
               },
@@ -131,7 +160,6 @@ const styles = StyleSheet.create({
   },
   navigation: {
     borderBottomWidth: 1,
-    paddingTop: 8,
   },
   navContainer: {
     flexDirection: "row",
@@ -140,6 +168,10 @@ const styles = StyleSheet.create({
   },
   navItem: {
     flex: 1,
+    display: "flex",
+    flexDirection: "row",
+    gap: 4,
+    justifyContent: "center",
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 8,
@@ -148,8 +180,7 @@ const styles = StyleSheet.create({
     // Active state styling handled by text/icon styles
   },
   navIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 16,
     opacity: 0.6,
   },
   navIconActive: {
@@ -163,9 +194,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     height: 3,
-    width: 40,
     borderRadius: 2,
-    marginLeft: 40, // Center the indicator within the navItem
+    left: 0,
   },
   content: {
     flex: 1,
