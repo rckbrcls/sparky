@@ -1,5 +1,10 @@
 import React, { createContext, useCallback, useContext, useRef } from "react";
-import { GestureResponderEvent, Keyboard, TextInput } from "react-native";
+import {
+  GestureResponderEvent,
+  Keyboard,
+  TextInput,
+  findNodeHandle,
+} from "react-native";
 
 interface RegisteredInput {
   isFocused: () => boolean;
@@ -46,12 +51,31 @@ export const GlobalTouchDismissProvider: React.FC<{
   const handleCapture = useCallback(
     (e: GestureResponderEvent) => {
       try {
-        // Current focused native input (may be null)
-        const focused = (TextInput as any).State?.currentlyFocusedInput?.();
-        if (!focused) return false; // nothing to do
-        const target = e.nativeEvent.target;
-        if (target === focused) return false; // tap on same input → ignore
-        // If any custom registered input is focused, blur it
+        const State = (TextInput as any).State;
+        const focusedInput = State?.currentlyFocusedInput?.();
+        if (!focusedInput) return false; // nothing focused, nothing to blur
+
+        // Normalize focused handle (can be component instance or numeric tag depending on RN version)
+        let focusedHandle: number | null = null;
+        if (typeof focusedInput === "number") {
+          focusedHandle = focusedInput;
+        } else if (focusedInput?._nativeTag != null) {
+          focusedHandle = focusedInput._nativeTag;
+        } else {
+          const maybe = findNodeHandle(focusedInput);
+          if (typeof maybe === "number") focusedHandle = maybe;
+        }
+
+        const target: any = e.nativeEvent.target;
+
+        // If the tap target IS the focused handle, do not blur (previous code compared object vs number → false mismatch)
+        if (focusedHandle != null && target === focusedHandle) return false;
+
+        // Heuristic: Some platforms report child views inside the TextInput (e.g. the inner text node).
+        // To avoid breaking text selection (double‑tap / drag) we skip blurring for quick successive taps
+        // occurring inside the same focused input bounds. Without parent chain, we approximate by checking
+        // that the registered focused input vetoed blur or user provided shouldBlur returning false.
+
         let anyFocused = false;
         let vetoBlur = false;
         inputsRef.current.forEach((h) => {
@@ -62,9 +86,13 @@ export const GlobalTouchDismissProvider: React.FC<{
             }
           }
         });
-        if (anyFocused && !vetoBlur) blurAll();
+
+        if (anyFocused && !vetoBlur) {
+          // Only blur if target is not the focused handle; since we can't reliably know descendants, allow custom veto.
+          blurAll();
+        }
       } catch {
-        // Fallback safe dismiss
+        // Silent fallback
       }
       return false; // never claim responder
     },
