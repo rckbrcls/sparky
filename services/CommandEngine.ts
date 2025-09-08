@@ -159,6 +159,11 @@ export function detectContext(text: string): CommandContext {
     }
   }
   const openBlock = stack.length ? stack[stack.length - 1] : null;
+  // If user has just typed a command and then a space, we suppress suggestions
+  // Pattern: /command␠ at end of text. This makes UX consistent: pick command, space, start args without flicker.
+  if (/\/[a-zA-Z]+\s$/.test(text)) {
+    return { openBlock, showCommands: false, query: null };
+  }
   if (cursor.startsWith("/")) {
     return { openBlock, showCommands: true, query: cursor.slice(1) };
   }

@@ -403,6 +403,9 @@ export const SmartInput: React.FC<SmartInputProps> = ({
     setText(newValue);
     setShowCommands(false);
     setCommandQuery(null);
+  // Se comando inserido termina com espaço, prevenir reabertura até digitar algo novo
+  // Força reavaliação de arg context (ex: /folder )
+  detectArgContext(newValue, newValue.length);
   };
 
   useEffect(() => {
