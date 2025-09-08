@@ -153,19 +153,24 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
         folder: (partial: string) => {
           const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
           const np = norm(partial || "");
-          return folders
+          // Provide full (sorted) list when partial empty
+          const base = folders
             .map((f) => f.name)
             .filter((n, i, a) => a.indexOf(n) === i)
-            .filter((n) => !np || norm(n).includes(np));
+            .sort((a, b) => a.localeCompare(b));
+          if (!np) return base;
+          return base.filter((n) => norm(n).includes(np));
         },
         deletefolder: (partial: string) => {
           const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "-");
           const np = norm(partial || "");
-          return folders
+          const base = folders
             .filter((f) => f.id !== "all")
             .map((f) => f.name)
             .filter((n, i, a) => a.indexOf(n) === i)
-            .filter((n) => !np || norm(n).includes(np));
+            .sort((a, b) => a.localeCompare(b));
+          if (!np) return base;
+          return base.filter((n) => norm(n).includes(np));
         },
       }),
       [folders]
@@ -192,6 +197,17 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
               setArgSuggestions([]);
             }
             return false;
+          }
+          // Immediately show suggestions after typing the command (no space yet)
+          const justCmd = /\/(folder|deletefolder)$/.exec(upto);
+          if (justCmd) {
+            const command = justCmd[1];
+            setArgContext({ command, partial: "", replaceFrom: cursor });
+            const handler = (ARG_HANDLERS as any)[command];
+            setArgSuggestions(handler ? handler("").slice(0, 30) : []);
+            setShowCommands(false);
+            setCommandQuery(null);
+            return true;
           }
           // Detect commands that take a single argument (extensible pattern)
           const m = /\/(folder|deletefolder)\s+([^\s\n]*)$/.exec(upto); // allows empty partial (hyphen slug in progress)
@@ -246,18 +262,30 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     };
 
     useEffect(() => {
-      (async () => {
-        try {
-          const list = await database.getAllFolders();
-          setFolders(list);
-          const map: Record<string, string> = {};
-          list.forEach((f) => (map[f.id] = f.name));
-          setFolderMap(map);
-        } catch (e) {
-          // DB pode não estar pronto ainda
-          if (__DEV__) console.debug("Folders load skipped", e);
+      let cancelled = false;
+      const load = async () => {
+        for (let attempt = 0; attempt < 5 && !cancelled; attempt++) {
+          try {
+            // @ts-ignore internal check
+            if (!(database as any).db && (database as any).initialize) {
+              await (database as any).initialize();
+            }
+            const list = await database.getAllFolders();
+            if (cancelled) return;
+            setFolders(list);
+            const map: Record<string, string> = {};
+            list.forEach((f) => (map[f.id] = f.name));
+            setFolderMap(map);
+            return;
+          } catch {
+            await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+          }
         }
-      })();
+      };
+      load();
+      return () => {
+        cancelled = true;
+      };
     }, []);
 
     // buildSegments já vem do engine único
