@@ -136,62 +136,11 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     }, []);
 
     const handleTextChange = (val: string) => {
-      if (ignoreNextChangeRef.current) {
-        ignoreNextChangeRef.current = false;
-        prevTextRef.current = val;
-        setText(val);
-        setSegments(buildSegments(val));
-        recompute(val, val.length);
-        return;
-      }
-      // Se acabou de adicionar UM espaço ao final enquanto está em arg mode de um comando slug
-      const prev = prevTextRef.current;
-      if (
-        val.length === prev.length + 1 &&
-        val.endsWith(" ") &&
-        commandState.inArgMode &&
-        commandState.activeCommand?.name &&
-        slugArgCommands.has(commandState.activeCommand.name) &&
-        commandState.argReplaceFrom != null
-      ) {
-        // Substitui espaço recém digitado por '-'
-        val = val.slice(0, -1) + "-";
-      }
-      let working = val;
-      // Preliminary command state to detect arg mode for immediate slug transform
-      try {
-        const preliminary = computeCommandState({
-          text: working,
-          cursor: working.length,
-          requestId: `pre-${requestCounterRef.current}`,
-        });
-        if (
-          preliminary.inArgMode &&
-          preliminary.activeCommand?.name &&
-          slugArgCommands.has(preliminary.activeCommand.name) &&
-          preliminary.argReplaceFrom != null
-        ) {
-          const argStart = preliminary.argReplaceFrom;
-          const cursorPos = working.length; // assume typing at end
-          if (cursorPos >= argStart) {
-            const argPortion = working.slice(argStart, cursorPos);
-            if (/\s/.test(argPortion)) {
-              const slugged = argPortion.replace(/\s+/g, "-");
-              if (slugged !== argPortion) {
-                // Preserve any remainder after the cursor (in case cursor isn't at end in future scenarios)
-                const remainder = working.slice(cursorPos);
-                working = working.slice(0, argStart) + slugged + remainder;
-              }
-            }
-          }
-        }
-      } catch {}
+      setText(val);
+      setSegments(buildSegments(val));
+      recompute(val, selection.end); // Use current selection
 
-      setText(working);
-      setSegments(buildSegments(working));
-      recompute(working, working.length);
-      prevTextRef.current = working; // atualizar histórico
-      const trimmed = working.trim();
+      const trimmed = val.trim();
       const stripped = trimmed
         .replace(/\/createfolder\s+\S+/gi, "")
         .replace(/\/deletefolder\s+\S+/gi, "")
@@ -200,6 +149,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
         stripped.length === 0 &&
         /\/createfolder\s+\S+|\/deletefolder\s+\S+/i.test(trimmed) &&
         !/\/folder\s+\S+/i.test(trimmed);
+
       if (onlySystem || stripped.length <= 3) {
         setPreview(null);
         Animated.timing(fadeAnim, {
@@ -209,8 +159,9 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
         }).start();
         return;
       }
+
       try {
-        const parsed = SmartTextParser.parseText(working);
+        const parsed = SmartTextParser.parseText(val);
         setPreview(parsed);
         Animated.timing(fadeAnim, {
           toValue: 1,
