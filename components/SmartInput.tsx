@@ -621,6 +621,41 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
                     }}
                     onKeyPress={(e) => {
                       const k = e.nativeEvent.key;
+                      if (k === "/") {
+                        // Inserimos manualmente o '/' para exibir sugestões imediatamente
+                        const selStart = selection.start;
+                        const selEnd = selection.end;
+                        const newText =
+                          text.slice(0, selStart) + "/" + text.slice(selEnd);
+                        ignoreNextChangeRef.current = true; // evitar recompute duplicado quando onChangeText vier
+                        setText(newText);
+                        setSegments(buildSegments(newText));
+                        const newCursor = selStart + 1;
+                        setSelection({ start: newCursor, end: newCursor });
+                        prevTextRef.current = newText;
+                        recompute(newText, newCursor);
+                        return; // já tratamos
+                      }
+                      if (k === "Backspace") {
+                        // Se vamos apagar um '/' imediatamente antes do cursor, fazemos manual para esconder palette instantaneamente
+                        if (
+                          selection.start === selection.end &&
+                          selection.start > 0 &&
+                          text.charAt(selection.start - 1) === "/"
+                        ) {
+                          const cutPos = selection.start - 1;
+                          const newText =
+                            text.slice(0, cutPos) + text.slice(selection.start);
+                          ignoreNextChangeRef.current = true;
+                          setText(newText);
+                          setSegments(buildSegments(newText));
+                          const newCursor = cutPos;
+                          setSelection({ start: newCursor, end: newCursor });
+                          prevTextRef.current = newText;
+                          recompute(newText, newCursor);
+                          return; // já tratamos
+                        }
+                      }
                       if (
                         (k === " " || k === "Spacebar") &&
                         commandState.inArgMode &&

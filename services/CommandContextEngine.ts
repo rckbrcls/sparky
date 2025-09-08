@@ -36,7 +36,9 @@ export function computeCommandState(
   let pos = 0;
   let activeRange: { start: number; end: number; token: string } | null = null;
   for (const tk of tokens) {
-    const isCommand = tk.startsWith("/") && /\/\w+/.test(tk);
+    // Consider any token starting with '/' as a command token so that a lone '/'
+    // immediately opens the command palette (previously required at least one word char)
+    const isCommand = tk.startsWith("/");
     const segKind: CommandStateSegment["kind"] = isCommand
       ? "command"
       : "normal";
@@ -59,12 +61,13 @@ export function computeCommandState(
   if (activeRange) {
     const { token } = activeRange;
     if (token.startsWith("/")) {
-      const partialName = token.slice(1); // may contain partial arg if space not typed yet
-      // If token contains no whitespace we are selecting command name
+      const partialName = token.slice(1); // may be empty when user just typed '/'
+      // If token contains no whitespace we are selecting command name (including empty)
       if (!/\s/.test(partialName)) {
         openCommandQuery = partialName;
+        const lower = partialName.toLowerCase();
         commandMatches = commands.filter((c) =>
-          c.name.startsWith(partialName.toLowerCase())
+          lower === "" ? true : c.name.startsWith(lower)
         );
       } else {
         // token like /folder my-arg (not split yet due to simple splitting logic)
@@ -110,6 +113,10 @@ export function computeCommandState(
         argPartial = "";
         argReplaceFrom = cursor;
       }
+    } else if (/\/$/.test(beforeCursor)) {
+      // Just a bare '/' at cursor end -> show all commands
+      openCommandQuery = "";
+      commandMatches = commands.slice();
     }
   }
 
