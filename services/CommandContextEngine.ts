@@ -100,28 +100,68 @@ export function computeCommandState(
     }
     commandMatches = [...prefixList, ...containsList];
   } else {
-    // Not in command-name-typing mode, check for argument mode
-    const cmdMatch = /\/(\w+)(?:\s+([^\/\n]*))?$/.exec(uptoCursor);
-    if (cmdMatch) {
-      const name = cmdMatch[1];
-      activeCommand = commands.find((c) => c.name === name);
-      if (activeCommand?.argument) {
-        const rawPartial = cmdMatch[2] || "";
-        const endedPattern = new RegExp(`/` + name + `\\s+\\S+\\s+$`);
-        const onlyCommandSpacePattern = new RegExp(`/` + name + `\\s+$`);
-        const ended = endedPattern.test(uptoCursor);
-        const onlyCommandSpace = onlyCommandSpacePattern.test(uptoCursor);
+    // Not in command-name-typing mode, check for argument mode.
+    // This regex now specifically checks for a command followed by a space,
+    // and optionally captures the beginning of an argument.
+    const argModeMatch = /\/(\w+)\s+([^\/\n]*)?$/.exec(uptoCursor);
+    const exactCmdMatch = /\/(\w+)$/.exec(uptoCursor); // For case where cursor is right after command name, no space yet
 
-        if (!ended) {
-          inArgMode = true;
-          argPartial = rawPartial;
-          argReplaceFrom = cursor - rawPartial.length;
-        } else if (onlyCommandSpace) {
-          inArgMode = true;
-          argPartial = "";
-          argReplaceFrom = cursor;
+    let commandName: string | undefined;
+    let isArgMode = false;
+
+    if (argModeMatch) {
+      commandName = argModeMatch[1];
+      isArgMode = true;
+    } else if (exactCmdMatch) {
+      const cmd = commands.find((c) => c.name === exactCmdMatch[1]);
+      if (cmd?.argument) {
+        commandName = cmd.name;
+        isArgMode = true; // Enter arg mode immediately, waiting for first char
+      }
+    }
+
+    if (isArgMode && commandName) {
+      activeCommand = commands.find((c) => c.name === commandName);
+      if (activeCommand?.argument) {
+        if (argModeMatch) {
+          const partial = argModeMatch[2] || "";
+          // An argument is complete if it's not empty and is followed by a space.
+          if (/\s$/.test(partial) && partial.trim().length > 0) {
+            inArgMode = false;
+          } else {
+            inArgMode = true;
+            argPartial = partial;
+            argReplaceFrom = cursor - partial.length;
+          }
+        } else {
+          // This case is for when the cursor is right after the command name, no space yet.
+          // We transition to arg mode, but wait for a space to be typed.
+          // Let's check if the command wants an immediate suggestion list.
+          if (activeCommand.argument.allowEmptyInitialList) {
+            inArgMode = true;
+            argPartial = "";
+            argReplaceFrom = cursor;
+          } else {
+            // We are technically in "argument mode" but don't set the flag
+            // that triggers the UI until the user types a space or starts typing.
+            // The next state computation after a space will trigger it.
+            inArgMode = false;
+          }
         }
       }
+    }
+  }
+
+  // Final check: if cursor is at /folder<space>, we should be in arg mode.
+  const trailingSpaceMatch = /\/(\w+)\s$/.exec(uptoCursor);
+  if (trailingSpaceMatch && !inArgMode) {
+    const cmdName = trailingSpaceMatch[1];
+    const cmd = commands.find((c) => c.name === cmdName);
+    if (cmd?.argument) {
+      inArgMode = true;
+      activeCommand = cmd;
+      argPartial = "";
+      argReplaceFrom = cursor;
     }
   }
 
