@@ -71,97 +71,115 @@ export function computeCommandState(
   // --- End Block Detection ---
 
   const uptoCursor = text.slice(0, cursor);
-  const commandQueryMatch = /(?:^|\s)\/([^\s]*)$/.exec(uptoCursor);
 
-  if (commandQueryMatch) {
-    openCommandQuery = commandQueryMatch[1];
-    const lower = openCommandQuery.toLowerCase();
-    const closing = openBlockKind
-      ? openBlockKind === "tags"
-        ? "endtags"
-        : openBlockKind === "people"
-        ? "endpeople"
-        : "endlocations"
-      : null;
+  // Debug: let's see what we're working with
+  console.log("Debug CommandContext:", {
+    text: JSON.stringify(text),
+    cursor,
+    uptoCursor: JSON.stringify(uptoCursor),
+  });
 
-    const prefixList = commands.filter(
-      (c) =>
-        (closing ? c.name === closing : true) &&
-        (lower === "" ? true : c.name.toLowerCase().startsWith(lower))
-    );
+  // Alternative approach: check if we're at the end of a command followed by space
+  // Look for /command pattern and check if there's a space right after where cursor is
+  const commandAtCursor = /\/(\w+)$/.exec(uptoCursor);
+  if (commandAtCursor) {
+    const cmdName = commandAtCursor[1];
+    const cmd = commands.find((c) => c.name === cmdName);
 
-    let containsList: CommandDefinition[] = [];
-    if (!closing) {
-      containsList = commands.filter(
-        (c) =>
-          c.name.toLowerCase().includes(lower) &&
-          !prefixList.find((p) => p.name === c.name)
-      );
-    }
-    commandMatches = [...prefixList, ...containsList];
-  } else {
-    // Not in command-name-typing mode, check for argument mode.
-    // This regex now specifically checks for a command followed by a space,
-    // and optionally captures the beginning of an argument.
-    const argModeMatch = /\/(\w+)\s+([^\/\n]*)?$/.exec(uptoCursor);
-    const exactCmdMatch = /\/(\w+)$/.exec(uptoCursor); // For case where cursor is right after command name, no space yet
+    // Check if there's a space right after the cursor position
+    const charAfterCursor = text[cursor];
+    console.log("Command at cursor:", {
+      cmdName,
+      charAfterCursor: JSON.stringify(charAfterCursor),
+      hasArgument: !!cmd?.argument,
+    });
 
-    let commandName: string | undefined;
-    let isArgMode = false;
-
-    if (argModeMatch) {
-      commandName = argModeMatch[1];
-      isArgMode = true;
-    } else if (exactCmdMatch) {
-      const cmd = commands.find((c) => c.name === exactCmdMatch[1]);
-      if (cmd?.argument) {
-        commandName = cmd.name;
-        isArgMode = true; // Enter arg mode immediately, waiting for first char
-      }
-    }
-
-    if (isArgMode && commandName) {
-      activeCommand = commands.find((c) => c.name === commandName);
-      if (activeCommand?.argument) {
-        if (argModeMatch) {
-          const partial = argModeMatch[2] || "";
-          // An argument is complete if it's not empty and is followed by a space.
-          if (/\s$/.test(partial) && partial.trim().length > 0) {
-            inArgMode = false;
-          } else {
-            inArgMode = true;
-            argPartial = partial;
-            argReplaceFrom = cursor - partial.length;
-          }
-        } else {
-          // This case is for when the cursor is right after the command name, no space yet.
-          // We transition to arg mode, but wait for a space to be typed.
-          // Let's check if the command wants an immediate suggestion list.
-          if (activeCommand.argument.allowEmptyInitialList) {
-            inArgMode = true;
-            argPartial = "";
-            argReplaceFrom = cursor;
-          } else {
-            // We are technically in "argument mode" but don't set the flag
-            // that triggers the UI until the user types a space or starts typing.
-            // The next state computation after a space will trigger it.
-            inArgMode = false;
-          }
-        }
-      }
+    if (charAfterCursor === " " && cmd && cmd.argument) {
+      inArgMode = true;
+      activeCommand = cmd;
+      argPartial = "";
+      argReplaceFrom = cursor + 1; // Start after the space
+      console.log("Entering arg mode for command followed by space:", cmdName);
     }
   }
 
-  // Final check: if cursor is at /folder<space>, we should be in arg mode.
-  const trailingSpaceMatch = /\/(\w+)\s$/.exec(uptoCursor);
+  // Also check the original trailing space logic in case cursor positioning is correct sometimes
+  const trailingSpaceMatch = /\/(\w+)\s+$/.exec(uptoCursor);
+  console.log("trailingSpaceMatch:", trailingSpaceMatch);
+
   if (trailingSpaceMatch && !inArgMode) {
     const cmdName = trailingSpaceMatch[1];
     const cmd = commands.find((c) => c.name === cmdName);
-    if (cmd?.argument) {
+    console.log("Found command with trailing space:", {
+      cmdName,
+      hasArgument: !!cmd?.argument,
+    });
+    if (cmd && cmd.argument) {
       inArgMode = true;
       activeCommand = cmd;
       argPartial = "";
       argReplaceFrom = cursor;
+      console.log("Entering arg mode for:", cmdName);
+    }
+  }
+  // If not in trailing space case, check for other patterns
+  else {
+    // Check for command query (typing a command) or argument with content
+    const commandQueryMatch = /(?:^|\s)\/([^\s]*)$/.exec(uptoCursor);
+    const argModeMatch = /\/(\w+)\s+([^\/\n]*)?$/.exec(uptoCursor);
+
+    if (argModeMatch) {
+      // We have a command followed by space and some argument content
+      const cmdName = argModeMatch[1];
+      const cmd = commands.find((c) => c.name === cmdName);
+      if (cmd && cmd.argument) {
+        const partial = argModeMatch[2] || "";
+        // An argument is complete if it's not empty and is followed by a space.
+        if (/\s$/.test(partial) && partial.trim().length > 0) {
+          inArgMode = false; // Argument is complete
+        } else {
+          inArgMode = true;
+          activeCommand = cmd;
+          argPartial = partial;
+          argReplaceFrom = cursor - partial.length;
+        }
+      }
+    } else if (commandQueryMatch) {
+      // We are typing a command name
+      const query = commandQueryMatch[1];
+      const exactMatch = commands.find((c) => c.name === query);
+
+      // If we have an exact command match, don't show command suggestions
+      if (exactMatch) {
+        // Command is complete - no suggestions needed
+      } else {
+        // Partial command query - show matching commands
+        openCommandQuery = query;
+        const lower = query.toLowerCase();
+        const closing = openBlockKind
+          ? openBlockKind === "tags"
+            ? "endtags"
+            : openBlockKind === "people"
+            ? "endpeople"
+            : "endlocations"
+          : null;
+
+        const prefixList = commands.filter(
+          (c) =>
+            (closing ? c.name === closing : true) &&
+            (lower === "" ? true : c.name.toLowerCase().startsWith(lower))
+        );
+
+        let containsList: CommandDefinition[] = [];
+        if (!closing) {
+          containsList = commands.filter(
+            (c) =>
+              c.name.toLowerCase().includes(lower) &&
+              !prefixList.find((p) => p.name === c.name)
+          );
+        }
+        commandMatches = [...prefixList, ...containsList];
+      }
     }
   }
 
