@@ -4,6 +4,11 @@ import { GestureResponderEvent, Keyboard, TextInput } from "react-native";
 interface RegisteredInput {
   isFocused: () => boolean;
   blur: () => void;
+  /**
+   * Return true if this tap should blur (default). Return false to preserve focus.
+   * Receives the raw gesture event so heuristics (like open suggestion palette) can be applied.
+   */
+  shouldBlur?: (e: GestureResponderEvent) => boolean;
 }
 
 interface GlobalTouchDismissContextValue {
@@ -47,13 +52,17 @@ export const GlobalTouchDismissProvider: React.FC<{
         const target = e.nativeEvent.target;
         if (target === focused) return false; // tap on same input → ignore
         // If any custom registered input is focused, blur it
-        let shouldBlur = false;
+        let anyFocused = false;
+        let vetoBlur = false;
         inputsRef.current.forEach((h) => {
-          if (h.isFocused()) shouldBlur = true;
+          if (h.isFocused()) {
+            anyFocused = true;
+            if (h.shouldBlur && h.shouldBlur(e) === false) {
+              vetoBlur = true;
+            }
+          }
         });
-        if (shouldBlur) {
-          blurAll();
-        }
+        if (anyFocused && !vetoBlur) blurAll();
       } catch {
         // Fallback safe dismiss
       }

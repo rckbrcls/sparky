@@ -753,9 +753,14 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
         isFocused: () =>
           !!inputRef.current && (inputRef.current as any).isFocused?.(),
         blur: () => inputRef.current?.blur(),
+        shouldBlur: () => {
+          // Não desfoca se algum palette de sugestões/comandos ou arg estiver aberto
+          if (argContext || showCommands) return false;
+          return true;
+        },
       });
       return () => unregister(id);
-    }, [register, unregister]);
+    }, [register, unregister, argContext, showCommands]);
 
     return (
       <View style={[styles.container, style]}>
