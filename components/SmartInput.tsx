@@ -134,13 +134,102 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   );
   // Folder map for preview naming
   const [folderMap, setFolderMap] = useState<Record<string, string>>({});
+  const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
+  interface ArgContext {
+    command: string;
+    partial: string;
+    replaceFrom: number;
+  }
+  const [argContext, setArgContext] = useState<ArgContext | null>(null);
+  const [argSuggestions, setArgSuggestions] = useState<string[]>([]);
+
+  const ARG_HANDLERS = useMemo(
+    () => ({
+      folder: (partial: string) =>
+        folders
+          .map((f) => f.name)
+          .filter((n, i, a) => a.indexOf(n) === i)
+          .filter((n) => n.toLowerCase().includes(partial.toLowerCase())),
+      deletefolder: (partial: string) =>
+        folders
+          .filter((f) => f.id !== "all")
+          .map((f) => f.name)
+          .filter((n, i, a) => a.indexOf(n) === i)
+          .filter((n) => n.toLowerCase().includes(partial.toLowerCase())),
+    }),
+    [folders]
+  );
+
+  // Recompute suggestions when folder list changes while user is already in arg context
+  useEffect(() => {
+    if (argContext) {
+      const handler = (ARG_HANDLERS as any)[argContext.command];
+      setArgSuggestions(
+        handler ? handler(argContext.partial).slice(0, 30) : []
+      );
+    }
+  }, [folders, ARG_HANDLERS, argContext]);
+
+  const detectArgContext = useCallback(
+    (value: string, cursor: number): boolean => {
+      try {
+        const upto = value.slice(0, cursor);
+        // Detect commands that take a single argument (extensible pattern)
+        const m = /\/(folder|deletefolder)\s+([^\s\n]*)$/.exec(upto); // allows empty partial
+        if (m) {
+          const command = m[1];
+          const partial = m[2] || "";
+          const replaceFrom = cursor - partial.length;
+          // Store arg context & suggestions
+          setArgContext({ command, partial, replaceFrom });
+          const handler = (ARG_HANDLERS as any)[command];
+          if (handler) {
+            const suggestions = handler(partial).slice(0, 30);
+            setArgSuggestions(suggestions);
+          } else {
+            setArgSuggestions([]);
+          }
+          // Immediately suppress command palette while in arg mode
+          setShowCommands(false);
+          setCommandQuery(null);
+          return true;
+        }
+        if (argContext) {
+          setArgContext(null);
+          setArgSuggestions([]);
+        }
+        return false;
+      } catch {
+        if (argContext) setArgContext(null);
+        setArgSuggestions([]);
+        return false;
+      }
+    },
+    [ARG_HANDLERS, argContext]
+  );
+
+  const handleSelectArgSuggestion = (name: string) => {
+    if (!argContext) return;
+    const before = text.slice(0, argContext.replaceFrom);
+    const after = text.slice(selection.start);
+    const inserted = `${name}`;
+    const newValue = before + inserted + after;
+    setText(newValue);
+    // Move caret after inserted word
+    const newPos = (before + inserted).length;
+    setSelection({ start: newPos, end: newPos });
+    setArgContext(null);
+    setArgSuggestions([]);
+    handleTextChange(newValue); // reparse
+  };
 
   useEffect(() => {
     (async () => {
       try {
-        const folders = await database.getAllFolders();
+        const list = await database.getAllFolders();
+        setFolders(list);
         const map: Record<string, string> = {};
-        folders.forEach((f) => (map[f.id] = f.name));
+        list.forEach((f) => (map[f.id] = f.name));
         setFolderMap(map);
       } catch (e) {
         // DB pode não estar pronto ainda
@@ -153,8 +242,26 @@ export const SmartInput: React.FC<SmartInputProps> = ({
 
   const handleTextChange = (newText: string) => {
     setText(newText);
-    updateContext(newText);
+    // First try to detect arg context using cursor at end (covers freshly typed space)
+    const inArg = detectArgContext(newText, newText.length);
+    // Only update general command context if NOT inside an arg context
+    if (!inArg) {
+      updateContext(newText);
+    }
     setSegments(buildSegments(newText));
+
+    // Extra fallback (should rarely run now). Ensures suggestions when space just added.
+    if (!inArg && /\/(folder|deletefolder)\s+$/.test(newText)) {
+      const m = /\/(folder|deletefolder)\s+$/.exec(newText);
+      if (m) {
+        const command = m[1];
+        const handler = (ARG_HANDLERS as any)[command];
+        setArgContext({ command, partial: "", replaceFrom: newText.length });
+        setArgSuggestions(handler ? handler("").slice(0, 30) : []);
+        setShowCommands(false);
+        setCommandQuery(null);
+      }
+    }
 
     const trimmed = newText.trim();
     // Consider only create/delete as comandos puramente de sistema
@@ -637,6 +744,29 @@ export const SmartInput: React.FC<SmartInputProps> = ({
                 onSelectionChange={(e) => {
                   const { start, end } = e.nativeEvent.selection;
                   setSelection({ start, end });
+                  const inArg = detectArgContext(text, start);
+                  if (inArg) return; // already handled & suppressed commands
+                  if (
+                    /\/(folder|deletefolder)\s+$/.test(text.slice(0, start))
+                  ) {
+                    const m = /\/(folder|deletefolder)\s+$/.exec(
+                      text.slice(0, start)
+                    );
+                    if (m) {
+                      const command = m[1];
+                      const handler = (ARG_HANDLERS as any)[command];
+                      setArgContext({
+                        command,
+                        partial: "",
+                        replaceFrom: start,
+                      });
+                      setArgSuggestions(
+                        handler ? handler("").slice(0, 30) : []
+                      );
+                      setShowCommands(false);
+                      setCommandQuery(null);
+                    }
+                  }
                 }}
                 onKeyPress={handleKeyPress}
                 autoCapitalize="none"
@@ -662,7 +792,37 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         )}
       </View>
 
-      {showCommands && filteredCommands.length > 0 && (
+      {argContext && (
+        <View style={styles.commandPalette}>
+          <ScrollView
+            style={styles.commandScroll}
+            contentContainerStyle={styles.commandScrollContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            {argSuggestions.map((s, idx) => (
+              <TouchableOpacity
+                key={s}
+                style={[
+                  styles.commandItem,
+                  idx === argSuggestions.length - 1 && { borderBottomWidth: 0 },
+                ]}
+                onPress={() => handleSelectArgSuggestion(s)}
+              >
+                <Text style={styles.commandName}>{s}</Text>
+                <Text style={styles.commandDesc}>folder</Text>
+              </TouchableOpacity>
+            ))}
+            {argSuggestions.length === 0 && (
+              <View style={styles.commandItem}>
+                <Text style={styles.commandDesc}>Sem sugestões</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      )}
+
+      {showCommands && filteredCommands.length > 0 && !argContext && (
         <View style={styles.commandPalette}>
           <ScrollView
             style={styles.commandScroll}
