@@ -289,8 +289,9 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: 12,
-    padding: 16,
+    padding: 10,
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
   },
   primaryButton: {
@@ -302,8 +303,8 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     backgroundColor: Colors.dark.surface,
-    borderWidth: 2,
-    borderColor: Colors.dark.tint,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
   },
   secondaryButtonText: {
     ...Typography.button,
