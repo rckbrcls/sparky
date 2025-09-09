@@ -1,4 +1,4 @@
-import { defaultNormalize } from "../utils/slug";
+import { defaultNormalize } from "../../utils/slug";
 
 export type ArgumentSourceKind = "folders" | "persons" | "locations" | "tags";
 

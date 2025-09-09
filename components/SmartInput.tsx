@@ -1,4 +1,3 @@
-// Clean refactored SmartInput implementation (modular command engine)
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -17,14 +16,15 @@ import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database } from "../database/database";
 import {
   computeCommandState,
+  ComputedCommandState,
   resolveArgumentSuggestions,
-} from "../services/CommandContextEngine";
-import { buildSegments, Segment } from "../services/CommandHighlights"; // extracted highlighter
+} from "../services/commands/CommandContextEngine";
+import { buildSegments, Segment } from "../services/commands/CommandHighlights"; // extracted highlighter
 import {
   applyArgumentInsert,
   applyCommandInsert as applyNewCommandInsert,
-} from "../services/CommandInsertion";
-import { CommandDefinition } from "../services/CommandRegistry";
+} from "../services/commands/CommandInsertion";
+import { CommandDefinition } from "../services/commands/CommandRegistry";
 import { ReminderService } from "../services/ReminderService";
 import { ParsedReminder, SmartTextParser } from "../services/SmartTextParser";
 
@@ -115,9 +115,10 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     );
 
     // Command engine
-    const [commandState, setCommandState] = useState<
-      import("../services/CommandContextEngine").ComputedCommandState
-    >({ inArgMode: false, segments: [] });
+    const [commandState, setCommandState] = useState<ComputedCommandState>({
+      inArgMode: false,
+      segments: [],
+    });
     const requestCounterRef = useRef(0);
     const recompute = useCallback((value: string, cursor: number) => {
       const reqId = `${++requestCounterRef.current}`;

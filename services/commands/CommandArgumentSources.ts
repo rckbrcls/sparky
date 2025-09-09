@@ -1,11 +1,10 @@
-import { database } from "../database/database";
-import { slugify } from "../utils/slug";
+import { database, QuickNote, Reminder } from "../../database/database";
+import { slugify } from "../../utils/slug";
 
-// Simple cache with TTL + in-flight tracking
 interface CacheEntry {
   data: string[];
   fetchedAt: number;
-  promise?: Promise<string[]>; // track in-flight
+  promise?: Promise<string[]>;
 }
 
 const TTL_MS = 30_000;
@@ -34,9 +33,7 @@ async function fetchFolders(): Promise<string[]> {
   }
 }
 
-async function fetchReminders(): Promise<
-  import("../database/database").Reminder[]
-> {
+async function fetchReminders(): Promise<Reminder[]> {
   try {
     // @ts-ignore init check
     if (!(database as any).db && (database as any).initialize) {
@@ -48,9 +45,7 @@ async function fetchReminders(): Promise<
   }
 }
 
-async function fetchQuickNotes(): Promise<
-  import("../database/database").QuickNote[]
-> {
+async function fetchQuickNotes(): Promise<QuickNote[]> {
   try {
     // @ts-ignore init check
     if (!(database as any).db && (database as any).initialize) {
