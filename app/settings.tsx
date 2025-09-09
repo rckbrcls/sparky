@@ -1,8 +1,10 @@
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
@@ -10,11 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Colors } from "../../constants/Colors";
-import { Typography } from "../../constants/Typography";
-import { ReminderService } from "../../services/ReminderService";
+import { IconSymbol } from "../components/ui/IconSymbol";
+import { Colors } from "../constants/Colors";
+import { Typography } from "../constants/Typography";
+import { ReminderService } from "../services/ReminderService";
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -135,87 +139,105 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Export Data</Text>
-          <Text style={styles.sectionDescription}>
-            Back up your reminders so you don&apos;t lose them
-          </Text>
-
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
           <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={handleExportJSON}
-            disabled={isExporting}
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            style={styles.backButton}
           >
-            <Text style={styles.primaryButtonText}>
-              {isExporting ? "Exporting..." : "Export as JSON"}
-            </Text>
+            <IconSymbol
+              name="chevron.left"
+              color={Colors.dark.tint}
+              size={16}
+            />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={handleExportCSV}
-            disabled={isExporting}
-          >
-            <Text style={styles.secondaryButtonText}>
-              {isExporting ? "Exporting..." : "Export as CSV"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Import Data</Text>
-          <Text style={styles.sectionDescription}>
-            Restore your reminders from a previous backup
-          </Text>
-
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={handleImportJSON}
-            disabled={isImporting}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isImporting ? "Importing..." : "Import JSON"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About the App</Text>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>I Can&apos;t Miss</Text>
-            <Text style={styles.infoDescription}>
-              A smart reminder app that helps you never forget important things
-              again.
-            </Text>
-            <Text style={styles.infoFeatures}>
-              • One-time and recurring reminders{"\n"}• Smart snooze system
-              {"\n"}• Spaced review for important tasks{"\n"}• Important dates
-              with advance notifications{"\n"}• Data backup and synchronization
-            </Text>
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text style={styles.headerTitle}>Settings</Text>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <Text style={styles.sectionDescription}>
-            Irreversible actions that affect all your data
-          </Text>
+        <View style={styles.content}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Export Data</Text>
+            <Text style={styles.sectionDescription}>
+              Back up your reminders so you don&apos;t lose them
+            </Text>
 
-          <TouchableOpacity
-            style={[styles.button, styles.dangerButton]}
-            onPress={handleClearAllData}
-          >
-            <Text style={styles.dangerButtonText}>Delete All Data</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.primaryButton]}
+              onPress={handleExportJSON}
+              disabled={isExporting}
+            >
+              <Text style={styles.primaryButtonText}>
+                {isExporting ? "Exporting..." : "Export as JSON"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={handleExportCSV}
+              disabled={isExporting}
+            >
+              <Text style={styles.secondaryButtonText}>
+                {isExporting ? "Exporting..." : "Export as CSV"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Import Data</Text>
+            <Text style={styles.sectionDescription}>
+              Restore your reminders from a previous backup
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.button, styles.primaryButton]}
+              onPress={handleImportJSON}
+              disabled={isImporting}
+            >
+              <Text style={styles.primaryButtonText}>
+                {isImporting ? "Importing..." : "Import JSON"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About the App</Text>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>I Can&apos;t Miss</Text>
+              <Text style={styles.infoDescription}>
+                A smart reminder app that helps you never forget important
+                things again.
+              </Text>
+              <Text style={styles.infoFeatures}>
+                • One-time and recurring reminders{"\n"}• Smart snooze system
+                {"\n"}• Spaced review for important tasks{"\n"}• Important dates
+                with advance notifications{"\n"}• Data backup and
+                synchronization
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Danger Zone</Text>
+            <Text style={styles.sectionDescription}>
+              Irreversible actions that affect all your data
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.button, styles.dangerButton]}
+              onPress={handleClearAllData}
+            >
+              <Text style={styles.dangerButtonText}>Delete All Data</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -226,11 +248,24 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: Colors.dark.surface,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingVertical: 20,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.dark.border,
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
+    minHeight: 60,
+  },
+  backButton: {
+    padding: 10,
+    position: "absolute",
+    left: 20,
+    zIndex: 20,
+    backgroundColor: Colors.dark.surface,
+    borderColor: Colors.dark.border,
+    borderRadius: 100,
+    borderWidth: 1,
   },
   headerTitle: {
     ...Typography.h2,
@@ -283,10 +318,10 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     backgroundColor: Colors.dark.surface,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
     borderColor: Colors.dark.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 20,
   },
   infoTitle: {
     ...Typography.h5,

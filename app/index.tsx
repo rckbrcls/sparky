@@ -1,18 +1,26 @@
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { Alert, SafeAreaView, StyleSheet, View } from "react-native";
-import { MainNavigation } from "../../components/MainNavigation";
-import { NotesView } from "../../components/NotesView";
-import { SmartInput, SmartInputHandle } from "../../components/SmartInput";
-import { ThemedText } from "../../components/ThemedText";
-import { TimelineView } from "../../components/TimelineView";
-import { TriggersView } from "../../components/TriggersView";
-import { Colors } from "../../constants/Colors";
-import { Typography } from "../../constants/Typography";
-import { useGlobalTouchDismiss } from "../../context/GlobalTouchDismissContext";
-import { database } from "../../database/database";
-import { useColorScheme } from "../../hooks/useColorScheme";
-import { NotificationService } from "../../services/NotificationService";
+import {
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { MainNavigation } from "../components/MainNavigation";
+import { NotesView } from "../components/NotesView";
+import { SmartInput, SmartInputHandle } from "../components/SmartInput";
+import { ThemedText } from "../components/ThemedText";
+import { TimelineView } from "../components/TimelineView";
+import { TriggersView } from "../components/TriggersView";
+import { IconSymbol } from "../components/ui/IconSymbol";
+import { Colors } from "../constants/Colors";
+import { Typography } from "../constants/Typography";
+import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
+import { database } from "../database/database";
+import { useColorScheme } from "../hooks/useColorScheme";
+import { NotificationService } from "../services/NotificationService";
 
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? "dark"; // fallback dark
@@ -43,7 +51,6 @@ export default function HomeScreen() {
   };
 
   const handleRefresh = () => {
-    // This can be used to coordinate refreshes across views
     setRefreshKey((prev) => prev + 1);
   };
 
@@ -79,6 +86,7 @@ export default function HomeScreen() {
 
   const themeColors = Colors[scheme];
   const smartInputRef = React.useRef<SmartInputHandle>(null);
+  const router = useRouter();
 
   const { handleCapture } = useGlobalTouchDismiss();
 
@@ -98,15 +106,24 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <ThemedText
-            style={[
-              Typography.h3,
-              styles.inlineTitle,
-              { color: themeColors.text },
-            ]}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
           >
-            I Can&#39;t Miss
-          </ThemedText>
+            <ThemedText style={[Typography.h3, { color: themeColors.text }]}>
+              I Can&#39;t Miss
+            </ThemedText>
+            <TouchableOpacity
+              onPress={() => router.push("/settings")}
+              style={styles.settingsButton}
+            >
+              <IconSymbol name="gear" color={themeColors.tint} size={22} />
+            </TouchableOpacity>
+          </View>
           <SmartInput
             ref={smartInputRef}
             onReminderCreated={handleReminderCreated}
@@ -130,12 +147,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  inlineTitle: {
-    marginBottom: 8,
-  },
   inputSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
+  },
+  settingsButton: {
+    padding: 10,
+    backgroundColor: Colors.dark.surface,
+    borderColor: Colors.dark.border,
+    borderRadius: 100,
+    borderWidth: 1,
   },
 });
