@@ -23,8 +23,8 @@ function isFresh(key: string) {
 async function fetchFolders(): Promise<string[]> {
   try {
     // @ts-ignore init check
-    if (!(database as any).db && (database as any).initialize) {
-      await (database as any).initialize();
+    if (!database.db && database.initialize) {
+      await database.initialize();
     }
     const list = await database.getAllFolders();
     return list.map((f) => f.name);
@@ -36,8 +36,8 @@ async function fetchFolders(): Promise<string[]> {
 async function fetchReminders(): Promise<Reminder[]> {
   try {
     // @ts-ignore init check
-    if (!(database as any).db && (database as any).initialize) {
-      await (database as any).initialize();
+    if (!database.db && database.initialize) {
+      await database.initialize();
     }
     return await database.getAllReminders();
   } catch {
@@ -48,8 +48,8 @@ async function fetchReminders(): Promise<Reminder[]> {
 async function fetchQuickNotes(): Promise<QuickNote[]> {
   try {
     // @ts-ignore init check
-    if (!(database as any).db && (database as any).initialize) {
-      await (database as any).initialize();
+    if (!database.db && database.initialize) {
+      await database.initialize();
     }
     return await database.getAllQuickNotes();
   } catch {
