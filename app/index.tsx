@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { MainNavigation } from "../components/MainNavigation";
 import { NotesView } from "../components/NotesView";
-import { SmartInput, SmartInputHandle } from "../components/SmartInput";
+import { Terminal, TerminalHandle } from "../components/Terminal";
 import { ThemedText } from "../components/ThemedText";
 import { TimelineView } from "../components/TimelineView";
 import { TriggersView } from "../components/TriggersView";
@@ -85,7 +85,7 @@ export default function HomeScreen() {
   };
 
   const themeColors = Colors[scheme];
-  const smartInputRef = React.useRef<SmartInputHandle>(null);
+  const terminalRef = React.useRef<TerminalHandle>(null);
   const router = useRouter();
 
   const { handleCapture } = useGlobalTouchDismiss();
@@ -124,8 +124,8 @@ export default function HomeScreen() {
               <IconSymbol name="gear" color={themeColors.tint} size={22} />
             </TouchableOpacity>
           </View>
-          <SmartInput
-            ref={smartInputRef}
+          <Terminal
+            ref={terminalRef}
             onReminderCreated={handleReminderCreated}
             placeholder={
               "Type text. Use /commands or #tags (e.g. /date /note /person)"

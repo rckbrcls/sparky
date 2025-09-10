@@ -28,17 +28,17 @@ import { CommandDefinition } from "../services/commands/CommandRegistry";
 import { ReminderService } from "../services/ReminderService";
 import { ParsedReminder, SmartTextParser } from "../services/SmartTextParser";
 
-interface SmartInputProps {
+interface TerminalProps {
   onReminderCreated: () => void;
   placeholder?: string;
   style?: any;
 }
-export interface SmartInputHandle {
+export interface TerminalHandle {
   blur: () => void;
   focus: () => void;
 }
 
-export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
+export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
   (props, ref) => {
     const { onReminderCreated, placeholder = "Add reminder...", style } = props;
 
@@ -832,7 +832,7 @@ export const SmartInput = React.forwardRef<SmartInputHandle, SmartInputProps>(
     );
   }
 );
-SmartInput.displayName = "SmartInput";
+Terminal.displayName = "Terminal";
 
 const styles = StyleSheet.create({
   container: { marginVertical: 8 },
