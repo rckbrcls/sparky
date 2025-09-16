@@ -3,12 +3,16 @@ import { ptBR } from "date-fns/locale";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
+  FlatListProps,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
@@ -18,11 +22,20 @@ interface ReminderWithFolder extends Reminder {
   folder?: Folder;
 }
 
+const AnimatedFlatList = Animated.createAnimatedComponent<
+  FlatListProps<ReminderWithFolder>
+>(FlatList);
+
+
 interface TimelineViewProps {
   onRefresh?: () => void;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
+export const TimelineView: React.FC<TimelineViewProps> = ({
+  onRefresh,
+  onScroll,
+}) => {
   const { isInitialized, error: initError, initializeApp } = useApp();
   const [reminders, setReminders] = useState<ReminderWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -228,7 +241,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
       </View>
 
       {/* Reminders List */}
-      <FlatList
+      <AnimatedFlatList
         data={reminders}
         renderItem={renderReminderCard}
         keyExtractor={(item) => item.id}
@@ -246,6 +259,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ onRefresh }) => {
         }
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={onScroll ? 16 : undefined}
       />
     </View>
   );

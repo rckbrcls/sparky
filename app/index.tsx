@@ -1,13 +1,14 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
-import {
-  Alert,
-  SafeAreaView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MainNavigation } from "../components/MainNavigation";
 import { NotesView } from "../components/NotesView";
 import { Terminal, TerminalHandle } from "../components/Terminal";
@@ -22,12 +23,59 @@ import { database } from "../database/database";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { NotificationService } from "../services/NotificationService";
 
+const DEFAULT_INPUT_HEIGHT = 168;
+
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? "dark"; // fallback dark
   const [activeMode, setActiveMode] = useState<"date" | "triggers" | "notes">(
     "date"
   );
   const [refreshKey, setRefreshKey] = useState(0);
+  const [headerHeightState, setHeaderHeightState] = useState(DEFAULT_INPUT_HEIGHT);
+  const headerTranslation = useSharedValue(0);
+  const headerHeight = useSharedValue(DEFAULT_INPUT_HEIGHT);
+
+  useEffect(() => {
+    headerTranslation.value = withTiming(0, { duration: 220 });
+  }, [activeMode, headerTranslation]);
+
+  const scrollHandler = useAnimatedScrollHandler<{ prevY?: number }>(
+    {
+      onBeginDrag: (event, ctx) => {
+        ctx.prevY = event.contentOffset.y;
+      },
+      onScroll: (event, ctx) => {
+        const y = event.contentOffset.y;
+        const previousY = ctx.prevY ?? y;
+        const delta = y - previousY;
+        ctx.prevY = y;
+
+        const contentHeight = event.contentSize?.height ?? 0;
+        const layoutHeight = event.layoutMeasurement?.height ?? 0;
+        const atBottom = y + layoutHeight >= contentHeight - 1;
+
+        if (delta < 0 && atBottom && y > 0) {
+          return;
+        }
+
+        const limit = headerHeight.value;
+        const next = headerTranslation.value + delta;
+        headerTranslation.value = Math.min(Math.max(next, 0), limit);
+      },
+      onMomentumEnd: (event, ctx) => {
+        ctx.prevY = event.contentOffset.y;
+      },
+    },
+    []
+  );
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -headerTranslation.value }],
+  }));
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    paddingTop: headerHeight.value - headerTranslation.value,
+  }));
 
   useFocusEffect(
     useCallback(() => {
@@ -61,6 +109,7 @@ export default function HomeScreen() {
           <TimelineView
             key={`timeline-${refreshKey}`}
             onRefresh={handleRefresh}
+            onScroll={scrollHandler}
           />
         );
       case "triggers":
@@ -68,17 +117,23 @@ export default function HomeScreen() {
           <TriggersView
             key={`triggers-${refreshKey}`}
             onRefresh={handleRefresh}
+            onScroll={scrollHandler}
           />
         );
       case "notes":
         return (
-          <NotesView key={`notes-${refreshKey}`} onRefresh={handleRefresh} />
+          <NotesView
+            key={`notes-${refreshKey}`}
+            onRefresh={handleRefresh}
+            onScroll={scrollHandler}
+          />
         );
       default:
         return (
           <TimelineView
             key={`timeline-${refreshKey}`}
             onRefresh={handleRefresh}
+            onScroll={scrollHandler}
           />
         );
     }
@@ -97,13 +152,25 @@ export default function HomeScreen() {
       onStartShouldSetResponderCapture={handleCapture}
     >
       <View style={styles.content}>
-        <View
+        <Animated.View
+          onLayout={(event) => {
+            const measuredHeight = event.nativeEvent.layout.height;
+            if (Math.abs(measuredHeight - headerHeightState) > 1) {
+              setHeaderHeightState(measuredHeight);
+              headerHeight.value = measuredHeight;
+              headerTranslation.value = Math.min(
+                headerTranslation.value,
+                measuredHeight
+              );
+            }
+          }}
           style={[
             styles.inputSection,
             {
               backgroundColor: themeColors.background,
               borderBottomColor: themeColors.border,
             },
+            headerAnimatedStyle,
           ]}
         >
           <View
@@ -129,10 +196,18 @@ export default function HomeScreen() {
             onReminderCreated={handleReminderCreated}
             placeholder={"text, /commands and #tags"}
           />
-        </View>
-        <MainNavigation activeMode={activeMode} onModeChange={setActiveMode}>
-          {renderActiveView()}
-        </MainNavigation>
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.mainContent,
+            { paddingTop: headerHeightState },
+            contentAnimatedStyle,
+          ]}
+        >
+          <MainNavigation activeMode={activeMode} onModeChange={setActiveMode}>
+            {renderActiveView()}
+          </MainNavigation>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -149,6 +224,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  mainContent: {
+    flex: 1,
   },
   settingsButton: {
     padding: 10,

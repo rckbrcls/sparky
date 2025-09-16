@@ -10,29 +10,33 @@ import {
   Alert,
   Animated,
   Easing,
-  KeyboardAvoidingView,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database } from "../database/database";
+import { useCommandEngine } from "../hooks/useCommandEngine";
+import { useFolderMap } from "../hooks/useFolderMap";
+import { useReminderPreview } from "../hooks/useReminderPreview";
+import { useScrollSync } from "../hooks/useScrollSync";
+import { buildSegments, Segment } from "../services/commands/CommandHighlights";
+import { CommandDefinition } from "../services/commands/CommandRegistry";
 import { ReminderService } from "../services/ReminderService";
 import { ParsedReminder, SmartTextParser } from "../services/SmartTextParser";
-import { useCommandEngine } from "../hooks/useCommandEngine";
-import { useReminderPreview } from "../hooks/useReminderPreview";
-import { useFolderMap } from "../hooks/useFolderMap";
-import { useScrollSync } from "../hooks/useScrollSync";
 import {
   cleanSystemCommands,
   matchCreateFolderCommand,
@@ -42,8 +46,6 @@ import {
   slugify,
   stripAllSystemCommands,
 } from "../utils/terminal";
-import { buildSegments, Segment } from "../services/commands/CommandHighlights";
-import { CommandDefinition } from "../services/commands/CommandRegistry";
 
 const COLLAPSED_MAX_HEIGHT = 220;
 const PREVIEW_MAX_HEIGHT = 180;
@@ -91,7 +93,10 @@ interface PreviewBadge {
   accessibilityLabel: string;
 }
 
-const BADGE_APPEARANCE: Record<BadgeTone, { backgroundColor: string; borderColor: string; textColor: string }> = {
+const BADGE_APPEARANCE: Record<
+  BadgeTone,
+  { backgroundColor: string; borderColor: string; textColor: string }
+> = {
   neutral: {
     backgroundColor: Colors.dark.surface,
     borderColor: Colors.dark.border,
@@ -155,17 +160,22 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       setPreviewViewportHeight,
     } = useScrollSync();
 
-    const { preview, fadeAnim, updatePreview, hidePreview } = useReminderPreview();
+    const { preview, fadeAnim, updatePreview, hidePreview } =
+      useReminderPreview();
     const { folderMap, setFolderMap } = useFolderMap();
 
-    const { commandState, recompute, handleSelectCommand, handleSelectArgSuggestion } =
-      useCommandEngine({
-        text,
-        selectionStart: selection.start,
-        setText,
-        setSelection,
-        setSegments,
-      });
+    const {
+      commandState,
+      recompute,
+      handleSelectCommand,
+      handleSelectArgSuggestion,
+    } = useCommandEngine({
+      text,
+      selectionStart: selection.start,
+      setText,
+      setSelection,
+      setSegments,
+    });
 
     const insets = useSafeAreaInsets();
     const animatedHeight = useRef(
@@ -259,8 +269,8 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         );
       }
 
-    return undefined;
-  }, [folderMap, preview, text]);
+      return undefined;
+    }, [folderMap, preview, text]);
 
     const previewBadges = useMemo<PreviewBadge[]>(() => {
       if (!preview) return [];
@@ -296,7 +306,10 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         });
       }
 
-      if (preview.fireAt instanceof Date && !Number.isNaN(preview.fireAt.getTime())) {
+      if (
+        preview.fireAt instanceof Date &&
+        !Number.isNaN(preview.fireAt.getTime())
+      ) {
         const datePart = preview.fireAt.toLocaleDateString();
         const timePart = preview.fireAt.toLocaleTimeString([], {
           hour: "2-digit",
@@ -322,7 +335,11 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         });
       }
 
-      const people = preview.persons?.length ? preview.persons : preview.person ? [preview.person] : [];
+      const people = preview.persons?.length
+        ? preview.persons
+        : preview.person
+        ? [preview.person]
+        : [];
       people.forEach((person, index) => {
         const trimmed = person.trim();
         if (!trimmed) return;
@@ -391,7 +408,6 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       }
     };
 
-
     const handleContentSizeChange = (height: number) => {
       const totalHeight = height + PLACEHOLDER_EXTRA_PADDING;
       setMeasuredInputContentHeight(totalHeight);
@@ -403,7 +419,8 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       async (parsed: ParsedReminder & { type: "note" }, rawText: string) => {
         let chosenFolderId = parsed.folderId || "all";
         const explicitFolderMatch = matchFolderCommand(rawText);
-        const createFolderInfo = SmartTextParser.extractCreateFolderName(rawText);
+        const createFolderInfo =
+          SmartTextParser.extractCreateFolderName(rawText);
         const deleteFolderMatch = matchDeleteFolderCommand(rawText);
         let commandOnly = false;
 
@@ -576,7 +593,10 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         const parsed = SmartTextParser.parseText(text);
 
         if (parsed.type === "note") {
-          await handleSubmitNote(parsed as ParsedReminder & { type: "note" }, text);
+          await handleSubmitNote(
+            parsed as ParsedReminder & { type: "note" },
+            text
+          );
         } else {
           await handleSubmitReminder(parsed);
         }
@@ -625,23 +645,26 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
 
     const renderSegments = () => {
       if (text.length === 0) {
-      return (
-        <Text
-          style={styles.placeholderText}
-          onLayout={(event) => {
-            const height = event.nativeEvent.layout.height;
-            setPlaceholderHeight(height);
-          }}
-        >
-          {placeholder}
-        </Text>
-      );
+        return (
+          <Text
+            style={styles.placeholderText}
+            onLayout={(event) => {
+              const height = event.nativeEvent.layout.height;
+              setPlaceholderHeight(height);
+            }}
+          >
+            {placeholder}
+          </Text>
+        );
       }
 
       return (
         <Text style={styles.highlightText}>
           {segments.map((segment, idx) => (
-            <Text key={`${segment.kind}-${idx}`} style={highlightStyle(segment.kind)}>
+            <Text
+              key={`${segment.kind}-${idx}`}
+              style={highlightStyle(segment.kind)}
+            >
               {segment.text}
             </Text>
           ))}
@@ -776,11 +799,18 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
                   accessibilityLabel={badge.accessibilityLabel}
                 >
                   {badge.icon ? (
-                    <Text style={[styles.badgeIcon, { color: appearance.textColor }]}>
+                    <Text
+                      style={[
+                        styles.badgeIcon,
+                        { color: appearance.textColor },
+                      ]}
+                    >
                       {badge.icon}
                     </Text>
                   ) : null}
-                  <Text style={[styles.badgeLabel, { color: appearance.textColor }]}>
+                  <Text
+                    style={[styles.badgeLabel, { color: appearance.textColor }]}
+                  >
                     {badge.label}
                   </Text>
                 </View>
@@ -821,10 +851,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       !hasMetaContent && styles.metaHidden,
     ];
     const metaSection = (
-      <View
-        style={metaContainerStyles}
-        pointerEvents="box-none"
-      >
+      <View style={metaContainerStyles} pointerEvents="box-none">
         {argSuggestions}
         {commandMatches}
       </View>
@@ -970,7 +997,9 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       bodyContent = (
         <View style={styles.fullscreenContent}>
           {badgesNode || <View style={styles.badgesPlaceholder} />}
-          <View style={[styles.fullscreenTop, { paddingBottom: bottomPadding }]}>
+          <View
+            style={[styles.fullscreenTop, { paddingBottom: bottomPadding }]}
+          >
             {inputBlock}
             {metaSection}
           </View>

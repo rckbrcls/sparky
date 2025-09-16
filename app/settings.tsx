@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "../components/ui/IconSymbol";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";

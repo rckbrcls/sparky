@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   RefreshControl,
   SectionList,
+  SectionListProps,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { database, Trigger } from "../database/database";
@@ -17,11 +21,21 @@ interface TriggerSection {
   data: (Trigger & { reminderTitle?: string })[];
 }
 
+type TriggerListItem = Trigger & { reminderTitle?: string };
+
+const AnimatedSectionList = Animated.createAnimatedComponent<
+  SectionListProps<TriggerListItem, TriggerSection>
+>(SectionList);
+
 interface TriggersViewProps {
   onRefresh?: () => void;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-export const TriggersView: React.FC<TriggersViewProps> = ({ onRefresh }) => {
+export const TriggersView: React.FC<TriggersViewProps> = ({
+  onRefresh,
+  onScroll,
+}) => {
   const [sections, setSections] = useState<TriggerSection[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -202,7 +216,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({ onRefresh }) => {
       {sections.length === 0 && !loading ? (
         renderEmptyState()
       ) : (
-        <SectionList
+        <AnimatedSectionList
           sections={sections}
           renderItem={renderTriggerCard}
           renderSectionHeader={renderSectionHeader}
@@ -217,6 +231,8 @@ export const TriggersView: React.FC<TriggersViewProps> = ({ onRefresh }) => {
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
+          onScroll={onScroll}
+          scrollEventThrottle={onScroll ? 16 : undefined}
         />
       )}
     </View>

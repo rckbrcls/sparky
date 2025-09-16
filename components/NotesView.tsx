@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  FlatListProps,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   RefreshControl,
   StyleSheet,
   Text,
@@ -9,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
@@ -19,11 +23,20 @@ interface QuickNoteWithFolder extends QuickNote {
   folder?: Folder;
 }
 
+const AnimatedNotesList =
+  Animated.createAnimatedComponent<FlatListProps<QuickNoteWithFolder>>(
+    FlatList
+  );
+
 interface NotesViewProps {
   onRefresh?: () => void;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
+export const NotesView: React.FC<NotesViewProps> = ({
+  onRefresh,
+  onScroll,
+}) => {
   const { isInitialized, error: initError, initializeApp } = useApp();
   const [notes, setNotes] = useState<QuickNoteWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -282,7 +295,7 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
       {notes.length === 0 && !loading ? (
         renderEmptyState()
       ) : (
-        <FlatList
+        <AnimatedNotesList
           data={notes}
           renderItem={renderNoteCard}
           keyExtractor={(item) => item.id}
@@ -301,6 +314,8 @@ export const NotesView: React.FC<NotesViewProps> = ({ onRefresh }) => {
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           onScrollBeginDrag={blurSearch}
+          onScroll={onScroll as unknown as (e: any) => void}
+          scrollEventThrottle={onScroll ? 16 : undefined}
           keyboardShouldPersistTaps="handled"
         />
       )}
