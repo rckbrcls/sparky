@@ -1,5 +1,15 @@
 import { CommandDefinition } from "./CommandRegistry";
 
+const ARGUMENT_MAX_LENGTH = 64;
+
+function withCommandPrefix(command: CommandDefinition): string {
+  return `/${command.name}`;
+}
+
+function sanitizeArgument(raw: string): string {
+  return raw.replace(/[\r\n\t]/g, " ").trim().slice(0, ARGUMENT_MAX_LENGTH);
+}
+
 export function applyCommandInsert(
   text: string,
   command: CommandDefinition,
@@ -7,15 +17,17 @@ export function applyCommandInsert(
 ): { newText: string; newCursor: number } {
   const prefix = text.slice(0, cursor);
   const suffix = text.slice(cursor);
-  // Replace current token if it is a /partial
-  const m = /(\/[^\s]*)$/.exec(prefix);
-  let insertion = `/${command.name}`;
+  const partialMatch = /(\/[^\s]*)$/.exec(prefix);
+
+  let insertion = withCommandPrefix(command);
   if (command.argument) insertion += " ";
-  if (m) {
-    const start = m.index;
+
+  if (partialMatch) {
+    const start = partialMatch.index;
     const newPrefix = prefix.slice(0, start) + insertion;
     return { newText: newPrefix + suffix, newCursor: newPrefix.length };
   }
+
   const newPrefix = prefix + insertion;
   return { newText: newPrefix + suffix, newCursor: newPrefix.length };
 }
@@ -27,11 +39,8 @@ export function applyArgumentInsert(
   chosen: string,
   finalize: boolean
 ): { newText: string; newCursor: number } {
-  const safe = chosen
-    .replace(/[\r\n\t]/g, " ")
-    .trim()
-    .substring(0, 64);
-  const insertion = finalize ? safe + " " : safe; // trailing space ends arg mode
+  const sanitized = sanitizeArgument(chosen);
+  const insertion = finalize ? `${sanitized} ` : sanitized; // trailing space ends arg mode
   const before = text.slice(0, replaceFrom);
   const after = text.slice(cursor);
   const newText = before + insertion + after;

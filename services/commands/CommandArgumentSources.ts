@@ -59,14 +59,14 @@ async function fetchQuickNotes(): Promise<QuickNote[]> {
 
 async function uniqueFrom<T>(
   values: T[],
-  map: (v: T) => string | undefined
+  map: (value: T) => string | undefined
 ): Promise<string[]> {
-  const out: string[] = [];
-  for (const v of values) {
-    const k = map(v);
-    if (k && !out.includes(k)) out.push(k);
-  }
-  return out.sort((a, b) => a.localeCompare(b));
+  const unique = new Set<string>();
+  values.forEach((value) => {
+    const key = map(value);
+    if (key) unique.add(key);
+  });
+  return Array.from(unique).sort((a, b) => a.localeCompare(b));
 }
 
 async function computePersons(): Promise<string[]> {
@@ -78,25 +78,25 @@ async function computeLocations(): Promise<string[]> {
   return uniqueFrom(reminders, (r) => r.location || undefined);
 }
 async function computeTags(): Promise<string[]> {
-  // Extract tags from quick notes content using existing parser conventions (/tags block or #tags in future)
+  // Extract tags from quick notes content using existing parser conventions
   const notes = await fetchQuickNotes();
   const tags: string[] = [];
-  for (const n of notes) {
-    // Simple heuristic: parse /tags block or JSON tags stored
+  for (const note of notes) {
     try {
-      if (n.tags) {
-        const arr = JSON.parse(n.tags);
-        if (Array.isArray(arr)) {
-          for (const t of arr)
-            if (typeof t === "string" && !tags.includes(t)) tags.push(t);
-        }
+      if (!note.tags) continue;
+      const parsed = JSON.parse(note.tags);
+      if (!Array.isArray(parsed)) continue;
+      for (const tag of parsed) {
+        if (typeof tag === "string" && !tags.includes(tag)) tags.push(tag);
       }
-    } catch {}
+    } catch {
+      // ignore malformed tag payloads, we just skip them
+    }
   }
   return tags.sort((a, b) => a.localeCompare(b));
 }
 
-type SourceKey = "folders" | "persons" | "locations" | "tags";
+export type SourceKey = "folders" | "persons" | "locations" | "tags";
 
 const sourceFetchers: Record<SourceKey, () => Promise<string[]>> = {
   folders: fetchFolders,

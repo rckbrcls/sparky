@@ -1,6 +1,7 @@
 import { defaultNormalize } from "../../utils/slug";
+import type { SourceKey } from "./CommandArgumentSources";
 
-export type ArgumentSourceKind = "folders" | "persons" | "locations" | "tags";
+export type ArgumentSourceKind = SourceKey;
 
 export interface CommandDefinition {
   name: string; // without leading slash
@@ -20,20 +21,28 @@ export interface CommandDefinition {
 }
 
 const registry: CommandDefinition[] = [];
+const registryMap = new Map<string, CommandDefinition>();
 
 export function registerCommand(def: CommandDefinition) {
-  if (registry.some((r) => r.name === def.name)) return; // idempotent
-  registry.push({
+  const key = def.name.toLowerCase();
+  if (registryMap.has(key)) return; // idempotent
+  const entry: CommandDefinition = {
     finalizeOnSelect: true,
     ...def,
     argument: def.argument
       ? { normalize: defaultNormalize, ...def.argument }
       : undefined,
-  });
+  };
+  registry.push(entry);
+  registryMap.set(key, entry);
 }
 
 export function getAllCommands(): CommandDefinition[] {
   return registry.slice();
+}
+
+export function getCommandByName(name: string): CommandDefinition | undefined {
+  return registryMap.get(name.toLowerCase());
 }
 
 // Pre-register core commands (entity + actions) — can be extended elsewhere.

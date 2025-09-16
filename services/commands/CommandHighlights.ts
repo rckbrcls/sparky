@@ -1,47 +1,65 @@
-// Extracted lightweight highlight module: segments for commands & their arguments
+// Lightweight segment builder used by the terminal and command context engine.
+// Responsible for identifying command tokens (/command) and their arguments so
+// both syntax highlighting and contextual menus can stay in sync without
+// duplicating parsing logic across the app.
+
 export interface Segment {
   text: string;
   kind: "command" | "commandArg" | "tag" | "normal";
 }
 
-// (Currently tags disabled) kept placeholder for future hashtag/tag parsing
-const TAG_REGEX = /$^/; // matches nothing
+const COMMAND_PATTERN = /(\/[a-zA-Z]+)([\s\S]*?)(?=(?:\s\/[a-zA-Z]+)|$)/g;
 
-function splitTags(
-  textChunk: string,
-  base: Segment["kind"] = "normal"
-): Segment[] {
-  if (!textChunk) return [];
-  const segs: Segment[] = [];
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = TAG_REGEX.exec(textChunk)) !== null) {
-    if (m.index > last)
-      segs.push({ text: textChunk.slice(last, m.index), kind: base });
-    segs.push({ text: m[0], kind: "tag" });
-    last = m.index + m[0].length;
+// Tags are not enabled yet, but we keep the plumbing ready for a future
+// /#hashtag or inline tag parser by holding a no-op regex placeholder.
+const TAG_PATTERN = /$^/; // matches nothing
+
+function appendSegment(target: Segment[], text: string, kind: Segment["kind"]) {
+  if (!text) return;
+  target.push({ text, kind });
+}
+
+function splitWithTags(text: string, base: Segment["kind"]): Segment[] {
+  if (!text) return [];
+  const collected: Segment[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TAG_PATTERN.exec(text)) !== null) {
+    if (match.index > lastIndex)
+      appendSegment(collected, text.slice(lastIndex, match.index), base);
+    appendSegment(collected, match[0], "tag");
+    lastIndex = match.index + match[0].length;
   }
-  if (last < textChunk.length)
-    segs.push({ text: textChunk.slice(last), kind: base });
-  return segs;
+  if (lastIndex < text.length)
+    appendSegment(collected, text.slice(lastIndex), base);
+  return collected;
 }
 
 export function buildSegments(value: string): Segment[] {
   if (!value) return [];
-  const result: Segment[] = [];
-  const regex = /(\/[a-zA-Z]+)([\s\S]*?)(?=(?:\s\/[a-zA-Z]+)|$)/g;
-  let lastIndex = 0;
+  const segments: Segment[] = [];
   let match: RegExpExecArray | null;
-  while ((match = regex.exec(value)) !== null) {
-    if (match.index > lastIndex)
-      result.push(...splitTags(value.slice(lastIndex, match.index)));
-    const token = match[1];
-    const argText = match[2] || "";
-    result.push({ text: token, kind: "command" });
-    if (argText) result.push(...splitTags(argText, "commandArg"));
-    lastIndex = match.index + token.length + argText.length;
+  let cursor = 0;
+
+  while ((match = COMMAND_PATTERN.exec(value)) !== null) {
+    if (match.index > cursor) {
+      segments.push(...splitWithTags(value.slice(cursor, match.index), "normal"));
+    }
+
+    const commandToken = match[1];
+    const argumentText = match[2] || "";
+
+    appendSegment(segments, commandToken, "command");
+    if (argumentText) {
+      segments.push(...splitWithTags(argumentText, "commandArg"));
+    }
+
+    cursor = match.index + commandToken.length + argumentText.length;
   }
-  if (lastIndex < value.length)
-    result.push(...splitTags(value.slice(lastIndex)));
-  return result;
+
+  if (cursor < value.length) {
+    segments.push(...splitWithTags(value.slice(cursor), "normal"));
+  }
+
+  return segments;
 }
