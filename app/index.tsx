@@ -35,6 +35,8 @@ export default function HomeScreen() {
     useState(DEFAULT_INPUT_HEIGHT);
   const headerTranslation = useSharedValue(0);
   const headerHeight = useSharedValue(DEFAULT_INPUT_HEIGHT);
+  const NAV_TIGHTEN = 0; // keep original nav size/spacing
+  const SCRIM_MAX_OPACITY = 1;
 
   useEffect(() => {
     headerTranslation.value = withTiming(0, { duration: 220 });
@@ -78,8 +80,21 @@ export default function HomeScreen() {
     } as any;
   });
 
+  const headerScrimAnimatedStyle = useAnimatedStyle(() => {
+    const progress =
+      headerHeight.value > 0 ? headerTranslation.value / headerHeight.value : 0;
+    const clamped = Math.max(0, Math.min(progress, 1));
+    return {
+      // Darken gradually with scroll progress
+      opacity: clamped * SCRIM_MAX_OPACITY,
+    } as any;
+  });
+
   const contentAnimatedStyle = useAnimatedStyle(() => ({
-    paddingTop: headerHeight.value - headerTranslation.value,
+    paddingTop: Math.max(
+      headerHeight.value - headerTranslation.value - NAV_TIGHTEN,
+      0
+    ),
   }));
 
   useFocusEffect(
@@ -87,7 +102,6 @@ export default function HomeScreen() {
       initializeApp();
     }, [])
   );
-
   const initializeApp = async () => {
     try {
       await database.initialize();
@@ -202,6 +216,15 @@ export default function HomeScreen() {
             onReminderCreated={handleReminderCreated}
             placeholder={"text, /commands and #tags"}
           />
+          {/* Darkening scrim overlay (overlay header content) */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.headerScrim,
+              { backgroundColor: "#000", zIndex: 10 },
+              headerScrimAnimatedStyle,
+            ]}
+          />
         </Animated.View>
         <Animated.View
           style={[
@@ -250,5 +273,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.border,
     borderRadius: 100,
     borderWidth: 1,
+  },
+  headerScrim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
 });
