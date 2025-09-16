@@ -8,13 +8,20 @@ import React, {
 import {
   Alert,
   Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
+  SafeAreaView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
@@ -37,10 +44,12 @@ import {
 import { buildSegments, Segment } from "../services/commands/CommandHighlights";
 import { CommandDefinition } from "../services/commands/CommandRegistry";
 
-const BASE_MIN_HEIGHT = 68;
-const MAX_HEIGHT = 220;
+const COLLAPSED_MAX_HEIGHT = 220;
 const PREVIEW_MAX_HEIGHT = 180;
 const PLACEHOLDER_EXTRA_PADDING = 28;
+const FALLBACK_SINGLE_LINE_HEIGHT = 22 + PLACEHOLDER_EXTRA_PADDING;
+const EXPANSION_DURATION = 220;
+const INPUT_VERTICAL_PADDING = 28;
 
 const getTypeIcon = (type: string, triggerType?: string) => {
   if (type === "date") return "⏰";
@@ -87,10 +96,13 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
     const [text, setText] = useState("");
     const [segments, setSegments] = useState<Segment[]>([]);
     const [selection, setSelection] = useState({ start: 0, end: 0 });
-    const [autoHeight, setAutoHeight] = useState(BASE_MIN_HEIGHT);
+    const [inputContentHeight, setMeasuredInputContentHeight] = useState(
+      FALLBACK_SINGLE_LINE_HEIGHT
+    );
     const [isOverflowing, setIsOverflowing] = useState(false);
     const [placeholderHeight, setPlaceholderHeight] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     const ignoreNextChangeRef = useRef(false);
 
@@ -98,7 +110,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       inputScrollRef,
       previewScrollRef,
       syncScroll,
-      setInputContentHeight,
+      setInputContentHeight: setSyncedInputContentHeight,
       setPreviewContentHeight,
       setInputViewportHeight,
       setPreviewViewportHeight,
@@ -115,6 +127,38 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         setSelection,
         setSegments,
       });
+
+    const { height: windowHeight } = useWindowDimensions();
+    const insets = useSafeAreaInsets();
+    const animatedHeight = useRef(
+      new Animated.Value(FALLBACK_SINGLE_LINE_HEIGHT)
+    ).current;
+
+    const baselineHeight = placeholderHeight
+      ? placeholderHeight + PLACEHOLDER_EXTRA_PADDING
+      : FALLBACK_SINGLE_LINE_HEIGHT;
+
+    const collapsedHeight = Math.min(
+      Math.max(baselineHeight, inputContentHeight),
+      COLLAPSED_MAX_HEIGHT
+    );
+
+    const fullscreenHeight = Math.max(
+      windowHeight - insets.top - insets.bottom,
+      baselineHeight
+    );
+
+    const targetHeight = isFullscreen ? fullscreenHeight : collapsedHeight;
+
+    // Smoothly interpolate the container height across compact/fullscreen transitions.
+    useEffect(() => {
+      Animated.timing(animatedHeight, {
+        toValue: targetHeight,
+        duration: EXPANSION_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    }, [animatedHeight, targetHeight]);
 
     const inputRef = useRef<TextInput | null>(null);
     useImperativeHandle(ref, () => ({
@@ -191,15 +235,9 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
 
     const handleContentSizeChange = (height: number) => {
       const totalHeight = height + PLACEHOLDER_EXTRA_PADDING;
-      setInputContentHeight(totalHeight);
-
-      if (totalHeight <= MAX_HEIGHT) {
-        setIsOverflowing(false);
-        setAutoHeight(Math.max(BASE_MIN_HEIGHT, totalHeight));
-      } else {
-        setIsOverflowing(true);
-        setAutoHeight(MAX_HEIGHT);
-      }
+      setMeasuredInputContentHeight(totalHeight);
+      setSyncedInputContentHeight(totalHeight);
+      setIsOverflowing(totalHeight > COLLAPSED_MAX_HEIGHT);
     };
 
     const handleSubmitNote = useCallback(
@@ -428,23 +466,17 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
 
     const renderSegments = () => {
       if (text.length === 0) {
-        return (
-          <Text
-            style={styles.placeholderText}
-            onLayout={(event) => {
-              const height = event.nativeEvent.layout.height;
-              setPlaceholderHeight(height);
-              setAutoHeight((prev) =>
-                Math.max(
-                  BASE_MIN_HEIGHT,
-                  Math.min(height + PLACEHOLDER_EXTRA_PADDING, MAX_HEIGHT)
-                )
-              );
-            }}
-          >
-            {placeholder}
-          </Text>
-        );
+      return (
+        <Text
+          style={styles.placeholderText}
+          onLayout={(event) => {
+            const height = event.nativeEvent.layout.height;
+            setPlaceholderHeight(height);
+          }}
+        >
+          {placeholder}
+        </Text>
+      );
       }
 
       return (
@@ -538,7 +570,13 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       const folderName = preview.type === "note" ? resolvePreviewFolderName() : undefined;
 
       return (
-        <Animated.View style={[styles.preview, { opacity: fadeAnim }]}>
+        <Animated.View
+          style={[
+            styles.preview,
+            isFullscreen && styles.previewFullscreen,
+            { opacity: fadeAnim },
+          ]}
+        >
           <View style={styles.previewHeader}>
             <Text style={styles.previewIcon}>
               {getTypeIcon(preview.type, preview.triggerType)}
@@ -557,7 +595,9 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
           <View
             style={[
               styles.previewScrollableWrapper,
-              { maxHeight: PREVIEW_MAX_HEIGHT },
+              isFullscreen
+                ? styles.previewScrollableWrapperFullscreen
+                : styles.previewScrollableWrapperCompact,
             ]}
           >
             <ScrollView
@@ -620,17 +660,35 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       );
     };
 
-    return (
-      <View style={[styles.container, style]}>
-        <View style={[styles.inputContainer, { minHeight: autoHeight }]}>
+    const shouldShowExpandButton = !isFullscreen && isOverflowing;
+    const scrollAreaStyles = [
+      styles.scrollArea,
+      isFullscreen
+        ? styles.scrollAreaFullscreen
+        : { maxHeight: Math.max(collapsedHeight - INPUT_VERTICAL_PADDING, 0) },
+    ];
+    const scrollContentStyle = [
+      styles.scrollContent,
+      isFullscreen && styles.scrollContentFullscreen,
+    ];
+    const inputContainerStyles = [
+      styles.inputContainer,
+      isFullscreen ? styles.inputContainerFullscreen : styles.inputContainerCompact,
+      { minHeight: baselineHeight },
+      { height: animatedHeight },
+    ];
+
+    const bodyContent = (
+      <>
+        <Animated.View style={inputContainerStyles}>
           <View style={styles.composedInput}>
             <ScrollView
               ref={inputScrollRef}
-              style={[styles.scrollArea, { maxHeight: MAX_HEIGHT - 28 }]}
-              contentContainerStyle={styles.scrollContent}
+              style={scrollAreaStyles}
+              contentContainerStyle={scrollContentStyle}
               keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={isOverflowing}
-              scrollEnabled={isOverflowing}
+              showsVerticalScrollIndicator={isFullscreen || isOverflowing}
+              scrollEnabled={isFullscreen || isOverflowing}
               onScroll={(event) =>
                 syncScroll("input", event.nativeEvent.contentOffset.y)
               }
@@ -741,19 +799,75 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
               </Text>
             </TouchableOpacity>
           )}
-        </View>
+          {shouldShowExpandButton && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Expand terminal"
+              style={styles.expandButton}
+              onPress={() => setIsFullscreen(true)}
+            >
+              <Text style={styles.expandIcon}>⤢</Text>
+            </TouchableOpacity>
+          )}
+        </Animated.View>
 
         {renderArgSuggestions()}
         {renderCommandMatches()}
         {renderPreview()}
-      </View>
+      </>
     );
+
+    if (isFullscreen) {
+      return (
+        <Modal
+          animationType="fade"
+          transparent={false}
+          visible
+          onRequestClose={() => setIsFullscreen(false)}
+        >
+          <SafeAreaView style={styles.fullscreenModal}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              keyboardVerticalOffset={insets.top + 16}
+              style={styles.fullscreenAvoiding}
+            >
+              <View style={[styles.fullscreenInner, style]}>{bodyContent}</View>
+            </KeyboardAvoidingView>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Retract terminal"
+              style={styles.collapseButton}
+              onPress={() => setIsFullscreen(false)}
+            >
+              <Text style={styles.expandIcon}>⤡</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        </Modal>
+      );
+    }
+
+    return <View style={[styles.container, style]}>{bodyContent}</View>;
   }
 );
 Terminal.displayName = "Terminal";
 
 const styles = StyleSheet.create({
-  container: { marginVertical: 8, position: "fixed", width: "100%", bottom: 0 },
+  container: {
+    marginVertical: 8,
+    width: "100%",
+  },
+  fullscreenModal: {
+    flex: 1,
+    backgroundColor: Colors.dark.background,
+  },
+  fullscreenAvoiding: {
+    flex: 1,
+  },
+  fullscreenInner: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -763,12 +877,21 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    justifyContent: "flex-start",
+    width: "100%",
+    position: "relative",
+  },
+  inputContainerCompact: {
+    alignSelf: "stretch",
+  },
+  inputContainerFullscreen: {
+    borderRadius: 16,
   },
   scrollArea: { width: "100%" },
+  scrollAreaFullscreen: { flexGrow: 1 },
   scrollContent: { flexGrow: 1 },
+  scrollContentFullscreen: { paddingBottom: 8 },
   layeredInput: { position: "relative", width: "100%" },
-  composedInput: { flex: 1, minHeight: 40, justifyContent: "flex-start" },
+  composedInput: { flex: 1, justifyContent: "flex-start" },
   highlightLayer: {
     position: "absolute",
     top: 0,
@@ -801,6 +924,37 @@ const styles = StyleSheet.create({
   hlCommand: { color: Colors.dark.tint, fontWeight: "600" },
   hlCommandArg: { color: Colors.dark.icon },
   hlTag: { color: Colors.dark.success, fontWeight: "500" },
+  expandButton: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.dark.surface,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expandIcon: {
+    ...Typography.body,
+    color: Colors.dark.tint,
+    fontWeight: "600",
+  },
+  collapseButton: {
+    position: "absolute",
+    right: 16,
+    top: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.dark.surface,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   submitButton: {
     marginLeft: 12,
     width: 32,
@@ -824,11 +978,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.dark.border,
   },
+  previewFullscreen: {
+    flexGrow: 1,
+  },
   previewScrollableWrapper: {
     marginTop: 4,
     overflow: "hidden",
     borderRadius: 6,
   },
+  previewScrollableWrapperCompact: { maxHeight: PREVIEW_MAX_HEIGHT },
+  previewScrollableWrapperFullscreen: { maxHeight: undefined, flexGrow: 1 },
   previewScroll: { width: "100%" },
   previewScrollContent: { paddingBottom: 4 },
   previewHeader: {
