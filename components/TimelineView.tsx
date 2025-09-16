@@ -268,6 +268,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={onScroll ? 16 : undefined}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
       />
     </View>
   );
@@ -276,7 +280,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: "transparent",
   },
   filterBar: {
     flexDirection: "row",

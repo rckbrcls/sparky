@@ -232,6 +232,10 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
         stickySectionHeadersEnabled={false}
         onScroll={onScroll}
         scrollEventThrottle={onScroll ? 16 : undefined}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
       />
     </View>
   );
@@ -240,7 +244,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: "transparent",
   },
   listContainer: {
     padding: 16,
