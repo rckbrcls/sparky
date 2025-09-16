@@ -68,9 +68,13 @@ export default function HomeScreen() {
     const clamped = Math.max(0, Math.min(progress, 1));
     const opacity = 0.12 * (1 - clamped);
     const elevation = 3 * (1 - clamped);
+    const shadowRadius = 12 * (1 - clamped);
+    const shadowOffsetHeight = 6 * (1 - clamped);
     return {
       shadowOpacity: opacity,
       elevation,
+      shadowRadius,
+      shadowOffset: { width: 0, height: shadowOffsetHeight },
     } as any;
   });
 
