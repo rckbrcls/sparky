@@ -280,6 +280,9 @@ export const NotesView: React.FC<NotesViewProps> = ({
         onScroll={onScroll as unknown as (e: any) => void}
         scrollEventThrottle={onScroll ? 16 : undefined}
         keyboardShouldPersistTaps="handled"
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
       />
     </View>
   );

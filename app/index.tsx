@@ -42,22 +42,49 @@ export default function HomeScreen() {
     headerTranslation.value = withTiming(0, { duration: 220 });
   }, [activeMode, headerTranslation]);
 
-  const scrollHandler = useAnimatedScrollHandler((event) => {
-    const y = event.contentOffset?.y ?? 0;
-    const contentHeight = event.contentSize?.height ?? 0;
-    const layoutHeight = event.layoutMeasurement?.height ?? 0;
-    const isScrollable = contentHeight > layoutHeight + 1;
+  const scrollHandler = useAnimatedScrollHandler({
+    onBeginDrag: (event, ctx: any) => {
+      ctx.prevY = event.contentOffset?.y ?? 0;
+      ctx.freezeBottom = false;
+    },
+    onScroll: (event, ctx: any) => {
+      const y = event.contentOffset?.y ?? 0;
+      const prevY = ctx.prevY ?? y;
+      const dy = y - prevY;
+      ctx.prevY = y;
 
-    if (!isScrollable || y <= 0) {
-      if (headerTranslation.value !== 0) {
-        headerTranslation.value = withTiming(0, { duration: 120 });
+      const contentHeight = event.contentSize?.height ?? 0;
+      const layoutHeight = event.layoutMeasurement?.height ?? 0;
+      const available = Math.max(contentHeight - layoutHeight, 0);
+
+      // Top guard: when at or above top, ensure header is fully shown
+      if (y <= 0) {
+        if (headerTranslation.value !== 0) {
+          headerTranslation.value = withTiming(0, { duration: 120 });
+        }
+        return;
       }
-      return;
-    }
 
-    const limit = headerHeight.value;
-    const clamped = Math.min(Math.max(y, 0), limit);
-    headerTranslation.value = clamped;
+      // Bottom overscroll guard: freeze updates near bottom
+      const bottomThreshold = 2; // px tolerance to detect bottom proximity
+      const releaseDelta = 12; // px to scroll up before unfreezing
+      const nearBottom = y >= available - bottomThreshold;
+      if (nearBottom && dy >= 0) {
+        ctx.freezeBottom = true;
+        return;
+      }
+      if (ctx.freezeBottom) {
+        if (y <= available - releaseDelta) {
+          ctx.freezeBottom = false; // resume once sufficiently above bottom
+        } else {
+          return; // keep frozen near bottom to avoid bounce-induced jitter
+        }
+      }
+
+      const limit = headerHeight.value;
+      const clamped = Math.min(Math.max(y, 0), limit);
+      headerTranslation.value = clamped;
+    },
   });
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
