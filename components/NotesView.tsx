@@ -35,6 +35,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   onRefresh,
   onScroll,
 }) => {
+  // background follows current theme to avoid black overlay artifacts
   const { isInitialized, error: initError, initializeApp } = useApp();
   const [notes, setNotes] = useState<QuickNoteWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -287,7 +288,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
+    backgroundColor: "transparent",
   },
   filterContainer: {
     backgroundColor: Colors.dark.surface,

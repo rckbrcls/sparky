@@ -41,7 +41,7 @@ export default function HomeScreen() {
   }, [activeMode, headerTranslation]);
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
-    const y = event.contentOffset.y;
+    const y = event.contentOffset?.y ?? 0;
     const contentHeight = event.contentSize?.height ?? 0;
     const layoutHeight = event.layoutMeasurement?.height ?? 0;
     const isScrollable = contentHeight > layoutHeight + 1;
@@ -56,7 +56,7 @@ export default function HomeScreen() {
     const limit = headerHeight.value;
     const clamped = Math.min(Math.max(y, 0), limit);
     headerTranslation.value = clamped;
-  }, []);
+  });
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -headerTranslation.value }],
@@ -66,10 +66,10 @@ export default function HomeScreen() {
     const progress =
       headerHeight.value > 0 ? headerTranslation.value / headerHeight.value : 0;
     const clamped = Math.max(0, Math.min(progress, 1));
-    const opacity = 0.12 * (1 - clamped);
-    const elevation = 3 * (1 - clamped);
-    const shadowRadius = 12 * (1 - clamped);
-    const shadowOffsetHeight = 6 * (1 - clamped);
+    const opacity = 0.2 * (1 - clamped);
+    const elevation = 4 * (1 - clamped);
+    const shadowRadius = 14 * (1 - clamped);
+    const shadowOffsetHeight = 8 * (1 - clamped);
     return {
       shadowOpacity: opacity,
       elevation,
