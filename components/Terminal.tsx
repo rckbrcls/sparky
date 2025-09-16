@@ -1,8 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   Animated,
-  findNodeHandle,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,225 +19,105 @@ import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database } from "../database/database";
-import {
-  computeCommandState,
-  ComputedCommandState,
-  resolveArgumentSuggestions,
-} from "../services/commands/CommandContextEngine";
-import { buildSegments, Segment } from "../services/commands/CommandHighlights"; // extracted highlighter
-import {
-  applyArgumentInsert,
-  applyCommandInsert as applyNewCommandInsert,
-} from "../services/commands/CommandInsertion";
-import { CommandDefinition } from "../services/commands/CommandRegistry";
 import { ReminderService } from "../services/ReminderService";
 import { ParsedReminder, SmartTextParser } from "../services/SmartTextParser";
+import { useCommandEngine } from "../hooks/useCommandEngine";
+import { useReminderPreview } from "../hooks/useReminderPreview";
+import { useFolderMap } from "../hooks/useFolderMap";
+import { useScrollSync } from "../hooks/useScrollSync";
+import {
+  cleanSystemCommands,
+  matchCreateFolderCommand,
+  matchDeleteFolderCommand,
+  matchFolderCommand,
+  SLUG_ARG_COMMANDS,
+  slugify,
+  stripAllSystemCommands,
+} from "../utils/terminal";
+import { buildSegments, Segment } from "../services/commands/CommandHighlights";
+import { CommandDefinition } from "../services/commands/CommandRegistry";
+
+const BASE_MIN_HEIGHT = 68;
+const MAX_HEIGHT = 220;
+const PREVIEW_MAX_HEIGHT = 180;
+const PLACEHOLDER_EXTRA_PADDING = 28;
+
+const getTypeIcon = (type: string, triggerType?: string) => {
+  if (type === "date") return "⏰";
+  if (type === "note") return "📝";
+  if (triggerType === "person") return "👤";
+  if (triggerType === "location") return "📍";
+  return "📋";
+};
+
+const getTypeLabel = (type: string, triggerType?: string) => {
+  if (type === "date") return "Date Reminder";
+  if (type === "note") return "Quick Note";
+  if (triggerType === "person") return "Person Trigger";
+  if (triggerType === "location") return "Location Trigger";
+  return "General Reminder";
+};
+
+const getPriorityColor = (priority: number) => {
+  switch (priority) {
+    case 3:
+      return Colors.dark.error;
+    case 2:
+      return Colors.dark.warning;
+    case 1:
+      return Colors.dark.success;
+    default:
+      return Colors.dark.muted;
+  }
+};
 
 interface TerminalProps {
   onReminderCreated: () => void;
   placeholder?: string;
   style?: any;
 }
+
 export interface TerminalHandle {
   blur: () => void;
   focus: () => void;
 }
 
 export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
-  (props, ref) => {
-    const { onReminderCreated, placeholder = "Add reminder...", style } = props;
-
+  ({ onReminderCreated, placeholder = "Add reminder...", style }, ref) => {
     const [text, setText] = useState("");
-    const [segments, setSegments] = useState<ReturnType<typeof buildSegments>>(
-      []
-    );
-    const [preview, setPreview] = useState<ParsedReminder | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [segments, setSegments] = useState<Segment[]>([]);
     const [selection, setSelection] = useState({ start: 0, end: 0 });
-    const [autoHeight, setAutoHeight] = useState(68);
+    const [autoHeight, setAutoHeight] = useState(BASE_MIN_HEIGHT);
     const [isOverflowing, setIsOverflowing] = useState(false);
-    // Altura do placeholder (todas as linhas) para expandir a área clicável do TextInput quando vazio
     const [placeholderHeight, setPlaceholderHeight] = useState(0);
-    const BASE_MIN_HEIGHT = 68;
-    const MAX_HEIGHT = 220;
-    const PREVIEW_MAX_HEIGHT = 180;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    // Previous text ref para detectar inserção de espaço em tempo real
-    const prevTextRef = useRef("");
-    // Ignorar próximo onChangeText quando já tratamos manualmente via onKeyPress
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const ignoreNextChangeRef = useRef(false);
 
-    // Commands whose single argument should be slugified (spaces -> dashes) while typing
-    const slugArgCommands = useRef(new Set(["folder", "createfolder"])).current;
+    const {
+      inputScrollRef,
+      previewScrollRef,
+      syncScroll,
+      setInputContentHeight,
+      setPreviewContentHeight,
+      setInputViewportHeight,
+      setPreviewViewportHeight,
+    } = useScrollSync();
 
-    // Scroll sync
-    const inputScrollRef = useRef<ScrollView | null>(null);
-    const previewScrollRef = useRef<ScrollView | null>(null);
-    const syncingRef = useRef(false);
-    const [inputContentHeight, setInputContentHeight] = useState(0);
-    const [previewContentHeight, setPreviewContentHeight] = useState(0);
-    const [inputViewportHeight, setInputViewportHeight] = useState(0);
-    const [previewViewportHeight, setPreviewViewportHeight] = useState(0);
+    const { preview, fadeAnim, updatePreview, hidePreview } = useReminderPreview();
+    const { folderMap, setFolderMap } = useFolderMap();
 
-    const syncScroll = useCallback(
-      (source: "input" | "preview", y: number) => {
-        if (syncingRef.current) return;
-        const inputScrollable = Math.max(
-          0,
-          inputContentHeight - inputViewportHeight
-        );
-        const previewScrollable = Math.max(
-          0,
-          previewContentHeight - previewViewportHeight
-        );
-        if (inputScrollable === 0 && previewScrollable === 0) return;
-        let normalized = 0;
-        if (source === "input")
-          normalized = inputScrollable ? y / inputScrollable : 0;
-        else normalized = previewScrollable ? y / previewScrollable : 0;
-        normalized = Math.min(1, Math.max(0, normalized));
-        const targetY =
-          source === "input"
-            ? normalized * previewScrollable
-            : normalized * inputScrollable;
-        const targetRef =
-          source === "input"
-            ? previewScrollRef.current
-            : inputScrollRef.current;
-        if (!targetRef) return;
-        syncingRef.current = true;
-        targetRef.scrollTo({ y: targetY, animated: false });
-        requestAnimationFrame(() => {
-          syncingRef.current = false;
-        });
-      },
-      [
-        inputContentHeight,
-        previewContentHeight,
-        inputViewportHeight,
-        previewViewportHeight,
-      ]
-    );
-
-    // Command engine
-    const [commandState, setCommandState] = useState<ComputedCommandState>({
-      inArgMode: false,
-      segments: [],
-    });
-    const requestCounterRef = useRef(0);
-    const recompute = useCallback((value: string, cursor: number) => {
-      const reqId = `${++requestCounterRef.current}`;
-      const base = computeCommandState({
-        text: value,
-        cursor,
-        requestId: reqId,
+    const { commandState, recompute, handleSelectCommand, handleSelectArgSuggestion } =
+      useCommandEngine({
+        text,
+        selectionStart: selection.start,
+        setText,
+        setSelection,
+        setSegments,
       });
-      setCommandState(base);
-      if (base.inArgMode && base.activeCommand?.argument) {
-        resolveArgumentSuggestions(base).then((resolved) => {
-          if (resolved.requestId === `${requestCounterRef.current}`)
-            setCommandState(resolved);
-        });
-      }
-    }, []);
-
-    const handleTextChange = (val: string) => {
-      setText(val);
-      setSegments(buildSegments(val));
-      recompute(val, selection.end); // Use current selection
-
-      const trimmed = val.trim();
-      const stripped = trimmed
-        .replace(/\/createfolder\s+\S+/gi, "")
-        .replace(/\/deletefolder\s+\S+/gi, "")
-        .trim();
-      const onlySystem =
-        stripped.length === 0 &&
-        /\/createfolder\s+\S+|\/deletefolder\s+\S+/i.test(trimmed) &&
-        !/\/folder\s+\S+/i.test(trimmed);
-
-      if (onlySystem || stripped.length <= 3) {
-        setPreview(null);
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 120,
-          useNativeDriver: true,
-        }).start();
-        return;
-      }
-
-      try {
-        const parsed = SmartTextParser.parseText(val);
-        setPreview(parsed);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 160,
-          useNativeDriver: true,
-        }).start();
-      } catch {
-        setPreview(null);
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 120,
-          useNativeDriver: true,
-        }).start();
-      }
-    };
-
-    // Folder names map (preview display only)
-    const [folderMap, setFolderMap] = useState<Record<string, string>>({});
-    useEffect(() => {
-      let cancelled = false;
-      (async () => {
-        try {
-          // @ts-ignore
-          if (!(database as any).db && (database as any).initialize)
-            await (database as any).initialize();
-          const folders = await database.getAllFolders();
-          if (cancelled) return;
-          const map: Record<string, string> = {};
-          folders.forEach((f) => {
-            map[f.id] = f.name;
-          });
-          setFolderMap(map);
-        } catch {}
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, []);
-
-    const handleSelectCommand = (cmd: CommandDefinition) => {
-      const { newText, newCursor } = applyNewCommandInsert(
-        text,
-        cmd,
-        selection.start
-      );
-      setText(newText);
-      setSelection({ start: newCursor, end: newCursor });
-      setSegments(buildSegments(newText));
-      recompute(newText, newCursor);
-    };
-
-    const handleSelectArgSuggestion = (value: string) => {
-      if (!commandState.inArgMode || !commandState.activeCommand) return;
-      const { argReplaceFrom } = commandState;
-      if (argReplaceFrom == null) return;
-      const { newText, newCursor } = applyArgumentInsert(
-        text,
-        argReplaceFrom,
-        selection.start,
-        value,
-        commandState.activeCommand.finalizeOnSelect !== false
-      );
-      setText(newText);
-      setSelection({ start: newCursor, end: newCursor });
-      setSegments(buildSegments(newText));
-      recompute(newText, newCursor);
-    };
 
     const inputRef = useRef<TextInput | null>(null);
-    React.useImperativeHandle(ref, () => ({
+    useImperativeHandle(ref, () => ({
       blur: () => inputRef.current?.blur(),
       focus: () => inputRef.current?.focus(),
     }));
@@ -253,183 +138,259 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
           return true;
         },
       });
-      return () => unregister(id);
-    }, [register, unregister, commandState]);
 
-    // Submit
-    const handleSubmit = async () => {
-      if (!text.trim()) return;
-      setIsProcessing(true);
-      try {
-        const parsed = SmartTextParser.parseText(text);
-        if (parsed.type === "note") {
-          let chosenFolderId = parsed.folderId || "all";
-          const explicitFolderMatch = /\/folder\s+(\S+)/i.exec(text);
-          const createFolderInfo =
-            SmartTextParser.extractCreateFolderName(text);
-          const deleteFolderMatch = /\/deletefolder\s+(\S+)/i.exec(text);
-          let commandOnly = false;
-          try {
-            const allFolders = await database.getAllFolders();
-            const slugify = (s: string) =>
-              s
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "")
-                .substring(0, 32);
-            const slugToId: Record<string, string> = {};
-            allFolders.forEach((f) => (slugToId[slugify(f.name)] = f.id));
-            if (createFolderInfo.id && createFolderInfo.id !== "all") {
-              let actual = slugToId[createFolderInfo.id];
+      return () => unregister(id);
+    }, [commandState, register, unregister]);
+
+    const handleTextChange = useCallback(
+      (value: string) => {
+        if (ignoreNextChangeRef.current) {
+          ignoreNextChangeRef.current = false;
+          return;
+        }
+
+        setText(value);
+        setSegments(buildSegments(value));
+        updatePreview(value);
+        recompute(value, selection.end);
+      },
+      [recompute, selection.end, updatePreview]
+    );
+
+    const resolvePreviewFolderName = useCallback(() => {
+      const folderMatch = matchFolderCommand(text || "");
+      if (folderMatch?.[1]?.trim()) return folderMatch[1].trim();
+
+      const createMatch = matchCreateFolderCommand(text || "");
+      if (createMatch?.[1]?.trim()) return createMatch[1].trim();
+
+      if (preview?.folderId) {
+        return (
+          folderMap[preview.folderId] ||
+          (preview.folderId === "all"
+            ? "All"
+            : preview.folderId.replace(/-/g, " "))
+        );
+      }
+
+      return undefined;
+    }, [folderMap, preview, text]);
+
+    const highlightStyle = (kind: Segment["kind"]) => {
+      switch (kind) {
+        case "command":
+          return styles.hlCommand;
+        case "commandArg":
+          return styles.hlCommandArg;
+        case "tag":
+          return styles.hlTag;
+        default:
+          return styles.hlNormal;
+      }
+    };
+
+    const handleContentSizeChange = (height: number) => {
+      const totalHeight = height + PLACEHOLDER_EXTRA_PADDING;
+      setInputContentHeight(totalHeight);
+
+      if (totalHeight <= MAX_HEIGHT) {
+        setIsOverflowing(false);
+        setAutoHeight(Math.max(BASE_MIN_HEIGHT, totalHeight));
+      } else {
+        setIsOverflowing(true);
+        setAutoHeight(MAX_HEIGHT);
+      }
+    };
+
+    const handleSubmitNote = useCallback(
+      async (parsed: ParsedReminder & { type: "note" }, rawText: string) => {
+        let chosenFolderId = parsed.folderId || "all";
+        const explicitFolderMatch = matchFolderCommand(rawText);
+        const createFolderInfo = SmartTextParser.extractCreateFolderName(rawText);
+        const deleteFolderMatch = matchDeleteFolderCommand(rawText);
+        let commandOnly = false;
+
+        try {
+          const allFolders = await database.getAllFolders();
+          const slugToId: Record<string, string> = {};
+          allFolders.forEach((folder) => {
+            slugToId[slugify(folder.name)] = folder.id;
+          });
+
+          if (createFolderInfo.id && createFolderInfo.id !== "all") {
+            let actual = slugToId[createFolderInfo.id];
+            if (!actual) {
+              const newId = await database.createFolder({
+                name: createFolderInfo.raw || createFolderInfo.id,
+                color: "#777777",
+                icon: "",
+                isDefault: false,
+                sortOrder: allFolders.length + 1,
+              });
+              slugToId[createFolderInfo.id] = newId;
+              actual = newId;
+              setFolderMap((prev) => ({
+                ...prev,
+                [newId]: (createFolderInfo.raw || createFolderInfo.id) ?? "",
+              }));
+            }
+            if (!parsed.folderId && actual) {
+              chosenFolderId = actual;
+            }
+          }
+
+          if (explicitFolderMatch) {
+            const rawName = explicitFolderMatch[1];
+            const rawSlug = slugify(rawName);
+            if (rawSlug && rawSlug !== "all") {
+              let actual = slugToId[rawSlug];
               if (!actual) {
                 const newId = await database.createFolder({
-                  name: createFolderInfo.raw || createFolderInfo.id,
+                  name: rawName,
                   color: "#777777",
                   icon: "",
                   isDefault: false,
                   sortOrder: allFolders.length + 1,
                 });
-                slugToId[createFolderInfo.id] = newId;
                 actual = newId;
-                setFolderMap((p) => ({
-                  ...p,
-                  [newId]: (createFolderInfo.raw || createFolderInfo.id) ?? "",
-                }));
+                slugToId[rawSlug] = newId;
+                setFolderMap((prev) => ({ ...prev, [newId]: rawName || "" }));
               }
-              if (!parsed.folderId && actual) chosenFolderId = actual;
+              chosenFolderId = actual;
             }
-            if (explicitFolderMatch) {
-              const rawName = explicitFolderMatch[1];
-              const rawSlug = slugify(rawName);
-              if (rawSlug && rawSlug !== "all") {
-                let actual = slugToId[rawSlug];
-                if (!actual) {
-                  const newId = await database.createFolder({
-                    name: rawName,
-                    color: "#777777",
-                    icon: "",
-                    isDefault: false,
-                    sortOrder: allFolders.length + 1,
-                  });
-                  actual = newId;
-                  slugToId[rawSlug] = newId;
-                  setFolderMap((p) => ({ ...p, [newId]: rawName || "" }));
-                }
-                chosenFolderId = actual;
-              }
-            }
-            if (deleteFolderMatch) {
-              const raw = deleteFolderMatch[1].trim();
-              if (raw && raw.toLowerCase() !== "all") {
-                const slug = raw
-                  .toLowerCase()
-                  .replace(/[^a-z0-9]+/g, "-")
-                  .replace(/^-+|-+$/g, "")
-                  .substring(0, 32);
-                const existing = await database.getAllFolders();
-                const target = existing.find(
-                  (f) =>
-                    f.id === raw ||
-                    f.id === slug ||
-                    f.name.toLowerCase() === raw.toLowerCase() ||
-                    f.name
-                      .toLowerCase()
-                      .replace(/[^a-z0-9]+/g, "-")
-                      .replace(/^-+|-+$/g, "")
-                      .substring(0, 32) === slug
-                );
-                if (target && !target.isDefault) {
-                  await database.deleteFolder(target.id);
-                  if (chosenFolderId === target.id) chosenFolderId = "all";
+          }
+
+          if (deleteFolderMatch) {
+            const raw = deleteFolderMatch[1].trim();
+            if (raw && raw.toLowerCase() !== "all") {
+              const normalizedSlug = slugify(raw);
+              const existing = await database.getAllFolders();
+              const target = existing.find(
+                (folder) =>
+                  folder.id === raw ||
+                  folder.id === normalizedSlug ||
+                  folder.name.toLowerCase() === raw.toLowerCase() ||
+                  slugify(folder.name) === normalizedSlug
+              );
+              if (target && !target.isDefault) {
+                await database.deleteFolder(target.id);
+                if (chosenFolderId === target.id) {
+                  chosenFolderId = "all";
                 }
               }
             }
-            const remaining = text
-              .replace(/\/deletefolder\s+\S+/gi, "")
-              .replace(/\/createfolder\s+\S+/gi, "")
-              .replace(/\/folder\s+\S+/gi, "")
-              .trim();
-            if (!remaining) commandOnly = true;
-          } catch {}
-          if (!commandOnly) {
-            const cleanedTitle = parsed.title
-              .replace(/\/(folder|createfolder|deletefolder)\s+\S+/gi, "")
-              .trim();
-            const cleanedBody = (parsed.body || "")
-              .replace(/\/(folder|createfolder|deletefolder)\s+\S+/gi, "")
-              .trim();
-            const combined = cleanedBody
-              ? `${cleanedTitle}\n${cleanedBody}`
-              : cleanedTitle;
-            await database.createQuickNote({
-              content: combined,
-              folderId: chosenFolderId,
-              tags: JSON.stringify(parsed.tags),
-              isPinned: parsed.priority === 3,
-            });
           }
-        } else {
-          const reminderId = await ReminderService.createReminder({
-            title: parsed.title,
-            person: parsed.person,
-            project: parsed.project,
-            location: parsed.location,
-            type:
-              parsed.type === "date"
-                ? "once"
-                : parsed.triggerType === "location"
-                ? "by_location"
-                : "by_person_project",
-            fireAt: parsed.fireAt,
-          });
-          if (parsed.type === "trigger") {
-            const triggerPromises: Promise<string>[] = [];
-            if (parsed.persons && parsed.persons.length)
-              parsed.persons.forEach((p) =>
-                triggerPromises.push(
-                  database.createTrigger({
-                    reminderId,
-                    type: "person",
-                    config: JSON.stringify({ contactName: p }),
-                    isActive: true,
-                  })
-                )
-              );
-            else if (parsed.person)
-              triggerPromises.push(
-                database.createTrigger({
-                  reminderId,
-                  type: "person",
-                  config: JSON.stringify({ contactName: parsed.person }),
-                  isActive: true,
-                })
-              );
-            if (parsed.locations && parsed.locations.length)
-              parsed.locations.forEach((loc) =>
-                triggerPromises.push(
-                  database.createTrigger({
-                    reminderId,
-                    type: "location",
-                    config: JSON.stringify({ location: loc }),
-                    isActive: true,
-                  })
-                )
-              );
-            else if (parsed.location)
-              triggerPromises.push(
-                database.createTrigger({
-                  reminderId,
-                  type: "location",
-                  config: JSON.stringify({ location: parsed.location }),
-                  isActive: true,
-                })
-              );
-            await Promise.all(triggerPromises);
-          }
+
+          const remaining = stripAllSystemCommands(rawText).trim();
+          if (!remaining) commandOnly = true;
+        } catch {
+          // Database lookup failures should not block quick note creation.
         }
+
+        if (!commandOnly) {
+          const cleanedTitle = cleanSystemCommands(parsed.title);
+          const cleanedBody = cleanSystemCommands(parsed.body || "");
+          const content = cleanedBody
+            ? `${cleanedTitle}\n${cleanedBody}`.trim()
+            : cleanedTitle;
+
+          await database.createQuickNote({
+            content,
+            folderId: chosenFolderId,
+            tags: JSON.stringify(parsed.tags),
+            isPinned: parsed.priority === 3,
+          });
+        }
+      },
+      [setFolderMap]
+    );
+
+    const handleSubmitReminder = useCallback(async (parsed: ParsedReminder) => {
+      const reminderId = await ReminderService.createReminder({
+        title: parsed.title,
+        person: parsed.person,
+        project: parsed.project,
+        location: parsed.location,
+        type:
+          parsed.type === "date"
+            ? "once"
+            : parsed.triggerType === "location"
+            ? "by_location"
+            : "by_person_project",
+        fireAt: parsed.fireAt,
+      });
+
+      if (parsed.type === "trigger") {
+        const triggerPromises: Promise<string>[] = [];
+
+        if (parsed.persons && parsed.persons.length) {
+          parsed.persons.forEach((personName) => {
+            triggerPromises.push(
+              database.createTrigger({
+                reminderId,
+                type: "person",
+                config: JSON.stringify({ contactName: personName }),
+                isActive: true,
+              })
+            );
+          });
+        } else if (parsed.person) {
+          triggerPromises.push(
+            database.createTrigger({
+              reminderId,
+              type: "person",
+              config: JSON.stringify({ contactName: parsed.person }),
+              isActive: true,
+            })
+          );
+        }
+
+        if (parsed.locations && parsed.locations.length) {
+          parsed.locations.forEach((location) => {
+            triggerPromises.push(
+              database.createTrigger({
+                reminderId,
+                type: "location",
+                config: JSON.stringify({ location }),
+                isActive: true,
+              })
+            );
+          });
+        } else if (parsed.location) {
+          triggerPromises.push(
+            database.createTrigger({
+              reminderId,
+              type: "location",
+              config: JSON.stringify({ location: parsed.location }),
+              isActive: true,
+            })
+          );
+        }
+
+        await Promise.all(triggerPromises);
+      }
+    }, []);
+
+    const handleSubmit = useCallback(async () => {
+      if (!text.trim()) return;
+      setIsProcessing(true);
+
+      try {
+        const parsed = SmartTextParser.parseText(text);
+
+        if (parsed.type === "note") {
+          await handleSubmitNote(parsed as ParsedReminder & { type: "note" }, text);
+        } else {
+          await handleSubmitReminder(parsed);
+        }
+
         setText("");
-        setPreview(null);
+        setSegments([]);
+        setSelection({ start: 0, end: 0 });
+        recompute("", 0);
+        hidePreview();
         onReminderCreated();
+
         Animated.sequence([
           Animated.timing(fadeAnim, {
             toValue: 0,
@@ -449,52 +410,218 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         ]).start();
       } catch (error) {
         console.error("Error creating reminder:", error);
-        const msg =
+        const message =
           error instanceof Error ? error.message : "Erro desconhecido";
-        Alert.alert("Erro", `Falha ao criar lembrete: ${msg}`);
+        Alert.alert("Erro", `Falha ao criar lembrete: ${message}`);
       } finally {
         setIsProcessing(false);
       }
-    };
+    }, [
+      fadeAnim,
+      handleSubmitNote,
+      handleSubmitReminder,
+      hidePreview,
+      onReminderCreated,
+      recompute,
+      text,
+    ]);
 
-    const getTypeIcon = (type: string, triggerType?: string) => {
-      if (type === "date") return "⏰";
-      if (type === "note") return "📝";
-      if (triggerType === "person") return "👤";
-      if (triggerType === "location") return "📍";
-      return "📋";
-    };
-    const getTypeLabel = (type: string, triggerType?: string) => {
-      if (type === "date") return "Date Reminder";
-      if (type === "note") return "Quick Note";
-      if (triggerType === "person") return "Person Trigger";
-      if (triggerType === "location") return "Location Trigger";
-      return "General Reminder";
-    };
-    const getPriorityColor = (priority: number) => {
-      switch (priority) {
-        case 3:
-          return Colors.dark.error;
-        case 2:
-          return Colors.dark.warning;
-        case 1:
-          return Colors.dark.success;
-        default:
-          return Colors.dark.muted;
+    const renderSegments = () => {
+      if (text.length === 0) {
+        return (
+          <Text
+            style={styles.placeholderText}
+            onLayout={(event) => {
+              const height = event.nativeEvent.layout.height;
+              setPlaceholderHeight(height);
+              setAutoHeight((prev) =>
+                Math.max(
+                  BASE_MIN_HEIGHT,
+                  Math.min(height + PLACEHOLDER_EXTRA_PADDING, MAX_HEIGHT)
+                )
+              );
+            }}
+          >
+            {placeholder}
+          </Text>
+        );
       }
+
+      return (
+        <Text style={styles.highlightText}>
+          {segments.map((segment, idx) => (
+            <Text key={`${segment.kind}-${idx}`} style={highlightStyle(segment.kind)}>
+              {segment.text}
+            </Text>
+          ))}
+        </Text>
+      );
     };
 
-    // added: container handle refs to avoid blur when tapping inside
-    const containerRef = useRef<View | null>(null);
-    const containerHandleRef = useRef<number | null>(null);
-    useEffect(() => {
-      containerHandleRef.current = findNodeHandle(containerRef.current) as
-        | number
-        | null;
-    });
+    const renderArgSuggestions = () => {
+      if (!commandState.inArgMode || !commandState.activeCommand) return null;
+      const suggestions: string[] = commandState.argSuggestions ?? [];
+
+      return (
+        <View style={styles.commandPalette}>
+          <ScrollView
+            style={styles.commandScroll}
+            contentContainerStyle={styles.commandScrollContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            {suggestions.length > 0 ? (
+              suggestions.map((suggestion: string, idx: number) => (
+                <TouchableOpacity
+                  key={suggestion}
+                  style={[
+                    styles.commandItem,
+                    idx === suggestions.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                  onPress={() => handleSelectArgSuggestion(suggestion)}
+                >
+                  <Text style={styles.commandName}>{suggestion}</Text>
+                  <Text style={styles.commandDesc}>
+                    {commandState.activeCommand?.name}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.commandItem}>
+                <Text style={styles.commandDesc}>Sem sugestões</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      );
+    };
+
+    const renderCommandMatches = () => {
+      if (
+        commandState.inArgMode ||
+        commandState.openCommandQuery == null ||
+        (commandState.commandMatches?.length || 0) === 0
+      )
+        return null;
+
+      const matches: CommandDefinition[] = commandState.commandMatches ?? [];
+
+      return (
+        <View style={styles.commandPalette}>
+          <ScrollView
+            style={styles.commandScroll}
+            contentContainerStyle={styles.commandScrollContent}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            {matches.map((match: CommandDefinition, idx: number) => (
+              <TouchableOpacity
+                key={match.name}
+                style={[
+                  styles.commandItem,
+                  idx === matches.length - 1 && { borderBottomWidth: 0 },
+                ]}
+                onPress={() => handleSelectCommand(match)}
+              >
+                <Text style={styles.commandName}>{`/${match.name}`}</Text>
+                <Text style={styles.commandDesc}>{match.description}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      );
+    };
+
+    const renderPreview = () => {
+      if (!preview) return null;
+
+      const folderName = preview.type === "note" ? resolvePreviewFolderName() : undefined;
+
+      return (
+        <Animated.View style={[styles.preview, { opacity: fadeAnim }]}>
+          <View style={styles.previewHeader}>
+            <Text style={styles.previewIcon}>
+              {getTypeIcon(preview.type, preview.triggerType)}
+            </Text>
+            <Text style={styles.previewType}>
+              {getTypeLabel(preview.type, preview.triggerType)}
+            </Text>
+            <View
+              style={[
+                styles.priorityIndicator,
+                { backgroundColor: getPriorityColor(preview.priority) },
+              ]}
+            />
+          </View>
+          <Text style={styles.previewTitle}>{preview.title}</Text>
+          <View
+            style={[
+              styles.previewScrollableWrapper,
+              { maxHeight: PREVIEW_MAX_HEIGHT },
+            ]}
+          >
+            <ScrollView
+              ref={previewScrollRef}
+              style={styles.previewScroll}
+              contentContainerStyle={styles.previewScrollContent}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+              onScroll={(event) =>
+                syncScroll("preview", event.nativeEvent.contentOffset.y)
+              }
+              scrollEventThrottle={16}
+              onLayout={(event) =>
+                setPreviewViewportHeight(event.nativeEvent.layout.height)
+              }
+              onContentSizeChange={(_, height) => setPreviewContentHeight(height)}
+            >
+              {folderName && (
+                <Text style={styles.previewDetail}>📁 {folderName}</Text>
+              )}
+              {preview.body && (
+                <Text style={styles.previewBody}>{preview.body}</Text>
+              )}
+              {preview.fireAt && (
+                <Text style={styles.previewDetail}>
+                  📅 {preview.fireAt.toLocaleDateString()} {" "}
+                  {preview.fireAt.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              )}
+              {preview.person && (
+                <Text style={styles.previewDetail}>👤 {preview.person}</Text>
+              )}
+              {preview.persons && preview.persons.length > 0 && (
+                <Text style={styles.previewDetail}>
+                  👥 {preview.persons.join(", ")}
+                </Text>
+              )}
+              {preview.location && (
+                <Text style={styles.previewDetail}>📍 {preview.location}</Text>
+              )}
+              {preview.locations && preview.locations.length > 0 && (
+                <Text style={styles.previewDetail}>
+                  🗺️ {preview.locations.join(", ")}
+                </Text>
+              )}
+              {preview.project && (
+                <Text style={styles.previewDetail}>🏷️ {preview.project}</Text>
+              )}
+              {preview.tags.length > 0 && (
+                <Text style={styles.previewDetail}>
+                  🏷️ {preview.tags.map((tag) => `#${tag}`).join(" ")}
+                </Text>
+              )}
+            </ScrollView>
+          </View>
+        </Animated.View>
+      );
+    };
 
     return (
-      <View ref={containerRef} style={[styles.container, style]}>
+      <View style={[styles.container, style]}>
         <View style={[styles.inputContainer, { minHeight: autoHeight }]}>
           <View style={styles.composedInput}>
             <ScrollView
@@ -504,52 +631,17 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={isOverflowing}
               scrollEnabled={isOverflowing}
-              onScroll={(e) =>
-                syncScroll("input", e.nativeEvent.contentOffset.y)
+              onScroll={(event) =>
+                syncScroll("input", event.nativeEvent.contentOffset.y)
               }
               scrollEventThrottle={16}
-              onLayout={(e) =>
-                setInputViewportHeight(e.nativeEvent.layout.height)
+              onLayout={(event) =>
+                setInputViewportHeight(event.nativeEvent.layout.height)
               }
             >
               <View style={styles.layeredInput}>
                 <View style={styles.highlightLayer} pointerEvents="none">
-                  {text.length === 0 ? (
-                    <Text
-                      style={styles.placeholderText}
-                      onLayout={(e) => {
-                        const h = e.nativeEvent.layout.height; // altura real do placeholder multi-linha
-                        setPlaceholderHeight(h);
-                        setAutoHeight((prev) =>
-                          Math.max(
-                            BASE_MIN_HEIGHT,
-                            Math.min(h + 28, MAX_HEIGHT)
-                          )
-                        );
-                      }}
-                    >
-                      {placeholder}
-                    </Text>
-                  ) : (
-                    <Text style={styles.highlightText}>
-                      {segments.map((s: Segment, idx) => (
-                        <Text
-                          key={idx}
-                          style={
-                            s.kind === "command"
-                              ? styles.hlCommand
-                              : s.kind === "commandArg"
-                              ? styles.hlCommandArg
-                              : s.kind === "tag"
-                              ? styles.hlTag
-                              : styles.hlNormal
-                          }
-                        >
-                          {s.text}
-                        </Text>
-                      ))}
-                    </Text>
-                  )}
+                  {renderSegments()}
                 </View>
                 <TextInput
                   ref={inputRef}
@@ -565,42 +657,31 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
                   returnKeyType="done"
                   onSubmitEditing={handleSubmit}
                   editable={!isProcessing}
-                  // onFocus / onBlur handlers removidos (controle explícito não necessário agora)
-                  onContentSizeChange={(e) => {
-                    const h = e.nativeEvent.contentSize.height;
-                    setInputContentHeight(h + 28);
-                    if (h + 28 <= MAX_HEIGHT) {
-                      setIsOverflowing(false);
-                      setAutoHeight(Math.max(BASE_MIN_HEIGHT, h + 28));
-                    } else {
-                      setIsOverflowing(true);
-                      setAutoHeight(MAX_HEIGHT);
-                    }
-                  }}
-                  onSelectionChange={(e) => {
-                    const { start, end } = e.nativeEvent.selection;
+                  onContentSizeChange={(event) =>
+                    handleContentSizeChange(event.nativeEvent.contentSize.height)
+                  }
+                  onSelectionChange={(event) => {
+                    const { start, end } = event.nativeEvent.selection;
                     setSelection({ start, end });
                     recompute(text, start);
                   }}
-                  onKeyPress={(e) => {
-                    const k = e.nativeEvent.key;
-                    if (k === "/") {
-                      // Inserimos manualmente o '/' para exibir sugestões imediatamente
+                  onKeyPress={(event) => {
+                    const key = event.nativeEvent.key;
+                    if (key === "/") {
                       const selStart = selection.start;
                       const selEnd = selection.end;
                       const newText =
                         text.slice(0, selStart) + "/" + text.slice(selEnd);
-                      ignoreNextChangeRef.current = true; // evitar recompute duplicado quando onChangeText vier
+                      ignoreNextChangeRef.current = true;
                       setText(newText);
                       setSegments(buildSegments(newText));
                       const newCursor = selStart + 1;
                       setSelection({ start: newCursor, end: newCursor });
-                      prevTextRef.current = newText;
                       recompute(newText, newCursor);
-                      return; // já tratamos
+                      return;
                     }
-                    if (k === "Backspace") {
-                      // Se vamos apagar um '/' imediatamente antes do cursor, fazemos manual para esconder palette instantaneamente
+
+                    if (key === "Backspace") {
                       if (
                         selection.start === selection.end &&
                         selection.start > 0 &&
@@ -614,28 +695,26 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
                         setSegments(buildSegments(newText));
                         const newCursor = cutPos;
                         setSelection({ start: newCursor, end: newCursor });
-                        prevTextRef.current = newText;
                         recompute(newText, newCursor);
-                        return; // já tratamos
+                        return;
                       }
                     }
+
                     if (
-                      (k === " " || k === "Spacebar") &&
+                      (key === " " || key === "Spacebar") &&
                       commandState.inArgMode &&
                       commandState.activeCommand?.name &&
-                      slugArgCommands.has(commandState.activeCommand.name) &&
+                      SLUG_ARG_COMMANDS.has(commandState.activeCommand.name) &&
                       commandState.argReplaceFrom != null
                     ) {
-                      // Substituir espaço imediatamente por '-'
                       const selStart = selection.start;
                       const selEnd = selection.end;
                       const before = text.slice(0, selStart);
                       const after = text.slice(selEnd);
-                      const newText = before + "-" + after;
-                      ignoreNextChangeRef.current = true; // vamos ajustar manualmente
+                      const newText = `${before}-${after}`;
+                      ignoreNextChangeRef.current = true;
                       setText(newText);
                       setSegments(buildSegments(newText));
-                      prevTextRef.current = newText;
                       const newCursor = selStart + 1;
                       setSelection({ start: newCursor, end: newCursor });
                       recompute(newText, newCursor);
@@ -664,170 +743,9 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
           )}
         </View>
 
-        {commandState.inArgMode && commandState.activeCommand && (
-          <View style={styles.commandPalette}>
-            <ScrollView
-              style={styles.commandScroll}
-              contentContainerStyle={styles.commandScrollContent}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-            >
-              {commandState.argSuggestions?.map((s, idx) => (
-                <TouchableOpacity
-                  key={s}
-                  style={[
-                    styles.commandItem,
-                    idx === commandState.argSuggestions!.length - 1 && {
-                      borderBottomWidth: 0,
-                    },
-                  ]}
-                  onPress={() => handleSelectArgSuggestion(s)}
-                >
-                  <Text style={styles.commandName}>{s}</Text>
-                  <Text style={styles.commandDesc}>
-                    {commandState.activeCommand?.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              {(commandState.argSuggestions?.length || 0) === 0 && (
-                <View style={styles.commandItem}>
-                  <Text style={styles.commandDesc}>Sem sugestões</Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        )}
-
-        {!commandState.inArgMode &&
-          commandState.openCommandQuery != null &&
-          (commandState.commandMatches?.length || 0) > 0 && (
-            <View style={styles.commandPalette}>
-              <ScrollView
-                style={styles.commandScroll}
-                contentContainerStyle={styles.commandScrollContent}
-                keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled
-              >
-                {commandState.commandMatches!.map((c, idx) => (
-                  <TouchableOpacity
-                    key={c.name}
-                    style={[
-                      styles.commandItem,
-                      idx === commandState.commandMatches!.length - 1 && {
-                        borderBottomWidth: 0,
-                      },
-                    ]}
-                    onPress={() => handleSelectCommand(c)}
-                  >
-                    <Text style={styles.commandName}>{`/${c.name}`}</Text>
-                    <Text style={styles.commandDesc}>{c.description}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-        {preview && (
-          <Animated.View style={[styles.preview, { opacity: fadeAnim }]}>
-            <View style={styles.previewHeader}>
-              <Text style={styles.previewIcon}>
-                {getTypeIcon(preview.type, preview.triggerType)}
-              </Text>
-              <Text style={styles.previewType}>
-                {getTypeLabel(preview.type, preview.triggerType)}
-              </Text>
-              <View
-                style={[
-                  styles.priorityIndicator,
-                  { backgroundColor: getPriorityColor(preview.priority) },
-                ]}
-              />
-            </View>
-            <Text style={styles.previewTitle}>{preview.title}</Text>
-            <View
-              style={[
-                styles.previewScrollableWrapper,
-                { maxHeight: PREVIEW_MAX_HEIGHT },
-              ]}
-            >
-              <ScrollView
-                ref={previewScrollRef}
-                style={styles.previewScroll}
-                contentContainerStyle={styles.previewScrollContent}
-                showsVerticalScrollIndicator
-                keyboardShouldPersistTaps="handled"
-                onScroll={(e) =>
-                  syncScroll("preview", e.nativeEvent.contentOffset.y)
-                }
-                scrollEventThrottle={16}
-                onLayout={(e) =>
-                  setPreviewViewportHeight(e.nativeEvent.layout.height)
-                }
-                onContentSizeChange={(_, h) => setPreviewContentHeight(h)}
-              >
-                {preview.type === "note" &&
-                  (() => {
-                    const folderCmd = /\/folder\s+(\S+)/i.exec(text || "");
-                    const createFolderCmd = /\/createfolder\s+(\S+)/i.exec(
-                      text || ""
-                    );
-                    let folderName: string | undefined;
-                    if (folderCmd && folderCmd[1].trim())
-                      folderName = folderCmd[1].trim();
-                    else if (createFolderCmd && createFolderCmd[1].trim())
-                      folderName = createFolderCmd[1].trim();
-                    else if (preview.folderId)
-                      folderName =
-                        folderMap[preview.folderId] ||
-                        (preview.folderId === "all"
-                          ? "All"
-                          : preview.folderId.replace(/-/g, " "));
-                    return folderName ? (
-                      <Text style={styles.previewDetail}>📁 {folderName}</Text>
-                    ) : null;
-                  })()}
-                {preview.body && (
-                  <Text style={styles.previewBody}>{preview.body}</Text>
-                )}
-                {preview.fireAt && (
-                  <Text style={styles.previewDetail}>
-                    📅 {preview.fireAt.toLocaleDateString()}{" "}
-                    {preview.fireAt.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                )}
-                {preview.person && (
-                  <Text style={styles.previewDetail}>👤 {preview.person}</Text>
-                )}
-                {preview.persons && preview.persons.length > 0 && (
-                  <Text style={styles.previewDetail}>
-                    👥 {preview.persons.join(", ")}
-                  </Text>
-                )}
-                {preview.location && (
-                  <Text style={styles.previewDetail}>
-                    📍 {preview.location}
-                  </Text>
-                )}
-                {preview.locations && preview.locations.length > 0 && (
-                  <Text style={styles.previewDetail}>
-                    🗺️ {preview.locations.join(", ")}
-                  </Text>
-                )}
-                {preview.project && (
-                  <Text style={styles.previewDetail}>🏷️ {preview.project}</Text>
-                )}
-                {preview.tags.length > 0 && (
-                  <Text style={styles.previewDetail}>
-                    🏷️ {preview.tags.map((t) => `#${t}`).join(" ")}
-                  </Text>
-                )}
-              </ScrollView>
-            </View>
-          </Animated.View>
-        )}
+        {renderArgSuggestions()}
+        {renderCommandMatches()}
+        {renderPreview()}
       </View>
     );
   }
@@ -851,7 +769,6 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   layeredInput: { position: "relative", width: "100%" },
   composedInput: { flex: 1, minHeight: 40, justifyContent: "flex-start" },
-  tapWrapper: { flex: 1, justifyContent: "flex-start" },
   highlightLayer: {
     position: "absolute",
     top: 0,

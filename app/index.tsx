@@ -127,9 +127,7 @@ export default function HomeScreen() {
           <Terminal
             ref={terminalRef}
             onReminderCreated={handleReminderCreated}
-            placeholder={
-              "Type text. Use /commands or #tags (e.g. /date /note /person)"
-            }
+            placeholder={"text, /commands and #tags"}
           />
         </View>
         <MainNavigation activeMode={activeMode} onModeChange={setActiveMode}>
