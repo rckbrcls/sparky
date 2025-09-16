@@ -31,7 +31,8 @@ export default function HomeScreen() {
     "date"
   );
   const [refreshKey, setRefreshKey] = useState(0);
-  const [headerHeightState, setHeaderHeightState] = useState(DEFAULT_INPUT_HEIGHT);
+  const [headerHeightState, setHeaderHeightState] =
+    useState(DEFAULT_INPUT_HEIGHT);
   const headerTranslation = useSharedValue(0);
   const headerHeight = useSharedValue(DEFAULT_INPUT_HEIGHT);
 
@@ -39,39 +40,39 @@ export default function HomeScreen() {
     headerTranslation.value = withTiming(0, { duration: 220 });
   }, [activeMode, headerTranslation]);
 
-  const scrollHandler = useAnimatedScrollHandler<{ prevY?: number }>(
-    {
-      onBeginDrag: (event, ctx) => {
-        ctx.prevY = event.contentOffset.y;
-      },
-      onScroll: (event, ctx) => {
-        const y = event.contentOffset.y;
-        const previousY = ctx.prevY ?? y;
-        const delta = y - previousY;
-        ctx.prevY = y;
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    const y = event.contentOffset.y;
+    const contentHeight = event.contentSize?.height ?? 0;
+    const layoutHeight = event.layoutMeasurement?.height ?? 0;
+    const isScrollable = contentHeight > layoutHeight + 1;
 
-        const contentHeight = event.contentSize?.height ?? 0;
-        const layoutHeight = event.layoutMeasurement?.height ?? 0;
-        const atBottom = y + layoutHeight >= contentHeight - 1;
+    if (!isScrollable || y <= 0) {
+      if (headerTranslation.value !== 0) {
+        headerTranslation.value = withTiming(0, { duration: 120 });
+      }
+      return;
+    }
 
-        if (delta < 0 && atBottom && y > 0) {
-          return;
-        }
-
-        const limit = headerHeight.value;
-        const next = headerTranslation.value + delta;
-        headerTranslation.value = Math.min(Math.max(next, 0), limit);
-      },
-      onMomentumEnd: (event, ctx) => {
-        ctx.prevY = event.contentOffset.y;
-      },
-    },
-    []
-  );
+    const limit = headerHeight.value;
+    const clamped = Math.min(Math.max(y, 0), limit);
+    headerTranslation.value = clamped;
+  }, []);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -headerTranslation.value }],
   }));
+
+  const headerShadowAnimatedStyle = useAnimatedStyle(() => {
+    const progress =
+      headerHeight.value > 0 ? headerTranslation.value / headerHeight.value : 0;
+    const clamped = Math.max(0, Math.min(progress, 1));
+    const opacity = 0.12 * (1 - clamped);
+    const elevation = 3 * (1 - clamped);
+    return {
+      shadowOpacity: opacity,
+      elevation,
+    } as any;
+  });
 
   const contentAnimatedStyle = useAnimatedStyle(() => ({
     paddingTop: headerHeight.value - headerTranslation.value,
@@ -171,6 +172,7 @@ export default function HomeScreen() {
               borderBottomColor: themeColors.border,
             },
             headerAnimatedStyle,
+            headerShadowAnimatedStyle,
           ]}
         >
           <View

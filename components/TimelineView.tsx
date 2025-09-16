@@ -22,10 +22,8 @@ interface ReminderWithFolder extends Reminder {
   folder?: Folder;
 }
 
-const AnimatedFlatList = Animated.createAnimatedComponent<
-  FlatListProps<ReminderWithFolder>
->(FlatList);
-
+const AnimatedFlatList =
+  Animated.createAnimatedComponent<FlatListProps<ReminderWithFolder>>(FlatList);
 
 interface TimelineViewProps {
   onRefresh?: () => void;
@@ -247,7 +245,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           isInitialized && !loading ? (
-            <Text style={styles.emptyText}>Nenhum lembrete encontrado.</Text>
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 32,
+              }}
+            >
+              <Text style={styles.emptyText}>Nenhum lembrete encontrado.</Text>
+            </View>
           ) : null
         }
         refreshControl={
@@ -257,7 +264,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             tintColor={Colors.dark.tint}
           />
         }
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, { flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={onScroll ? 16 : undefined}

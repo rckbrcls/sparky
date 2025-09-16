@@ -23,9 +23,10 @@ interface TriggerSection {
 
 type TriggerListItem = Trigger & { reminderTitle?: string };
 
-const AnimatedSectionList = Animated.createAnimatedComponent<
-  SectionListProps<TriggerListItem, TriggerSection>
->(SectionList);
+const AnimatedSectionList =
+  Animated.createAnimatedComponent<
+    SectionListProps<TriggerListItem, TriggerSection>
+  >(SectionList);
 
 interface TriggersViewProps {
   onRefresh?: () => void;
@@ -213,28 +214,25 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
 
   return (
     <View style={styles.container}>
-      {sections.length === 0 && !loading ? (
-        renderEmptyState()
-      ) : (
-        <AnimatedSectionList
-          sections={sections}
-          renderItem={renderTriggerCard}
-          renderSectionHeader={renderSectionHeader}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={handleRefresh}
-              tintColor={Colors.dark.tint}
-            />
-          }
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          onScroll={onScroll}
-          scrollEventThrottle={onScroll ? 16 : undefined}
-        />
-      )}
+      <AnimatedSectionList
+        sections={sections}
+        renderItem={renderTriggerCard}
+        renderSectionHeader={renderSectionHeader}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={!loading ? renderEmptyState() : null}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={handleRefresh}
+            tintColor={Colors.dark.tint}
+          />
+        }
+        contentContainerStyle={[styles.listContainer, { flexGrow: 1 }]}
+        showsVerticalScrollIndicator={false}
+        stickySectionHeadersEnabled={false}
+        onScroll={onScroll}
+        scrollEventThrottle={onScroll ? 16 : undefined}
+      />
     </View>
   );
 };

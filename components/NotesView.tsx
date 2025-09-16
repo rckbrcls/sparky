@@ -292,33 +292,27 @@ export const NotesView: React.FC<NotesViewProps> = ({
       </View>
 
       {/* Notes List */}
-      {notes.length === 0 && !loading ? (
-        renderEmptyState()
-      ) : (
-        <AnimatedNotesList
-          data={notes}
-          renderItem={renderNoteCard}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={
-            isInitialized && !loading ? (
-              <Text style={styles.emptyListText}>Nenhuma nota.</Text>
-            ) : null
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={handleRefresh}
-              tintColor={Colors.dark.tint}
-            />
-          }
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          onScrollBeginDrag={blurSearch}
-          onScroll={onScroll as unknown as (e: any) => void}
-          scrollEventThrottle={onScroll ? 16 : undefined}
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
+      <AnimatedNotesList
+        data={notes}
+        renderItem={renderNoteCard}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={
+          isInitialized && !loading ? renderEmptyState() : null
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={handleRefresh}
+            tintColor={Colors.dark.tint}
+          />
+        }
+        contentContainerStyle={[styles.listContainer, { flexGrow: 1 }]}
+        showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={blurSearch}
+        onScroll={onScroll as unknown as (e: any) => void}
+        scrollEventThrottle={onScroll ? 16 : undefined}
+        keyboardShouldPersistTaps="handled"
+      />
     </View>
   );
 };
