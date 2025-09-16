@@ -807,10 +807,9 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       isFullscreenLayout
         ? styles.inputContainerFullscreen
         : styles.inputContainerCompact,
-      { minHeight: baselineHeight },
       isFullscreenLayout
-        ? { flexGrow: 1, height: undefined }
-        : { height: animatedHeight },
+        ? { minHeight: baselineHeight, flex: 1, height: undefined }
+        : { minHeight: baselineHeight, height: animatedHeight },
     ];
 
     const argSuggestions = renderArgSuggestions();
@@ -970,14 +969,10 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
     if (isFullscreenLayout) {
       bodyContent = (
         <View style={styles.fullscreenContent}>
-          <View style={styles.fullscreenTop}>
+          {badgesNode || <View style={styles.badgesPlaceholder} />}
+          <View style={[styles.fullscreenTop, { paddingBottom: bottomPadding }]}>
             {inputBlock}
             {metaSection}
-          </View>
-          <View
-            style={[styles.fullscreenBottom, { paddingBottom: bottomPadding }]}
-          >
-            {badgesNode || <View style={styles.badgesPlaceholder} />}
           </View>
         </View>
       );
@@ -1064,13 +1059,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     minHeight: 0,
   },
-  fullscreenBottom: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    flexShrink: 0,
-    borderTopWidth: 1,
-    borderColor: Colors.dark.border,
-  },
   fullscreenMeta: {
     marginTop: 12,
     flexShrink: 0,
@@ -1110,11 +1098,14 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   inputContainerFullscreen: {
-    borderRadius: 16,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: "transparent",
+    backgroundColor: Colors.dark.background,
     marginHorizontal: 0,
     alignSelf: "stretch",
-    flexGrow: 1,
-    minHeight: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   scrollArea: { width: "100%" },
   scrollAreaFullscreen: { flex: 1 },
@@ -1209,9 +1200,10 @@ const styles = StyleSheet.create({
   },
   badgesContainerFullscreen: {
     marginTop: 0,
+    marginBottom: 12,
     borderTopWidth: 0,
     paddingTop: 0,
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
   badgesScroll: {
     width: "100%",
@@ -1249,7 +1241,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   badgesPlaceholder: {
-    minHeight: 44,
+    height: 12,
   },
   commandPalette: {
     marginTop: 6,
