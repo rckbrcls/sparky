@@ -17,6 +17,49 @@ import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { ReminderService } from "../services/ReminderService";
 
+type FileSystemDirectories = {
+  cacheDirectory?: string | null;
+  documentDirectory?: string | null;
+};
+
+const getWritableDirectory = () => {
+  const { cacheDirectory, documentDirectory } =
+    FileSystem as FileSystemDirectories;
+  const candidates = [cacheDirectory, documentDirectory];
+  const directory = candidates.find(
+    (candidate): candidate is string =>
+      typeof candidate === "string" && candidate.length > 0
+  );
+
+  if (!directory) {
+    throw new Error("No writable directory available");
+  }
+
+  return directory.endsWith("/") ? directory : `${directory}/`;
+};
+
+const buildDatedFileName = (prefix: string, extension: string) => {
+  const [date] = new Date().toISOString().split("T");
+  return `${prefix}_${date}.${extension}`;
+};
+
+const writeAndShareFile = async (
+  fileName: string,
+  data: string,
+  title: string
+) => {
+  const directory = getWritableDirectory();
+  const fileUri = `${directory}${fileName}`;
+
+  await FileSystem.writeAsStringAsync(fileUri, data);
+  await Share.share({
+    url: fileUri,
+    title,
+  });
+
+  return fileUri;
+};
+
 export default function SettingsScreen() {
   const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
@@ -27,17 +70,11 @@ export default function SettingsScreen() {
       setIsExporting(true);
       const jsonData = await ReminderService.exportData();
 
-      const fileName = `reminders_backup_${
-        new Date().toISOString().split("T")[0]
-      }.json`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-
-      await FileSystem.writeAsStringAsync(fileUri, jsonData);
-
-      await Share.share({
-        url: fileUri,
-        title: "Export Reminders",
-      });
+      await writeAndShareFile(
+        buildDatedFileName("reminders_backup", "json"),
+        jsonData,
+        "Export Reminders"
+      );
 
       Alert.alert("Success", "Data exported successfully!");
     } catch (error) {
@@ -53,17 +90,11 @@ export default function SettingsScreen() {
       setIsExporting(true);
       const csvData = await ReminderService.exportCSV();
 
-      const fileName = `reminders_${
-        new Date().toISOString().split("T")[0]
-      }.csv`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-
-      await FileSystem.writeAsStringAsync(fileUri, csvData);
-
-      await Share.share({
-        url: fileUri,
-        title: "Export Reminders CSV",
-      });
+      await writeAndShareFile(
+        buildDatedFileName("reminders", "csv"),
+        csvData,
+        "Export Reminders CSV"
+      );
 
       Alert.alert("Success", "Data exported as CSV successfully!");
     } catch (error) {
