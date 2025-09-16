@@ -835,7 +835,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
 Terminal.displayName = "Terminal";
 
 const styles = StyleSheet.create({
-  container: { marginVertical: 8 },
+  container: { marginVertical: 8, position: "fixed", width: "100%", bottom: 0 },
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
