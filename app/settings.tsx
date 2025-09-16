@@ -193,6 +193,23 @@ export default function SettingsScreen() {
 
         <View style={styles.content}>
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About the App</Text>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>I Can&apos;t Miss</Text>
+              <Text style={styles.infoDescription}>
+                A smart reminder app that helps you never forget important
+                things again.
+              </Text>
+              <Text style={styles.infoFeatures}>
+                • One-time and recurring reminders{"\n"}• Smart snooze system
+                {"\n"}• Spaced review for important tasks{"\n"}• Important dates
+                with advance notifications{"\n"}• Data backup and
+                synchronization
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Export Data</Text>
             <Text style={styles.sectionDescription}>
               Back up your reminders so you don&apos;t lose them
@@ -234,23 +251,6 @@ export default function SettingsScreen() {
                 {isImporting ? "Importing..." : "Import JSON"}
               </Text>
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About the App</Text>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>I Can&apos;t Miss</Text>
-              <Text style={styles.infoDescription}>
-                A smart reminder app that helps you never forget important
-                things again.
-              </Text>
-              <Text style={styles.infoFeatures}>
-                • One-time and recurring reminders{"\n"}• Smart snooze system
-                {"\n"}• Spaced review for important tasks{"\n"}• Important dates
-                with advance notifications{"\n"}• Data backup and
-                synchronization
-              </Text>
-            </View>
           </View>
 
           <View style={styles.section}>

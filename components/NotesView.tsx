@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -8,7 +8,6 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,7 +15,6 @@ import Animated from "react-native-reanimated";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
-import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database, Folder, QuickNote } from "../database/database";
 
 interface QuickNoteWithFolder extends QuickNote {
@@ -40,22 +38,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const { isInitialized, error: initError, initializeApp } = useApp();
   const [notes, setNotes] = useState<QuickNoteWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string>("all");
   const [folders, setFolders] = useState<Folder[]>([]);
-  const searchRef = useRef<TextInput | null>(null);
-  const blurSearch = () => searchRef.current?.blur();
-  const { register, unregister } = useGlobalTouchDismiss();
-
-  useEffect(() => {
-    const id = `notes-search`;
-    register(id, {
-      isFocused: () =>
-        !!searchRef.current && (searchRef.current as any).isFocused?.(),
-      blur: () => searchRef.current?.blur(),
-    });
-    return () => unregister(id);
-  }, [register, unregister]);
 
   useEffect(() => {
     if (isInitialized) {
@@ -68,7 +52,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
     if (isInitialized) {
       loadNotes();
     }
-  }, [searchTerm, selectedFolder, isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedFolder, isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadFolders = async () => {
     if (!isInitialized) return;
@@ -86,9 +70,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
     try {
       let noteData: QuickNote[] = [];
 
-      if (searchTerm.trim()) {
-        noteData = await database.searchQuickNotes(searchTerm);
-      } else if (selectedFolder !== "all") {
+      if (selectedFolder !== "all") {
         noteData = await database.getQuickNotesByFolder(selectedFolder);
       } else {
         noteData = await database.getAllQuickNotes();
@@ -220,7 +202,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
       ]}
       onPress={() => {
         setSelectedFolder(folder.id);
-        blurSearch();
       }}
     >
       <Text
@@ -239,9 +220,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       <Text style={styles.emptyIcon}>📝</Text>
       <Text style={styles.emptyTitle}>No Notes Yet</Text>
       <Text style={styles.emptySubtitle}>
-        {searchTerm
-          ? "No notes match your search"
-          : "Start capturing ideas with quick notes"}
+        Start capturing ideas with quick notes
       </Text>
     </View>
   );
@@ -262,17 +241,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
           )}
         </View>
       )}
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          ref={searchRef}
-          style={styles.searchInput}
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-          placeholder="Search notes..."
-          placeholderTextColor={Colors.dark.muted}
-        />
-      </View>
 
       {/* Folder Filter */}
       <View style={styles.filterContainer}>
@@ -308,7 +276,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
         }
         contentContainerStyle={[styles.listContainer, { flexGrow: 1 }]}
         showsVerticalScrollIndicator={false}
-        onScrollBeginDrag={blurSearch}
         onScroll={onScroll as unknown as (e: any) => void}
         scrollEventThrottle={onScroll ? 16 : undefined}
         keyboardShouldPersistTaps="handled"
@@ -321,23 +288,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.dark.background,
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.dark.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-  },
-  searchInput: {
-    ...Typography.body,
-    color: Colors.dark.text,
-    backgroundColor: Colors.dark.background,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
   },
   filterContainer: {
     backgroundColor: Colors.dark.surface,
