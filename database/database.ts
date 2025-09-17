@@ -79,6 +79,7 @@ export interface QuickNote {
   folderId?: string;
   tags: string; // JSON array
   isPinned: boolean;
+  sortOrder?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -170,11 +171,18 @@ class Database {
         folderId TEXT,
         tags TEXT,
         isPinned INTEGER DEFAULT 0,
+        sortOrder INTEGER DEFAULT 0,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         FOREIGN KEY (folderId) REFERENCES folders (id) ON DELETE SET NULL
       );
     `);
+
+    try {
+      await this.db.execAsync(`ALTER TABLE quick_notes ADD COLUMN sortOrder INTEGER DEFAULT 0;`);
+    } catch {
+      // Column already exists
+    }
 
     await this.db.execAsync(`
       CREATE TABLE IF NOT EXISTS snooze_history (
@@ -784,8 +792,8 @@ class Database {
 
     await this.db.runAsync(
       `
-      INSERT INTO quick_notes (id, content, folderId, tags, isPinned, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO quick_notes (id, content, folderId, tags, isPinned, sortOrder, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         id,
@@ -793,6 +801,7 @@ class Database {
         note.folderId || null,
         note.tags || "[]",
         note.isPinned ? 1 : 0,
+        note.sortOrder ?? Date.now(),
         now,
         now,
       ]
@@ -805,7 +814,7 @@ class Database {
     if (!this.db) throw new Error("Database not initialized");
     const result = await this.db.getAllAsync(`
       SELECT * FROM quick_notes 
-      ORDER BY isPinned DESC, updatedAt DESC
+      ORDER BY isPinned DESC, sortOrder DESC, updatedAt DESC
     `);
     return result as QuickNote[];
   }
@@ -816,7 +825,7 @@ class Database {
       `
       SELECT * FROM quick_notes 
       WHERE folderId = ?
-      ORDER BY isPinned DESC, updatedAt DESC
+      ORDER BY isPinned DESC, sortOrder DESC, updatedAt DESC
     `,
       [folderId]
     );
@@ -825,11 +834,11 @@ class Database {
 
   async searchQuickNotes(searchTerm: string): Promise<QuickNote[]> {
     if (!this.db) throw new Error("Database not initialized");
-    const result = await this.db.getAllAsync(
+      const result = await this.db.getAllAsync(
       `
       SELECT * FROM quick_notes 
       WHERE content LIKE ?
-      ORDER BY isPinned DESC, updatedAt DESC
+      ORDER BY isPinned DESC, sortOrder DESC, updatedAt DESC
     `,
       [`%${searchTerm}%`]
     );
@@ -852,6 +861,20 @@ class Database {
     `,
       [...values, new Date().toISOString(), id]
     );
+  }
+
+  async updateQuickNotesSortOrder(
+    updates: { id: string; sortOrder: number }[]
+  ): Promise<void> {
+    if (!this.db) throw new Error("Database not initialized");
+    if (!updates.length) return;
+
+    for (const { id, sortOrder } of updates) {
+      await this.db.runAsync(
+        `UPDATE quick_notes SET sortOrder = ? WHERE id = ?`,
+        [sortOrder, id]
+      );
+    }
   }
 
   async deleteQuickNote(id: string): Promise<void> {

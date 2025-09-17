@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
-  FlatListProps,
   NativeScrollEvent,
   NativeSyntheticEvent,
   RefreshControl,
@@ -11,7 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated from "react-native-reanimated";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import DraggableFlatList, {
+  DragEndParams,
+  RenderItemParams,
+  ScaleDecorator,
+  ShadowDecorator,
+} from "react-native-draggable-flatlist";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
@@ -21,11 +26,6 @@ import { AppIcon } from "./AppIcon";
 interface QuickNoteWithFolder extends QuickNote {
   folder?: Folder;
 }
-
-const AnimatedNotesList =
-  Animated.createAnimatedComponent<FlatListProps<QuickNoteWithFolder>>(
-    FlatList
-  );
 
 interface NotesViewProps {
   onRefresh?: () => void;
@@ -77,6 +77,9 @@ export const NotesView: React.FC<NotesViewProps> = ({
     return [...noteList].sort((a, b) => {
       const pinnedDiff = Number(!!b.isPinned) - Number(!!a.isPinned);
       if (pinnedDiff !== 0) return pinnedDiff;
+      const orderA = typeof a.sortOrder === "number" ? a.sortOrder : 0;
+      const orderB = typeof b.sortOrder === "number" ? b.sortOrder : 0;
+      if (orderA !== orderB) return orderB - orderA;
       const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
       const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
       return dateB - dateA;
@@ -100,11 +103,16 @@ export const NotesView: React.FC<NotesViewProps> = ({
       }
 
       const notesWithFolders: QuickNoteWithFolder[] = noteData.map((note) => {
+        const normalizedSortOrder =
+          note.sortOrder === null || note.sortOrder === undefined
+            ? undefined
+            : Number(note.sortOrder);
+
         if (note.folderId) {
           const folder = folders.find((f) => f.id === note.folderId);
-          return { ...note, folder };
+          return { ...note, sortOrder: normalizedSortOrder, folder };
         }
-        return { ...note };
+        return { ...note, sortOrder: normalizedSortOrder };
       });
 
       setNotes(sortNotes(notesWithFolders));
@@ -152,11 +160,17 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const handleTogglePin = async (note: QuickNoteWithFolder) => {
     const nextPinned = !note.isPinned;
     const updatedAt = new Date().toISOString();
+    const orderStamp = Date.now();
 
     setNotes((prevNotes) => {
       const updatedNotes = prevNotes.map((item) =>
         item.id === note.id
-          ? { ...item, isPinned: nextPinned, updatedAt }
+          ? {
+              ...item,
+              isPinned: nextPinned,
+              updatedAt,
+              sortOrder: orderStamp,
+            }
           : item
       );
       return sortNotes(updatedNotes);
@@ -165,17 +179,63 @@ export const NotesView: React.FC<NotesViewProps> = ({
     try {
       await database.updateQuickNote(note.id, {
         isPinned: nextPinned,
+        sortOrder: orderStamp,
       });
     } catch (error) {
       console.error("Error toggling pin:", error);
       setNotes((prevNotes) => {
         const revertedNotes = prevNotes.map((item) =>
           item.id === note.id
-            ? { ...item, isPinned: note.isPinned, updatedAt: note.updatedAt }
+            ? {
+                ...item,
+                isPinned: note.isPinned,
+                updatedAt: note.updatedAt,
+                sortOrder: note.sortOrder,
+              }
             : item
         );
         return sortNotes(revertedNotes);
       });
+    }
+  };
+
+  const handleDragEnd = async ({
+    data,
+    from,
+    to,
+  }: DragEndParams<QuickNoteWithFolder>) => {
+    if (from === to) {
+      setNotes(sortNotes(data));
+      return;
+    }
+
+    const pinned = data.filter((item) => !!item.isPinned);
+    const others = data.filter((item) => !item.isPinned);
+
+    const assignOrder = (items: QuickNoteWithFolder[]) => {
+      const total = items.length;
+      return items.map((item, index) => ({
+        ...item,
+        sortOrder: total - index,
+      }));
+    };
+
+    const orderedPinned = assignOrder(pinned);
+    const orderedOthers = assignOrder(others);
+    const combined = [...orderedPinned, ...orderedOthers];
+
+    setNotes(sortNotes(combined));
+
+    try {
+      await database.updateQuickNotesSortOrder(
+        combined.map((item) => ({
+          id: item.id,
+          sortOrder: typeof item.sortOrder === "number" ? item.sortOrder : 0,
+        }))
+      );
+    } catch (error) {
+      console.error("Error updating sort order:", error);
+      loadNotes({ showLoading: false });
     }
   };
 
@@ -190,74 +250,92 @@ export const NotesView: React.FC<NotesViewProps> = ({
     }
   };
 
-  const renderNoteCard = ({ item }: { item: QuickNoteWithFolder }) => {
+  const renderNoteCard = ({
+    item,
+    drag,
+    isActive,
+  }: RenderItemParams<QuickNoteWithFolder>) => {
     const pinned = !!item.isPinned; // normaliza possível 0/1 vindo do DB
     return (
-      <TouchableOpacity style={[styles.card, pinned && styles.pinnedCard]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardInfo}>
-            {pinned && (
-              <AppIcon
-                icon="pin"
-                size={16}
-                color={Colors.dark.tint}
-                style={styles.pinIcon}
-              />
-            )}
-            {item.folder && (
-              <View
-                style={[
-                  styles.folderBadge,
-                  { backgroundColor: item.folder.color },
-                ]}
-              >
-                <AppIcon
-                  icon={item.folder.icon || "folder"}
-                  size={12}
-                  color={Colors.dark.background}
-                  style={styles.folderBadgeIcon}
-                />
-                <Text style={styles.folderBadgeText}>{item.folder.name}</Text>
+      <ScaleDecorator activeScale={0.97}>
+        <ShadowDecorator color={Colors.dark.tint} opacity={0.3}>
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onLongPress={drag}
+            delayLongPress={120}
+            disabled={isActive}
+            style={[
+              styles.card,
+              pinned && styles.pinnedCard,
+              isActive && styles.draggingCard,
+            ]}
+          >
+            <View style={styles.cardHeader}>
+              <View style={styles.cardInfo}>
+                {pinned && (
+                  <AppIcon
+                    icon="pin"
+                    size={16}
+                    color={Colors.dark.tint}
+                    style={styles.pinIcon}
+                  />
+                )}
+                {item.folder && (
+                  <View
+                    style={[
+                      styles.folderBadge,
+                      { backgroundColor: item.folder.color },
+                    ]}
+                  >
+                    <AppIcon
+                      icon={item.folder.icon || "folder"}
+                      size={12}
+                      color={Colors.dark.background}
+                      style={styles.folderBadgeIcon}
+                    />
+                    <Text style={styles.folderBadgeText}>{item.folder.name}</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-          <View style={styles.cardActions}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleTogglePin(item)}
-            >
-              <AppIcon
-                icon={pinned ? "pin" : "location"}
-                size={18}
-                color={Colors.dark.text}
-                style={styles.actionIcon}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleDeleteNote(item.id)}
-            >
-              <AppIcon
-                icon="trash"
-                size={18}
-                color={Colors.dark.error}
-                style={styles.actionIcon}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleTogglePin(item)}
+                >
+                  <AppIcon
+                    icon={pinned ? "pin" : "location"}
+                    size={18}
+                    color={Colors.dark.text}
+                    style={styles.actionIcon}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleDeleteNote(item.id)}
+                >
+                  <AppIcon
+                    icon="trash"
+                    size={18}
+                    color={Colors.dark.error}
+                    style={styles.actionIcon}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-        <Text style={styles.noteContent}>{item.content}</Text>
+            <Text style={styles.noteContent}>{item.content}</Text>
 
-        <View style={styles.cardFooter}>
-          <Text style={styles.noteDate}>
-            {new Date(item.updatedAt).toLocaleDateString()}
-          </Text>
-          {formatTags(item.tags) && (
-            <Text style={styles.noteTags}>{formatTags(item.tags)}</Text>
-          )}
-        </View>
-      </TouchableOpacity>
+            <View style={styles.cardFooter}>
+              <Text style={styles.noteDate}>
+                {new Date(item.updatedAt).toLocaleDateString()}
+              </Text>
+              {formatTags(item.tags) && (
+                <Text style={styles.noteTags}>{formatTags(item.tags)}</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        </ShadowDecorator>
+      </ScaleDecorator>
     );
   };
 
@@ -296,10 +374,11 @@ export const NotesView: React.FC<NotesViewProps> = ({
   );
 
   return (
-    <View style={styles.container}>
-      {!isInitialized && (
-        <View style={styles.initializingBox}>
-          <Text style={styles.initializingText}>
+    <GestureHandlerRootView style={styles.container}>
+      <View style={styles.container}>
+        {!isInitialized && (
+          <View style={styles.initializingBox}>
+            <Text style={styles.initializingText}>
             {initError
               ? `Erro: ${initError}`
               : "Inicializando banco de dados..."}
@@ -330,10 +409,12 @@ export const NotesView: React.FC<NotesViewProps> = ({
       </View>
 
       {/* Notes List */}
-      <AnimatedNotesList
+      <DraggableFlatList
         data={notes}
         renderItem={renderNoteCard}
         keyExtractor={(item) => item.id}
+        onDragEnd={handleDragEnd}
+        activationDistance={8}
         ListEmptyComponent={
           isInitialized && !loading ? renderEmptyState() : null
         }
@@ -344,7 +425,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
             tintColor={Colors.dark.tint}
           />
         }
-        contentContainerStyle={[styles.listContainer, { flexGrow: 1 }]}
+        contentContainerStyle={[styles.listContainer, { flexGrow: notes.length ? 0 : 1 }]}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll as unknown as (e: any) => void}
         scrollEventThrottle={onScroll ? 16 : undefined}
@@ -353,7 +434,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
         alwaysBounceVertical={false}
         overScrollMode="never"
       />
-    </View>
+      </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -413,6 +495,9 @@ const styles = StyleSheet.create({
   pinnedCard: {
     borderColor: Colors.dark.warning,
     backgroundColor: `${Colors.dark.warning}15`,
+  },
+  draggingCard: {
+    borderColor: Colors.dark.tint,
   },
   cardHeader: {
     flexDirection: "row",
