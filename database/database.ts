@@ -230,8 +230,6 @@ class Database {
       CREATE INDEX IF NOT EXISTS idx_quick_notes_content ON quick_notes (content);
     `);
 
-    // Migrate legacy default folders (default, work, personal, health) into 'all'
-    await this.migrateLegacyFolders();
     // Ensure minimal default folder
     await this.insertDefaultFolders();
   }
@@ -625,45 +623,7 @@ class Database {
     await this.db.runAsync(
       `INSERT OR IGNORE INTO folders (id, name, color, icon, isDefault, sortOrder, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ["all", "All", "#777777", "", 1, 0, now, now]
-    );
-  }
-
-  private async migrateLegacyFolders(): Promise<void> {
-    if (!this.db) throw new Error("Database not initialized");
-    // Check if legacy folders exist
-    const legacyIds = ["default", "work", "personal", "health"];
-    const existing = (await this.db.getAllAsync(
-      `SELECT id FROM folders WHERE id IN (${legacyIds
-        .map(() => "?")
-        .join(",")})`,
-      legacyIds
-    )) as { id: string }[];
-    if (!existing.length) return;
-    // Ensure 'all' exists early
-    const now = new Date().toISOString();
-    await this.db.runAsync(
-      `INSERT OR IGNORE INTO folders (id, name, color, icon, isDefault, sortOrder, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ["all", "All", "#777777", "", 1, 0, now, now]
-    );
-    // Repoint any reminders / notes referencing legacy folders to 'all'
-    await this.db.runAsync(
-      `UPDATE reminders SET folderId = 'all' WHERE folderId IN (${legacyIds
-        .map(() => "?")
-        .join(",")})`,
-      legacyIds
-    );
-    await this.db.runAsync(
-      `UPDATE quick_notes SET folderId = 'all' WHERE folderId IN (${legacyIds
-        .map(() => "?")
-        .join(",")})`,
-      legacyIds
-    );
-    // Delete legacy folders
-    await this.db.runAsync(
-      `DELETE FROM folders WHERE id IN (${legacyIds.map(() => "?").join(",")})`,
-      legacyIds
+      ["all", "All", "#777777", "folder", 1, 0, now, now]
     );
   }
 
