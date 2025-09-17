@@ -46,6 +46,8 @@ import {
   slugify,
   stripAllSystemCommands,
 } from "../utils/terminal";
+import { AppIcon } from "./AppIcon";
+import type { AppIconKey } from "../constants/iconMappings";
 
 const COLLAPSED_MAX_HEIGHT = 220;
 const PREVIEW_MAX_HEIGHT = 180;
@@ -54,12 +56,12 @@ const FALLBACK_SINGLE_LINE_HEIGHT = 22 + PLACEHOLDER_EXTRA_PADDING;
 const EXPANSION_DURATION = 220;
 const INPUT_VERTICAL_PADDING = 28;
 
-const getTypeIcon = (type: string, triggerType?: string) => {
-  if (type === "date") return "⏰";
-  if (type === "note") return "📝";
-  if (triggerType === "person") return "👤";
-  if (triggerType === "location") return "📍";
-  return "📋";
+const getTypeIcon = (type: string, triggerType?: string): AppIconKey => {
+  if (type === "date") return "clock";
+  if (type === "note") return "notes";
+  if (triggerType === "person") return "person";
+  if (triggerType === "location") return "location";
+  return "clipboard";
 };
 
 const getTypeLabel = (type: string, triggerType?: string) => {
@@ -88,7 +90,7 @@ type BadgeTone = "neutral" | "accent" | "success" | "warning" | "danger";
 interface PreviewBadge {
   key: string;
   label: string;
-  icon?: string;
+  icon?: AppIconKey;
   tone: BadgeTone;
   accessibilityLabel: string;
 }
@@ -299,7 +301,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             : "success";
         badges.push({
           key: "priority",
-          icon: "⚡",
+          icon: "lightning",
           label: `Prioridade ${priorityLabel}`,
           tone,
           accessibilityLabel: `Prioridade ${priorityLabel}`,
@@ -318,7 +320,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         const label = `${datePart} ${timePart}`.trim();
         badges.push({
           key: "fireAt",
-          icon: "⏰",
+          icon: "clock",
           label,
           tone: "neutral",
           accessibilityLabel: `Agendado para ${label}`,
@@ -328,7 +330,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       if (folderName) {
         badges.push({
           key: "folder",
-          icon: "📁",
+          icon: "folder",
           label: folderName,
           tone: "neutral",
           accessibilityLabel: `Pasta ${folderName}`,
@@ -345,7 +347,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         if (!trimmed) return;
         badges.push({
           key: `person-${index}-${trimmed}`,
-          icon: "👤",
+          icon: "person",
           label: trimmed,
           tone: "neutral",
           accessibilityLabel: `Pessoa ${trimmed}`,
@@ -362,7 +364,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         if (!trimmed) return;
         badges.push({
           key: `location-${index}-${trimmed}`,
-          icon: "📍",
+          icon: "location",
           label: trimmed,
           tone: "neutral",
           accessibilityLabel: `Local ${trimmed}`,
@@ -372,7 +374,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       if (preview.project) {
         badges.push({
           key: "project",
-          icon: "📌",
+          icon: "pin",
           label: preview.project,
           tone: "neutral",
           accessibilityLabel: `Projeto ${preview.project}`,
@@ -799,14 +801,12 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
                   accessibilityLabel={badge.accessibilityLabel}
                 >
                   {badge.icon ? (
-                    <Text
-                      style={[
-                        styles.badgeIcon,
-                        { color: appearance.textColor },
-                      ]}
-                    >
-                      {badge.icon}
-                    </Text>
+                    <AppIcon
+                      icon={badge.icon}
+                      size={16}
+                      color={appearance.textColor}
+                      style={styles.badgeIcon}
+                    />
                   ) : null}
                   <Text
                     style={[styles.badgeLabel, { color: appearance.textColor }]}
@@ -972,9 +972,11 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             onPress={handleSubmit}
             disabled={isProcessing}
           >
-            <Text style={styles.submitButtonText}>
-              {isProcessing ? "⏳" : "✓"}
-            </Text>
+            <AppIcon
+              icon={isProcessing ? "hourglass" : "check"}
+              size={18}
+              color={Colors.dark.background}
+            />
           </TouchableOpacity>
         )}
         {shouldShowExpandButton && (
@@ -1216,11 +1218,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   submitButtonDisabled: { backgroundColor: Colors.dark.muted },
-  submitButtonText: {
-    ...Typography.body,
-    color: Colors.dark.background,
-    fontWeight: "600",
-  },
   badgesContainer: {
     marginTop: 12,
     borderTopWidth: 1,
@@ -1263,7 +1260,6 @@ const styles = StyleSheet.create({
   },
   badgeIcon: {
     marginRight: 6,
-    fontSize: 14,
   },
   badgeLabel: {
     ...Typography.caption,

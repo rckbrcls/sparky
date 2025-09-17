@@ -17,6 +17,7 @@ import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
 import { database, Folder, Reminder } from "../database/database";
+import { AppIcon } from "./AppIcon";
 
 interface ReminderWithFolder extends Reminder {
   folder?: Folder;
@@ -167,7 +168,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 { backgroundColor: item.folder.color },
               ]}
             >
-              <Text style={styles.folderIcon}>{item.folder.icon}</Text>
+              <AppIcon
+                icon={item.folder.icon}
+                size={18}
+                color={Colors.dark.background}
+              />
             </View>
           )}
         </View>
@@ -183,12 +188,38 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         )}
 
         <View style={styles.cardFooter}>
-          {item.person && <Text style={styles.metadata}>👤 {item.person}</Text>}
+          {item.person && (
+            <View style={styles.metadataChip}>
+              <AppIcon
+                icon="person"
+                size={14}
+                color={Colors.dark.muted}
+                style={styles.metadataIcon}
+              />
+              <Text style={styles.metadataText}>{item.person}</Text>
+            </View>
+          )}
           {item.project && (
-            <Text style={styles.metadata}>🏷️ {item.project}</Text>
+            <View style={styles.metadataChip}>
+              <AppIcon
+                icon="tag"
+                size={14}
+                color={Colors.dark.muted}
+                style={styles.metadataIcon}
+              />
+              <Text style={styles.metadataText}>{item.project}</Text>
+            </View>
           )}
           {item.location && (
-            <Text style={styles.metadata}>📍 {item.location}</Text>
+            <View style={styles.metadataChip}>
+              <AppIcon
+                icon="location"
+                size={14}
+                color={Colors.dark.muted}
+                style={styles.metadataIcon}
+              />
+              <Text style={styles.metadataText}>{item.location}</Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -380,9 +411,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  folderIcon: {
-    fontSize: 16,
-  },
   fireDate: {
     ...Typography.body,
     color: Colors.dark.tint,
@@ -400,12 +428,20 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
-  metadata: {
-    ...Typography.caption,
-    color: Colors.dark.muted,
+  metadataChip: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.dark.background,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    gap: 4,
+  },
+  metadataIcon: {
+    opacity: 0.7,
+  },
+  metadataText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
   },
 });

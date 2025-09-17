@@ -14,10 +14,12 @@ import Animated from "react-native-reanimated";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { database, Trigger } from "../database/database";
+import { AppIcon } from "./AppIcon";
+import type { AppIconKey } from "../constants/iconMappings";
 
 interface TriggerSection {
   title: string;
-  icon: string;
+  icon: AppIconKey;
   data: (Trigger & { reminderTitle?: string })[];
 }
 
@@ -65,7 +67,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
       if (groupedTriggers.location) {
         newSections.push({
           title: "Location Triggers",
-          icon: "📍",
+          icon: "location",
           data: groupedTriggers.location,
         });
       }
@@ -73,7 +75,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
       if (groupedTriggers.person) {
         newSections.push({
           title: "Person Triggers",
-          icon: "👤",
+          icon: "person",
           data: groupedTriggers.person,
         });
       }
@@ -81,7 +83,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
       if (groupedTriggers.time) {
         newSections.push({
           title: "Time Triggers",
-          icon: "⏰",
+          icon: "clock",
           data: groupedTriggers.time,
         });
       }
@@ -89,7 +91,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
       if (groupedTriggers.dayOfWeek) {
         newSections.push({
           title: "Weekly Triggers",
-          icon: "📅",
+          icon: "calendar",
           data: groupedTriggers.dayOfWeek,
         });
       }
@@ -97,7 +99,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
       if (groupedTriggers.project) {
         newSections.push({
           title: "Project Triggers",
-          icon: "🏢",
+          icon: "building",
           data: groupedTriggers.project,
         });
       }
@@ -168,34 +170,42 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
           <Text style={styles.triggerConfig}>{formatTriggerConfig(item)}</Text>
         </View>
         <View style={styles.triggerTypeContainer}>
-          <Text style={styles.triggerTypeIcon}>
-            {getTriggerIcon(item.type)}
-          </Text>
+          <AppIcon
+            icon={getTriggerIcon(item.type)}
+            size={18}
+            color={Colors.dark.tint}
+            style={styles.triggerTypeIcon}
+          />
         </View>
       </View>
     </TouchableOpacity>
   );
 
-  const getTriggerIcon = (type: string) => {
+  const getTriggerIcon = (type: string): AppIconKey => {
     switch (type) {
       case "location":
-        return "📍";
+        return "location";
       case "person":
-        return "👤";
+        return "person";
       case "time":
-        return "⏰";
+        return "clock";
       case "dayOfWeek":
-        return "📅";
+        return "calendar";
       case "project":
-        return "🏢";
+        return "building";
       default:
-        return "⚡";
+        return "lightning";
     }
   };
 
   const renderSectionHeader = ({ section }: { section: TriggerSection }) => (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionIcon}>{section.icon}</Text>
+      <AppIcon
+        icon={section.icon}
+        size={18}
+        color={Colors.dark.text}
+        style={styles.sectionIcon}
+      />
       <Text style={styles.sectionTitle}>{section.title}</Text>
       <Text style={styles.sectionCount}>({section.data.length})</Text>
     </View>
@@ -203,7 +213,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>⚡</Text>
+      <AppIcon icon="lightning" size={32} color={Colors.dark.muted} />
       <Text style={styles.emptyTitle}>No Active Triggers</Text>
       <Text style={styles.emptySubtitle}>
         Create reminders with location, person, or time triggers to see them
@@ -261,7 +271,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.border,
   },
   sectionIcon: {
-    fontSize: 18,
     marginRight: 8,
   },
   sectionTitle: {
@@ -314,18 +323,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   triggerTypeIcon: {
-    fontSize: 16,
+    opacity: 0.8,
   },
   emptyState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.5,
   },
   emptyTitle: {
     ...Typography.h3,

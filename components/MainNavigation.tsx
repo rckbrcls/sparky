@@ -9,17 +9,19 @@ import {
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useColorScheme } from "../hooks/useColorScheme";
+import { AppIcon } from "./AppIcon";
+import type { AppIconKey } from "../constants/iconMappings";
 
 interface ViewMode {
   id: "date" | "triggers" | "notes";
   title: string;
-  icon: string;
+  icon: AppIconKey;
 }
 
 const VIEW_MODES: ViewMode[] = [
-  { id: "date", title: "Timeline", icon: "📅" },
-  { id: "triggers", title: "Triggers", icon: "⚡" },
-  { id: "notes", title: "Notes", icon: "📝" },
+  { id: "date", title: "Timeline", icon: "calendar" },
+  { id: "triggers", title: "Triggers", icon: "trigger" },
+  { id: "notes", title: "Notes", icon: "notes" },
 ];
 
 interface MainNavigationProps {
@@ -105,18 +107,19 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
                 )
               }
             >
-              <Text
+              <AppIcon
+                icon={mode.icon}
+                size={20}
+                color={
+                  activeMode === mode.id
+                    ? themeColors.tint
+                    : themeColors.muted
+                }
                 style={[
                   styles.navIcon,
-                  { opacity: 0.6, color: themeColors.muted },
-                  activeMode === mode.id && {
-                    opacity: 1,
-                    color: themeColors.tint,
-                  },
+                  { opacity: activeMode === mode.id ? 1 : 0.6 },
                 ]}
-              >
-                {mode.icon}
-              </Text>
+              />
               <Text
                 style={[
                   styles.navText,
@@ -180,11 +183,7 @@ const styles = StyleSheet.create({
     // Active state styling handled by text/icon styles
   },
   navIcon: {
-    fontSize: 16,
     opacity: 0.6,
-  },
-  navIconActive: {
-    opacity: 1,
   },
   navText: {
     ...Typography.caption,

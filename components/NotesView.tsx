@@ -16,6 +16,7 @@ import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
 import { database, Folder, QuickNote } from "../database/database";
+import { AppIcon } from "./AppIcon";
 
 interface QuickNoteWithFolder extends QuickNote {
   folder?: Folder;
@@ -152,7 +153,14 @@ export const NotesView: React.FC<NotesViewProps> = ({
       <TouchableOpacity style={[styles.card, pinned && styles.pinnedCard]}>
         <View style={styles.cardHeader}>
           <View style={styles.cardInfo}>
-            {pinned && <Text style={styles.pinIcon}>📌</Text>}
+            {pinned && (
+              <AppIcon
+                icon="pin"
+                size={16}
+                color={Colors.dark.tint}
+                style={styles.pinIcon}
+              />
+            )}
             {item.folder && (
               <View
                 style={[
@@ -167,13 +175,23 @@ export const NotesView: React.FC<NotesViewProps> = ({
               style={styles.actionButton}
               onPress={() => handleTogglePin(item)}
             >
-              <Text style={styles.actionIcon}>{pinned ? "📌" : "📍"}</Text>
+              <AppIcon
+                icon={pinned ? "pin" : "location"}
+                size={18}
+                color={Colors.dark.text}
+                style={styles.actionIcon}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleDeleteNote(item.id)}
             >
-              <Text style={styles.actionIcon}>🗑️</Text>
+              <AppIcon
+                icon="trash"
+                size={18}
+                color={Colors.dark.error}
+                style={styles.actionIcon}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -218,7 +236,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>📝</Text>
+      <AppIcon icon="notes" size={32} color={Colors.dark.muted} />
       <Text style={styles.emptyTitle}>No Notes Yet</Text>
       <Text style={styles.emptySubtitle}>
         Start capturing ideas with quick notes
@@ -356,7 +374,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pinIcon: {
-    fontSize: 14,
     marginRight: 8,
   },
   folderBadge: {
@@ -374,7 +391,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   actionIcon: {
-    fontSize: 16,
     opacity: 0.7,
   },
   noteContent: {
@@ -402,11 +418,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.5,
   },
   emptyTitle: {
     ...Typography.h3,

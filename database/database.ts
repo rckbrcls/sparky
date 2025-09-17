@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 
+
 export interface Reminder {
   id: string;
   title: string;
@@ -141,7 +142,7 @@ class Database {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         color TEXT NOT NULL DEFAULT '#00D2FF',
-        icon TEXT DEFAULT '📁',
+        icon TEXT DEFAULT 'folder',
         isDefault INTEGER DEFAULT 0,
         sortOrder INTEGER DEFAULT 0,
         createdAt TEXT NOT NULL,

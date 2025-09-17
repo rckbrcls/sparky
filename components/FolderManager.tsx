@@ -12,6 +12,8 @@ import {
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { database, Folder } from "../database/database";
+import { AppIcon } from "./AppIcon";
+import { folderIconKeys } from "../constants/iconMappings";
 
 interface FolderManagerProps {
   visible: boolean;
@@ -34,25 +36,6 @@ const FOLDER_COLORS = [
   "#84CC16",
 ];
 
-const FOLDER_ICONS = [
-  "📁",
-  "💼",
-  "🏠",
-  "🏥",
-  "🎯",
-  "📚",
-  "🎨",
-  "💡",
-  "🔧",
-  "📊",
-  "🎵",
-  "🌟",
-  "⚡",
-  "🚀",
-  "🌍",
-  "🔥",
-];
-
 export const FolderManager: React.FC<FolderManagerProps> = ({
   visible,
   onClose,
@@ -62,7 +45,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [selectedColor, setSelectedColor] = useState(FOLDER_COLORS[0]);
-  const [selectedIcon, setSelectedIcon] = useState(FOLDER_ICONS[0]);
+  const [selectedIcon, setSelectedIcon] = useState(folderIconKeys[0]);
 
   useEffect(() => {
     if (visible) {
@@ -96,7 +79,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
 
       setNewFolderName("");
       setSelectedColor(FOLDER_COLORS[0]);
-      setSelectedIcon(FOLDER_ICONS[0]);
+      setSelectedIcon(folderIconKeys[0]);
       setShowCreateForm(false);
       loadFolders();
       onFolderCreated?.();
@@ -134,7 +117,11 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
     <View style={styles.folderItem}>
       <View style={styles.folderInfo}>
         <View style={[styles.folderBadge, { backgroundColor: item.color }]}>
-          <Text style={styles.folderIcon}>{item.icon}</Text>
+          <AppIcon
+            icon={item.icon}
+            size={20}
+            color={Colors.dark.background}
+          />
         </View>
         <View style={styles.folderDetails}>
           <Text style={styles.folderName}>{item.name}</Text>
@@ -147,7 +134,12 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
           style={styles.deleteButton}
           onPress={() => handleDeleteFolder(item.id, item.name)}
         >
-          <Text style={styles.deleteIcon}>🗑️</Text>
+          <AppIcon
+            icon="trash"
+            size={18}
+            color={Colors.dark.muted}
+            style={styles.deleteIcon}
+          />
         </TouchableOpacity>
       )}
     </View>
@@ -176,7 +168,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
     <View style={styles.pickerSection}>
       <Text style={styles.pickerLabel}>Icon</Text>
       <View style={styles.iconGrid}>
-        {FOLDER_ICONS.map((icon) => (
+        {folderIconKeys.map((icon) => (
           <TouchableOpacity
             key={icon}
             style={[
@@ -185,7 +177,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
             ]}
             onPress={() => setSelectedIcon(icon)}
           >
-            <Text style={styles.iconText}>{icon}</Text>
+            <AppIcon icon={icon} size={22} color={Colors.dark.text} />
           </TouchableOpacity>
         ))}
       </View>
@@ -202,7 +194,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
         <View style={styles.header}>
           <Text style={styles.title}>Manage Folders</Text>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeIcon}>✕</Text>
+            <AppIcon icon="close" size={20} color={Colors.dark.muted} />
           </TouchableOpacity>
         </View>
 
@@ -212,7 +204,12 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
               style={styles.createButton}
               onPress={() => setShowCreateForm(true)}
             >
-              <Text style={styles.createIcon}>➕</Text>
+              <AppIcon
+                icon="plus"
+                size={20}
+                color={Colors.dark.tint}
+                style={styles.createIcon}
+              />
               <Text style={styles.createText}>Create New Folder</Text>
             </TouchableOpacity>
 
@@ -245,7 +242,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
                   setShowCreateForm(false);
                   setNewFolderName("");
                   setSelectedColor(FOLDER_COLORS[0]);
-                  setSelectedIcon(FOLDER_ICONS[0]);
+      setSelectedIcon(folderIconKeys[0]);
                 }}
               >
                 <Text style={styles.cancelText}>Cancel</Text>
@@ -287,10 +284,6 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 8,
   },
-  closeIcon: {
-    fontSize: 18,
-    color: Colors.dark.muted,
-  },
   content: {
     flex: 1,
     padding: 20,
@@ -307,9 +300,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   createIcon: {
-    fontSize: 20,
     marginRight: 12,
-    color: Colors.dark.tint,
   },
   createText: {
     ...Typography.body,
@@ -343,9 +334,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  folderIcon: {
-    fontSize: 18,
-  },
   folderDetails: {
     flex: 1,
   },
@@ -363,7 +351,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   deleteIcon: {
-    fontSize: 16,
     opacity: 0.7,
   },
   createForm: {
@@ -423,9 +410,6 @@ const styles = StyleSheet.create({
   selectedIconOption: {
     borderColor: Colors.dark.tint,
     backgroundColor: `${Colors.dark.tint}20`,
-  },
-  iconText: {
-    fontSize: 20,
   },
   formActions: {
     flexDirection: "row",
