@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -42,33 +42,54 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string>("all");
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [foldersLoaded, setFoldersLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const initialLoad = useRef(true);
 
   useEffect(() => {
-    if (isInitialized) {
-      loadFolders();
-      loadNotes();
-    }
+    if (!isInitialized) return;
+    loadFolders();
   }, [isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (isInitialized) {
-      loadNotes();
+    if (!isInitialized || !foldersLoaded) return;
+    const shouldShowLoading = initialLoad.current;
+    if (initialLoad.current) {
+      initialLoad.current = false;
     }
-  }, [selectedFolder, isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadNotes({ showLoading: shouldShowLoading });
+  }, [selectedFolder, isInitialized, foldersLoaded, folders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadFolders = async () => {
     if (!isInitialized) return;
+    setFoldersLoaded(false);
     try {
       const folderData = await database.getAllFolders();
       setFolders(folderData);
     } catch (error) {
       console.error("Error loading folders:", error);
+    } finally {
+      setFoldersLoaded(true);
     }
   };
 
-  const loadNotes = async () => {
+  const sortNotes = (noteList: QuickNoteWithFolder[]) => {
+    return [...noteList].sort((a, b) => {
+      const pinnedDiff = Number(!!b.isPinned) - Number(!!a.isPinned);
+      if (pinnedDiff !== 0) return pinnedDiff;
+      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  };
+
+  const loadNotes = async ({
+    showLoading = true,
+  }: {
+    showLoading?: boolean;
+  } = {}) => {
     if (!isInitialized) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       let noteData: QuickNote[] = [];
 
@@ -78,22 +99,19 @@ export const NotesView: React.FC<NotesViewProps> = ({
         noteData = await database.getAllQuickNotes();
       }
 
-      // Add folder information
-      const notesWithFolders = await Promise.all(
-        noteData.map(async (note) => {
-          if (note.folderId) {
-            const folder = folders.find((f) => f.id === note.folderId);
-            return { ...note, folder };
-          }
-          return note;
-        })
-      );
+      const notesWithFolders: QuickNoteWithFolder[] = noteData.map((note) => {
+        if (note.folderId) {
+          const folder = folders.find((f) => f.id === note.folderId);
+          return { ...note, folder };
+        }
+        return { ...note };
+      });
 
-      setNotes(notesWithFolders);
+      setNotes(sortNotes(notesWithFolders));
     } catch (error) {
       console.error("Error loading notes:", error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -102,8 +120,14 @@ export const NotesView: React.FC<NotesViewProps> = ({
       initializeApp();
       return;
     }
-    loadNotes();
-    onRefresh?.();
+    setRefreshing(true);
+    loadNotes({ showLoading: false })
+      .then(() => {
+        onRefresh?.();
+      })
+      .finally(() => {
+        setRefreshing(false);
+      });
   };
 
   const handleDeleteNote = async (noteId: string) => {
@@ -125,14 +149,33 @@ export const NotesView: React.FC<NotesViewProps> = ({
     ]);
   };
 
-  const handleTogglePin = async (note: QuickNote) => {
+  const handleTogglePin = async (note: QuickNoteWithFolder) => {
+    const nextPinned = !note.isPinned;
+    const updatedAt = new Date().toISOString();
+
+    setNotes((prevNotes) => {
+      const updatedNotes = prevNotes.map((item) =>
+        item.id === note.id
+          ? { ...item, isPinned: nextPinned, updatedAt }
+          : item
+      );
+      return sortNotes(updatedNotes);
+    });
+
     try {
       await database.updateQuickNote(note.id, {
-        isPinned: !note.isPinned,
+        isPinned: nextPinned,
       });
-      loadNotes();
     } catch (error) {
       console.error("Error toggling pin:", error);
+      setNotes((prevNotes) => {
+        const revertedNotes = prevNotes.map((item) =>
+          item.id === note.id
+            ? { ...item, isPinned: note.isPinned, updatedAt: note.updatedAt }
+            : item
+        );
+        return sortNotes(revertedNotes);
+      });
     }
   };
 
@@ -167,7 +210,15 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   styles.folderBadge,
                   { backgroundColor: item.folder.color },
                 ]}
-              />
+              >
+                <AppIcon
+                  icon={item.folder.icon || "folder"}
+                  size={12}
+                  color={Colors.dark.background}
+                  style={styles.folderBadgeIcon}
+                />
+                <Text style={styles.folderBadgeText}>{item.folder.name}</Text>
+              </View>
             )}
           </View>
           <View style={styles.cardActions}>
@@ -288,7 +339,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
         }
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={Colors.dark.tint}
           />
@@ -377,11 +428,20 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   folderBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginLeft: 4,
+  },
+  folderBadgeIcon: {
+    marginRight: 6,
+  },
+  folderBadgeText: {
+    ...Typography.caption,
+    color: Colors.dark.background,
+    fontWeight: "600",
   },
   cardActions: {
     flexDirection: "row",

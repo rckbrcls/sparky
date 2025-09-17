@@ -26,6 +26,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Colors } from "../constants/Colors";
+import type { AppIconKey } from "../constants/iconMappings";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { database } from "../database/database";
@@ -47,7 +48,6 @@ import {
   stripAllSystemCommands,
 } from "../utils/terminal";
 import { AppIcon } from "./AppIcon";
-import type { AppIconKey } from "../constants/iconMappings";
 
 const COLLAPSED_MAX_HEIGHT = 220;
 const PREVIEW_MAX_HEIGHT = 180;
@@ -1115,12 +1115,12 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     backgroundColor: Colors.dark.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.dark.border,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 14,
     width: "100%",
     position: "relative",
