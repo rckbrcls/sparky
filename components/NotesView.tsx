@@ -425,7 +425,11 @@ export const NotesView: React.FC<NotesViewProps> = ({
             tintColor={Colors.dark.tint}
           />
         }
-        contentContainerStyle={[styles.listContainer, { flexGrow: notes.length ? 0 : 1 }]}
+        contentContainerStyle={[
+          styles.listContainer,
+          styles.listContentInset,
+          { flexGrow: notes.length ? 0 : 1 },
+        ]}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll as unknown as (e: any) => void}
         scrollEventThrottle={onScroll ? 16 : undefined}
@@ -483,6 +487,9 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
+  },
+  listContentInset: {
+    paddingBottom: 80,
   },
   card: {
     backgroundColor: Colors.dark.surface,
