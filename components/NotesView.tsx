@@ -1,14 +1,21 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
+  Modal,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import DraggableFlatList, {
@@ -44,7 +51,23 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [folders, setFolders] = useState<Folder[]>([]);
   const [foldersLoaded, setFoldersLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingNote, setEditingNote] = useState<QuickNoteWithFolder | null>(null);
+  const [editedContent, setEditedContent] = useState("");
+  const [editedTags, setEditedTags] = useState("");
+  const [editedFolderId, setEditedFolderId] = useState<string | null>(null);
+  const [editedPinned, setEditedPinned] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [folderPickerNote, setFolderPickerNote] =
+    useState<QuickNoteWithFolder | null>(null);
+  const [folderPickerSelection, setFolderPickerSelection] =
+    useState<string | null>(null);
+  const [savingFolderChange, setSavingFolderChange] = useState(false);
   const initialLoad = useRef(true);
+
+  const availableFolders = useMemo(
+    () => folders.filter((folder) => folder.id !== "all"),
+    [folders]
+  );
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -250,6 +273,170 @@ export const NotesView: React.FC<NotesViewProps> = ({
     }
   };
 
+  const parseTagsInput = (value: string) => {
+    return value
+      .split(/[\s,]+/)
+      .map((tag) => tag.replace(/^#/, "").trim())
+      .filter(Boolean);
+  };
+
+  const openNoteEditor = (note: QuickNoteWithFolder) => {
+    setEditingNote(note);
+    setEditedContent(note.content);
+    setEditedTags(formatTags(note.tags));
+    setEditedFolderId(note.folderId ?? null);
+    setEditedPinned(!!note.isPinned);
+  };
+
+  const closeNoteEditor = (force = false) => {
+    if (savingEdit && !force) return;
+    setEditingNote(null);
+    setEditedContent("");
+    setEditedTags("");
+    setEditedFolderId(null);
+    setEditedPinned(false);
+  };
+
+  const closeFolderPicker = (force = false) => {
+    if (savingFolderChange && !force) return;
+    setFolderPickerNote(null);
+    setFolderPickerSelection(null);
+  };
+
+  const handleSaveNoteEdit = async () => {
+    if (!editingNote || savingEdit) return;
+
+    const trimmedContent = editedContent.trim();
+    if (!trimmedContent) {
+      Alert.alert("Empty note", "Please add some content before saving.");
+      return;
+    }
+
+    const tagsArray = parseTagsInput(editedTags);
+    const serializedTags = JSON.stringify(tagsArray);
+    const normalizedFolderId = editedFolderId;
+
+    const updates: Record<string, unknown> = {
+      content: trimmedContent,
+      tags: serializedTags,
+      isPinned: editedPinned,
+    };
+
+    if ((normalizedFolderId ?? null) !== (editingNote.folderId ?? null)) {
+      updates.folderId = normalizedFolderId ?? null;
+    }
+
+    try {
+      setSavingEdit(true);
+      await database.updateQuickNote(
+        editingNote.id,
+        updates as Partial<QuickNote>
+      );
+
+      const updatedAt = new Date().toISOString();
+
+      setNotes((prevNotes) => {
+        const updatedNotes = prevNotes.map((note) => {
+          if (note.id !== editingNote.id) return note;
+
+          const nextFolder =
+            typeof normalizedFolderId === "string"
+              ? folders.find((folder) => folder.id === normalizedFolderId)
+              : undefined;
+
+          return {
+            ...note,
+            content: trimmedContent,
+            tags: serializedTags,
+            folderId:
+              typeof normalizedFolderId === "string"
+                ? normalizedFolderId
+                : undefined,
+            folder: nextFolder,
+            isPinned: editedPinned,
+            updatedAt,
+          };
+        });
+
+        return sortNotes(updatedNotes);
+      });
+
+      closeNoteEditor(true);
+    } catch (error) {
+      console.error("Error updating note:", error);
+      Alert.alert("Error", "Failed to update note");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleConfirmFolderChange = async () => {
+    if (!folderPickerNote || savingFolderChange) return;
+
+    const nextFolderId = folderPickerSelection;
+    const previousFolderId = folderPickerNote.folderId ?? null;
+
+    if ((nextFolderId ?? null) === previousFolderId) {
+      closeFolderPicker(true);
+      return;
+    }
+
+    try {
+      setSavingFolderChange(true);
+      await database.updateQuickNote(folderPickerNote.id, {
+        folderId: nextFolderId ?? null,
+      });
+
+      const nextFolder =
+        typeof nextFolderId === "string"
+          ? folders.find((folder) => folder.id === nextFolderId)
+          : undefined;
+
+      setNotes((prevNotes) => {
+        const noteExists = prevNotes.some(
+          (note) => note.id === folderPickerNote.id
+        );
+        if (!noteExists) return prevNotes;
+
+        if (
+          selectedFolder !== "all" &&
+          (nextFolderId ?? null) !== selectedFolder &&
+          previousFolderId === selectedFolder
+        ) {
+          return prevNotes.filter((note) => note.id !== folderPickerNote.id);
+        }
+
+        const updatedNotes = prevNotes.map((note) =>
+          note.id === folderPickerNote.id
+            ? {
+                ...note,
+                folderId:
+                  typeof nextFolderId === "string" ? nextFolderId : undefined,
+                folder: nextFolder,
+              }
+            : note
+        );
+
+        return sortNotes(updatedNotes);
+      });
+
+      if (
+        selectedFolder !== "all" &&
+        (nextFolderId ?? null) === selectedFolder &&
+        previousFolderId !== selectedFolder
+      ) {
+        loadNotes({ showLoading: false });
+      }
+
+      closeFolderPicker(true);
+    } catch (error) {
+      console.error("Error updating note folder:", error);
+      Alert.alert("Error", "Failed to move note to folder");
+    } finally {
+      setSavingFolderChange(false);
+    }
+  };
+
   const renderNoteCard = ({
     item,
     drag,
@@ -262,6 +449,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
           <TouchableOpacity
             activeOpacity={0.95}
             onLongPress={drag}
+            onPress={() => openNoteEditor(item)}
             delayLongPress={120}
             disabled={isActive}
             style={[
@@ -298,6 +486,31 @@ export const NotesView: React.FC<NotesViewProps> = ({
                 )}
               </View>
               <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => openNoteEditor(item)}
+                >
+                  <AppIcon
+                    icon="document"
+                    size={18}
+                    color={Colors.dark.text}
+                    style={styles.actionIcon}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => {
+                    setFolderPickerNote(item);
+                    setFolderPickerSelection(item.folderId ?? null);
+                  }}
+                >
+                  <AppIcon
+                    icon={item.folder?.icon || "folder"}
+                    size={18}
+                    color={Colors.dark.text}
+                    style={styles.actionIcon}
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => handleTogglePin(item)}
@@ -373,6 +586,21 @@ export const NotesView: React.FC<NotesViewProps> = ({
     </View>
   );
 
+  const editingAccentColor = editingNote?.folder?.color ?? Colors.dark.tint;
+  const editingTimestampLabel = editingNote?.updatedAt
+    ? new Date(editingNote.updatedAt).toLocaleString()
+    : "";
+  const selectedFolderMeta =
+    typeof folderPickerSelection === "string"
+      ? folders.find((folder) => folder.id === folderPickerSelection)
+      : undefined;
+  const folderPickerAccentColor =
+    selectedFolderMeta?.color ?? folderPickerNote?.folder?.color ?? Colors.dark.tint;
+  const folderPickerHeroIcon =
+    selectedFolderMeta?.icon || folderPickerNote?.folder?.icon || "folder";
+  const folderPickerHasChanged =
+    (folderPickerSelection ?? null) !== (folderPickerNote?.folderId ?? null);
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
@@ -439,6 +667,400 @@ export const NotesView: React.FC<NotesViewProps> = ({
         overScrollMode="never"
       />
       </View>
+      <Modal
+        visible={!!editingNote}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!savingEdit) closeNoteEditor();
+        }}
+      >
+        <View style={styles.editModalRoot}>
+          <TouchableWithoutFeedback
+            onPress={() => {
+              if (!savingEdit) closeNoteEditor();
+            }}
+          >
+            <View style={styles.editBackdrop} />
+          </TouchableWithoutFeedback>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.editModalContainer}
+          >
+            <View style={styles.editModalCard}>
+              {editingNote && (
+                <>
+                  <View style={styles.editTopBar}>
+                    <View
+                      style={[
+                        styles.editHeroBadge,
+                        { backgroundColor: `${editingAccentColor}33` },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.editHeroIconWrap,
+                          { backgroundColor: editingAccentColor },
+                        ]}
+                      >
+                        <AppIcon
+                          icon={editingNote.folder?.icon || "notes"}
+                          size={16}
+                          color={Colors.dark.background}
+                        />
+                      </View>
+                      <Text style={styles.editHeroBadgeText}>Quick note</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.editCloseButton}
+                      onPress={() => {
+                        if (!savingEdit) closeNoteEditor();
+                      }}
+                      disabled={savingEdit}
+                    >
+                      <AppIcon icon="close" size={20} color={Colors.dark.muted} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.editTitle}>Polish your thought</Text>
+                  {editingTimestampLabel ? (
+                    <Text style={styles.editSubtitle}>
+                      {`Updated ${editingTimestampLabel}`}
+                    </Text>
+                  ) : null}
+                  <TouchableOpacity
+                    style={[
+                      styles.pinToggle,
+                      editedPinned && styles.pinToggleActive,
+                    ]}
+                    onPress={() => setEditedPinned((prev) => !prev)}
+                    disabled={savingEdit}
+                  >
+                    <AppIcon
+                      icon="pin"
+                      size={18}
+                      color={
+                        editedPinned ? Colors.dark.background : Colors.dark.muted
+                      }
+                      style={styles.pinToggleIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.pinToggleText,
+                        editedPinned && styles.pinToggleTextActive,
+                      ]}
+                    >
+                      {editedPinned ? "Pinned" : "Pin note"}
+                    </Text>
+                  </TouchableOpacity>
+                  <ScrollView
+                    style={styles.editForm}
+                    contentContainerStyle={styles.editFormContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <View style={styles.editSection}>
+                      <Text style={styles.editLabel}>Content</Text>
+                      <TextInput
+                        style={styles.editContentInput}
+                        multiline
+                        value={editedContent}
+                        onChangeText={setEditedContent}
+                        placeholder="Capture your note..."
+                        placeholderTextColor={Colors.dark.muted}
+                        editable={!savingEdit}
+                      />
+                    </View>
+                    <View style={styles.editSection}>
+                      <Text style={styles.editLabel}>Tags</Text>
+                      <TextInput
+                        style={styles.editTagInput}
+                        value={editedTags}
+                        onChangeText={setEditedTags}
+                        placeholder="#focus #deepwork"
+                        placeholderTextColor={Colors.dark.muted}
+                        editable={!savingEdit}
+                        autoCapitalize="none"
+                      />
+                      <Text style={styles.editHelperText}>
+                        Separate tags with spaces or commas
+                      </Text>
+                    </View>
+                    {!!availableFolders.length && (
+                      <View style={styles.editSection}>
+                        <Text style={styles.editLabel}>Folder</Text>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.editFolderChips}
+                          keyboardShouldPersistTaps="handled"
+                        >
+                          <TouchableOpacity
+                            style={[
+                              styles.folderChip,
+                              editedFolderId === null && styles.folderChipActive,
+                            ]}
+                            onPress={() => setEditedFolderId(null)}
+                            disabled={savingEdit}
+                          >
+                            <Text
+                              style={[
+                                styles.folderChipText,
+                                editedFolderId === null &&
+                                  styles.folderChipTextActive,
+                              ]}
+                            >
+                              No folder
+                            </Text>
+                          </TouchableOpacity>
+                          {availableFolders.map((folder) => {
+                            const isSelected = editedFolderId === folder.id;
+                            return (
+                              <TouchableOpacity
+                                key={folder.id}
+                                style={[
+                                  styles.folderChip,
+                                  isSelected && styles.folderChipActive,
+                                  {
+                                    borderColor: folder.color,
+                                    backgroundColor: isSelected
+                                      ? `${folder.color}22`
+                                      : Colors.dark.surface,
+                                  },
+                                ]}
+                                onPress={() => setEditedFolderId(folder.id)}
+                                disabled={savingEdit}
+                              >
+                                <AppIcon
+                                  icon={folder.icon || "folder"}
+                                  size={14}
+                                  color={
+                                    isSelected
+                                      ? Colors.dark.background
+                                      : Colors.dark.muted
+                                  }
+                                  style={styles.folderChipIcon}
+                                />
+                                <Text
+                                  style={[
+                                    styles.folderChipText,
+                                    isSelected && styles.folderChipTextActive,
+                                  ]}
+                                >
+                                  {folder.name}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </ScrollView>
+                  <View style={styles.editFooter}>
+                    <TouchableOpacity
+                      style={styles.editCancelButton}
+                      onPress={() => {
+                        if (!savingEdit) closeNoteEditor();
+                      }}
+                      disabled={savingEdit}
+                    >
+                      <Text style={styles.editCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.editSaveButton,
+                        (savingEdit || !editedContent.trim()) &&
+                          styles.editSaveButtonDisabled,
+                      ]}
+                      onPress={handleSaveNoteEdit}
+                      disabled={savingEdit || !editedContent.trim()}
+                    >
+                      {savingEdit ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={Colors.dark.background}
+                        />
+                      ) : (
+                        <Text style={styles.editSaveText}>Save changes</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+      <Modal
+        visible={!!folderPickerNote}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!savingFolderChange) closeFolderPicker();
+        }}
+      >
+        <View style={styles.folderModalRoot}>
+          <TouchableWithoutFeedback
+            onPress={() => {
+              if (!savingFolderChange) closeFolderPicker();
+            }}
+          >
+            <View style={styles.editBackdrop} />
+          </TouchableWithoutFeedback>
+          <View style={styles.folderModalCard}>
+            {folderPickerNote && (
+              <>
+                <View style={styles.folderModalHeader}>
+                  <View
+                    style={[
+                      styles.folderHeroBadge,
+                      { backgroundColor: `${folderPickerAccentColor}33` },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.folderHeroIconWrap,
+                        { backgroundColor: folderPickerAccentColor },
+                      ]}
+                    >
+                      <AppIcon
+                        icon={folderPickerHeroIcon}
+                        size={16}
+                        color={Colors.dark.background}
+                      />
+                    </View>
+                    <Text style={styles.folderHeroText}>Move note</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.editCloseButton}
+                    onPress={() => {
+                      if (!savingFolderChange) closeFolderPicker();
+                    }}
+                    disabled={savingFolderChange}
+                  >
+                    <AppIcon icon="close" size={20} color={Colors.dark.muted} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.folderModalTitle}>Choose a new home</Text>
+                <Text style={styles.folderModalSubtitle}>
+                  Keep your thoughts grouped just right
+                </Text>
+                <ScrollView
+                  style={styles.folderOptions}
+                  contentContainerStyle={styles.folderOptionsContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.folderOption,
+                      folderPickerSelection === null &&
+                        styles.folderOptionActive,
+                    ]}
+                    onPress={() => setFolderPickerSelection(null)}
+                    disabled={savingFolderChange}
+                  >
+                    <View style={styles.folderOptionIconWrap}>
+                      <AppIcon
+                        icon="document"
+                        size={18}
+                        color={Colors.dark.text}
+                      />
+                    </View>
+                    <View style={styles.folderOptionCopy}>
+                      <Text style={styles.folderOptionTitle}>No folder</Text>
+                      <Text style={styles.folderOptionSubtitle}>
+                        Keep it floating without a category
+                      </Text>
+                    </View>
+                    {folderPickerSelection === null && (
+                      <AppIcon
+                        icon="check"
+                        size={18}
+                        color={Colors.dark.tint}
+                      />
+                    )}
+                  </TouchableOpacity>
+                  {availableFolders.map((folder) => {
+                    const isActive = folderPickerSelection === folder.id;
+                    return (
+                      <TouchableOpacity
+                        key={folder.id}
+                        style={[
+                          styles.folderOption,
+                          isActive && styles.folderOptionActive,
+                          {
+                            borderColor: isActive
+                              ? folder.color
+                              : Colors.dark.border,
+                          },
+                        ]}
+                        onPress={() => setFolderPickerSelection(folder.id)}
+                        disabled={savingFolderChange}
+                      >
+                        <View
+                          style={[
+                            styles.folderOptionIconWrap,
+                            { backgroundColor: `${folder.color}22` },
+                          ]}
+                        >
+                          <AppIcon
+                            icon={folder.icon || "folder"}
+                            size={18}
+                            color={folder.color}
+                          />
+                        </View>
+                        <View style={styles.folderOptionCopy}>
+                          <Text style={styles.folderOptionTitle}>
+                            {folder.name}
+                          </Text>
+                      <Text style={styles.folderOptionSubtitle}>
+                        Organize alongside similar notes
+                      </Text>
+                        </View>
+                        {isActive && (
+                          <AppIcon
+                            icon="check"
+                            size={18}
+                            color={folder.color}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <View style={styles.folderActions}>
+                  <TouchableOpacity
+                    style={styles.editCancelButton}
+                    onPress={() => {
+                      if (!savingFolderChange) closeFolderPicker();
+                    }}
+                    disabled={savingFolderChange}
+                  >
+                    <Text style={styles.editCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.folderConfirmButton,
+                      (!folderPickerHasChanged || savingFolderChange) &&
+                        styles.editSaveButtonDisabled,
+                    ]}
+                    onPress={handleConfirmFolderChange}
+                    disabled={!folderPickerHasChanged || savingFolderChange}
+                  >
+                    {savingFolderChange ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={Colors.dark.background}
+                      />
+                    ) : (
+                      <Text style={styles.editSaveText}>Move note</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </GestureHandlerRootView>
   );
 };
@@ -490,6 +1112,318 @@ const styles = StyleSheet.create({
   },
   listContentInset: {
     paddingBottom: 80,
+  },
+  editModalRoot: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+  editBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+  },
+  editModalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editModalCard: {
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    width: "100%",
+    maxWidth: 520,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 14,
+  },
+  editTopBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  editHeroBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 18,
+  },
+  editHeroIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  editHeroBadgeText: {
+    ...Typography.caption,
+    color: Colors.dark.text,
+    fontWeight: "600",
+  },
+  editCloseButton: {
+    padding: 6,
+    marginLeft: 8,
+  },
+  editTitle: {
+    ...Typography.h3,
+    color: Colors.dark.text,
+    marginBottom: 6,
+  },
+  editSubtitle: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    marginBottom: 18,
+  },
+  pinToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    marginBottom: 20,
+  },
+  pinToggleActive: {
+    backgroundColor: Colors.dark.tint,
+    borderColor: Colors.dark.tint,
+  },
+  pinToggleIcon: {
+    marginRight: 8,
+  },
+  pinToggleText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    fontWeight: "600",
+  },
+  pinToggleTextActive: {
+    color: Colors.dark.background,
+  },
+  editForm: {
+    maxHeight: 360,
+    marginBottom: 16,
+  },
+  editFormContent: {
+    paddingBottom: 12,
+  },
+  editSection: {
+    marginBottom: 20,
+  },
+  editLabel: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  editContentInput: {
+    minHeight: 140,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.background,
+    padding: 14,
+    ...Typography.body,
+    color: Colors.dark.text,
+    textAlignVertical: "top",
+  },
+  editTagInput: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.background,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    ...Typography.body,
+    color: Colors.dark.text,
+  },
+  editHelperText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    marginTop: 8,
+  },
+  editFolderChips: {
+    paddingRight: 12,
+  },
+  folderChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.surface,
+  },
+  folderChipActive: {
+    borderColor: Colors.dark.tint,
+  },
+  folderChipIcon: {
+    marginRight: 6,
+  },
+  folderChipText: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    fontWeight: "600",
+  },
+  folderChipTextActive: {
+    color: Colors.dark.background,
+  },
+  editFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  editCancelButton: {
+    flex: 1,
+    marginRight: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    alignItems: "center",
+  },
+  editCancelText: {
+    ...Typography.body,
+    color: Colors.dark.muted,
+    fontWeight: "600",
+  },
+  editSaveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.dark.tint,
+    alignItems: "center",
+  },
+  editSaveButtonDisabled: {
+    backgroundColor: `${Colors.dark.tint}55`,
+  },
+  editSaveText: {
+    ...Typography.body,
+    color: Colors.dark.background,
+    fontWeight: "700",
+  },
+  folderModalRoot: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    alignItems: "center",
+  },
+  folderModalCard: {
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+    width: "100%",
+    maxWidth: 420,
+  },
+  folderModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  folderHeroBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  folderHeroIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  folderHeroText: {
+    ...Typography.caption,
+    color: Colors.dark.text,
+    fontWeight: "600",
+  },
+  folderModalTitle: {
+    ...Typography.h3,
+    color: Colors.dark.text,
+    marginBottom: 4,
+  },
+  folderModalSubtitle: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    marginBottom: 20,
+  },
+  folderOptions: {
+    maxHeight: 320,
+    marginBottom: 16,
+  },
+  folderOptionsContent: {
+    paddingBottom: 12,
+  },
+  folderOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    marginBottom: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.background,
+  },
+  folderOptionActive: {
+    borderColor: Colors.dark.tint,
+    backgroundColor: `${Colors.dark.tint}20`,
+  },
+  folderOptionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    backgroundColor: `${Colors.dark.tint}15`,
+  },
+  folderOptionCopy: {
+    flex: 1,
+  },
+  folderOptionTitle: {
+    ...Typography.body,
+    color: Colors.dark.text,
+    fontWeight: "600",
+  },
+  folderOptionSubtitle: {
+    ...Typography.caption,
+    color: Colors.dark.muted,
+    marginTop: 2,
+  },
+  folderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  folderConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.dark.tint,
+    alignItems: "center",
+    marginLeft: 12,
   },
   card: {
     backgroundColor: Colors.dark.surface,
