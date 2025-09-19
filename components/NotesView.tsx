@@ -9,8 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  LayoutChangeEvent,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -45,12 +44,16 @@ interface QuickNoteWithFolder extends QuickNote {
 
 interface NotesViewProps {
   onRefresh?: () => void;
-  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollMetrics?: (params: {
+    y: number;
+    contentHeight: number;
+    layoutHeight: number;
+  }) => void;
 }
 
 export const NotesView: React.FC<NotesViewProps> = ({
   onRefresh,
-  onScroll,
+  onScrollMetrics,
 }) => {
   // background follows current theme to avoid black overlay artifacts
   const { isInitialized, error: initError, initializeApp } = useApp();
@@ -70,6 +73,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [savingEdit, setSavingEdit] = useState(false);
   const initialLoad = useRef(true);
   const editSheetRef = useRef<BottomSheetModal>(null);
+  const listContentHeight = useRef(0);
+  const listLayoutHeight = useRef(0);
 
   const editSheetSnapPoints = useMemo(() => ["60%", "92%"], []);
 
@@ -477,6 +482,25 @@ export const NotesView: React.FC<NotesViewProps> = ({
     ? new Date(editingNote.updatedAt).toLocaleString()
     : "";
 
+  const handleContentSizeChange = useCallback((_: number, height: number) => {
+    listContentHeight.current = height;
+  }, []);
+
+  const handleListLayout = useCallback((event: LayoutChangeEvent) => {
+    listLayoutHeight.current = event.nativeEvent.layout.height;
+  }, []);
+
+  const handleScrollOffsetChange = useCallback(
+    (offset: number) => {
+      onScrollMetrics?.({
+        y: offset,
+        contentHeight: listContentHeight.current,
+        layoutHeight: listLayoutHeight.current,
+      });
+    },
+    [onScrollMetrics]
+  );
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
@@ -535,8 +559,9 @@ export const NotesView: React.FC<NotesViewProps> = ({
             { flexGrow: notes.length ? 0 : 1 },
           ]}
           showsVerticalScrollIndicator={false}
-          onScroll={onScroll as unknown as (e: any) => void}
-          scrollEventThrottle={onScroll ? 16 : undefined}
+          onLayout={handleListLayout}
+          onContentSizeChange={handleContentSizeChange}
+          onScrollOffsetChange={handleScrollOffsetChange}
           keyboardShouldPersistTaps="handled"
           bounces={false}
           alwaysBounceVertical={false}

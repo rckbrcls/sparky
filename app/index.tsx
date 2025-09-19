@@ -1,8 +1,10 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 import Animated, {
+  runOnUI,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -24,6 +26,68 @@ import { useColorScheme } from "../hooks/useColorScheme";
 import { NotificationService } from "../services/NotificationService";
 
 const DEFAULT_INPUT_HEIGHT = 168;
+const BOTTOM_THRESHOLD_PX = 2;
+const BOTTOM_RELEASE_DELTA_PX = 12;
+
+type HeaderScrollMetrics = {
+  y: number;
+  contentHeight: number;
+  layoutHeight: number;
+};
+
+type HeaderSharedRefs = {
+  freezeBottom: SharedValue<number>;
+  headerHeight: SharedValue<number>;
+  headerTranslation: SharedValue<number>;
+  scrollPrevY: SharedValue<number>;
+};
+
+const applyHeaderScroll = (
+  { y, contentHeight, layoutHeight }: HeaderScrollMetrics,
+  {
+    freezeBottom,
+    headerHeight,
+    headerTranslation,
+    scrollPrevY,
+  }: HeaderSharedRefs
+) => {
+  "worklet";
+  const prevY = scrollPrevY.value;
+  const dy = y - prevY;
+  scrollPrevY.value = y;
+
+  const available = Math.max(contentHeight - layoutHeight, 0);
+  const hasScrollableContent = available > 0;
+
+  if (y <= 0) {
+    freezeBottom.value = 0;
+    if (headerTranslation.value !== 0) {
+      headerTranslation.value = withTiming(0, { duration: 120 });
+    }
+    return;
+  }
+
+  const nearBottom = hasScrollableContent
+    ? y >= available - BOTTOM_THRESHOLD_PX
+    : false;
+
+  if (nearBottom && dy >= 0) {
+    freezeBottom.value = 1;
+    return;
+  }
+
+  if (freezeBottom.value === 1) {
+    if (y <= available - BOTTOM_RELEASE_DELTA_PX) {
+      freezeBottom.value = 0;
+    } else {
+      return;
+    }
+  }
+
+  const limit = headerHeight.value;
+  const clamped = Math.min(Math.max(y, 0), limit);
+  headerTranslation.value = clamped;
+};
 
 export default function HomeScreen() {
   const scheme = useColorScheme() ?? "dark"; // fallback dark
@@ -35,57 +99,66 @@ export default function HomeScreen() {
     useState(DEFAULT_INPUT_HEIGHT);
   const headerTranslation = useSharedValue(0);
   const headerHeight = useSharedValue(DEFAULT_INPUT_HEIGHT);
+  const scrollPrevY = useSharedValue(0);
+  const freezeBottom = useSharedValue(0);
   const NAV_TIGHTEN = 0; // keep original nav size/spacing
   const SCRIM_MAX_OPACITY = 1;
 
   useEffect(() => {
     headerTranslation.value = withTiming(0, { duration: 220 });
-  }, [activeMode, headerTranslation]);
+    scrollPrevY.value = 0;
+    freezeBottom.value = 0;
+  }, [activeMode, freezeBottom, headerTranslation, scrollPrevY]);
 
   const scrollHandler = useAnimatedScrollHandler({
-    onBeginDrag: (event, ctx: any) => {
-      ctx.prevY = event.contentOffset?.y ?? 0;
-      ctx.freezeBottom = false;
+    onBeginDrag: (event) => {
+      scrollPrevY.value = event.contentOffset?.y ?? 0;
+      freezeBottom.value = 0;
     },
-    onScroll: (event, ctx: any) => {
+    onScroll: (event) => {
       const y = event.contentOffset?.y ?? 0;
-      const prevY = ctx.prevY ?? y;
-      const dy = y - prevY;
-      ctx.prevY = y;
-
       const contentHeight = event.contentSize?.height ?? 0;
       const layoutHeight = event.layoutMeasurement?.height ?? 0;
-      const available = Math.max(contentHeight - layoutHeight, 0);
 
-      // Top guard: when at or above top, ensure header is fully shown
-      if (y <= 0) {
-        if (headerTranslation.value !== 0) {
-          headerTranslation.value = withTiming(0, { duration: 120 });
-        }
-        return;
-      }
-
-      // Bottom overscroll guard: freeze updates near bottom
-      const bottomThreshold = 2; // px tolerance to detect bottom proximity
-      const releaseDelta = 12; // px to scroll up before unfreezing
-      const nearBottom = y >= available - bottomThreshold;
-      if (nearBottom && dy >= 0) {
-        ctx.freezeBottom = true;
-        return;
-      }
-      if (ctx.freezeBottom) {
-        if (y <= available - releaseDelta) {
-          ctx.freezeBottom = false; // resume once sufficiently above bottom
-        } else {
-          return; // keep frozen near bottom to avoid bounce-induced jitter
-        }
-      }
-
-      const limit = headerHeight.value;
-      const clamped = Math.min(Math.max(y, 0), limit);
-      headerTranslation.value = clamped;
+      applyHeaderScroll(
+        { y, contentHeight, layoutHeight },
+        { freezeBottom, headerHeight, headerTranslation, scrollPrevY }
+      );
     },
   });
+
+  const notesScrollBridge = useMemo(
+    () =>
+      runOnUI(
+        (
+          y: number,
+          contentHeight: number,
+          layoutHeight: number
+        ) => {
+          "worklet";
+          applyHeaderScroll(
+            { y, contentHeight, layoutHeight },
+            { freezeBottom, headerHeight, headerTranslation, scrollPrevY }
+          );
+        }
+      ),
+    [freezeBottom, headerHeight, headerTranslation, scrollPrevY]
+  );
+
+  const handleNotesScroll = useCallback(
+    ({
+      y,
+      contentHeight,
+      layoutHeight,
+    }: {
+      y: number;
+      contentHeight: number;
+      layoutHeight: number;
+    }) => {
+      notesScrollBridge(y, contentHeight, layoutHeight);
+    },
+    [notesScrollBridge]
+  );
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -headerTranslation.value }],
@@ -171,7 +244,7 @@ export default function HomeScreen() {
           <NotesView
             key={`notes-${refreshKey}`}
             onRefresh={handleRefresh}
-            onScroll={scrollHandler}
+            onScrollMetrics={handleNotesScroll}
           />
         );
       default:
