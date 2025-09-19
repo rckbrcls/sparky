@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import Animated, {
+  Easing,
   runOnUI,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -28,6 +29,10 @@ import { NotificationService } from "../services/NotificationService";
 const DEFAULT_INPUT_HEIGHT = 168;
 const BOTTOM_THRESHOLD_PX = 2;
 const BOTTOM_RELEASE_DELTA_PX = 12;
+const HEADER_SCROLL_ANIMATION = {
+  duration: 220,
+  easing: Easing.bezier(0.16, 1, 0.3, 1),
+};
 
 type HeaderScrollMetrics = {
   y: number;
@@ -62,7 +67,7 @@ const applyHeaderScroll = (
   if (y <= 0) {
     freezeBottom.value = 0;
     if (headerTranslation.value !== 0) {
-      headerTranslation.value = withTiming(0, { duration: 120 });
+      headerTranslation.value = withTiming(0, HEADER_SCROLL_ANIMATION);
     }
     return;
   }
@@ -86,7 +91,7 @@ const applyHeaderScroll = (
 
   const limit = headerHeight.value;
   const clamped = Math.min(Math.max(y, 0), limit);
-  headerTranslation.value = clamped;
+  headerTranslation.value = withTiming(clamped, HEADER_SCROLL_ANIMATION);
 };
 
 export default function HomeScreen() {
@@ -105,7 +110,7 @@ export default function HomeScreen() {
   const SCRIM_MAX_OPACITY = 1;
 
   useEffect(() => {
-    headerTranslation.value = withTiming(0, { duration: 220 });
+    headerTranslation.value = withTiming(0, HEADER_SCROLL_ANIMATION);
     scrollPrevY.value = 0;
     freezeBottom.value = 0;
   }, [activeMode, freezeBottom, headerTranslation, scrollPrevY]);
