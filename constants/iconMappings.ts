@@ -35,7 +35,8 @@ export type AppIconKey =
   | "plus"
   | "document"
   | "edit"
-  | "eye";
+  | "eye"
+  | "drag";
 
 type MaterialCommunityIconName = ComponentProps<
   typeof MaterialCommunityIcons
@@ -81,6 +82,7 @@ export const ICON_DEFINITIONS: Record<AppIconKey, IconDefinition> = {
   document: { name: "file-outline" },
   edit: { name: "pencil" },
   eye: { name: "eye-outline" },
+  drag: { name: "drag-vertical" },
 };
 
 export const folderIconKeys: AppIconKey[] = [

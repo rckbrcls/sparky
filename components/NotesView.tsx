@@ -51,6 +51,172 @@ interface NotesViewProps {
   }) => void;
 }
 
+const formatTags = (tagsString: string) => {
+  try {
+    const tags = JSON.parse(tagsString || "[]");
+    return tags.length > 0
+      ? tags.map((tag: string) => `#${tag}`).join(" ")
+      : "";
+  } catch {
+    return "";
+  }
+};
+
+interface NoteCardProps {
+  item: QuickNoteWithFolder;
+  drag: () => void;
+  isActive: boolean;
+  onOpen: (note: QuickNoteWithFolder) => void;
+  onDragHandleActivate: (noteId: string) => void;
+  onDragHandleRelease: (noteId: string) => void;
+  isReorderMode: boolean;
+  activeDragId: string | null;
+}
+
+const NoteCard: React.FC<NoteCardProps> = React.memo(
+  ({
+    item,
+    drag,
+    isActive,
+    onOpen,
+    onDragHandleActivate,
+    onDragHandleRelease,
+    isReorderMode,
+    activeDragId,
+  }) => {
+    const pinned = !!item.isPinned;
+    const formattedTags = useMemo(() => formatTags(item.tags), [item.tags]);
+    const isActiveDragTarget = activeDragId === item.id;
+
+    const cardScale = useMemo(() => {
+      if (!isReorderMode) return 1;
+      if (isActive) return 1.05;
+      return isActiveDragTarget ? 1.03 : 0.97;
+    }, [isActive, isActiveDragTarget, isReorderMode]);
+
+    const cardOpacity = useMemo(() => {
+      if (!isReorderMode) return 1;
+      return isActiveDragTarget ? 1 : 0.82;
+    }, [isActiveDragTarget, isReorderMode]);
+
+    const handleCardPress = useCallback(() => {
+      if (isActive) return;
+      onOpen(item);
+    }, [isActive, item, onOpen]);
+
+    const handleDragHandlePressIn = useCallback(() => {
+      if (isActive) return;
+      onDragHandleActivate(item.id);
+      drag();
+    }, [drag, isActive, item.id, onDragHandleActivate]);
+
+    const handleDragHandlePressOut = useCallback(() => {
+      onDragHandleRelease(item.id);
+    }, [item.id, onDragHandleRelease]);
+
+    return (
+      <ScaleDecorator activeScale={0.97}>
+        <ShadowDecorator color={Colors.dark.tint} opacity={0.3}>
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onPress={handleCardPress}
+            disabled={isActive}
+            style={[
+              styles.card,
+              pinned && styles.pinnedCard,
+              isActive && styles.draggingCard,
+              isActiveDragTarget && styles.reorderActiveCard,
+              {
+                transform: [{ scale: cardScale }],
+                opacity: cardOpacity,
+              },
+            ]}
+          >
+            <View style={styles.cardContentRow}>
+              <TouchableOpacity
+                style={[
+                  styles.dragHandle,
+                  (isActiveDragTarget || isReorderMode) && styles.dragHandleActive,
+                ]}
+                onPressIn={handleDragHandlePressIn}
+                onPressOut={handleDragHandlePressOut}
+                disabled={isActive}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <AppIcon
+                  icon="drag"
+                  size={18}
+                  color={
+                    isActiveDragTarget || isReorderMode
+                      ? Colors.dark.tint
+                      : Colors.dark.muted
+                  }
+                />
+              </TouchableOpacity>
+              <View style={styles.cardMain}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardInfo}>
+                    {pinned && (
+                      <AppIcon
+                        icon="pin"
+                        size={16}
+                        color={Colors.dark.tint}
+                        style={styles.pinIcon}
+                      />
+                    )}
+                    {item.folder && (
+                      <View
+                        style={[
+                          styles.folderBadge,
+                          { backgroundColor: item.folder.color },
+                        ]}
+                      >
+                        <AppIcon
+                          icon={item.folder.icon || "folder"}
+                          size={12}
+                          color={Colors.dark.background}
+                          style={styles.folderBadgeIcon}
+                        />
+                        <Text style={styles.folderBadgeText}>
+                          {item.folder.name}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => onOpen(item)}
+                    disabled={isActive}
+                  >
+                    <AppIcon
+                      icon="eye"
+                      size={18}
+                      color={Colors.dark.background}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.noteContent}>{item.content}</Text>
+
+                <View style={styles.cardFooter}>
+                  <Text style={styles.noteDate}>
+                    {new Date(item.updatedAt).toLocaleDateString()}
+                  </Text>
+                  {formattedTags && (
+                    <Text style={styles.noteTags}>{formattedTags}</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </ShadowDecorator>
+      </ScaleDecorator>
+    );
+  }
+);
+
+NoteCard.displayName = "NoteCard";
+
 export const NotesView: React.FC<NotesViewProps> = ({
   onRefresh,
   onScrollMetrics,
@@ -71,6 +237,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [editedFolderId, setEditedFolderId] = useState<string | null>(null);
   const [editedPinned, setEditedPinned] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const initialLoad = useRef(true);
   const editSheetRef = useRef<BottomSheetModal>(null);
   const listContentHeight = useRef(0);
@@ -215,6 +383,9 @@ export const NotesView: React.FC<NotesViewProps> = ({
     from,
     to,
   }: DragEndParams<QuickNoteWithFolder>) => {
+    setReorderMode(false);
+    setActiveDragId(null);
+
     if (from === to) {
       setNotes(sortNotes(data));
       return;
@@ -250,23 +421,33 @@ export const NotesView: React.FC<NotesViewProps> = ({
     }
   };
 
-  const formatTags = (tagsString: string) => {
-    try {
-      const tags = JSON.parse(tagsString || "[]");
-      return tags.length > 0
-        ? tags.map((tag: string) => `#${tag}`).join(" ")
-        : "";
-    } catch {
-      return "";
-    }
-  };
-
   const parseTagsInput = (value: string) => {
     return value
       .split(/[\s,]+/)
       .map((tag) => tag.replace(/^#/, "").trim())
       .filter(Boolean);
   };
+
+  const handleDragHandleActivate = useCallback((noteId: string) => {
+    setActiveDragId(noteId);
+    setReorderMode(true);
+  }, []);
+
+  const handleDragHandleRelease = useCallback((noteId: string) => {
+    setActiveDragId((prev) => (prev === noteId ? null : prev));
+    setReorderMode(false);
+  }, []);
+
+  const handleDragBegin = useCallback(
+    (index: number) => {
+      const note = notes[index];
+      if (note) {
+        setActiveDragId(note.id);
+        setReorderMode(true);
+      }
+    },
+    [notes]
+  );
 
   const resetNoteEditorState = useCallback(() => {
     setEditingNote(null);
@@ -366,86 +547,27 @@ export const NotesView: React.FC<NotesViewProps> = ({
     }
   };
 
-  const renderNoteCard = ({
-    item,
-    drag,
-    isActive,
-  }: RenderItemParams<QuickNoteWithFolder>) => {
-    const pinned = !!item.isPinned; // normaliza possível 0/1 vindo do DB
-    return (
-      <ScaleDecorator activeScale={0.97}>
-        <ShadowDecorator color={Colors.dark.tint} opacity={0.3}>
-          <TouchableOpacity
-            activeOpacity={0.95}
-            onLongPress={drag}
-            onPress={() => openNoteEditor(item)}
-            delayLongPress={120}
-            disabled={isActive}
-            style={[
-              styles.card,
-              pinned && styles.pinnedCard,
-              isActive && styles.draggingCard,
-            ]}
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.cardInfo}>
-                {pinned && (
-                  <AppIcon
-                    icon="pin"
-                    size={16}
-                    color={Colors.dark.tint}
-                    style={styles.pinIcon}
-                  />
-                )}
-                {item.folder && (
-                  <View
-                    style={[
-                      styles.folderBadge,
-                      { backgroundColor: item.folder.color },
-                    ]}
-                  >
-                    <AppIcon
-                      icon={item.folder.icon || "folder"}
-                      size={12}
-                      color={Colors.dark.background}
-                      style={styles.folderBadgeIcon}
-                    />
-                    <Text style={styles.folderBadgeText}>
-                      {item.folder.name}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => openNoteEditor(item)}
-                  disabled={isActive}
-                >
-                  <AppIcon
-                    icon="eye"
-                    size={18}
-                    color={Colors.dark.background}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Text style={styles.noteContent}>{item.content}</Text>
-
-            <View style={styles.cardFooter}>
-              <Text style={styles.noteDate}>
-                {new Date(item.updatedAt).toLocaleDateString()}
-              </Text>
-              {formatTags(item.tags) && (
-                <Text style={styles.noteTags}>{formatTags(item.tags)}</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        </ShadowDecorator>
-      </ScaleDecorator>
-    );
-  };
+  const renderNoteCard = useCallback(
+    ({ item, drag, isActive }: RenderItemParams<QuickNoteWithFolder>) => (
+      <NoteCard
+        item={item}
+        drag={drag}
+        isActive={isActive}
+        onOpen={openNoteEditor}
+        onDragHandleActivate={handleDragHandleActivate}
+        onDragHandleRelease={handleDragHandleRelease}
+        isReorderMode={reorderMode}
+        activeDragId={activeDragId}
+      />
+    ),
+    [
+      activeDragId,
+      handleDragHandleActivate,
+      handleDragHandleRelease,
+      openNoteEditor,
+      reorderMode,
+    ]
+  );
 
   const renderFolderFilter = (
     folder: Folder | { id: string; name: string; icon?: string }
@@ -546,6 +668,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
           renderItem={renderNoteCard}
           keyExtractor={(item) => item.id}
           onDragEnd={handleDragEnd}
+          onDragBegin={handleDragBegin}
           activationDistance={8}
           ListEmptyComponent={
             isInitialized && !loading ? renderEmptyState() : null
@@ -866,8 +989,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.dark.warning,
     backgroundColor: `${Colors.dark.warning}15`,
   },
+  reorderActiveCard: {
+    borderColor: Colors.dark.tint,
+    shadowColor: Colors.dark.tint,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 3,
+  },
   draggingCard: {
     borderColor: Colors.dark.tint,
+    backgroundColor: `${Colors.dark.tint}22`,
+    shadowColor: Colors.dark.tint,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
   sheetBackground: {
     backgroundColor: Colors.dark.surface,
@@ -1090,6 +1225,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
+  cardContentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  cardMain: {
+    flex: 1,
+  },
   cardInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -1113,9 +1255,20 @@ const styles = StyleSheet.create({
     color: Colors.dark.background,
     fontWeight: "600",
   },
-  cardActions: {
-    flexDirection: "row",
+  dragHandle: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.surface,
+    marginRight: 12,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  dragHandleActive: {
+    borderColor: Colors.dark.tint,
+    backgroundColor: `${Colors.dark.tint}12`,
   },
   editButton: {
     paddingVertical: 6,
