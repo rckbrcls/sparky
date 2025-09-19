@@ -33,7 +33,9 @@ export type AppIconKey =
   | "check"
   | "close"
   | "plus"
-  | "document";
+  | "document"
+  | "edit"
+  | "eye";
 
 type MaterialCommunityIconName = ComponentProps<
   typeof MaterialCommunityIcons
@@ -77,6 +79,8 @@ export const ICON_DEFINITIONS: Record<AppIconKey, IconDefinition> = {
   close: { name: "close" },
   plus: { name: "plus" },
   document: { name: "file-outline" },
+  edit: { name: "pencil" },
+  eye: { name: "eye-outline" },
 };
 
 export const folderIconKeys: AppIconKey[] = [

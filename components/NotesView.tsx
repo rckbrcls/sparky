@@ -422,7 +422,11 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   onPress={() => openNoteEditor(item)}
                   disabled={isActive}
                 >
-                  <Text style={styles.editButtonText}>Editar</Text>
+                  <AppIcon
+                    icon="eye"
+                    size={18}
+                    color={Colors.dark.background}
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -724,7 +728,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                               size={14}
                               color={
                                 isSelected
-                                  ? Colors.dark.background
+                                  ? Colors.dark.tint
                                   : Colors.dark.muted
                               }
                               style={styles.folderChipIcon}
@@ -1016,7 +1020,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   folderChipTextActive: {
-    color: Colors.dark.background,
+    color: Colors.dark.tint,
   },
   editFooterArea: {
     borderTopWidth: 1,
@@ -1118,12 +1122,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: Colors.dark.tint,
-  },
-  editButtonText: {
-    ...Typography.caption,
-    color: Colors.dark.background,
-    fontWeight: "600",
-    letterSpacing: 0.4,
+    alignItems: "center",
+    justifyContent: "center",
   },
   noteContent: {
     ...Typography.body,
