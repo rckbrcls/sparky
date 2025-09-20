@@ -1,5 +1,12 @@
 import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ScrollView,
+  StyleProp,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 
 import { Colors } from "../../constants/Colors";
 import { AppIcon } from "../AppIcon";
@@ -8,11 +15,15 @@ import { SettingsAction } from "./types";
 
 interface NotesToolbarProps {
   actions: SettingsAction[];
+  style?: StyleProp<ViewStyle>;
 }
 
-export const NotesToolbar: React.FC<NotesToolbarProps> = ({ actions }) => {
+export const NotesToolbar: React.FC<NotesToolbarProps> = ({
+  actions,
+  style,
+}) => {
   return (
-    <View style={styles.toolbarContainer}>
+    <View style={[styles.toolbarContainer, style]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

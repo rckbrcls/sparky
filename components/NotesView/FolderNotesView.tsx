@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
+  Animated,
   LayoutChangeEvent,
   RefreshControl,
   Text,
@@ -58,8 +59,45 @@ export const FolderNotesView: React.FC<FolderNotesViewProps> = ({
   onScrollOffsetChange,
   isInitialized,
 }) => {
+  const toolbarAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!settingsActions.length) {
+      toolbarAnim.setValue(0);
+      return;
+    }
+
+    Animated.timing(toolbarAnim, {
+      toValue: 1,
+      duration: 240,
+      delay: 40,
+      useNativeDriver: true,
+    }).start();
+  }, [settingsActions.length, toolbarAnim]);
+
+  const toolbarStyle = useMemo(
+    () => ({
+      opacity: toolbarAnim,
+      transform: [
+        {
+          translateY: toolbarAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-16, 0],
+          }),
+        },
+      ],
+    }),
+    [toolbarAnim]
+  );
+
   return (
     <View style={styles.notesStageContainer}>
+      {settingsActions.length ? (
+        <Animated.View style={[toolbarStyle]}>
+          <NotesToolbar actions={settingsActions} />
+        </Animated.View>
+      ) : null}
+
       <View style={styles.notesBackWrapper}>
         <TouchableOpacity
           style={styles.notesBackButton}
@@ -75,8 +113,6 @@ export const FolderNotesView: React.FC<FolderNotesViewProps> = ({
           <Text style={styles.notesBackText}>Folders</Text>
         </TouchableOpacity>
       </View>
-
-      {settingsActions.length ? <NotesToolbar actions={settingsActions} /> : null}
 
       <View style={styles.notesListWrapper}>
         <View style={styles.notesHeader}>

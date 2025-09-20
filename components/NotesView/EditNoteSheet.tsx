@@ -20,7 +20,7 @@ import { styles } from "./styles";
 import { FolderListItem, QuickNoteWithFolder } from "./types";
 
 interface EditNoteSheetProps {
-  sheetRef: React.RefObject<BottomSheetModal>;
+  sheetRef: React.RefObject<BottomSheetModal | null>;
   snapPoints: string[];
   renderBackdrop: (props: BottomSheetBackdropProps) => React.ReactElement;
   onDismiss: () => void;

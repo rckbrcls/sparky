@@ -67,7 +67,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [folderNoteCounts, setFolderNoteCounts] = useState<
     Record<string, number>
   >({});
-  const editSheetRef = useRef<BottomSheetModal>(null);
+  const editSheetRef = useRef<BottomSheetModal | null>(null);
   const listContentHeight = useRef(0);
   const listLayoutHeight = useRef(0);
   const stageTransition = useRef(new Animated.Value(0)).current;
@@ -131,28 +131,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
     () => (showPinnedOnly ? notes.filter((note) => note.isPinned) : notes),
     [notes, showPinnedOnly]
   );
-
-  useEffect(() => {
-    if (showPinnedOnly) {
-      setActiveDragId(null);
-      setReorderMode(false);
-    }
-  }, [showPinnedOnly]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-    loadFolders();
-  }, [isInitialized, loadFolders]);
-
-  useEffect(() => {
-    if (!isInitialized || !foldersLoaded) return;
-    if (!selectedFolderId) {
-      setNotes([]);
-      setLoading(false);
-      return;
-    }
-    loadNotes({ showLoading: true });
-  }, [foldersLoaded, isInitialized, loadNotes, selectedFolderId]);
 
   const loadFolderCounts = useCallback(async () => {
     if (!isInitialized) return;
@@ -243,6 +221,28 @@ export const NotesView: React.FC<NotesViewProps> = ({
     },
     [folders, isInitialized, loadFolderCounts, selectedFolderId]
   );
+
+  useEffect(() => {
+    if (showPinnedOnly) {
+      setActiveDragId(null);
+      setReorderMode(false);
+    }
+  }, [showPinnedOnly]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    loadFolders();
+  }, [isInitialized, loadFolders]);
+
+  useEffect(() => {
+    if (!isInitialized || !foldersLoaded) return;
+    if (!selectedFolderId) {
+      setNotes([]);
+      setLoading(false);
+      return;
+    }
+    loadNotes({ showLoading: true });
+  }, [foldersLoaded, isInitialized, loadNotes, selectedFolderId]);
 
   const handleRefresh = useCallback(() => {
     if (!isInitialized) {
