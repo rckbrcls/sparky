@@ -29,6 +29,8 @@ export const NotesToolbar: React.FC<NotesToolbarProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.toolbarList}
         keyboardShouldPersistTaps="handled"
+        directionalLockEnabled
+        overScrollMode="never"
       >
         {actions.map((action) => {
           const isActive = !!action.active;
