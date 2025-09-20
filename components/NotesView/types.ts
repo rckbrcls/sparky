@@ -1,4 +1,4 @@
-import { Folder, QuickNote } from "../../database/database";
+import { Folder, QuickNote } from "../../repositories/types";
 
 export interface QuickNoteWithFolder extends QuickNote {
   folder?: Folder;

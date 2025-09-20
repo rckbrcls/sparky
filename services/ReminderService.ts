@@ -7,7 +7,8 @@ import {
   setHours,
 } from "date-fns";
 import { RRule } from "rrule";
-import { database, Reminder } from "../database/database";
+import { database } from "../database";
+import type { Reminder as ReminderDTO } from "../repositories/types";
 import { NotificationService } from "./NotificationService";
 
 export class ReminderService {
@@ -95,9 +96,9 @@ export class ReminderService {
       );
     }
 
-    const updateData: Partial<Reminder> = {
+    const updateData: Partial<ReminderDTO> = {
       ...updates,
-      nextFireAt: nextFireAt?.toISOString(),
+      nextFireAt: nextFireAt ? nextFireAt.toISOString() : undefined,
     };
 
     // Schedule new notification
@@ -195,7 +196,7 @@ export class ReminderService {
     await database.createSnoozeHistory({
       reminderId,
       snoozeCount: snoozeCount + 1,
-      originalFireAt: reminder.nextFireAt,
+      originalFireAt: reminder.nextFireAt as string,
       newFireAt: newFireAt.toISOString(),
     });
 
@@ -433,25 +434,25 @@ export class ReminderService {
   }
 
   // Utility methods for fetching reminders
-  static async getTodayReminders(): Promise<Reminder[]> {
+  static async getTodayReminders(): Promise<ReminderDTO[]> {
     return await database.getTodayReminders();
   }
 
-  static async getUpcomingReminders(): Promise<Reminder[]> {
+  static async getUpcomingReminders(): Promise<ReminderDTO[]> {
     return await database.getUpcomingReminders();
   }
 
-  static async getOverdueReminders(): Promise<Reminder[]> {
+  static async getOverdueReminders(): Promise<ReminderDTO[]> {
     return await database.getOverdueReminders();
   }
 
   static async getRemindersByPersonOrProject(
     filter: string
-  ): Promise<Reminder[]> {
+  ): Promise<ReminderDTO[]> {
     return await database.getRemindersByPersonOrProject(filter);
   }
 
-  static async getAllReminders(): Promise<Reminder[]> {
+  static async getAllReminders(): Promise<ReminderDTO[]> {
     return await database.getAllReminders();
   }
 

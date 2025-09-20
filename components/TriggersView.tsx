@@ -13,7 +13,7 @@ import {
 import Animated from "react-native-reanimated";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
-import { database, Trigger } from "../database/database";
+import { database, Trigger } from "../database";
 import { AppIcon } from "./AppIcon";
 import type { AppIconKey } from "../constants/iconMappings";
 

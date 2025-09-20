@@ -1,4 +1,5 @@
-import { database, QuickNote, Reminder } from "../../database/database";
+import { database } from "../../database";
+import type { QuickNote, Reminder } from "../../repositories/types";
 import { slugify } from "../../utils/slug";
 
 interface CacheEntry {

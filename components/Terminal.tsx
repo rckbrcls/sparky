@@ -29,7 +29,7 @@ import { Colors } from "../constants/Colors";
 import type { AppIconKey } from "../constants/iconMappings";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
-import { database } from "../database/database";
+import { database } from "../database";
 import { useCommandEngine } from "../hooks/useCommandEngine";
 import { useFolderMap } from "../hooks/useFolderMap";
 import { useReminderPreview } from "../hooks/useReminderPreview";
@@ -439,9 +439,6 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
               const newId = await database.createFolder({
                 name: createFolderInfo.raw || createFolderInfo.id,
                 color: "#777777",
-                icon: "",
-                isDefault: false,
-                sortOrder: allFolders.length + 1,
               });
               slugToId[createFolderInfo.id] = newId;
               actual = newId;
@@ -464,9 +461,6 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
                 const newId = await database.createFolder({
                   name: rawName,
                   color: "#777777",
-                  icon: "",
-                  isDefault: false,
-                  sortOrder: allFolders.length + 1,
                 });
                 actual = newId;
                 slugToId[rawSlug] = newId;
@@ -511,10 +505,9 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             : cleanedTitle;
 
           await database.createQuickNote({
-            content,
-            folderId: chosenFolderId,
-            tags: JSON.stringify(parsed.tags),
-            isPinned: parsed.priority === 3,
+            title: content,
+            body: content,
+            folderId: chosenFolderId === "all" ? undefined : chosenFolderId,
           });
         }
       },

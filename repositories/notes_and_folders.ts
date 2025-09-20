@@ -149,15 +149,22 @@ export const createQuickNote = async (input: {
 
 export const updateQuickNote = async (
   id: string,
-  updates: Partial<{ title: string; body: string; folderId: string }>
+  updates: Partial<{
+    content: string;
+    tags: string;
+    isPinned: boolean;
+    folderId: string | null;
+  }>
 ) => {
   const rec = await quickNoteCollection.find(id);
   const ts = Date.now();
   await database.write(async () => {
     await rec.update((m: Model) => {
       const raw: any = m._raw;
-      if (updates.title !== undefined) raw.content = updates.title;
-      if (updates.body !== undefined) raw.body = updates.body;
+      if (updates.content !== undefined) raw.content = updates.content;
+      if (updates.tags !== undefined) raw.tags = updates.tags;
+      if (updates.isPinned !== undefined)
+        raw.is_pinned = updates.isPinned ? 1 : 0;
       if (updates.folderId !== undefined) raw.folder_id = updates.folderId;
       raw.updated_at = ts;
     });
@@ -168,6 +175,29 @@ export const deleteQuickNote = async (id: string) => {
   const rec = await quickNoteCollection.find(id);
   await database.write(async () => {
     await rec.markAsDeleted();
+  });
+};
+
+export const updateQuickNotesSortOrder = async (
+  items: {
+    id: string;
+    sortOrder: number;
+  }[]
+) => {
+  const ts = Date.now();
+  await database.write(async () => {
+    for (const it of items) {
+      try {
+        const rec = await quickNoteCollection.find(it.id);
+        await rec.update((m: Model) => {
+          const raw: any = m._raw;
+          raw.sort_order = it.sortOrder;
+          raw.updated_at = ts;
+        });
+      } catch {
+        // ignore missing records
+      }
+    }
   });
 };
 

@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
-import { database, Folder } from "../database/database";
+import { database } from "../database";
+import type { Folder } from "../repositories/types";
 import { AppIcon } from "./AppIcon";
 import { folderIconKeys } from "../constants/iconMappings";
 
@@ -72,9 +73,6 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
       await database.createFolder({
         name: newFolderName.trim(),
         color: selectedColor,
-        icon: selectedIcon,
-        isDefault: false,
-        sortOrder: folders.length,
       });
 
       setNewFolderName("");
@@ -117,11 +115,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
     <View style={styles.folderItem}>
       <View style={styles.folderInfo}>
         <View style={[styles.folderBadge, { backgroundColor: item.color }]}>
-          <AppIcon
-            icon={item.icon}
-            size={20}
-            color={Colors.dark.background}
-          />
+          <AppIcon icon={item.icon} size={20} color={Colors.dark.background} />
         </View>
         <View style={styles.folderDetails}>
           <Text style={styles.folderName}>{item.name}</Text>
@@ -242,7 +236,7 @@ export const FolderManager: React.FC<FolderManagerProps> = ({
                   setShowCreateForm(false);
                   setNewFolderName("");
                   setSelectedColor(FOLDER_COLORS[0]);
-      setSelectedIcon(folderIconKeys[0]);
+                  setSelectedIcon(folderIconKeys[0]);
                 }}
               >
                 <Text style={styles.cancelText}>Cancel</Text>

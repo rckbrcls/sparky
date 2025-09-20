@@ -5,6 +5,7 @@ import type { Model } from "@nozbe/watermelondb";
 import { database, reminderCollection } from "../database";
 import * as notesFoldersRepo from "./notes_and_folders";
 import type { Reminder as ReminderModel } from "../models/Reminder";
+import type { Reminder as ReminderDTO } from "./types";
 
 export type Subscription = { unsubscribe: () => void };
 
@@ -50,7 +51,7 @@ const mapObservable = <T, U>(source: Observable<T>, mapper: (v: T) => U) => ({
   },
 });
 
-const mapReminderModelToDomain = (record: ReminderModel) => ({
+const mapReminderModelToDomain = (record: ReminderModel): ReminderDTO => ({
   id: record.id,
   title: record.title,
   notes: record.notes,
@@ -59,15 +60,19 @@ const mapReminderModelToDomain = (record: ReminderModel) => ({
   location: record.location,
   type: record.type,
   rrule: record.rrule,
-  nextFireAt: record.nextFireAt ?? null,
-  status: record.status,
-  completedAt: record.completedAt ?? null,
+  nextFireAt: record.nextFireAt
+    ? new Date(record.nextFireAt).toISOString()
+    : null,
+  status: record.status as ReminderDTO["status"],
+  completedAt: record.completedAt
+    ? new Date(record.completedAt).toISOString()
+    : null,
   notificationId: record.notificationId,
   folderId: record.folderId,
-  tags: record.tags ? record.tags.split(",").filter(Boolean) : [],
+  tags: record.tags ?? null,
   priority: record.priority,
-  createdAt: record.createdAt,
-  updatedAt: record.updatedAt,
+  createdAt: new Date(record.createdAt).toISOString(),
+  updatedAt: new Date(record.updatedAt).toISOString(),
 });
 
 const mapReminderList = (records: ReminderModel[]) =>
@@ -362,6 +367,85 @@ export const getActiveTriggers = async () => {
     createdAt: t.createdAt ?? t.created_at,
     updatedAt: t.updatedAt ?? t.updated_at,
   }));
+};
+
+export const createTrigger = async (input: {
+  reminderId: string;
+  type: string;
+  config?: string;
+  isActive?: boolean;
+}) => {
+  let id = "";
+  await database.write(async () => {
+    const rec = await database.get("triggers").create((r: Model) => {
+      const raw: any = r._raw;
+      raw.id = (Math.random() + 1).toString(36).substring(2);
+      raw.reminder_id = input.reminderId;
+      raw.type = input.type;
+      raw.config = input.config ?? null;
+      raw.is_active = input.isActive ? 1 : 0;
+      raw.created_at = Date.now();
+      raw.updated_at = Date.now();
+    });
+    id = rec.id;
+  });
+
+  return id;
+};
+
+export const createImportantDate = async (input: {
+  title: string;
+  description?: string | null;
+  date: string;
+  type: string;
+  person?: string | null;
+  leadTimes: string;
+}) => {
+  let id = "";
+  await database.write(async () => {
+    const rec = await database.get("important_dates").create((r: Model) => {
+      const raw: any = r._raw;
+      raw.id = (Math.random() + 1).toString(36).substring(2);
+      raw.title = input.title;
+      raw.description = input.description ?? null;
+      raw.date = input.date;
+      raw.type = input.type;
+      raw.person = input.person ?? null;
+      raw.lead_times = input.leadTimes;
+      raw.created_at = Date.now();
+      raw.updated_at = Date.now();
+    });
+    id = rec.id;
+  });
+
+  return id;
+};
+
+export const updateReviewStage = async (
+  reminderId: string,
+  updates: Partial<any>
+) => {
+  const records = await database
+    .get("review_stages")
+    .query(Q.where("reminder_id", reminderId))
+    .fetch()
+    .catch(() => [] as any[]);
+
+  if (records.length === 0) return;
+  const rec = records[0];
+  const ts = Date.now();
+  await database.write(async () => {
+    await rec.update((m: Model) => {
+      const raw: any = m._raw;
+      if (updates.currentStage !== undefined)
+        raw.current_stage = updates.currentStage;
+      if (updates.lastReviewAt !== undefined)
+        raw.last_review_at = updates.lastReviewAt;
+      if (updates.ignoreCount !== undefined)
+        raw.ignore_count = updates.ignoreCount;
+      raw.updated_at = ts;
+    });
+  });
 };
 
 export default {

@@ -22,7 +22,7 @@ import { IconSymbol } from "../components/ui/IconSymbol";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
-import { database } from "../database/database";
+import { database } from "../database";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { NotificationService } from "../services/NotificationService";
 
@@ -134,19 +134,13 @@ export default function HomeScreen() {
 
   const notesScrollBridge = useMemo(
     () =>
-      runOnUI(
-        (
-          y: number,
-          contentHeight: number,
-          layoutHeight: number
-        ) => {
-          "worklet";
-          applyHeaderScroll(
-            { y, contentHeight, layoutHeight },
-            { freezeBottom, headerHeight, headerTranslation, scrollPrevY }
-          );
-        }
-      ),
+      runOnUI((y: number, contentHeight: number, layoutHeight: number) => {
+        "worklet";
+        applyHeaderScroll(
+          { y, contentHeight, layoutHeight },
+          { freezeBottom, headerHeight, headerTranslation, scrollPrevY }
+        );
+      }),
     [freezeBottom, headerHeight, headerTranslation, scrollPrevY]
   );
 

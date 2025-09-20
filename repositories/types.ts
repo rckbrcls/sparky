@@ -5,10 +5,10 @@ export interface Reminder {
   person?: string | null;
   project?: string | null;
   location?: string | null;
-  type: 'once' | 'recurring' | 'by_person_project' | 'by_location';
+  type: string;
   rrule?: string | null;
   nextFireAt?: string | null;
-  status: 'active' | 'completed' | 'overdue' | 'archived';
+  status: "active" | "completed" | "overdue" | "archived";
   completedAt?: string | null;
   notificationId?: string | null;
   folderId?: string | null;
@@ -32,7 +32,7 @@ export interface ImportantDate {
   title: string;
   description?: string | null;
   date: string;
-  type: 'birthday' | 'renewal' | 'due_date';
+  type: "birthday" | "renewal" | "due_date";
   person?: string | null;
   leadTimes: string;
   createdAt: string;
@@ -63,7 +63,7 @@ export interface Folder {
 export interface Trigger {
   id: string;
   reminderId: string;
-  type: 'location' | 'person' | 'time' | 'dayOfWeek' | 'project';
+  type: "location" | "person" | "time" | "dayOfWeek" | "project";
   config: string;
   isActive: boolean;
   createdAt: string;

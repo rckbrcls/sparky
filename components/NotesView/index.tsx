@@ -27,7 +27,8 @@ import {
 
 import { Colors } from "../../constants/Colors";
 import { useApp } from "../../context/AppContext";
-import { database, Folder, QuickNote } from "../../database/database";
+import { database } from "../../database";
+import type { Folder, QuickNote } from "../../repositories/types";
 import { EditNoteSheet } from "./EditNoteSheet";
 import { FolderListView } from "./FolderListView";
 import { FolderNotesView } from "./FolderNotesView";

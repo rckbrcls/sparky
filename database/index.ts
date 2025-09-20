@@ -22,7 +22,7 @@ const adapter = new SQLiteAdapter({
   },
 });
 
-export const database = new Database({
+const dbInstance = new Database({
   adapter,
   modelClasses: [
     Reminder,
@@ -35,15 +35,16 @@ export const database = new Database({
   ],
 });
 
-export const reminderCollection = database.get<Reminder>("reminders");
+export const reminderCollection = dbInstance.get<Reminder>("reminders");
 export const snoozeHistoryCollection =
-  database.get<SnoozeHistory>("snooze_history");
+  dbInstance.get<SnoozeHistory>("snooze_history");
 export const importantDateCollection =
-  database.get<ImportantDate>("important_dates");
-export const reviewStageCollection = database.get<ReviewStage>("review_stages");
-export const folderCollection = database.get<Folder>("folders");
-export const triggerCollection = database.get<Trigger>("triggers");
-export const quickNoteCollection = database.get<QuickNote>("quick_notes");
+  dbInstance.get<ImportantDate>("important_dates");
+export const reviewStageCollection =
+  dbInstance.get<ReviewStage>("review_stages");
+export const folderCollection = dbInstance.get<Folder>("folders");
+export const triggerCollection = dbInstance.get<Trigger>("triggers");
+export const quickNoteCollection = dbInstance.get<QuickNote>("quick_notes");
 
 const getDayBounds = (date: Date): { startTs: number; endTs: number } => {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -82,10 +83,13 @@ export const databaseApi = {
   getSnoozeHistoryForReminder: remindersRepo.getSnoozeHistoryForReminder,
   createSnoozeHistory: remindersRepo.createSnoozeHistory,
   createReviewStage: remindersRepo.createReviewStage,
+  updateReviewStage: remindersRepo.updateReviewStage,
   getReviewStageForReminder: remindersRepo.getReviewStageForReminder,
   getRemindersByPersonOrProject: remindersRepo.getRemindersByPersonOrProject,
   getRemindersWithFolders: remindersRepo.getRemindersWithFolders,
   getActiveTriggers: remindersRepo.getActiveTriggers,
+  createTrigger: remindersRepo.createTrigger,
+  createImportantDate: remindersRepo.createImportantDate,
   getTodayReminders: () => {
     const { startTs, endTs } = getDayBounds(new Date());
     return remindersRepo.getTodayReminders(startTs, endTs);
@@ -102,4 +106,32 @@ export const databaseApi = {
   createQuickNote: notesFoldersRepo.createQuickNote,
   updateQuickNote: notesFoldersRepo.updateQuickNote,
   deleteQuickNote: notesFoldersRepo.deleteQuickNote,
+  updateQuickNotesSortOrder: notesFoldersRepo.updateQuickNotesSortOrder,
+  exportData: async () => {
+    // Minimal export: gather reminders, folders, quick notes and triggers
+    const reminders = await remindersRepo.getAllReminders();
+    const folders = await notesFoldersRepo.getAllFolders();
+    const quickNotes = await notesFoldersRepo.getAllQuickNotes();
+    const triggers = await remindersRepo.getActiveTriggers();
+    return { reminders, folders, quickNotes, triggers };
+  },
+  importData: async (data: any) => {
+    // import is not implemented; placeholder to avoid runtime errors
+    console.warn("database.importData called - not implemented");
+    return Promise.resolve();
+  },
 };
+
+export {
+  Reminder,
+  SnoozeHistory,
+  ImportantDate,
+  ReviewStage,
+  Folder,
+  Trigger,
+  QuickNote,
+};
+
+// Export `database` as the high-level API expected across the app
+export const database = databaseApi as unknown as typeof dbInstance &
+  typeof databaseApi;

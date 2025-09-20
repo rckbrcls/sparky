@@ -16,7 +16,8 @@ import Animated from "react-native-reanimated";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useApp } from "../context/AppContext";
-import { database, Folder, Reminder } from "../database/database";
+import { database } from "../database";
+import type { Folder, Reminder } from "../repositories/types";
 import { AppIcon } from "./AppIcon";
 
 interface ReminderWithFolder extends Reminder {
@@ -130,8 +131,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     }
   };
 
-  const formatFireDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatFireDate = (dateValue: string | number | undefined | null) => {
+    if (!dateValue) return "";
+    const date =
+      typeof dateValue === "number"
+        ? new Date(dateValue)
+        : new Date(String(dateValue));
 
     if (isToday(date)) {
       return format(date, "HH:mm", { locale: ptBR });
