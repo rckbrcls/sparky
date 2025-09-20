@@ -2,7 +2,7 @@ import uuid from "react-native-uuid";
 import { Q } from "@nozbe/watermelondb";
 import type { Model } from "@nozbe/watermelondb";
 
-import { database, reminderCollection } from "../db";
+import { database, reminderCollection } from "../database";
 import * as notesFoldersRepo from "./notes_and_folders";
 import type { Reminder as ReminderModel } from "../models/Reminder";
 

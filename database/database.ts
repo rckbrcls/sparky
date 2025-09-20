@@ -1,4 +1,4 @@
-import { databaseApi } from "../db";
+import { databaseApi } from ".";
 
 export const database: any = databaseApi as any;
 

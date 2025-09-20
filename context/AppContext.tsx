@@ -5,7 +5,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { databaseApi as database } from "../db";
+import { databaseApi as database } from "../database";
 import { ReminderService } from "../services/ReminderService";
 import { NotificationService } from "../services/NotificationService";
 
