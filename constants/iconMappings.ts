@@ -36,7 +36,11 @@ export type AppIconKey =
   | "document"
   | "edit"
   | "eye"
-  | "drag";
+  | "drag"
+  | "refresh"
+  | "stack"
+  | "chevronLeft"
+  | "chevronRight";
 
 type MaterialCommunityIconName = ComponentProps<
   typeof MaterialCommunityIcons
@@ -83,6 +87,10 @@ export const ICON_DEFINITIONS: Record<AppIconKey, IconDefinition> = {
   edit: { name: "pencil" },
   eye: { name: "eye-outline" },
   drag: { name: "drag-vertical" },
+  refresh: { name: "refresh" },
+  stack: { name: "layers-outline" },
+  chevronLeft: { name: "chevron-left" },
+  chevronRight: { name: "chevron-right" },
 };
 
 export const folderIconKeys: AppIconKey[] = [
