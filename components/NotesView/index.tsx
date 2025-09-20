@@ -221,6 +221,17 @@ export const NotesView: React.FC<NotesViewProps> = ({
     [folders, isInitialized, loadFolderCounts, selectedFolderId]
   );
 
+  const loadFoldersRef = useRef(loadFolders);
+  const loadNotesRef = useRef(loadNotes);
+
+  useEffect(() => {
+    loadFoldersRef.current = loadFolders;
+  }, [loadFolders]);
+
+  useEffect(() => {
+    loadNotesRef.current = loadNotes;
+  }, [loadNotes]);
+
   useEffect(() => {
     if (showPinnedOnly) {
       setActiveDragId(null);
@@ -249,18 +260,22 @@ export const NotesView: React.FC<NotesViewProps> = ({
       return;
     }
     setRefreshing(true);
-    const refreshPromise = selectedFolderId
-      ? loadNotes({ showLoading: false, targetFolderId: selectedFolderId })
-      : loadFolders();
+    const runRefresh = selectedFolderId
+      ? () =>
+          loadNotesRef.current({
+            showLoading: false,
+            targetFolderId: selectedFolderId,
+          })
+      : () => loadFoldersRef.current();
 
-    Promise.resolve(refreshPromise)
+    Promise.resolve(runRefresh())
       .then(() => {
         onRefresh?.();
       })
       .finally(() => {
         setRefreshing(false);
       });
-  }, [initializeApp, isInitialized, loadFolders, loadNotes, onRefresh, selectedFolderId]);
+  }, [initializeApp, isInitialized, onRefresh, selectedFolderId]);
 
   const handleToggleReorderMode = useCallback(() => {
     if (showPinnedOnly || !selectedFolderId) return;
