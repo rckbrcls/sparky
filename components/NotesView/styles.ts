@@ -7,6 +7,17 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
   },
+  stageArea: {
+    flex: 1,
+    position: "relative",
+  },
+  stagePlane: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   toolbarContainer: {
     backgroundColor: Colors.dark.surface,
     borderBottomWidth: 1,
@@ -49,51 +60,86 @@ export const styles = StyleSheet.create({
     color: Colors.dark.border,
   },
   folderFilterContainer: {
+    flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 16,
+    paddingBottom: 16,
+    backgroundColor: Colors.dark.background,
   },
-  folderFilterList: {
-    paddingRight: 16,
-  },
-  folderFilterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    backgroundColor: Colors.dark.surface,
-  },
-  folderFilterChipActive: {
-    shadowColor: Colors.dark.tint,
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  folderFilterChipIcon: {
-    marginRight: 6,
-  },
-  folderFilterChipLabel: {
+  folderListHeader: {
     ...Typography.caption,
     color: Colors.dark.muted,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  folderFilterList: {
+    paddingBottom: 8,
+  },
+  folderCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.surface,
+  },
+  folderCardIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.dark.border,
+    backgroundColor: Colors.dark.background,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  folderCardInfo: {
+    flex: 1,
+  },
+  folderCardTitle: {
+    ...Typography.body,
+    color: Colors.dark.text,
     fontWeight: "600",
-    maxWidth: 120,
   },
-  folderFilterChipLabelActive: {
-    color: Colors.dark.tint,
-  },
-  folderFilterChipCount: {
+  folderCardSubtitle: {
     ...Typography.caption,
-    color: Colors.dark.border,
-    fontWeight: "600",
-    marginLeft: 8,
+    color: Colors.dark.muted,
+    marginTop: 4,
   },
-  folderFilterChipCountActive: {
+  folderCardIndicator: {
+    marginLeft: 12,
+  },
+  folderCardChevron: {
+    marginLeft: 12,
+  },
+  folderCardSeparator: {
+    height: 12,
+  },
+  notesStageContainer: {
+    flex: 1,
+    backgroundColor: Colors.dark.background,
+  },
+  notesBackWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: Colors.dark.background,
+  },
+  notesBackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  notesBackIcon: {
+    marginRight: 8,
+  },
+  notesBackText: {
+    ...Typography.body,
     color: Colors.dark.tint,
-  },
-  folderFilterChipSpinner: {
-    marginLeft: 10,
+    fontWeight: "600",
   },
   notesListWrapper: {
     flex: 1,

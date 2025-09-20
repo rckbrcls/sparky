@@ -7,9 +7,9 @@ import React, {
 } from "react";
 import {
   Alert,
-  ActivityIndicator,
+  Animated,
+  Easing,
   LayoutChangeEvent,
-  RefreshControl,
   Text,
   TouchableOpacity,
   View,
@@ -20,19 +20,15 @@ import {
   BottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import DraggableFlatList, {
-  DragEndParams,
-  RenderItemParams,
-} from "react-native-draggable-flatlist";
+import { DragEndParams, RenderItemParams } from "react-native-draggable-flatlist";
 
 import { Colors } from "../../constants/Colors";
 import { useApp } from "../../context/AppContext";
 import { database, Folder, QuickNote } from "../../database/database";
 import { EditNoteSheet } from "./EditNoteSheet";
-import { FolderFilterBar } from "./FolderFilterBar";
+import { FolderListView } from "./FolderListView";
+import { FolderNotesView } from "./FolderNotesView";
 import { NoteCard } from "./NoteCard";
-import { NotesEmptyState } from "./EmptyState";
-import { NotesToolbar } from "./NotesToolbar";
 import { styles } from "./styles";
 import {
   FolderListItem,
@@ -52,7 +48,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const { isInitialized, error: initError, initializeApp } = useApp();
   const [notes, setNotes] = useState<QuickNoteWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string>("all");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [foldersLoaded, setFoldersLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,10 +64,13 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
   const [showExtraTools, setShowExtraTools] = useState(false);
-  const [folderNoteCounts, setFolderNoteCounts] = useState<Record<string, number>>({});
+  const [folderNoteCounts, setFolderNoteCounts] = useState<
+    Record<string, number>
+  >({});
   const editSheetRef = useRef<BottomSheetModal>(null);
   const listContentHeight = useRef(0);
   const listLayoutHeight = useRef(0);
+  const stageTransition = useRef(new Animated.Value(0)).current;
 
   const editSheetSnapPoints = useMemo(() => ["60%", "92%"], []);
 
@@ -117,9 +116,9 @@ export const NotesView: React.FC<NotesViewProps> = ({
   );
 
   useEffect(() => {
-    if (!folderItems.length) return;
+    if (!folderItems.length || !selectedFolderId) return;
     if (!folderItems.some((folder) => folder.id === selectedFolderId)) {
-      setSelectedFolderId("all");
+      setSelectedFolderId(null);
     }
   }, [folderItems, selectedFolderId]);
 
@@ -147,8 +146,13 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
   useEffect(() => {
     if (!isInitialized || !foldersLoaded) return;
+    if (!selectedFolderId) {
+      setNotes([]);
+      setLoading(false);
+      return;
+    }
     loadNotes({ showLoading: true });
-  }, [isInitialized, foldersLoaded, loadNotes]);
+  }, [foldersLoaded, isInitialized, loadNotes, selectedFolderId]);
 
   const loadFolderCounts = useCallback(async () => {
     if (!isInitialized) return;
@@ -186,10 +190,15 @@ export const NotesView: React.FC<NotesViewProps> = ({
       targetFolderId,
     }: {
       showLoading?: boolean;
-      targetFolderId?: string;
+      targetFolderId?: string | null;
     } = {}) => {
       if (!isInitialized) return;
       const folderId = targetFolderId ?? selectedFolderId;
+      if (!folderId) {
+        setNotes([]);
+        setLoading(false);
+        return;
+      }
       if (showLoading) setLoading(true);
       try {
         let noteData: QuickNote[] = [];
@@ -229,7 +238,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       } catch (error) {
         console.error("Error loading notes:", error);
       } finally {
-        if (showLoading) setLoading(false);
+        setLoading(false);
       }
     },
     [folders, isInitialized, loadFolderCounts, selectedFolderId]
@@ -241,17 +250,21 @@ export const NotesView: React.FC<NotesViewProps> = ({
       return;
     }
     setRefreshing(true);
-    loadNotes({ showLoading: false })
+    const refreshPromise = selectedFolderId
+      ? loadNotes({ showLoading: false, targetFolderId: selectedFolderId })
+      : loadFolders();
+
+    Promise.resolve(refreshPromise)
       .then(() => {
         onRefresh?.();
       })
       .finally(() => {
         setRefreshing(false);
       });
-  }, [initializeApp, isInitialized, loadNotes, onRefresh]);
+  }, [initializeApp, isInitialized, loadFolders, loadNotes, onRefresh, selectedFolderId]);
 
   const handleToggleReorderMode = useCallback(() => {
-    if (showPinnedOnly) return;
+    if (showPinnedOnly || !selectedFolderId) return;
     setReorderMode((prev) => {
       const next = !prev;
       if (!next) {
@@ -259,24 +272,39 @@ export const NotesView: React.FC<NotesViewProps> = ({
       }
       return next;
     });
-  }, [showPinnedOnly]);
+  }, [selectedFolderId, showPinnedOnly]);
 
   const handleTogglePinnedOnly = useCallback(() => {
-    if (!hasPinnedNotes) return;
+    if (!hasPinnedNotes || !selectedFolderId) return;
     setShowPinnedOnly((prev) => !prev);
-  }, [hasPinnedNotes]);
+  }, [hasPinnedNotes, selectedFolderId]);
 
   const handleSelectFolder = useCallback(
     (folderId: string) => {
-      if (folderId === selectedFolderId) return;
       setShowPinnedOnly(false);
       setReorderMode(false);
       setActiveDragId(null);
       setShowExtraTools(false);
+      if (folderId === selectedFolderId) {
+        setSelectedFolderId(null);
+        setNotes([]);
+        setLoading(false);
+        return;
+      }
       setSelectedFolderId(folderId);
     },
     [selectedFolderId]
   );
+
+  const handleBackToFolders = useCallback(() => {
+    setSelectedFolderId(null);
+    setNotes([]);
+    setLoading(false);
+    setReorderMode(false);
+    setActiveDragId(null);
+    setShowExtraTools(false);
+    setShowPinnedOnly(false);
+  }, []);
 
   const handleDeleteNote = (
     noteId: string,
@@ -509,6 +537,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   );
 
   const settingsActions = useMemo<SettingsAction[]>(() => {
+    if (!selectedFolderId) return [];
     const actions: SettingsAction[] = [];
 
     actions.push({
@@ -556,9 +585,15 @@ export const NotesView: React.FC<NotesViewProps> = ({
     hasPinnedNotes,
     reorderMode,
     refreshing,
+    selectedFolderId,
     showExtraTools,
     showPinnedOnly,
   ]);
+
+  const notesCountLabel = useMemo(() => {
+    const count = displayedNotes.length;
+    return `${count} ${count === 1 ? "note" : "notes"}`;
+  }, [displayedNotes.length]);
 
   const handleContentSizeChange = useCallback((_: number, height: number) => {
     listContentHeight.current = height;
@@ -579,6 +614,54 @@ export const NotesView: React.FC<NotesViewProps> = ({
     [onScrollMetrics]
   );
 
+  useEffect(() => {
+    const toValue = selectedFolderId ? 1 : 0;
+    Animated.timing(stageTransition, {
+      toValue,
+      duration: 260,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [selectedFolderId, stageTransition]);
+
+  const folderStageStyle = useMemo(
+    () => ({
+      opacity: stageTransition.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+      transform: [
+        {
+          translateX: stageTransition.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -24],
+          }),
+        },
+        {
+          scale: stageTransition.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 0.96],
+          }),
+        },
+      ],
+    }),
+    [stageTransition]
+  );
+
+  const notesStageStyle = useMemo(
+    () => ({
+      opacity: stageTransition.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+      transform: [
+        {
+          translateX: stageTransition.interpolate({
+            inputRange: [0, 1],
+            outputRange: [24, 0],
+          }),
+        },
+      ],
+    }),
+    [stageTransition]
+  );
+
+  const showFolderList = !selectedFolderId;
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
@@ -597,69 +680,44 @@ export const NotesView: React.FC<NotesViewProps> = ({
           </View>
         )}
 
-        <NotesToolbar actions={settingsActions} />
+        <View style={styles.stageArea}>
+          <Animated.View
+            style={[styles.stagePlane, folderStageStyle]}
+            pointerEvents={showFolderList ? "auto" : "none"}
+          >
+            <FolderListView
+              folders={folderItems}
+              selectedFolderId={selectedFolderId}
+              onSelect={handleSelectFolder}
+              folderNoteCounts={folderNoteCounts}
+              loading={loading}
+              refreshing={refreshing}
+            />
+          </Animated.View>
 
-        <FolderFilterBar
-          folders={folderItems}
-          selectedFolderId={selectedFolderId}
-          onSelect={handleSelectFolder}
-          folderNoteCounts={folderNoteCounts}
-          loading={loading}
-          refreshing={refreshing}
-        />
-
-        <View style={styles.notesListWrapper}>
-          <View style={styles.notesHeader}>
-            <Text style={styles.notesHeaderTitle}>
-              {currentFolder?.name ?? "All notes"}
-            </Text>
-            <View style={styles.notesHeaderMeta}>
-              {loading || refreshing ? (
-                <ActivityIndicator
-                  size="small"
-                  color={Colors.dark.tint}
-                  style={styles.notesHeaderSpinner}
-                />
-              ) : null}
-              <Text style={styles.notesHeaderCount}>
-                {displayedNotes.length} {displayedNotes.length === 1 ? "note" : "notes"}
-              </Text>
-            </View>
-          </View>
-          <DraggableFlatList
-            style={styles.notesList}
-            data={displayedNotes}
-            renderItem={renderNoteCard}
-            keyExtractor={(item) => item.id}
-            onDragEnd={handleDragEnd}
-            onDragBegin={handleDragBegin}
-            activationDistance={8}
-            ListEmptyComponent={
-              isInitialized && !loading ? (
-                <NotesEmptyState showPinnedOnly={showPinnedOnly} />
-              ) : null
-            }
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={Colors.dark.tint}
-              />
-            }
-            contentContainerStyle={[
-              styles.listContainer,
-              styles.listContentInset,
-              { flexGrow: displayedNotes.length ? 0 : 1 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            onLayout={handleListLayout}
-            onContentSizeChange={handleContentSizeChange}
-            onScrollOffsetChange={handleScrollOffsetChange}
-            keyboardShouldPersistTaps="handled"
-            bounces={false}
-            alwaysBounceVertical={false}
-            overScrollMode="never"
-          />
+          <Animated.View
+            style={[styles.stagePlane, notesStageStyle]}
+            pointerEvents={showFolderList ? "none" : "auto"}
+          >
+            <FolderNotesView
+              folderName={currentFolder?.name ?? "All notes"}
+              notesCountLabel={notesCountLabel}
+              notes={displayedNotes}
+              loading={loading}
+              refreshing={refreshing}
+              showPinnedOnly={showPinnedOnly}
+              settingsActions={settingsActions}
+              onBack={handleBackToFolders}
+              onRefresh={handleRefresh}
+              renderNoteCard={renderNoteCard}
+              onDragEnd={handleDragEnd}
+              onDragBegin={handleDragBegin}
+              onListLayout={handleListLayout}
+              onContentSizeChange={handleContentSizeChange}
+              onScrollOffsetChange={handleScrollOffsetChange}
+              isInitialized={isInitialized}
+            />
+          </Animated.View>
         </View>
       </View>
       <EditNoteSheet
