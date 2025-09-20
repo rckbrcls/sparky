@@ -63,7 +63,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const [reorderMode, setReorderMode] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
-  const [showExtraTools, setShowExtraTools] = useState(false);
   const [folderNoteCounts, setFolderNoteCounts] = useState<
     Record<string, number>
   >({});
@@ -284,7 +283,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
       setShowPinnedOnly(false);
       setReorderMode(false);
       setActiveDragId(null);
-      setShowExtraTools(false);
       if (folderId === selectedFolderId) {
         setSelectedFolderId(null);
         setNotes([]);
@@ -302,7 +300,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
     setLoading(false);
     setReorderMode(false);
     setActiveDragId(null);
-    setShowExtraTools(false);
     setShowPinnedOnly(false);
   }, []);
 
@@ -550,43 +547,22 @@ export const NotesView: React.FC<NotesViewProps> = ({
     });
 
     actions.push({
-      key: "refresh",
-      label: refreshing ? "Refreshing..." : "Refresh",
-      icon: "refresh",
-      onPress: handleRefresh,
-      disabled: refreshing,
-    });
-
-    if (showExtraTools || reorderMode) {
-      actions.push({
-        key: "reorder",
-        label: reorderMode ? "Reordering" : "Reorder notes",
-        icon: "drag",
-        onPress: handleToggleReorderMode,
-        active: reorderMode,
-        disabled: showPinnedOnly || displayedNotes.length < 2,
-      });
-    }
-
-    actions.push({
-      key: "more",
-      label: showExtraTools ? "Hide tools" : "More tools",
-      icon: showExtraTools ? "close" : "tools",
-      onPress: () => setShowExtraTools((prev) => !prev),
-      active: showExtraTools,
+      key: "reorder",
+      label: reorderMode ? "Reordering" : "Reorder notes",
+      icon: "drag",
+      onPress: handleToggleReorderMode,
+      active: reorderMode,
+      disabled: showPinnedOnly || displayedNotes.length < 2,
     });
 
     return actions;
   }, [
     displayedNotes.length,
-    handleRefresh,
     handleTogglePinnedOnly,
     handleToggleReorderMode,
     hasPinnedNotes,
     reorderMode,
-    refreshing,
     selectedFolderId,
-    showExtraTools,
     showPinnedOnly,
   ]);
 
