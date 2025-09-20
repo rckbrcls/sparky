@@ -91,7 +91,7 @@ export class ReminderService {
     if (updates.fireAt !== undefined) {
       nextFireAt = this.calculateNextFireAt(
         updates.fireAt,
-        updates.rrule || reminder.rrule
+        updates.rrule ?? reminder.rrule ?? undefined
       );
     }
 
@@ -478,7 +478,7 @@ export class ReminderService {
       "Updated At",
     ];
 
-    const rows = reminders.map((reminder) => [
+    const rows = reminders.map((reminder: any) => [
       reminder.id,
       reminder.title,
       reminder.notes || "",
@@ -487,11 +487,11 @@ export class ReminderService {
       reminder.location || "",
       reminder.type,
       reminder.nextFireAt
-        ? format(parseISO(reminder.nextFireAt), "dd/MM/yyyy HH:mm")
+        ? format(new Date(reminder.nextFireAt), "dd/MM/yyyy HH:mm")
         : "",
       reminder.status,
-      format(parseISO(reminder.createdAt), "dd/MM/yyyy HH:mm"),
-      format(parseISO(reminder.updatedAt), "dd/MM/yyyy HH:mm"),
+      format(new Date(reminder.createdAt), "dd/MM/yyyy HH:mm"),
+      format(new Date(reminder.updatedAt), "dd/MM/yyyy HH:mm"),
     ]);
 
     return [headers, ...rows].map((row) => row.join(",")).join("\n");

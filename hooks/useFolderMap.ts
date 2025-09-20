@@ -20,7 +20,7 @@ export const useFolderMap = (): FolderMapResult => {
         const folders = await database.getAllFolders();
         if (cancelled) return;
         const next: Record<string, string> = {};
-        folders.forEach((folder) => {
+        folders.forEach((folder: any) => {
           next[folder.id] = folder.name;
         });
         setFolderMap(next);

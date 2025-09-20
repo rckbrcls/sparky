@@ -429,7 +429,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         try {
           const allFolders = await database.getAllFolders();
           const slugToId: Record<string, string> = {};
-          allFolders.forEach((folder) => {
+          allFolders.forEach((folder: any) => {
             slugToId[slugify(folder.name)] = folder.id;
           });
 
@@ -482,7 +482,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
               const normalizedSlug = slugify(raw);
               const existing = await database.getAllFolders();
               const target = existing.find(
-                (folder) =>
+                (folder: any) =>
                   folder.id === raw ||
                   folder.id === normalizedSlug ||
                   folder.name.toLowerCase() === raw.toLowerCase() ||

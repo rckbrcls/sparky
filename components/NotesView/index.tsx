@@ -20,7 +20,10 @@ import {
   BottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { DragEndParams, RenderItemParams } from "react-native-draggable-flatlist";
+import {
+  DragEndParams,
+  RenderItemParams,
+} from "react-native-draggable-flatlist";
 
 import { Colors } from "../../constants/Colors";
 import { useApp } from "../../context/AppContext";
@@ -136,7 +139,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
     try {
       const allNotes = await database.getAllQuickNotes();
       const counts: Record<string, number> = { all: allNotes.length };
-      allNotes.forEach((note) => {
+      allNotes.forEach((note: any) => {
         if (note.folderId) {
           counts[note.folderId] = (counts[note.folderId] ?? 0) + 1;
         }
@@ -617,7 +620,10 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
   const folderStageStyle = useMemo(
     () => ({
-      opacity: stageTransition.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+      opacity: stageTransition.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 0],
+      }),
       transform: [
         {
           translateX: stageTransition.interpolate({
@@ -638,7 +644,10 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
   const notesStageStyle = useMemo(
     () => ({
-      opacity: stageTransition.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+      opacity: stageTransition.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+      }),
       transform: [
         {
           translateX: stageTransition.interpolate({

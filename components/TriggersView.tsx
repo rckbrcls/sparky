@@ -52,7 +52,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
       const triggers = await database.getActiveTriggers();
 
       // Group triggers by type
-      const groupedTriggers = triggers.reduce((acc, trigger) => {
+      const groupedTriggers = triggers.reduce((acc: any, trigger: any) => {
         const type = trigger.type;
         if (!acc[type]) {
           acc[type] = [];

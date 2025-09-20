@@ -27,7 +27,7 @@ async function fetchFolders(): Promise<string[]> {
       await database.initialize();
     }
     const list = await database.getAllFolders();
-    return list.map((f) => f.name);
+    return list.map((f: any) => f.name);
   } catch {
     return [];
   }
