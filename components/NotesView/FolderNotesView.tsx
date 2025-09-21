@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import {
-  ActivityIndicator,
   Animated,
   LayoutChangeEvent,
   RefreshControl,
@@ -21,7 +20,6 @@ import { styles } from "./styles";
 import { QuickNoteWithFolder, SettingsAction } from "./types";
 
 interface FolderNotesViewProps {
-  folderName: string;
   notesCountLabel: string;
   notes: QuickNoteWithFolder[];
   loading: boolean;
@@ -42,7 +40,6 @@ interface FolderNotesViewProps {
 }
 
 export const FolderNotesView: React.FC<FolderNotesViewProps> = ({
-  folderName,
   notesCountLabel,
   notes,
   loading,

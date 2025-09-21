@@ -701,7 +701,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
             pointerEvents={showFolderList ? "none" : "auto"}
           >
             <FolderNotesView
-              folderName={currentFolder?.name ?? "All notes"}
               notesCountLabel={notesCountLabel}
               notes={displayedNotes}
               loading={loading}

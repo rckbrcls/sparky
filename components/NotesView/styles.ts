@@ -66,14 +66,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: Colors.dark.background,
   },
-  folderListHeader: {
-    ...Typography.caption,
-    color: Colors.dark.muted,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
+
   folderFilterList: {
     paddingBottom: 8,
   },

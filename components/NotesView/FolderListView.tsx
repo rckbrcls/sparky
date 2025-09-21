@@ -36,7 +36,9 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
       const noteCount =
         folderNoteCounts[item.id] ??
         (item.id === "all" ? folderNoteCounts.all ?? 0 : 0);
-      const noteCountLabel = `${noteCount} ${noteCount === 1 ? "note" : "notes"}`;
+      const noteCountLabel = `${noteCount} ${
+        noteCount === 1 ? "note" : "notes"
+      }`;
 
       return (
         <TouchableOpacity
@@ -91,13 +93,14 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
 
   return (
     <View style={styles.folderFilterContainer}>
-      <Text style={styles.folderListHeader}>Folders</Text>
       <FlatList
         data={folders}
         keyExtractor={(item) => item.id}
         renderItem={renderFolderCard}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.folderCardSeparator} />}
+        ItemSeparatorComponent={() => (
+          <View style={styles.folderCardSeparator} />
+        )}
         contentContainerStyle={styles.folderFilterList}
       />
     </View>
