@@ -119,7 +119,6 @@ export const styles = StyleSheet.create({
   notesBackWrapper: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 12,
     backgroundColor: Colors.dark.background,
     flexDirection: "row",
     alignItems: "center",
@@ -184,21 +183,7 @@ export const styles = StyleSheet.create({
     borderColor: Colors.dark.warning,
     backgroundColor: `${Colors.dark.warning}15`,
   },
-  reorderActiveCard: {
-    borderColor: Colors.dark.tint,
-    shadowColor: Colors.dark.tint,
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  draggingCard: {
-    borderColor: Colors.dark.tint,
-    backgroundColor: `${Colors.dark.tint}22`,
-    shadowColor: Colors.dark.tint,
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 4,
-  },
+
   sheetBackground: {
     backgroundColor: Colors.dark.surface,
   },
@@ -450,24 +435,7 @@ export const styles = StyleSheet.create({
     color: Colors.dark.background,
     fontWeight: "600",
   },
-  dragHandle: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    backgroundColor: Colors.dark.surface,
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dragHandleActive: {
-    borderColor: Colors.dark.tint,
-    backgroundColor: `${Colors.dark.tint}12`,
-  },
-  dragHandleDisabled: {
-    opacity: 0.4,
-  },
+
   editButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
