@@ -10,8 +10,12 @@ import { Folder } from "../models/Folder";
 import { Trigger } from "../models/Trigger";
 import { QuickNote } from "../models/QuickNote";
 
-import * as remindersRepo from "../repositories/reminders";
-import * as notesFoldersRepo from "../repositories/notes_and_folders";
+// Lazy-load repositories to avoid require cycles.
+const loadRemindersRepo = (): typeof import("../repositories/reminders") =>
+  require("../repositories/reminders");
+const loadNotesFoldersRepo =
+  (): typeof import("../repositories/notes_and_folders") =>
+    require("../repositories/notes_and_folders");
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -64,55 +68,137 @@ export const databaseApi = {
     return Promise.resolve();
   },
 
-  // reminders
-  getAllReminders: remindersRepo.getAllReminders,
-  getReminderById: remindersRepo.getReminderById,
-  createReminder: remindersRepo.createReminder,
-  updateReminder: remindersRepo.updateReminder,
-  deleteReminder: remindersRepo.deleteReminder,
-  observeAllReminders: remindersRepo.observeAllReminders,
+  // reminders (lazy-loaded)
+  getAllReminders: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.getAllReminders.apply(r, args);
+  },
+  getReminderById: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.getReminderById.apply(r, args);
+  },
+  createReminder: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.createReminder.apply(r, args);
+  },
+  updateReminder: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.updateReminder.apply(r, args);
+  },
+  deleteReminder: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.deleteReminder.apply(r, args);
+  },
+  observeAllReminders: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.observeAllReminders.apply(r, args);
+  },
   observeTodayReminders: () => {
     const { startTs, endTs } = getDayBounds(new Date());
-    return remindersRepo.observeTodayReminders(startTs, endTs);
+    return loadRemindersRepo().observeTodayReminders(startTs, endTs);
   },
-  observeOverdueReminders: () => remindersRepo.observeOverdueReminders(tsNow()),
+  observeOverdueReminders: () =>
+    loadRemindersRepo().observeOverdueReminders(tsNow()),
   observeUpcomingReminders: () =>
-    remindersRepo.observeUpcomingReminders(tsNow()),
-  getOverdueReminders: () => remindersRepo.getOverdueReminders(tsNow()),
-  getUpcomingReminders: () => remindersRepo.getUpcomingReminders(tsNow()),
-  getSnoozeHistoryForReminder: remindersRepo.getSnoozeHistoryForReminder,
-  createSnoozeHistory: remindersRepo.createSnoozeHistory,
-  createReviewStage: remindersRepo.createReviewStage,
-  updateReviewStage: remindersRepo.updateReviewStage,
-  getReviewStageForReminder: remindersRepo.getReviewStageForReminder,
-  getRemindersByPersonOrProject: remindersRepo.getRemindersByPersonOrProject,
-  getRemindersWithFolders: remindersRepo.getRemindersWithFolders,
-  getActiveTriggers: remindersRepo.getActiveTriggers,
-  createTrigger: remindersRepo.createTrigger,
-  createImportantDate: remindersRepo.createImportantDate,
+    loadRemindersRepo().observeUpcomingReminders(tsNow()),
+  getOverdueReminders: () => loadRemindersRepo().getOverdueReminders(tsNow()),
+  getUpcomingReminders: () => loadRemindersRepo().getUpcomingReminders(tsNow()),
+  getSnoozeHistoryForReminder: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.getSnoozeHistoryForReminder.apply(r, args);
+  },
+  createSnoozeHistory: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.createSnoozeHistory.apply(r, args);
+  },
+  createReviewStage: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.createReviewStage.apply(r, args);
+  },
+  updateReviewStage: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.updateReviewStage.apply(r, args);
+  },
+  getReviewStageForReminder: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.getReviewStageForReminder.apply(r, args);
+  },
+  getRemindersByPersonOrProject: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.getRemindersByPersonOrProject.apply(r, args);
+  },
+  getRemindersWithFolders: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.getRemindersWithFolders.apply(r, args);
+  },
+  getActiveTriggers: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.getActiveTriggers.apply(r, args);
+  },
+  createTrigger: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.createTrigger.apply(r, args);
+  },
+  createImportantDate: (...args: any[]) => {
+    const r = loadRemindersRepo() as any;
+    return r.createImportantDate.apply(r, args);
+  },
   getTodayReminders: () => {
     const { startTs, endTs } = getDayBounds(new Date());
-    return remindersRepo.getTodayReminders(startTs, endTs);
+    return loadRemindersRepo().getTodayReminders(startTs, endTs);
   },
 
-  // folders + quick notes
-  getAllFolders: notesFoldersRepo.getAllFolders,
-  createFolder: notesFoldersRepo.createFolder,
-  updateFolder: notesFoldersRepo.updateFolder,
-  deleteFolder: notesFoldersRepo.deleteFolder,
-  getAllQuickNotes: notesFoldersRepo.getAllQuickNotes,
-  getQuickNotesByFolder: notesFoldersRepo.getQuickNotesByFolder,
-  observeQuickNotesByFolder: notesFoldersRepo.observeQuickNotesByFolder,
-  createQuickNote: notesFoldersRepo.createQuickNote,
-  updateQuickNote: notesFoldersRepo.updateQuickNote,
-  deleteQuickNote: notesFoldersRepo.deleteQuickNote,
-  updateQuickNotesSortOrder: notesFoldersRepo.updateQuickNotesSortOrder,
+  // folders + quick notes (lazy-loaded)
+  getAllFolders: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.getAllFolders.apply(r, args);
+  },
+  createFolder: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.createFolder.apply(r, args);
+  },
+  updateFolder: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.updateFolder.apply(r, args);
+  },
+  deleteFolder: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.deleteFolder.apply(r, args);
+  },
+  getAllQuickNotes: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.getAllQuickNotes.apply(r, args);
+  },
+  getQuickNotesByFolder: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.getQuickNotesByFolder.apply(r, args);
+  },
+  observeQuickNotesByFolder: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.observeQuickNotesByFolder.apply(r, args);
+  },
+  createQuickNote: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.createQuickNote.apply(r, args);
+  },
+  updateQuickNote: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.updateQuickNote.apply(r, args);
+  },
+  deleteQuickNote: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.deleteQuickNote.apply(r, args);
+  },
+  updateQuickNotesSortOrder: (...args: any[]) => {
+    const r = loadNotesFoldersRepo() as any;
+    return r.updateQuickNotesSortOrder.apply(r, args);
+  },
   exportData: async () => {
     // Minimal export: gather reminders, folders, quick notes and triggers
-    const reminders = await remindersRepo.getAllReminders();
-    const folders = await notesFoldersRepo.getAllFolders();
-    const quickNotes = await notesFoldersRepo.getAllQuickNotes();
-    const triggers = await remindersRepo.getActiveTriggers();
+    const reminders = await loadRemindersRepo().getAllReminders();
+    const folders = await loadNotesFoldersRepo().getAllFolders();
+    const quickNotes = await loadNotesFoldersRepo().getAllQuickNotes();
+    const triggers = await loadRemindersRepo().getActiveTriggers();
     return { reminders, folders, quickNotes, triggers };
   },
   importData: async (data: any) => {
