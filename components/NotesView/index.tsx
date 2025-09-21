@@ -13,6 +13,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  RefreshControl,
 } from "react-native";
 import {
   BottomSheetBackdrop,
@@ -20,10 +21,6 @@ import {
   BottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import {
-  DragEndParams,
-  RenderItemParams,
-} from "react-native-draggable-flatlist";
 
 import { Colors } from "../../constants/Colors";
 import { useApp } from "../../context/AppContext";
@@ -31,8 +28,13 @@ import { database } from "../../database";
 import type { Folder, QuickNote } from "../../repositories/types";
 import { EditNoteSheet } from "./EditNoteSheet";
 import { FolderListView } from "./FolderListView";
-import { FolderNotesView } from "./FolderNotesView";
-import { NoteCard } from "./NoteCard";
+import { NotesToolbar } from "./NotesToolbar";
+import { NotesEmptyState } from "./EmptyState";
+import DraggableFlatList, {
+  ScaleDecorator,
+  ShadowDecorator,
+} from "react-native-draggable-flatlist";
+import { AppIcon } from "../AppIcon";
 import { styles } from "./styles";
 import {
   FolderListItem,
@@ -349,7 +351,11 @@ export const NotesView: React.FC<NotesViewProps> = ({
     data,
     from,
     to,
-  }: DragEndParams<QuickNoteWithFolder>) => {
+  }: {
+    data: QuickNoteWithFolder[];
+    from: number;
+    to: number;
+  }) => {
     setActiveDragId(null);
 
     if (!reorderMode || showPinnedOnly) {
@@ -365,8 +371,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
       return;
     }
 
-    const pinned = data.filter((item) => !!item.isPinned);
-    const others = data.filter((item) => !item.isPinned);
+    const pinned = data.filter((item: QuickNoteWithFolder) => !!item.isPinned);
+    const others = data.filter((item: QuickNoteWithFolder) => !item.isPinned);
 
     const assignOrder = (items: QuickNoteWithFolder[]) => {
       const total = items.length;
@@ -530,28 +536,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
     }
   };
 
-  const renderNoteCard = useCallback(
-    ({ item, drag, isActive }: RenderItemParams<QuickNoteWithFolder>) => (
-      <NoteCard
-        item={item}
-        drag={drag}
-        isActive={isActive}
-        onOpen={openNoteEditor}
-        onDragHandleActivate={handleDragHandleActivate}
-        onDragHandleRelease={handleDragHandleRelease}
-        isReorderMode={reorderMode}
-        activeDragId={activeDragId}
-      />
-    ),
-    [
-      activeDragId,
-      handleDragHandleActivate,
-      handleDragHandleRelease,
-      openNoteEditor,
-      reorderMode,
-    ]
-  );
-
   const settingsActions = useMemo<SettingsAction[]>(() => {
     if (!selectedFolderId) return [];
     const actions: SettingsAction[] = [];
@@ -700,23 +684,176 @@ export const NotesView: React.FC<NotesViewProps> = ({
             style={[styles.stagePlane, notesStageStyle]}
             pointerEvents={showFolderList ? "none" : "auto"}
           >
-            <FolderNotesView
-              notesCountLabel={notesCountLabel}
-              notes={displayedNotes}
-              loading={loading}
-              refreshing={refreshing}
-              showPinnedOnly={showPinnedOnly}
-              settingsActions={settingsActions}
-              onBack={handleBackToFolders}
-              onRefresh={handleRefresh}
-              renderNoteCard={renderNoteCard}
-              onDragEnd={handleDragEnd}
-              onDragBegin={handleDragBegin}
-              onListLayout={handleListLayout}
-              onContentSizeChange={handleContentSizeChange}
-              onScrollOffsetChange={handleScrollOffsetChange}
-              isInitialized={isInitialized}
-            />
+            {/* Inlined FolderNotesView component */}
+            <View style={styles.notesStageContainer}>
+              {settingsActions.length ? (
+                <NotesToolbar actions={settingsActions} />
+              ) : null}
+
+              <View style={styles.notesBackWrapper}>
+                <TouchableOpacity
+                  style={styles.notesBackButton}
+                  onPress={handleBackToFolders}
+                  activeOpacity={0.85}
+                >
+                  <AppIcon
+                    icon="chevronLeft"
+                    size={18}
+                    color={Colors.dark.tint}
+                    style={styles.notesBackIcon}
+                  />
+                  <Text style={styles.notesBackText}>back</Text>
+                </TouchableOpacity>
+                <Text style={styles.notesHeaderCount}>{notesCountLabel}</Text>
+              </View>
+
+              <View style={styles.notesListWrapper}>
+                <DraggableFlatList
+                  style={styles.notesList}
+                  data={displayedNotes}
+                  renderItem={({ item, drag, isActive }) => (
+                    <ScaleDecorator activeScale={0.97}>
+                      <ShadowDecorator color={Colors.dark.tint} opacity={0.3}>
+                        <TouchableOpacity
+                          activeOpacity={0.95}
+                          onPress={() => !isActive && openNoteEditor(item)}
+                          disabled={isActive}
+                          style={[
+                            styles.card,
+                            item.isPinned && styles.pinnedCard,
+                            isActive && styles.draggingCard,
+                            {
+                              transform: [{ scale: isActive ? 1.05 : 1 }],
+                              opacity: 1,
+                            },
+                          ]}
+                        >
+                          <View style={styles.cardContentRow}>
+                            <TouchableOpacity
+                              style={[
+                                styles.dragHandle,
+                                styles.dragHandleDisabled,
+                              ]}
+                              onPressIn={() => {
+                                if (!reorderMode || isActive) return;
+                                handleDragHandleActivate(item.id);
+                                drag();
+                              }}
+                              onPressOut={() => {
+                                if (!reorderMode) return;
+                                handleDragHandleRelease(item.id);
+                              }}
+                              disabled={isActive || !reorderMode}
+                              hitSlop={{
+                                top: 10,
+                                bottom: 10,
+                                left: 10,
+                                right: 10,
+                              }}
+                            >
+                              <AppIcon
+                                icon="drag"
+                                size={18}
+                                color={Colors.dark.muted}
+                              />
+                            </TouchableOpacity>
+                            <View style={styles.cardMain}>
+                              <View style={styles.cardHeader}>
+                                <View style={styles.cardInfo}>
+                                  {item.isPinned && (
+                                    <AppIcon
+                                      icon="pin"
+                                      size={16}
+                                      color={Colors.dark.tint}
+                                      style={styles.pinIcon}
+                                    />
+                                  )}
+                                  {item.folder && (
+                                    <View
+                                      style={[
+                                        styles.folderBadge,
+                                        { backgroundColor: item.folder.color },
+                                      ]}
+                                    >
+                                      <AppIcon
+                                        icon={item.folder.icon || "folder"}
+                                        size={12}
+                                        color={Colors.dark.background}
+                                        style={styles.folderBadgeIcon}
+                                      />
+                                      <Text style={styles.folderBadgeText}>
+                                        {item.folder.name}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <TouchableOpacity
+                                  style={styles.editButton}
+                                  onPress={() => openNoteEditor(item)}
+                                  disabled={isActive}
+                                >
+                                  <AppIcon
+                                    icon="eye"
+                                    size={18}
+                                    color={Colors.dark.background}
+                                  />
+                                </TouchableOpacity>
+                              </View>
+
+                              <Text style={styles.noteContent}>
+                                {item.content}
+                              </Text>
+
+                              <View style={styles.cardFooter}>
+                                <Text style={styles.noteDate}>
+                                  {new Date(
+                                    item.updatedAt
+                                  ).toLocaleDateString()}
+                                </Text>
+                                {formatTags(item.tags) ? (
+                                  <Text style={styles.noteTags}>
+                                    {formatTags(item.tags)}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      </ShadowDecorator>
+                    </ScaleDecorator>
+                  )}
+                  keyExtractor={(item) => item.id}
+                  onDragEnd={handleDragEnd}
+                  onDragBegin={handleDragBegin}
+                  activationDistance={8}
+                  ListEmptyComponent={
+                    isInitialized && !loading ? (
+                      <NotesEmptyState showPinnedOnly={showPinnedOnly} />
+                    ) : null
+                  }
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={handleRefresh}
+                      tintColor={Colors.dark.tint}
+                    />
+                  }
+                  contentContainerStyle={[
+                    styles.listContainer,
+                    styles.listContentInset,
+                    { flexGrow: displayedNotes.length ? 0 : 1 },
+                  ]}
+                  showsVerticalScrollIndicator={false}
+                  onLayout={handleListLayout}
+                  onContentSizeChange={handleContentSizeChange}
+                  onScrollOffsetChange={handleScrollOffsetChange}
+                  keyboardShouldPersistTaps="handled"
+                  bounces={false}
+                  alwaysBounceVertical={false}
+                  overScrollMode="never"
+                />
+              </View>
+            </View>
           </Animated.View>
         </View>
       </View>
