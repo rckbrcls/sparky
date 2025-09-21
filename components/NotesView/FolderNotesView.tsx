@@ -110,25 +110,12 @@ export const FolderNotesView: React.FC<FolderNotesViewProps> = ({
             color={Colors.dark.tint}
             style={styles.notesBackIcon}
           />
-          <Text style={styles.notesBackText}>Folders</Text>
+          <Text style={styles.notesBackText}>back</Text>
         </TouchableOpacity>
+        <Text style={styles.notesHeaderCount}>{notesCountLabel}</Text>
       </View>
 
       <View style={styles.notesListWrapper}>
-        <View style={styles.notesHeader}>
-          <Text style={styles.notesHeaderTitle}>{folderName}</Text>
-          <View style={styles.notesHeaderMeta}>
-            {loading || refreshing ? (
-              <ActivityIndicator
-                size="small"
-                color={Colors.dark.tint}
-                style={styles.notesHeaderSpinner}
-              />
-            ) : null}
-            <Text style={styles.notesHeaderCount}>{notesCountLabel}</Text>
-          </View>
-        </View>
-
         <DraggableFlatList
           style={styles.notesList}
           data={notes}

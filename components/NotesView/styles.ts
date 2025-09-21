@@ -128,6 +128,9 @@ export const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     backgroundColor: Colors.dark.background,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   notesBackButton: {
     flexDirection: "row",
@@ -137,7 +140,7 @@ export const styles = StyleSheet.create({
     marginRight: 8,
   },
   notesBackText: {
-    ...Typography.body,
+    ...Typography.bodySmall,
     color: Colors.dark.tint,
     fontWeight: "600",
   },
