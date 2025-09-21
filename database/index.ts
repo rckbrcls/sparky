@@ -133,5 +133,15 @@ export {
 };
 
 // Export `database` as the high-level API expected across the app
-export const database = databaseApi as unknown as typeof dbInstance &
-  typeof databaseApi;
+// Build a `database` object that exposes both WatermelonDB instance methods
+// and our higher-level API. This keeps existing call sites working which
+// expect `database.get(...)`, `database.write(...)`, etc.
+// Attach high-level API methods onto the WatermelonDB instance so that
+// prototype methods (like `get`, `write`, etc.) remain available.
+const dbWithApi: any = dbInstance as any;
+Object.keys(databaseApi).forEach((k) => {
+  // @ts-ignore: assign api methods onto the instance
+  dbWithApi[k] = (databaseApi as any)[k];
+});
+
+export const database: typeof dbInstance & typeof databaseApi = dbWithApi;

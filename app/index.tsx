@@ -1,16 +1,16 @@
-import { useFocusEffect } from "@react-navigation/native";
+// ...existing imports...
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
-import type { SharedValue } from "react-native-reanimated";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, {
   Easing,
-  runOnUI,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
+import { scheduleOnUI } from "react-native-worklets";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MainNavigation } from "../components/MainNavigation";
 import { NotesView } from "../components/NotesView";
@@ -22,9 +22,9 @@ import { IconSymbol } from "../components/ui/IconSymbol";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
-import { database } from "../database";
+// database initialization handled in AppProvider
 import { useColorScheme } from "../hooks/useColorScheme";
-import { NotificationService } from "../services/NotificationService";
+// NotificationService is initialized at app-level in AppProvider
 
 const DEFAULT_INPUT_HEIGHT = 168;
 const BOTTOM_THRESHOLD_PX = 2;
@@ -132,17 +132,22 @@ export default function HomeScreen() {
     },
   });
 
-  const notesScrollBridge = useMemo(
-    () =>
-      runOnUI((y: number, contentHeight: number, layoutHeight: number) => {
-        "worklet";
-        applyHeaderScroll(
-          { y, contentHeight, layoutHeight },
-          { freezeBottom, headerHeight, headerTranslation, scrollPrevY }
-        );
-      }),
-    [freezeBottom, headerHeight, headerTranslation, scrollPrevY]
-  );
+  const notesScrollBridge = useMemo(() => {
+    const workletFn = (
+      y: number,
+      contentHeight: number,
+      layoutHeight: number
+    ) => {
+      "worklet";
+      applyHeaderScroll(
+        { y, contentHeight, layoutHeight },
+        { freezeBottom, headerHeight, headerTranslation, scrollPrevY }
+      );
+    };
+    return (y: number, contentHeight: number, layoutHeight: number) => {
+      scheduleOnUI(workletFn, y, contentHeight, layoutHeight);
+    };
+  }, [freezeBottom, headerHeight, headerTranslation, scrollPrevY]);
 
   const handleNotesScroll = useCallback(
     ({
@@ -195,21 +200,6 @@ export default function HomeScreen() {
       0
     ),
   }));
-
-  useFocusEffect(
-    useCallback(() => {
-      initializeApp();
-    }, [])
-  );
-  const initializeApp = async () => {
-    try {
-      await database.initialize();
-      await NotificationService.initialize();
-    } catch (error) {
-      Alert.alert("Error", "Error initializing the application");
-      console.error("Initialization error:", error);
-    }
-  };
 
   const handleReminderCreated = () => {
     // Trigger refresh of all views
