@@ -278,7 +278,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dark.background,
   },
   header: {
-    backgroundColor: Colors.dark.surface,
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
