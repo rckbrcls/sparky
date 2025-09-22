@@ -111,9 +111,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
                 icon={mode.icon}
                 size={20}
                 color={
-                  activeMode === mode.id
-                    ? themeColors.tint
-                    : themeColors.muted
+                  activeMode === mode.id ? themeColors.tint : themeColors.muted
                 }
                 style={[
                   styles.navIcon,

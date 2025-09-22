@@ -10,7 +10,11 @@ interface UseReminderPreviewResult {
   hidePreview: () => void;
 }
 
-const animateFade = (anim: Animated.Value, toValue: number, duration: number) => {
+const animateFade = (
+  anim: Animated.Value,
+  toValue: number,
+  duration: number
+) => {
   Animated.timing(anim, {
     toValue,
     duration,

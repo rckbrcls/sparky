@@ -116,17 +116,24 @@ export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
               </View>
               <Text style={styles.editTitle}>Polish your thought</Text>
               {timestampLabel ? (
-                <Text style={styles.editSubtitle}>{`Updated ${timestampLabel}`}</Text>
+                <Text
+                  style={styles.editSubtitle}
+                >{`Updated ${timestampLabel}`}</Text>
               ) : null}
               <TouchableOpacity
-                style={[styles.pinToggle, editedPinned && styles.pinToggleActive]}
+                style={[
+                  styles.pinToggle,
+                  editedPinned && styles.pinToggleActive,
+                ]}
                 onPress={onTogglePinned}
                 disabled={saving}
               >
                 <AppIcon
                   icon="pin"
                   size={18}
-                  color={editedPinned ? Colors.dark.background : Colors.dark.muted}
+                  color={
+                    editedPinned ? Colors.dark.background : Colors.dark.muted
+                  }
                   style={styles.pinToggleIcon}
                 />
                 <Text
@@ -263,7 +270,8 @@ export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.editSaveButton,
-                    (saving || !editedContent.trim()) && styles.editSaveButtonDisabled,
+                    (saving || !editedContent.trim()) &&
+                      styles.editSaveButtonDisabled,
                   ]}
                   onPress={onSave}
                   disabled={saving || !editedContent.trim()}
