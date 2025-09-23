@@ -14,7 +14,10 @@ import { scheduleOnUI } from "react-native-worklets";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MainNavigation } from "../components/MainNavigation";
 import { NotesView } from "../components/NotesView";
-import { Terminal, TerminalHandle } from "../components/Terminal";
+import {
+  Terminal,
+  TerminalHandle,
+} from "../features/terminal/components/Terminal";
 import { ThemedText } from "../components/ThemedText";
 import { TimelineView } from "../components/TimelineView";
 import { TriggersView } from "../components/TriggersView";
@@ -303,9 +306,7 @@ export default function HomeScreen() {
           <Terminal
             ref={terminalRef}
             onReminderCreated={handleReminderCreated}
-            placeholder={"text, /commands and #tags"}
           />
-          {/* Darkening scrim overlay (overlay header content) */}
           <Animated.View
             pointerEvents="none"
             style={[

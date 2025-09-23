@@ -100,12 +100,10 @@ export class SmartTextParser {
     const dateInfo = this.extractDate(base);
     const person = this.extractPerson(base);
     const location = this.extractLocation(base);
-    // project extraction removed
     const priority = this.extractPriority(base);
-    const tags: string[] = []; // deprecated hashtag tags in markdown mode
+    const tags: string[] = [];
 
     if (commands.tags) {
-      // still allow explicit /tags block but no leading # stripping now
       const extra = commands.tags
         .split(/[\s,;]+/)
         .map((t) => t.toLowerCase())
@@ -118,7 +116,7 @@ export class SmartTextParser {
       const folderName = commands.folder.trim();
       if (folderName) folderId = this.normalizeFolderId(folderName);
     }
-    // /createfolder does not assign automatically; it's for creation action only (handled elsewhere)
+
     const result: ParsedReminder = {
       title: this.cleanTitle(base, timeInfo, dateInfo, person, location),
       type: "note",

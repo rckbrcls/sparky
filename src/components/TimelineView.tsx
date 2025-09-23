@@ -159,7 +159,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           <View
             style={[
               styles.urgencyIndicator,
-              { backgroundColor: getUrgencyColor(urgency) },
+              {
+                backgroundColor: getUrgencyColor(urgency),
+              },
             ]}
           />
           <View style={styles.cardContent}>
@@ -170,7 +172,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             <View
               style={[
                 styles.folderBadge,
-                { backgroundColor: item.folder.color },
+                {
+                  backgroundColor: item.folder.color,
+                },
               ]}
             >
               <AppIcon

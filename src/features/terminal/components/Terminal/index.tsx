@@ -9,35 +9,30 @@ import React, {
 import {
   Alert,
   Animated,
-  Easing,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
+  TextInputKeyPressEvent,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Colors } from "../../../../constants/Colors";
+import type { AppIconKey } from "../../../../constants/iconMappings";
+import { useGlobalTouchDismiss } from "../../../../context/GlobalTouchDismissContext";
+import { database } from "../../../../database";
+import { useCommandEngine } from "../../../../hooks/useCommandEngine";
+import { useFolderMap } from "../../../../hooks/useFolderMap";
+import { useReminderPreview } from "../../../../hooks/useReminderPreview";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { Colors } from "../constants/Colors";
-import type { AppIconKey } from "../constants/iconMappings";
-import { Typography } from "../constants/Typography";
-import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
-import { database } from "../database";
-import { useCommandEngine } from "../hooks/useCommandEngine";
-import { useFolderMap } from "../hooks/useFolderMap";
-import { useReminderPreview } from "../hooks/useReminderPreview";
-import { useScrollSync } from "../hooks/useScrollSync";
-import { buildSegments, Segment } from "../services/commands/CommandHighlights";
-import { CommandDefinition } from "../services/commands/CommandRegistry";
-import { ReminderService } from "../services/ReminderService";
-import { ParsedReminder, SmartTextParser } from "../services/SmartTextParser";
+  buildSegments,
+  Segment,
+} from "../../../../services/commands/CommandHighlights";
+import { CommandDefinition } from "../../../../services/commands/CommandRegistry";
+import { ReminderService } from "../../../../services/ReminderService";
+import {
+  ParsedReminder,
+  SmartTextParser,
+} from "../../../../services/SmartTextParser";
 import {
   cleanSystemCommands,
   matchCreateFolderCommand,
@@ -46,15 +41,9 @@ import {
   SLUG_ARG_COMMANDS,
   slugify,
   stripAllSystemCommands,
-} from "../utils/terminal";
-import { AppIcon } from "./AppIcon";
-
-const COLLAPSED_MAX_HEIGHT = 220;
-const PREVIEW_MAX_HEIGHT = 180;
-const PLACEHOLDER_EXTRA_PADDING = 28;
-const FALLBACK_SINGLE_LINE_HEIGHT = 22 + PLACEHOLDER_EXTRA_PADDING;
-const EXPANSION_DURATION = 220;
-const INPUT_VERTICAL_PADDING = 28;
+} from "../../../../utils/terminal";
+import { AppIcon } from "../../../../components/AppIcon";
+import { styles } from "./styles";
 
 const getTypeIcon = (type: string, triggerType?: string): AppIconKey => {
   if (type === "date") return "clock";
@@ -128,8 +117,6 @@ const BADGE_APPEARANCE: Record<
 
 interface TerminalProps {
   onReminderCreated: () => void;
-  placeholder?: string;
-  style?: any;
 }
 
 export interface TerminalHandle {
@@ -138,29 +125,12 @@ export interface TerminalHandle {
 }
 
 export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
-  ({ onReminderCreated, placeholder = "Add reminder...", style }, ref) => {
+  ({ onReminderCreated }, ref) => {
     const [text, setText] = useState("");
     const [segments, setSegments] = useState<Segment[]>([]);
     const [selection, setSelection] = useState({ start: 0, end: 0 });
-    const [inputContentHeight, setMeasuredInputContentHeight] = useState(
-      FALLBACK_SINGLE_LINE_HEIGHT
-    );
-    const [isOverflowing, setIsOverflowing] = useState(false);
-    const [placeholderHeight, setPlaceholderHeight] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
-
     const ignoreNextChangeRef = useRef(false);
-
-    const {
-      inputScrollRef,
-      previewScrollRef,
-      syncScroll,
-      setInputContentHeight: setSyncedInputContentHeight,
-      setPreviewContentHeight,
-      setInputViewportHeight,
-      setPreviewViewportHeight,
-    } = useScrollSync();
 
     const { preview, fadeAnim, updatePreview, hidePreview } =
       useReminderPreview();
@@ -178,31 +148,6 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       setSelection,
       setSegments,
     });
-
-    const insets = useSafeAreaInsets();
-    const animatedHeight = useRef(
-      new Animated.Value(FALLBACK_SINGLE_LINE_HEIGHT)
-    ).current;
-
-    const baselineHeight = placeholderHeight
-      ? placeholderHeight + PLACEHOLDER_EXTRA_PADDING
-      : FALLBACK_SINGLE_LINE_HEIGHT;
-
-    const collapsedHeight = Math.min(
-      Math.max(baselineHeight, inputContentHeight),
-      COLLAPSED_MAX_HEIGHT
-    );
-    // Smoothly interpolate the container height across compact/fullscreen transitions.
-    useEffect(() => {
-      Animated.timing(animatedHeight, {
-        toValue: collapsedHeight,
-        duration: EXPANSION_DURATION,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
-    }, [animatedHeight, collapsedHeight]);
-
-    const isFullscreenLayout = isFullscreen;
 
     const inputRef = useRef<TextInput | null>(null);
     useImperativeHandle(ref, () => ({
@@ -229,16 +174,6 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
 
       return () => unregister(id);
     }, [commandState, register, unregister]);
-
-    const openFullscreen = useCallback(() => {
-      setIsFullscreen(true);
-    }, []);
-
-    const closeFullscreen = useCallback(() => {
-      if (!isFullscreen) return;
-      Keyboard.dismiss();
-      setIsFullscreen(false);
-    }, [isFullscreen]);
 
     const handleTextChange = useCallback(
       (value: string) => {
@@ -408,13 +343,6 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         default:
           return styles.hlNormal;
       }
-    };
-
-    const handleContentSizeChange = (height: number) => {
-      const totalHeight = height + PLACEHOLDER_EXTRA_PADDING;
-      setMeasuredInputContentHeight(totalHeight);
-      setSyncedInputContentHeight(totalHeight);
-      setIsOverflowing(totalHeight > COLLAPSED_MAX_HEIGHT);
     };
 
     const handleSubmitNote = useCallback(
@@ -641,15 +569,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
     const renderSegments = () => {
       if (text.length === 0) {
         return (
-          <Text
-            style={styles.placeholderText}
-            onLayout={(event) => {
-              const height = event.nativeEvent.layout.height;
-              setPlaceholderHeight(height);
-            }}
-          >
-            {placeholder}
-          </Text>
+          <Text style={styles.placeholderText}>text, /command and #tag</Text>
         );
       }
 
@@ -744,38 +664,14 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
     const renderBadges = () => {
       if (!preview || previewBadges.length === 0) return null;
 
-      const fullscreenActive = isFullscreenLayout;
-      const scrollStyles = [
-        styles.badgesScroll,
-        fullscreenActive && styles.badgesScrollFullscreen,
-      ];
-      const contentStyles = [
-        styles.badgesContent,
-        fullscreenActive && styles.badgesContentFullscreen,
-      ];
-
       return (
-        <Animated.View
-          style={[
-            styles.badgesContainer,
-            fullscreenActive && styles.badgesContainerFullscreen,
-            { opacity: fadeAnim },
-          ]}
-        >
+        <Animated.View style={[styles.badgesContainer, { opacity: fadeAnim }]}>
           <ScrollView
-            ref={previewScrollRef}
-            style={scrollStyles}
-            contentContainerStyle={contentStyles}
+            style={styles.badgesScroll}
+            contentContainerStyle={styles.badgesContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={previewBadges.length > 6}
-            onScroll={(event) =>
-              syncScroll("preview", event.nativeEvent.contentOffset.y)
-            }
             scrollEventThrottle={16}
-            onLayout={(event) =>
-              setPreviewViewportHeight(event.nativeEvent.layout.height)
-            }
-            onContentSizeChange={(_, height) => setPreviewContentHeight(height)}
           >
             {previewBadges.map((badge) => {
               const appearance = BADGE_APPEARANCE[badge.tone];
@@ -814,33 +710,12 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       );
     };
 
-    const shouldShowExpandButton = !isFullscreen && isOverflowing;
-    const scrollAreaStyles = [
-      styles.scrollArea,
-      isFullscreenLayout
-        ? styles.scrollAreaFullscreen
-        : { maxHeight: Math.max(collapsedHeight - INPUT_VERTICAL_PADDING, 0) },
-    ];
-    const scrollContentStyle = [
-      styles.scrollContent,
-      isFullscreenLayout && styles.scrollContentFullscreen,
-    ];
-    const inputContainerStyles = [
-      styles.inputContainer,
-      isFullscreenLayout
-        ? styles.inputContainerFullscreen
-        : styles.inputContainerCompact,
-      isFullscreenLayout
-        ? { minHeight: baselineHeight, flex: 1, height: undefined }
-        : { minHeight: baselineHeight, height: animatedHeight },
-    ];
-
     const argSuggestions = renderArgSuggestions();
     const commandMatches = renderCommandMatches();
     const badgesNode = renderBadges();
     const hasMetaContent = Boolean(argSuggestions || commandMatches);
     const metaContainerStyles = [
-      isFullscreenLayout ? styles.fullscreenMeta : styles.metaInline,
+      styles.metaInline,
       !hasMetaContent && styles.metaHidden,
     ];
     const metaSection = (
@@ -850,23 +725,68 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       </View>
     );
 
+    function onInputKeyPress(event: TextInputKeyPressEvent) {
+      const key = event.nativeEvent.key;
+      if (key === "/") {
+        const selStart = selection.start;
+        const selEnd = selection.end;
+        const newText = text.slice(0, selStart) + "/" + text.slice(selEnd);
+        ignoreNextChangeRef.current = true;
+        setText(newText);
+        setSegments(buildSegments(newText));
+        const newCursor = selStart + 1;
+        setSelection({ start: newCursor, end: newCursor });
+        recompute(newText, newCursor);
+        return;
+      }
+
+      if (key === "Backspace") {
+        if (
+          selection.start === selection.end &&
+          selection.start > 0 &&
+          text.charAt(selection.start - 1) === "/"
+        ) {
+          const cutPos = selection.start - 1;
+          const newText = text.slice(0, cutPos) + text.slice(selection.start);
+          ignoreNextChangeRef.current = true;
+          setText(newText);
+          setSegments(buildSegments(newText));
+          const newCursor = cutPos;
+          setSelection({ start: newCursor, end: newCursor });
+          recompute(newText, newCursor);
+          return;
+        }
+      }
+
+      if (
+        (key === " " || key === "Spacebar") &&
+        commandState.inArgMode &&
+        commandState.activeCommand?.name &&
+        SLUG_ARG_COMMANDS.has(commandState.activeCommand.name) &&
+        commandState.argReplaceFrom != null
+      ) {
+        const selStart = selection.start;
+        const selEnd = selection.end;
+        const before = text.slice(0, selStart);
+        const after = text.slice(selEnd);
+        const newText = `${before}-${after}`;
+        ignoreNextChangeRef.current = true;
+        setText(newText);
+        setSegments(buildSegments(newText));
+        const newCursor = selStart + 1;
+        setSelection({ start: newCursor, end: newCursor });
+        recompute(newText, newCursor);
+      }
+    }
+
     const inputBlock = (
-      <Animated.View style={inputContainerStyles}>
+      <Animated.View style={styles.inputContainer}>
         <View style={styles.composedInput}>
           <ScrollView
-            ref={inputScrollRef}
-            style={scrollAreaStyles}
-            contentContainerStyle={scrollContentStyle}
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={isFullscreenLayout || isOverflowing}
-            scrollEnabled={isFullscreenLayout || isOverflowing}
-            onScroll={(event) =>
-              syncScroll("input", event.nativeEvent.contentOffset.y)
-            }
             scrollEventThrottle={16}
-            onLayout={(event) =>
-              setInputViewportHeight(event.nativeEvent.layout.height)
-            }
           >
             <View style={styles.layeredInput}>
               <View style={styles.highlightLayer} pointerEvents="none">
@@ -874,81 +794,19 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
               </View>
               <TextInput
                 ref={inputRef}
-                style={[
-                  styles.inputOverlay,
-                  placeholderHeight > 0 && !text.length
-                    ? { minHeight: placeholderHeight }
-                    : null,
-                ]}
+                style={[styles.inputOverlay]}
                 value={text}
                 onChangeText={handleTextChange}
                 multiline
                 returnKeyType="done"
                 onSubmitEditing={handleSubmit}
                 editable={!isProcessing}
-                onContentSizeChange={(event) =>
-                  handleContentSizeChange(event.nativeEvent.contentSize.height)
-                }
                 onSelectionChange={(event) => {
                   const { start, end } = event.nativeEvent.selection;
                   setSelection({ start, end });
                   recompute(text, start);
                 }}
-                onKeyPress={(event) => {
-                  const key = event.nativeEvent.key;
-                  if (key === "/") {
-                    const selStart = selection.start;
-                    const selEnd = selection.end;
-                    const newText =
-                      text.slice(0, selStart) + "/" + text.slice(selEnd);
-                    ignoreNextChangeRef.current = true;
-                    setText(newText);
-                    setSegments(buildSegments(newText));
-                    const newCursor = selStart + 1;
-                    setSelection({ start: newCursor, end: newCursor });
-                    recompute(newText, newCursor);
-                    return;
-                  }
-
-                  if (key === "Backspace") {
-                    if (
-                      selection.start === selection.end &&
-                      selection.start > 0 &&
-                      text.charAt(selection.start - 1) === "/"
-                    ) {
-                      const cutPos = selection.start - 1;
-                      const newText =
-                        text.slice(0, cutPos) + text.slice(selection.start);
-                      ignoreNextChangeRef.current = true;
-                      setText(newText);
-                      setSegments(buildSegments(newText));
-                      const newCursor = cutPos;
-                      setSelection({ start: newCursor, end: newCursor });
-                      recompute(newText, newCursor);
-                      return;
-                    }
-                  }
-
-                  if (
-                    (key === " " || key === "Spacebar") &&
-                    commandState.inArgMode &&
-                    commandState.activeCommand?.name &&
-                    SLUG_ARG_COMMANDS.has(commandState.activeCommand.name) &&
-                    commandState.argReplaceFrom != null
-                  ) {
-                    const selStart = selection.start;
-                    const selEnd = selection.end;
-                    const before = text.slice(0, selStart);
-                    const after = text.slice(selEnd);
-                    const newText = `${before}-${after}`;
-                    ignoreNextChangeRef.current = true;
-                    setText(newText);
-                    setSegments(buildSegments(newText));
-                    const newCursor = selStart + 1;
-                    setSelection({ start: newCursor, end: newCursor });
-                    recompute(newText, newCursor);
-                  }
-                }}
+                onKeyPress={onInputKeyPress}
                 autoCapitalize="none"
                 autoCorrect={false}
                 scrollEnabled={false}
@@ -972,319 +830,21 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             />
           </TouchableOpacity>
         )}
-        {shouldShowExpandButton && (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Expand terminal"
-            style={styles.expandButton}
-            onPress={openFullscreen}
-          >
-            <Text style={styles.expandIcon}>⤢</Text>
-          </TouchableOpacity>
-        )}
       </Animated.View>
     );
 
-    const bottomPadding = Math.max(insets.bottom, 16);
     let bodyContent: React.ReactNode;
 
-    if (isFullscreenLayout) {
-      bodyContent = (
-        <View style={styles.fullscreenContent}>
-          {badgesNode || <View style={styles.badgesPlaceholder} />}
-          <View
-            style={[styles.fullscreenTop, { paddingBottom: bottomPadding }]}
-          >
-            {inputBlock}
-            {metaSection}
-          </View>
-        </View>
-      );
-    } else {
-      bodyContent = (
-        <View style={styles.compactStack}>
-          {inputBlock}
-          {metaSection}
-          {badgesNode}
-        </View>
-      );
-    }
+    bodyContent = (
+      <View style={styles.compactStack}>
+        {inputBlock}
+        {metaSection}
+        {badgesNode}
+      </View>
+    );
 
-    if (isFullscreen) {
-      return (
-        <Modal
-          animationType="slide"
-          presentationStyle="fullScreen"
-          visible
-          onRequestClose={closeFullscreen}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={insets.top}
-            style={styles.fullscreenAvoider}
-          >
-            <SafeAreaView style={styles.fullscreenContainer}>
-              <View style={styles.fullscreenHeader}>
-                <View style={styles.drawerHandle} />
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Retract terminal"
-                  style={styles.collapseButton}
-                  onPress={closeFullscreen}
-                >
-                  <Text style={styles.expandIcon}>⤡</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={[styles.fullscreenInner, style]}>{bodyContent}</View>
-            </SafeAreaView>
-          </KeyboardAvoidingView>
-        </Modal>
-      );
-    }
-
-    return <View style={[styles.container, style]}>{bodyContent}</View>;
+    return <View style={[styles.container]}>{bodyContent}</View>;
   }
 );
-Terminal.displayName = "Terminal";
 
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: 8,
-    width: "100%",
-  },
-  fullscreenAvoider: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  fullscreenContainer: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  fullscreenHeader: {
-    paddingTop: 12,
-    paddingBottom: 8,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  fullscreenInner: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
-    alignItems: "stretch",
-  },
-  fullscreenContent: {
-    flex: 1,
-    width: "100%",
-  },
-  fullscreenTop: {
-    flex: 1,
-    paddingTop: 0,
-    minHeight: 0,
-  },
-  fullscreenMeta: {
-    marginTop: 12,
-    flexShrink: 0,
-  },
-  drawerHandle: {
-    alignSelf: "center",
-    width: 48,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.dark.border,
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  compactStack: {
-    width: "100%",
-  },
-  metaInline: {
-    marginTop: 8,
-  },
-  metaHidden: {
-    marginTop: 0,
-    height: 0,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.dark.background,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    width: "100%",
-    position: "relative",
-  },
-  inputContainerCompact: {
-    alignSelf: "stretch",
-  },
-  inputContainerFullscreen: {
-    borderRadius: 0,
-    borderWidth: 0,
-    borderColor: "transparent",
-    backgroundColor: Colors.dark.background,
-    marginHorizontal: 0,
-    alignSelf: "stretch",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  scrollArea: { width: "100%" },
-  scrollAreaFullscreen: { flex: 1 },
-  scrollContent: { flexGrow: 1 },
-  scrollContentFullscreen: { paddingBottom: 8 },
-  layeredInput: { position: "relative", width: "100%" },
-  composedInput: { flex: 1, justifyContent: "flex-start" },
-  highlightLayer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  highlightText: {
-    ...Typography.body,
-    color: Colors.dark.text,
-    lineHeight: 22,
-  },
-  inputOverlay: {
-    ...Typography.body,
-    color: "transparent",
-    lineHeight: 22,
-    textAlignVertical: "top",
-    flexGrow: 1,
-    width: "100%",
-    includeFontPadding: false,
-    padding: 0,
-  },
-  placeholderText: {
-    ...Typography.body,
-    color: Colors.dark.muted,
-    lineHeight: 22,
-  },
-  hlNormal: { color: Colors.dark.text },
-  hlCommand: { color: Colors.dark.tint, fontWeight: "600" },
-  hlCommandArg: { color: Colors.dark.icon },
-  hlTag: { color: Colors.dark.success, fontWeight: "500" },
-  expandButton: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.dark.surface,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  expandIcon: {
-    ...Typography.body,
-    color: Colors.dark.tint,
-    fontWeight: "600",
-  },
-  collapseButton: {
-    position: "absolute",
-    right: 16,
-    top: 4,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.dark.surface,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  submitButton: {
-    marginLeft: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.dark.tint,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  submitButtonDisabled: { backgroundColor: Colors.dark.muted },
-  badgesContainer: {
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderColor: Colors.dark.border,
-    paddingTop: 12,
-  },
-  badgesContainerFullscreen: {
-    marginTop: 0,
-    marginBottom: 12,
-    borderTopWidth: 0,
-    paddingTop: 0,
-    paddingBottom: 12,
-  },
-  badgesScroll: {
-    width: "100%",
-    maxHeight: PREVIEW_MAX_HEIGHT,
-  },
-  badgesScrollFullscreen: {
-    flexGrow: 0,
-    maxHeight: undefined,
-  },
-  badgesContent: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingBottom: 4,
-  },
-  badgesContentFullscreen: {
-    paddingBottom: 16,
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: Colors.dark.surface,
-  },
-  badgeIcon: {
-    marginRight: 6,
-  },
-  badgeLabel: {
-    ...Typography.caption,
-    fontWeight: "600",
-  },
-  badgesPlaceholder: {
-    height: 12,
-  },
-  commandPalette: {
-    marginTop: 6,
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.dark.border,
-    overflow: "hidden",
-  },
-  commandScroll: { maxHeight: 220, width: "100%" },
-  commandScrollContent: { flexGrow: 1 },
-  commandItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-  },
-  commandName: {
-    ...Typography.body,
-    color: Colors.dark.tint,
-    fontWeight: "600",
-  },
-  commandDesc: {
-    ...Typography.caption,
-    color: Colors.dark.muted,
-    marginTop: 2,
-  },
-});
+Terminal.displayName = "Terminal";
