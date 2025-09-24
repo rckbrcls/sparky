@@ -8,37 +8,24 @@ import {
   View,
 } from "react-native";
 import {
-  BottomSheetBackdropProps,
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 
-import { Colors } from "../../constants/Colors";
-import { AppIcon } from "../AppIcon";
 import { styles } from "./styles";
-import { FolderListItem, QuickNoteWithFolder } from "./types";
-
-interface EditNoteSheetProps {
-  sheetRef: React.RefObject<BottomSheetModal | null>;
-  snapPoints: string[];
-  renderBackdrop: (props: BottomSheetBackdropProps) => React.ReactElement;
-  onDismiss: () => void;
-  note: QuickNoteWithFolder | null;
-  saving: boolean;
-  editedContent: string;
-  onChangeContent: (value: string) => void;
-  editedTags: string;
-  onChangeTags: (value: string) => void;
-  editedFolderId: string | null;
-  onChangeFolder: (value: string | null) => void;
-  editedPinned: boolean;
-  onTogglePinned: () => void;
-  availableFolders: FolderListItem[];
-  onClose: (force?: boolean) => void;
-  onSave: () => void;
-  onDelete: (noteId: string, options?: { afterDelete?: () => void }) => void;
-}
+import type {
+  EditNoteSheetProps,
+  FolderListItem,
+  QuickNoteWithFolder,
+} from "./types";
+export type {
+  EditNoteSheetProps,
+  FolderListItem,
+  QuickNoteWithFolder,
+} from "./types";
+import { AppIcon } from "@/src/components/AppIcon";
+import { Colors } from "@/src/constants/Colors";
 
 export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
   sheetRef,

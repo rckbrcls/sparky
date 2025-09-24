@@ -1,22 +1,11 @@
 import React from "react";
-import {
-  ScrollView,
-  StyleProp,
-  Text,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-} from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
-import { Colors } from "../../constants/Colors";
-import { AppIcon } from "../AppIcon";
 import { styles } from "./styles";
-import { SettingsAction } from "./types";
-
-interface NotesToolbarProps {
-  actions: SettingsAction[];
-  style?: StyleProp<ViewStyle>;
-}
+import type { NotesToolbarProps } from "./types";
+import { AppIcon } from "@/src/components/AppIcon";
+import { Colors } from "@/src/constants/Colors";
+export type { SettingsAction } from "./types";
 
 export const NotesToolbar: React.FC<NotesToolbarProps> = ({
   actions,

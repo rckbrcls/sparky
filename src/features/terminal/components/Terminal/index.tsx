@@ -14,9 +14,9 @@ import {
 } from "react-native";
 import { useGlobalTouchDismiss } from "../../../../context/GlobalTouchDismissContext";
 import { database } from "../../../../database";
-import { useCommandEngine } from "../../../../hooks/useCommandEngine";
+import { useCommandEngine } from "../../hooks/useCommandEngine";
 import { useFolderMap } from "../../../../hooks/useFolderMap";
-import { useReminderPreview } from "../../../../hooks/useReminderPreview";
+
 import { ReminderService } from "../../../../services/ReminderService";
 import {
   ParsedReminder,
@@ -31,9 +31,10 @@ import {
   stripAllSystemCommands,
 } from "../../../../utils/terminal";
 import { Badges } from "../Badges";
-import { InputBlock } from "./InputBlock";
-import { MetaSection } from "./MetaSection";
+import { InputBlock } from "../InputBlock";
+import { MetaSection } from "../MetaSection";
 import { styles } from "./styles";
+import { useReminderPreview } from "../../hooks/useReminderPreview";
 
 interface TerminalProps {
   onReminderCreated: () => void;

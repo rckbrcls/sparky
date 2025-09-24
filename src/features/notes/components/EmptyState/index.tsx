@@ -1,13 +1,10 @@
 import React from "react";
 import { Text, View } from "react-native";
-
-import { Colors } from "../../constants/Colors";
-import { AppIcon } from "../AppIcon";
 import { styles } from "./styles";
-
-interface NotesEmptyStateProps {
-  showPinnedOnly: boolean;
-}
+import type { NotesEmptyStateProps } from "./types";
+import { AppIcon } from "@/src/components/AppIcon";
+import { Colors } from "@/src/constants/Colors";
+export type { NotesEmptyStateProps } from "./types";
 
 export const NotesEmptyState: React.FC<NotesEmptyStateProps> = ({
   showPinnedOnly,

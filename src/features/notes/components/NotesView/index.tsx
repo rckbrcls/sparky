@@ -22,27 +22,22 @@ import {
   BottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-
-import { Colors } from "../../constants/Colors";
-import { useApp } from "../../context/AppContext";
-import { database } from "../../database";
-import type { Folder, QuickNote } from "../../repositories/types";
-import { EditNoteSheet } from "./EditNoteSheet";
-import { FolderListView } from "./FolderListView";
-import { NotesToolbar } from "./NotesToolbar";
-import { NotesEmptyState } from "./EmptyState";
-// replaced DraggableFlatList with FlatList
-import { AppIcon } from "../AppIcon";
+import type { Folder, QuickNote } from "../../../../repositories/types";
 import { styles } from "./styles";
-import {
-  FolderListItem,
-  NotesViewProps,
-  QuickNoteWithFolder,
-  SettingsAction,
-} from "./types";
+import type { NotesViewProps, QuickNoteWithFolder } from "./types";
+import type { FolderListItem } from "../FolderListView/types";
+import type { SettingsAction } from "../NotesToolbar/types";
 import { formatTags, parseTagsInput, sortNotes } from "./utils";
+import { AppIcon } from "@/src/components/AppIcon";
+import { Colors } from "@/src/constants/Colors";
+import { useApp } from "@/src/context/AppContext";
+import { database } from "@/src/database";
+import { EditNoteSheet } from "../EditNoteSheet";
+import { NotesEmptyState } from "../EmptyState";
+import { FolderListView } from "../FolderListView";
+import { NotesToolbar } from "../NotesToolbar";
 
-export type { NotesViewProps };
+export type { NotesViewProps, QuickNoteWithFolder };
 
 export const NotesView: React.FC<NotesViewProps> = ({
   onRefresh,

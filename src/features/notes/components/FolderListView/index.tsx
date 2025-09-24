@@ -7,19 +7,11 @@ import {
   View,
 } from "react-native";
 
-import { Colors } from "../../constants/Colors";
-import { AppIcon } from "../AppIcon";
 import { styles } from "./styles";
-import { FolderListItem } from "./types";
-
-interface FolderListViewProps {
-  folders: FolderListItem[];
-  selectedFolderId: string | null;
-  onSelect: (folderId: string) => void;
-  folderNoteCounts: Record<string, number>;
-  loading: boolean;
-  refreshing: boolean;
-}
+import type { FolderListItem, FolderListViewProps } from "./types";
+export type { FolderListItem, FolderListViewProps } from "./types";
+import { AppIcon } from "@/src/components/AppIcon";
+import { Colors } from "@/src/constants/Colors";
 
 export const FolderListView: React.FC<FolderListViewProps> = ({
   folders,

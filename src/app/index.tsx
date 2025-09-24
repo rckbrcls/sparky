@@ -13,7 +13,7 @@ import Animated, {
 import { scheduleOnUI } from "react-native-worklets";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MainNavigation } from "../components/MainNavigation";
-import { NotesView } from "../components/NotesView";
+
 import {
   Terminal,
   TerminalHandle,
@@ -27,6 +27,7 @@ import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 // database initialization handled in AppProvider
 import { useColorScheme } from "../hooks/useColorScheme";
+import { NotesView } from "../features/notes/components/NotesView";
 // NotificationService is initialized at app-level in AppProvider
 
 const DEFAULT_INPUT_HEIGHT = 168;
