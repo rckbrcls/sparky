@@ -1,4 +1,4 @@
-import { defaultNormalize } from "../../utils/slug";
+import { defaultNormalize } from "@/src/utils/slug";
 import type { SourceKey } from "./CommandArgumentSources";
 
 export type ArgumentSourceKind = SourceKey;

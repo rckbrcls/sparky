@@ -3,7 +3,7 @@ import { Animated, ScrollView, Text, View } from "react-native";
 import { Colors } from "../../../../constants/Colors";
 import type { AppIconKey } from "../../../../constants/iconMappings";
 import { AppIcon } from "../../../../components/AppIcon";
-import type { ParsedReminder } from "../../../../services/SmartTextParser";
+import type { ParsedReminder } from "@/src/features/terminal/services/SmartTextParser";
 import {
   matchCreateFolderCommand,
   matchFolderCommand,

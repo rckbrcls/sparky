@@ -6,7 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import { databaseApi as database } from "../database";
-import { ReminderService } from "../services/ReminderService";
+import { ReminderService } from "../features/timeline/services/ReminderService";
 import { NotificationService } from "../services/NotificationService";
 
 interface AppContextType {

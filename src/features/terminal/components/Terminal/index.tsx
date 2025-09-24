@@ -17,11 +17,11 @@ import { database } from "../../../../database";
 import { useCommandEngine } from "../../hooks/useCommandEngine";
 import { useFolderMap } from "@/src/features/notes/hooks/useFolderMap";
 
-import { ReminderService } from "../../../../services/ReminderService";
+import { ReminderService } from "@/src/features/timeline/services/ReminderService";
 import {
   ParsedReminder,
   SmartTextParser,
-} from "../../../../services/SmartTextParser";
+} from "@/src/features/terminal/services/SmartTextParser";
 import {
   cleanSystemCommands,
   matchDeleteFolderCommand,

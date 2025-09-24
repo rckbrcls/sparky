@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { AppIcon } from "@/src/components/AppIcon";
 import { Colors } from "@/src/constants/Colors";
-import { buildSegments, Segment } from "@/src/services/commands/CommandHighlights";
+import { buildSegments, Segment } from "@/src/features/terminal/services/commands/CommandHighlights";
 import { styles } from "./styles";
 
 interface InputBlockProps {

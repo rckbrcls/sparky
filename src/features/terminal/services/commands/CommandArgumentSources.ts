@@ -1,7 +1,7 @@
-import { database } from "../../database";
+import { database } from "@/src/database";
 import type { QuickNote } from "@/src/features/notes/types";
 import type { Reminder } from "@/src/features/timeline/types";
-import { slugify } from "../../utils/slug";
+import { slugify } from "@/src/utils/slug";
 
 interface CacheEntry {
   data: string[];

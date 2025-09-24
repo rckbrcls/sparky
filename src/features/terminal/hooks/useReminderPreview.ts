@@ -3,7 +3,7 @@ import { Animated } from "react-native";
 import {
   ParsedReminder,
   SmartTextParser,
-} from "../../../services/SmartTextParser";
+} from "../services/SmartTextParser";
 import { shouldHidePreviewForText } from "../../../utils/terminal";
 
 interface UseReminderPreviewResult {

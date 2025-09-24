@@ -21,7 +21,8 @@ export const stripCreateDeleteCommands = (value: string) =>
 export const stripAllSystemCommands = (value: string) =>
   stripCreateDeleteCommands(value).replace(FOLDER_RE, "");
 
-export const cleanSystemCommands = (value: string) => stripAllSystemCommands(value).trim();
+export const cleanSystemCommands = (value: string) =>
+  stripAllSystemCommands(value).trim();
 
 export const shouldHidePreviewForText = (value: string) => {
   const trimmed = value.trim();
@@ -30,13 +31,15 @@ export const shouldHidePreviewForText = (value: string) => {
   const stripped = stripCreateDeleteCommands(trimmed).trim();
   const hasOnlySystemCommands =
     stripped.length === 0 &&
-    (CREATE_FOLDER_MATCH_RE.test(trimmed) || DELETE_FOLDER_MATCH_RE.test(trimmed)) &&
+    (CREATE_FOLDER_MATCH_RE.test(trimmed) ||
+      DELETE_FOLDER_MATCH_RE.test(trimmed)) &&
     !FOLDER_MATCH_RE.test(trimmed);
 
   return hasOnlySystemCommands || stripped.length <= 3;
 };
 
-export const matchFolderCommand = (value: string) => value.match(FOLDER_MATCH_RE);
+export const matchFolderCommand = (value: string) =>
+  value.match(FOLDER_MATCH_RE);
 export const matchCreateFolderCommand = (value: string) =>
   value.match(CREATE_FOLDER_MATCH_RE);
 export const matchDeleteFolderCommand = (value: string) =>

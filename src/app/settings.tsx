@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "../components/ui/IconSymbol";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
-import { ReminderService } from "../services/ReminderService";
+import { ReminderService } from "../features/timeline/services/ReminderService";
 
 type FileSystemDirectories = {
   cacheDirectory?: string | null;

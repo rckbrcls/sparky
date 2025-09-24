@@ -1,6 +1,6 @@
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { CommandDefinition } from "@/src/services/commands/CommandRegistry";
+import { CommandDefinition } from "@/src/features/terminal/services/commands/CommandRegistry";
 import { styles } from "./styles";
 
 interface MetaSectionProps {
