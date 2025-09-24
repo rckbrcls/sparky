@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { buildSegments, Segment } from "../services/commands/CommandHighlights";
 import {
   applyArgumentInsert,
   applyCommandInsert as applyNewCommandInsert,
@@ -17,7 +16,6 @@ interface UseCommandEngineParams {
   selectionStart: number;
   setText: Dispatch<SetStateAction<string>>;
   setSelection: Dispatch<SetStateAction<{ start: number; end: number }>>;
-  setSegments: Dispatch<SetStateAction<Segment[]>>;
 }
 
 interface UseCommandEngineResult {
@@ -32,7 +30,6 @@ export const useCommandEngine = ({
   selectionStart,
   setText,
   setSelection,
-  setSegments,
 }: UseCommandEngineParams): UseCommandEngineResult => {
   const [commandState, setCommandState] = useState<ComputedCommandState>({
     inArgMode: false,
@@ -67,10 +64,9 @@ export const useCommandEngine = ({
       );
       setText(newText);
       setSelection({ start: newCursor, end: newCursor });
-      setSegments(buildSegments(newText));
       recompute(newText, newCursor);
     },
-    [recompute, selectionStart, setSegments, setSelection, setText, text]
+    [recompute, selectionStart, setSelection, setText, text]
   );
 
   const handleSelectArgSuggestion = useCallback(
@@ -88,10 +84,9 @@ export const useCommandEngine = ({
       );
       setText(newText);
       setSelection({ start: newCursor, end: newCursor });
-      setSegments(buildSegments(newText));
       recompute(newText, newCursor);
     },
-    [commandState, recompute, selectionStart, setSegments, setSelection, setText, text]
+    [commandState, recompute, selectionStart, setSelection, setText, text]
   );
 
   return { commandState, recompute, handleSelectCommand, handleSelectArgSuggestion };

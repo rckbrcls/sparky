@@ -8,24 +8,15 @@ import React, {
 import {
   Alert,
   Animated,
-  ScrollView,
-  Text,
   TextInput,
   TextInputKeyPressEvent,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { Colors } from "../../../../constants/Colors";
 import { useGlobalTouchDismiss } from "../../../../context/GlobalTouchDismissContext";
 import { database } from "../../../../database";
 import { useCommandEngine } from "../../../../hooks/useCommandEngine";
 import { useFolderMap } from "../../../../hooks/useFolderMap";
 import { useReminderPreview } from "../../../../hooks/useReminderPreview";
-import {
-  buildSegments,
-  Segment,
-} from "../../../../services/commands/CommandHighlights";
-import { CommandDefinition } from "../../../../services/commands/CommandRegistry";
 import { ReminderService } from "../../../../services/ReminderService";
 import {
   ParsedReminder,
@@ -39,8 +30,9 @@ import {
   slugify,
   stripAllSystemCommands,
 } from "../../../../utils/terminal";
-import { AppIcon } from "../../../../components/AppIcon";
-import Badges from "../Badges";
+import { Badges } from "../Badges";
+import { InputBlock } from "./InputBlock";
+import { MetaSection } from "./MetaSection";
 import { styles } from "./styles";
 
 interface TerminalProps {
@@ -55,7 +47,6 @@ export interface TerminalHandle {
 export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
   ({ onReminderCreated }, ref) => {
     const [text, setText] = useState("");
-    const [segments, setSegments] = useState<Segment[]>([]);
     const [selection, setSelection] = useState({ start: 0, end: 0 });
     const [isProcessing, setIsProcessing] = useState(false);
     const ignoreNextChangeRef = useRef(false);
@@ -74,8 +65,16 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       selectionStart: selection.start,
       setText,
       setSelection,
-      setSegments,
     });
+
+    const {
+      inArgMode,
+      argSuggestions,
+      activeCommand,
+      commandMatches,
+      openCommandQuery,
+      argReplaceFrom,
+    } = commandState;
 
     const inputRef = useRef<TextInput | null>(null);
     useImperativeHandle(ref, () => ({
@@ -111,25 +110,11 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         }
 
         setText(value);
-        setSegments(buildSegments(value));
         updatePreview(value);
         recompute(value, selection.end);
       },
       [recompute, selection.end, updatePreview]
     );
-
-    const highlightStyle = (kind: Segment["kind"]) => {
-      switch (kind) {
-        case "command":
-          return styles.hlCommand;
-        case "commandArg":
-          return styles.hlCommandArg;
-        case "tag":
-          return styles.hlTag;
-        default:
-          return styles.hlNormal;
-      }
-    };
 
     const handleSubmitNote = useCallback(
       async (parsed: ParsedReminder & { type: "note" }, rawText: string) => {
@@ -311,7 +296,6 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         }
 
         setText("");
-        setSegments([]);
         setSelection({ start: 0, end: 0 });
         recompute("", 0);
         hidePreview();
@@ -352,114 +336,14 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       text,
     ]);
 
-    const renderSegments = () => {
-      if (text.length === 0) {
-        return (
-          <Text style={styles.placeholderText}>text, /command and #tag</Text>
-        );
-      }
-
-      return (
-        <Text style={styles.highlightText}>
-          {segments.map((segment, idx) => (
-            <Text
-              key={`${segment.kind}-${idx}`}
-              style={highlightStyle(segment.kind)}
-            >
-              {segment.text}
-            </Text>
-          ))}
-        </Text>
-      );
-    };
-
-    const renderArgSuggestions = () => {
-      if (!commandState.inArgMode || !commandState.activeCommand) return null;
-      const suggestions: string[] = commandState.argSuggestions ?? [];
-
-      return (
-        <View style={styles.commandPalette}>
-          <ScrollView
-            style={styles.commandScroll}
-            contentContainerStyle={styles.commandScrollContent}
-            keyboardShouldPersistTaps="handled"
-            nestedScrollEnabled
-          >
-            {suggestions.length > 0 ? (
-              suggestions.map((suggestion: string, idx: number) => (
-                <TouchableOpacity
-                  key={suggestion}
-                  style={[
-                    styles.commandItem,
-                    idx === suggestions.length - 1 && { borderBottomWidth: 0 },
-                  ]}
-                  onPress={() => handleSelectArgSuggestion(suggestion)}
-                >
-                  <Text style={styles.commandName}>{suggestion}</Text>
-                  <Text style={styles.commandDesc}>
-                    {commandState.activeCommand?.name}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.commandItem}>
-                <Text style={styles.commandDesc}>Sem sugestões</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-      );
-    };
-
-    const renderCommandMatches = () => {
-      if (
-        commandState.inArgMode ||
-        commandState.openCommandQuery == null ||
-        (commandState.commandMatches?.length || 0) === 0
-      )
-        return null;
-
-      const matches: CommandDefinition[] = commandState.commandMatches ?? [];
-
-      return (
-        <View style={styles.commandPalette}>
-          <ScrollView
-            style={styles.commandScroll}
-            contentContainerStyle={styles.commandScrollContent}
-            keyboardShouldPersistTaps="handled"
-            nestedScrollEnabled
-          >
-            {matches.map((match: CommandDefinition, idx: number) => (
-              <TouchableOpacity
-                key={match.name}
-                style={[
-                  styles.commandItem,
-                  idx === matches.length - 1 && { borderBottomWidth: 0 },
-                ]}
-                onPress={() => handleSelectCommand(match)}
-              >
-                <Text style={styles.commandName}>{`/${match.name}`}</Text>
-                <Text style={styles.commandDesc}>{match.description}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      );
-    };
-
-    const argSuggestions = renderArgSuggestions();
-    const commandMatches = renderCommandMatches();
-
-    const hasMetaContent = Boolean(argSuggestions || commandMatches);
-    const metaContainerStyles = [
-      styles.metaInline,
-      !hasMetaContent && styles.metaHidden,
-    ];
-    const metaSection = (
-      <View style={metaContainerStyles} pointerEvents="box-none">
-        {argSuggestions}
-        {commandMatches}
-      </View>
+    const applyProgrammaticTextChange = useCallback(
+      (newText: string, newCursor: number) => {
+        ignoreNextChangeRef.current = true;
+        setText(newText);
+        setSelection({ start: newCursor, end: newCursor });
+        recompute(newText, newCursor);
+      },
+      [recompute, setSelection, setText]
     );
 
     function onInputKeyPress(event: TextInputKeyPressEvent) {
@@ -468,12 +352,8 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         const selStart = selection.start;
         const selEnd = selection.end;
         const newText = text.slice(0, selStart) + "/" + text.slice(selEnd);
-        ignoreNextChangeRef.current = true;
-        setText(newText);
-        setSegments(buildSegments(newText));
         const newCursor = selStart + 1;
-        setSelection({ start: newCursor, end: newCursor });
-        recompute(newText, newCursor);
+        applyProgrammaticTextChange(newText, newCursor);
         return;
       }
 
@@ -485,107 +365,62 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         ) {
           const cutPos = selection.start - 1;
           const newText = text.slice(0, cutPos) + text.slice(selection.start);
-          ignoreNextChangeRef.current = true;
-          setText(newText);
-          setSegments(buildSegments(newText));
           const newCursor = cutPos;
-          setSelection({ start: newCursor, end: newCursor });
-          recompute(newText, newCursor);
+          applyProgrammaticTextChange(newText, newCursor);
           return;
         }
       }
 
       if (
         (key === " " || key === "Spacebar") &&
-        commandState.inArgMode &&
-        commandState.activeCommand?.name &&
-        SLUG_ARG_COMMANDS.has(commandState.activeCommand.name) &&
-        commandState.argReplaceFrom != null
+        inArgMode &&
+        activeCommand?.name &&
+        SLUG_ARG_COMMANDS.has(activeCommand.name) &&
+        argReplaceFrom != null
       ) {
         const selStart = selection.start;
         const selEnd = selection.end;
         const before = text.slice(0, selStart);
         const after = text.slice(selEnd);
         const newText = `${before}-${after}`;
-        ignoreNextChangeRef.current = true;
-        setText(newText);
-        setSegments(buildSegments(newText));
         const newCursor = selStart + 1;
-        setSelection({ start: newCursor, end: newCursor });
-        recompute(newText, newCursor);
+        applyProgrammaticTextChange(newText, newCursor);
       }
     }
 
-    const inputBlock = (
-      <Animated.View style={styles.inputContainer}>
-        <View style={styles.composedInput}>
-          <ScrollView
-            style={styles.scrollArea}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            scrollEventThrottle={16}
-          >
-            <View style={styles.layeredInput}>
-              <View style={styles.highlightLayer} pointerEvents="none">
-                {renderSegments()}
-              </View>
-              <TextInput
-                ref={inputRef}
-                style={[styles.inputOverlay]}
-                value={text}
-                onChangeText={handleTextChange}
-                multiline
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
-                editable={!isProcessing}
-                onSelectionChange={(event) => {
-                  const { start, end } = event.nativeEvent.selection;
-                  setSelection({ start, end });
-                  recompute(text, start);
-                }}
-                onKeyPress={onInputKeyPress}
-                autoCapitalize="none"
-                autoCorrect={false}
-                scrollEnabled={false}
-              />
-            </View>
-          </ScrollView>
+    return (
+      <View style={styles.container}>
+        <View style={styles.compactStack}>
+          <InputBlock
+            text={text}
+            isProcessing={isProcessing}
+            inputRef={inputRef}
+            onChangeText={handleTextChange}
+            onSubmit={handleSubmit}
+            onSelectionChange={(start, end) => {
+              setSelection({ start, end });
+              recompute(text, start);
+            }}
+            onKeyPress={onInputKeyPress}
+          />
+          <MetaSection
+            inArgMode={inArgMode}
+            argSuggestions={argSuggestions}
+            activeCommand={activeCommand}
+            commandMatches={commandMatches}
+            openCommandQuery={openCommandQuery}
+            onSelectArgSuggestion={handleSelectArgSuggestion}
+            onSelectCommand={handleSelectCommand}
+          />
+          <Badges
+            preview={preview}
+            fadeAnim={fadeAnim}
+            text={text}
+            folderMap={folderMap}
+          />
         </View>
-        {text.trim().length > 0 && (
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              isProcessing && styles.submitButtonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={isProcessing}
-          >
-            <AppIcon
-              icon={isProcessing ? "hourglass" : "check"}
-              size={18}
-              color={Colors.dark.background}
-            />
-          </TouchableOpacity>
-        )}
-      </Animated.View>
-    );
-
-    let bodyContent: React.ReactNode;
-
-    bodyContent = (
-      <View style={styles.compactStack}>
-        {inputBlock}
-        {metaSection}
-        <Badges
-          preview={preview}
-          fadeAnim={fadeAnim}
-          text={text}
-          folderMap={folderMap}
-        />
       </View>
     );
-
-    return <View style={[styles.container]}>{bodyContent}</View>;
   }
 );
 
