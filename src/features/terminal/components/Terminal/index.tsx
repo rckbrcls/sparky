@@ -15,7 +15,7 @@ import {
 import { useGlobalTouchDismiss } from "../../../../context/GlobalTouchDismissContext";
 import { database } from "../../../../database";
 import { useCommandEngine } from "../../hooks/useCommandEngine";
-import { useFolderMap } from "../../../../hooks/useFolderMap";
+import { useFolderMap } from "@/src/features/notes/hooks/useFolderMap";
 
 import { ReminderService } from "../../../../services/ReminderService";
 import {

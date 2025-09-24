@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { database } from "../database";
+
+import { database } from "@/src/database";
 
 interface FolderMapResult {
   folderMap: Record<string, string>;
@@ -28,6 +29,7 @@ export const useFolderMap = (): FolderMapResult => {
         // ignore folder preload errors
       }
     })();
+
     return () => {
       cancelled = true;
     };
