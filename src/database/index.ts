@@ -11,11 +11,15 @@ import { Trigger } from "@/src/features/triggers/models/Trigger";
 import { QuickNote } from "@/src/features/notes/models/QuickNote";
 
 // Lazy-load repositories to avoid require cycles.
-const loadRemindersRepo = (): typeof import("../repositories/reminders") =>
-  require("../repositories/reminders");
-const loadNotesFoldersRepo =
-  (): typeof import("../repositories/notes_and_folders") =>
-    require("../repositories/notes_and_folders");
+const loadRemindersRepo = (): typeof import(
+  "../features/timeline/repositories/reminders"
+) => require("../features/timeline/repositories/reminders");
+const loadNotesFoldersRepo = (): typeof import(
+  "../features/notes/repositories/notesAndFolders"
+) => require("../features/notes/repositories/notesAndFolders");
+const loadTriggersRepo = (): typeof import(
+  "../features/triggers/repositories/triggers"
+) => require("../features/triggers/repositories/triggers");
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -132,11 +136,11 @@ export const databaseApi = {
     return r.getRemindersWithFolders.apply(r, args);
   },
   getActiveTriggers: (...args: any[]) => {
-    const r = loadRemindersRepo() as any;
+    const r = loadTriggersRepo() as any;
     return r.getActiveTriggers.apply(r, args);
   },
   createTrigger: (...args: any[]) => {
-    const r = loadRemindersRepo() as any;
+    const r = loadTriggersRepo() as any;
     return r.createTrigger.apply(r, args);
   },
   createImportantDate: (...args: any[]) => {
@@ -198,7 +202,7 @@ export const databaseApi = {
     const reminders = await loadRemindersRepo().getAllReminders();
     const folders = await loadNotesFoldersRepo().getAllFolders();
     const quickNotes = await loadNotesFoldersRepo().getAllQuickNotes();
-    const triggers = await loadRemindersRepo().getActiveTriggers();
+    const triggers = await loadTriggersRepo().getActiveTriggers();
     return { reminders, folders, quickNotes, triggers };
   },
   importData: async (data: any) => {

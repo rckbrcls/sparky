@@ -1,4 +1,3 @@
-// ...existing imports...
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
@@ -25,10 +24,8 @@ import { IconSymbol } from "../components/ui/IconSymbol";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
 import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
-// database initialization handled in AppProvider
 import { useColorScheme } from "../hooks/useColorScheme";
 import { NotesView } from "../features/notes/components/NotesView";
-// NotificationService is initialized at app-level in AppProvider
 
 const DEFAULT_INPUT_HEIGHT = 168;
 const BOTTOM_THRESHOLD_PX = 2;

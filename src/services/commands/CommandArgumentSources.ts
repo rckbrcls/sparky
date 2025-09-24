@@ -1,5 +1,6 @@
 import { database } from "../../database";
-import type { QuickNote, Reminder } from "../../repositories/types";
+import type { QuickNote } from "@/src/features/notes/types";
+import type { Reminder } from "@/src/features/timeline/types";
 import { slugify } from "../../utils/slug";
 
 interface CacheEntry {

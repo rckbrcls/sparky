@@ -3,7 +3,8 @@ import type {
   NativeSyntheticEvent,
 } from "react-native";
 
-import type { Folder, Reminder } from "@/src/repositories/types";
+import type { Reminder } from "@/src/features/timeline/types";
+import type { Folder } from "@/src/features/notes/types";
 
 export interface ReminderWithFolder extends Reminder {
   folder?: Folder;

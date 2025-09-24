@@ -2,10 +2,10 @@ import uuid from "react-native-uuid";
 import { Q } from "@nozbe/watermelondb";
 import type { Model } from "@nozbe/watermelondb";
 
-import { database, reminderCollection } from "../database";
-import * as notesFoldersRepo from "./notes_and_folders";
+import { database, reminderCollection } from "@/src/database";
+import * as notesFoldersRepo from "@/src/features/notes/repositories/notesAndFolders";
 import type { Reminder as ReminderModel } from "@/src/features/timeline/models/Reminder";
-import type { Reminder as ReminderDTO } from "./types";
+import type { Reminder as ReminderDTO } from "../types";
 
 export type Subscription = { unsubscribe: () => void };
 
@@ -174,7 +174,6 @@ export const createReminder = async (input: any): Promise<string> => {
     await reminderCollection.create((record: Model) => {
       const raw: any = record._raw;
       raw.id = reminderId;
-      // minimal raw set to keep schema aligned
       raw.title = input.title;
       raw.notes = input.notes ?? null;
       raw.person = input.person ?? null;
@@ -243,7 +242,6 @@ export const getSnoozeHistoryForReminder = async (reminderId: string) => {
     .fetch()
     .catch(() => [] as any[]);
 
-  // map minimal fields
   return records.map((r: any) => ({
     id: r.id,
     reminderId: r.reminderId ?? r.reminder_id,
@@ -321,6 +319,33 @@ export const getReviewStageForReminder = async (reminderId: string) => {
   };
 };
 
+export const updateReviewStage = async (
+  reminderId: string,
+  updates: Partial<any>
+) => {
+  const records = await database
+    .get("review_stages")
+    .query(Q.where("reminder_id", reminderId))
+    .fetch()
+    .catch(() => [] as any[]);
+
+  if (records.length === 0) return;
+  const rec = records[0];
+  const ts = Date.now();
+  await database.write(async () => {
+    await rec.update((m: Model) => {
+      const raw: any = m._raw;
+      if (updates.currentStage !== undefined)
+        raw.current_stage = updates.currentStage;
+      if (updates.lastReviewAt !== undefined)
+        raw.last_review_at = updates.lastReviewAt;
+      if (updates.ignoreCount !== undefined)
+        raw.ignore_count = updates.ignoreCount;
+      raw.updated_at = ts;
+    });
+  });
+};
+
 export const getRemindersByPersonOrProject = async (filter: string) => {
   const records = await reminderCollection
     .query(
@@ -334,7 +359,6 @@ export const getRemindersByPersonOrProject = async (filter: string) => {
 };
 
 export const getRemindersWithFolders = async () => {
-  // fetch reminders and folders, then join in JS
   const reminders = await getAllReminders();
   const folders = await notesFoldersRepo
     .getAllFolders()
@@ -349,48 +373,6 @@ export const getRemindersWithFolders = async () => {
     ...r,
     folder: r.folderId ? folderMap[r.folderId] : undefined,
   }));
-};
-
-export const getActiveTriggers = async () => {
-  const records = await database
-    .get("triggers")
-    .query(Q.where("is_active", 1))
-    .fetch()
-    .catch(() => [] as any[]);
-
-  return records.map((t: any) => ({
-    id: t.id,
-    reminderId: t.reminderId ?? t.reminder_id,
-    type: t.type,
-    config: t.config,
-    isActive: !!(t.isActive ?? t.is_active),
-    createdAt: t.createdAt ?? t.created_at,
-    updatedAt: t.updatedAt ?? t.updated_at,
-  }));
-};
-
-export const createTrigger = async (input: {
-  reminderId: string;
-  type: string;
-  config?: string;
-  isActive?: boolean;
-}) => {
-  let id = "";
-  await database.write(async () => {
-    const rec = await database.get("triggers").create((r: Model) => {
-      const raw: any = r._raw;
-      raw.id = (Math.random() + 1).toString(36).substring(2);
-      raw.reminder_id = input.reminderId;
-      raw.type = input.type;
-      raw.config = input.config ?? null;
-      raw.is_active = input.isActive ? 1 : 0;
-      raw.created_at = Date.now();
-      raw.updated_at = Date.now();
-    });
-    id = rec.id;
-  });
-
-  return id;
 };
 
 export const createImportantDate = async (input: {
@@ -419,33 +401,6 @@ export const createImportantDate = async (input: {
   });
 
   return id;
-};
-
-export const updateReviewStage = async (
-  reminderId: string,
-  updates: Partial<any>
-) => {
-  const records = await database
-    .get("review_stages")
-    .query(Q.where("reminder_id", reminderId))
-    .fetch()
-    .catch(() => [] as any[]);
-
-  if (records.length === 0) return;
-  const rec = records[0];
-  const ts = Date.now();
-  await database.write(async () => {
-    await rec.update((m: Model) => {
-      const raw: any = m._raw;
-      if (updates.currentStage !== undefined)
-        raw.current_stage = updates.currentStage;
-      if (updates.lastReviewAt !== undefined)
-        raw.last_review_at = updates.lastReviewAt;
-      if (updates.ignoreCount !== undefined)
-        raw.ignore_count = updates.ignoreCount;
-      raw.updated_at = ts;
-    });
-  });
 };
 
 export default {

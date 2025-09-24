@@ -22,7 +22,7 @@ import {
   BottomSheetModal,
 } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import type { Folder, QuickNote } from "../../../../repositories/types";
+import type { Folder, QuickNote } from "../types";
 import { styles } from "./styles";
 import type { NotesViewProps, QuickNoteWithFolder } from "./types";
 import type { FolderListItem } from "../FolderListView/types";

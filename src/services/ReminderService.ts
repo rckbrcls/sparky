@@ -8,7 +8,7 @@ import {
 } from "date-fns";
 import { RRule } from "rrule";
 import { database } from "../database";
-import type { Reminder as ReminderDTO } from "../repositories/types";
+import type { Reminder as ReminderDTO } from "@/src/features/timeline/types";
 import { NotificationService } from "./NotificationService";
 
 export class ReminderService {
