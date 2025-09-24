@@ -20,7 +20,7 @@ import {
 } from "../features/terminal/components/Terminal";
 import { ThemedText } from "../components/ThemedText";
 import { TimelineView } from "../features/timeline/components/TimelineView";
-import { TriggersView } from "../components/TriggersView";
+import { TriggersView } from "../features/triggers/components/TriggersView";
 import { IconSymbol } from "../components/ui/IconSymbol";
 import { Colors } from "../constants/Colors";
 import { Typography } from "../constants/Typography";
