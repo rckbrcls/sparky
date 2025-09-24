@@ -8,8 +8,8 @@ import {
 
 import type { ReviewStage } from "./ReviewStage";
 import type { SnoozeHistory } from "./SnoozeHistory";
-import type { Trigger } from "./Trigger";
-import { Folder } from "./Folder";
+import type { Trigger } from "@/src/features/triggers/models/Trigger";
+import { Folder } from "@/src/features/notes/models/Folder";
 
 export class Reminder extends Model {
   static table = "reminders";

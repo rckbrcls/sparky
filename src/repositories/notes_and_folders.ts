@@ -2,8 +2,8 @@ import { Q } from "@nozbe/watermelondb";
 import type { Model } from "@nozbe/watermelondb";
 
 import { database, folderCollection, quickNoteCollection } from "../database";
-import type { Folder as FolderModel } from "../models/Folder";
-import type { QuickNote as QuickNoteModel } from "../models/QuickNote";
+import type { Folder as FolderModel } from "@/src/features/notes/models/Folder";
+import type { QuickNote as QuickNoteModel } from "@/src/features/notes/models/QuickNote";
 
 export type Subscription = { unsubscribe: () => void };
 

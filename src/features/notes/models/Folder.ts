@@ -1,7 +1,7 @@
 import { Model, Query } from "@nozbe/watermelondb";
 import { children, field, text } from "@nozbe/watermelondb/decorators";
 
-import type { Reminder } from "./Reminder";
+import type { Reminder } from "@/src/features/timeline/models/Reminder";
 import type { QuickNote } from "./QuickNote";
 
 export class Folder extends Model {

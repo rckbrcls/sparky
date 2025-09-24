@@ -2,13 +2,13 @@ import { Database } from "@nozbe/watermelondb";
 import SQLiteAdapter from "@nozbe/watermelondb/adapters/sqlite";
 
 import { schema } from "./schema";
-import { Reminder } from "../models/Reminder";
-import { SnoozeHistory } from "../models/SnoozeHistory";
-import { ImportantDate } from "../models/ImportantDate";
-import { ReviewStage } from "../models/ReviewStage";
-import { Folder } from "../models/Folder";
-import { Trigger } from "../models/Trigger";
-import { QuickNote } from "../models/QuickNote";
+import { Reminder } from "@/src/features/timeline/models/Reminder";
+import { SnoozeHistory } from "@/src/features/timeline/models/SnoozeHistory";
+import { ImportantDate } from "@/src/features/timeline/models/ImportantDate";
+import { ReviewStage } from "@/src/features/timeline/models/ReviewStage";
+import { Folder } from "@/src/features/notes/models/Folder";
+import { Trigger } from "@/src/features/triggers/models/Trigger";
+import { QuickNote } from "@/src/features/notes/models/QuickNote";
 
 // Lazy-load repositories to avoid require cycles.
 const loadRemindersRepo = (): typeof import("../repositories/reminders") =>

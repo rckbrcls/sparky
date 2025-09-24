@@ -4,7 +4,7 @@ import type { Model } from "@nozbe/watermelondb";
 
 import { database, reminderCollection } from "../database";
 import * as notesFoldersRepo from "./notes_and_folders";
-import type { Reminder as ReminderModel } from "../models/Reminder";
+import type { Reminder as ReminderModel } from "@/src/features/timeline/models/Reminder";
 import type { Reminder as ReminderDTO } from "./types";
 
 export type Subscription = { unsubscribe: () => void };
