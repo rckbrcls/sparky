@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import Animated from "react-native-reanimated";
 
 import { Colors } from "@/src/constants/Colors";
@@ -82,13 +81,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     onRefresh?.();
   };
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      onScroll?.(event);
-    },
-    [onScroll]
-  );
-
   const emptyComponent = useMemo(() => {
     if (!isInitialized || loading) return null;
     return <TimelineEmptyState />;
@@ -130,7 +122,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           { flexGrow: reminders.length ? 0 : 1 },
         ]}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
+        onScroll={onScroll}
         scrollEventThrottle={onScroll ? 16 : undefined}
         keyboardShouldPersistTaps="handled"
         bounces={false}
