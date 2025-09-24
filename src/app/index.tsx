@@ -19,7 +19,7 @@ import {
   TerminalHandle,
 } from "../features/terminal/components/Terminal";
 import { ThemedText } from "../components/ThemedText";
-import { TimelineView } from "../components/TimelineView";
+import { TimelineView } from "../features/timeline/components/TimelineView";
 import { TriggersView } from "../components/TriggersView";
 import { IconSymbol } from "../components/ui/IconSymbol";
 import { Colors } from "../constants/Colors";
