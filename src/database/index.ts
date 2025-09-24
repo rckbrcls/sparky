@@ -11,15 +11,30 @@ import { Trigger } from "@/src/features/triggers/models/Trigger";
 import { QuickNote } from "@/src/features/notes/models/QuickNote";
 
 // Lazy-load repositories to avoid require cycles.
-const loadRemindersRepo = (): typeof import(
-  "../features/timeline/repositories/reminders"
-) => require("../features/timeline/repositories/reminders");
-const loadNotesFoldersRepo = (): typeof import(
-  "../features/notes/repositories/notesAndFolders"
-) => require("../features/notes/repositories/notesAndFolders");
-const loadTriggersRepo = (): typeof import(
-  "../features/triggers/repositories/triggers"
-) => require("../features/triggers/repositories/triggers");
+let remindersRepo: typeof import("../features/timeline/repositories/reminders") | null =
+  null;
+let notesFoldersRepo: typeof import("../features/notes/repositories/notesAndFolders") | null =
+  null;
+let triggersRepo: typeof import("../features/triggers/repositories/triggers") | null =
+  null;
+
+const loadRemindersRepo = () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  remindersRepo ??= require("../features/timeline/repositories/reminders");
+  return remindersRepo;
+};
+
+const loadNotesFoldersRepo = () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  notesFoldersRepo ??= require("../features/notes/repositories/notesAndFolders");
+  return notesFoldersRepo;
+};
+
+const loadTriggersRepo = () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  triggersRepo ??= require("../features/triggers/repositories/triggers");
+  return triggersRepo;
+};
 
 const adapter = new SQLiteAdapter({
   schema,

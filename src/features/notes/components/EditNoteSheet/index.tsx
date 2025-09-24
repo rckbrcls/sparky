@@ -13,19 +13,12 @@ import {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 
-import { styles } from "./styles";
-import type {
-  EditNoteSheetProps,
-  FolderListItem,
-  QuickNoteWithFolder,
-} from "./types";
-export type {
-  EditNoteSheetProps,
-  FolderListItem,
-  QuickNoteWithFolder,
-} from "./types";
 import { AppIcon } from "@/src/components/AppIcon";
 import { Colors } from "@/src/constants/Colors";
+
+import { styles } from "./styles";
+import type { EditNoteSheetProps } from "./types";
+export type { EditNoteSheetProps } from "./types";
 
 export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
   sheetRef,

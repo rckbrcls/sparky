@@ -459,7 +459,7 @@ export class ReminderService {
   static async updateReminderStatuses(): Promise<void> {
     const reminders = (await database.getAllReminders()) as ReminderDTO[];
     const now = Date.now();
-    const updates: Array<Promise<void>> = [];
+    const updates: Promise<void>[] = [];
 
     for (const reminder of reminders) {
       if (!reminder.nextFireAt) continue;

@@ -5,11 +5,11 @@ import type {
   TriggerSection,
 } from "../components/TriggersView/types";
 
-const SECTION_ORDER: Array<{
+const SECTION_ORDER: {
   type: string;
   title: string;
   icon: AppIconKey;
-}> = [
+}[] = [
   { type: "location", title: "Location Triggers", icon: "location" },
   { type: "person", title: "Person Triggers", icon: "person" },
   { type: "time", title: "Time Triggers", icon: "clock" },

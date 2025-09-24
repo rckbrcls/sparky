@@ -12,6 +12,7 @@ import { database } from "@/src/database";
 import { TriggerCard } from "../TriggerCard";
 import { TriggerSectionHeader } from "../TriggerSectionHeader";
 import { TriggersEmptyState } from "../TriggersEmptyState";
+import { buildTriggerSections } from "../../utils/sections";
 import { styles } from "./styles";
 import type {
   TriggerListItem,
@@ -23,7 +24,6 @@ export type {
   TriggerSection,
   TriggersViewProps,
 } from "./types";
-import { buildTriggerSections } from "../../utils/sections";
 
 const AnimatedSectionList =
   Animated.createAnimatedComponent<

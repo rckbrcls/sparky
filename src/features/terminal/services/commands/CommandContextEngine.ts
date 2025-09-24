@@ -48,7 +48,7 @@ function resolveOpenBlockKind(
   text: string
 ): ComputedCommandState["openBlockKind"] {
   const tokens = text.split(/\s+/).filter(Boolean);
-  const stack: Array<"tags" | "people" | "locations"> = [];
+  const stack: ("tags" | "people" | "locations")[] = [];
   tokens.forEach((token) => {
     if (BLOCK_START.has(token)) {
       stack.push(token.slice(1) as typeof stack[number]);

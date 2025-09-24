@@ -7,11 +7,12 @@ import {
   View,
 } from "react-native";
 
+import { AppIcon } from "@/src/components/AppIcon";
+import { Colors } from "@/src/constants/Colors";
+
 import { styles } from "./styles";
 import type { FolderListItem, FolderListViewProps } from "./types";
 export type { FolderListItem, FolderListViewProps } from "./types";
-import { AppIcon } from "@/src/components/AppIcon";
-import { Colors } from "@/src/constants/Colors";
 
 export const FolderListView: React.FC<FolderListViewProps> = ({
   folders,
