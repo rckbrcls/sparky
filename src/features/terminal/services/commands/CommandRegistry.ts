@@ -45,10 +45,7 @@ export function getCommandByName(name: string): CommandDefinition | undefined {
   return registryMap.get(name.toLowerCase());
 }
 
-// Pre-register core commands (entity + actions) — can be extended elsewhere.
 function bootstrap() {
-  // NOTE: We only add argument-enabled entity commands here; others remain in legacy engine until migrated fully.
-  // Legacy parity additions: date, note, createfolder, priority, tags, people, locations, help
   registerCommand({
     name: "date",
     description: "Insert a date/time command (/date ...)",
@@ -118,11 +115,6 @@ function bootstrap() {
     name: "priority",
     description: "Set priority (/priority !!! | !! | ! | 3 | 2 | 1)",
     category: "entity",
-  });
-  registerCommand({
-    name: "help",
-    description: "Show help list (/help)",
-    category: "action",
   });
   // Closing block commands (no arguments) for legacy block mode support
   registerCommand({

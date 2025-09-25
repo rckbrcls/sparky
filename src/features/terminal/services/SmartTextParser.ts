@@ -284,10 +284,6 @@ export class SmartTextParser {
       const tok = tokens[i];
       if (tok.startsWith("/")) {
         const name = tok.slice(1).toLowerCase();
-        if (name === "title") {
-          i++;
-          continue;
-        }
         let j = i + 1;
         const parts: string[] = [];
         if (BLOCKS[name]) {
