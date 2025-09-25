@@ -69,7 +69,8 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
   },
   hlCommandArg: {
-    color: Colors.dark.icon,
+    color: Colors.dark.success,
+    fontWeight: "700",
   },
   hlTag: {
     color: Colors.dark.success,

@@ -326,6 +326,11 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             }}
             onKeyPress={onInputKeyPress}
             activatedCommands={intent.activated}
+            activeArgRange={
+              inArgMode && argReplaceFrom != null
+                ? { start: argReplaceFrom, end: argReplaceFrom + (commandState.argPartial?.length || 0) }
+                : undefined
+            }
           />
           <MetaSection
             inArgMode={inArgMode}

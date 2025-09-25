@@ -23,6 +23,7 @@ interface InputBlockProps {
   onSelectionChange: (start: number, end: number) => void;
   onKeyPress: (event: TextInputKeyPressEvent) => void;
   activatedCommands?: ActivatedCommand[];
+  activeArgRange?: { start: number; end: number };
 }
 
 export const InputBlock: React.FC<InputBlockProps> = ({
@@ -34,6 +35,7 @@ export const InputBlock: React.FC<InputBlockProps> = ({
   onSelectionChange,
   onKeyPress,
   activatedCommands = [],
+  activeArgRange,
 }) => {
   const highlightStyle = (kind: Segment["kind"]) => {
     switch (kind) {
@@ -52,13 +54,38 @@ export const InputBlock: React.FC<InputBlockProps> = ({
 
   const segments = useMemo(() => {
     // Base rendering treats everything as normal text. We then overlay
-    // activated command name ranges (without slash) as commandActive.
+    // activated command name and argument ranges as commandActive.
     const base: Segment[] = [{ text, kind: "normal" }];
-    if (!activatedCommands.length) return base;
+    if (!activatedCommands.length && !activeArgRange) return base;
 
-    const ranges = activatedCommands
-      .map((c) => (c.index != null ? { start: c.index!, end: c.index! + c.name.length } : null))
-      .filter(Boolean) as { start: number; end: number }[];
+    const ranges: { start: number; end: number; kind: Segment["kind"] }[] = [];
+
+    // Command name ranges
+    activatedCommands.forEach((c) => {
+      if (c.index != null) {
+        ranges.push({ start: c.index!, end: c.index! + c.name.length, kind: "commandActive" });
+      }
+    });
+
+    // Finalized command argument ranges
+    activatedCommands.forEach((c) => {
+      if (c.index != null && (c.value ?? "").length > 0) {
+        const start = c.index! + c.name.length + 1; // after a space
+        const end = start + (c.value as string).length;
+        if (text[start - 1] === " ") {
+          ranges.push({ start, end, kind: "commandArg" });
+        }
+      }
+    });
+
+    // Active argument being typed (arg mode)
+    if (activeArgRange && activeArgRange.end > activeArgRange.start) {
+      ranges.push({ start: activeArgRange.start, end: activeArgRange.end, kind: "commandArg" });
+    }
+
+    // Sort ranges by start to make processing predictable
+    ranges.sort((a, b) => a.start - b.start || a.end - b.end);
+
     if (!ranges.length) return base;
 
     const result: Segment[] = [];
@@ -78,14 +105,14 @@ export const InputBlock: React.FC<InputBlockProps> = ({
       const a = Math.max(cursor, nextRange.start);
       const b = Math.min(end, nextRange.end);
       if (a < b) {
-        result.push({ text: seg.text.slice(a - start, b - start), kind: "commandActive" });
+        result.push({ text: seg.text.slice(a - start, b - start), kind: nextRange.kind });
       }
       cursor = b;
       if (cursor >= end) break;
     }
 
     return result;
-  }, [activatedCommands, text]);
+  }, [activatedCommands, activeArgRange, text]);
 
   const renderSegments = () => {
     if (!text.length) {
