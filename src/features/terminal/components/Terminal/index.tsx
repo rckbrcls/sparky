@@ -19,7 +19,6 @@ import { useFolderMap } from "@/src/features/notes/hooks/useFolderMap";
 
 import { ReminderService } from "@/src/features/timeline/services/ReminderService";
 import { slugifyForArgs } from "@/src/features/terminal/engine";
-import { applyArgumentInsert } from "@/src/features/terminal/engine";
 import { Badges } from "../Badges";
 import { InputBlock } from "../InputBlock";
 import { MetaSection } from "../MetaSection";
@@ -46,13 +45,16 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       useReminderPreview();
     const { folderMap, setFolderMap } = useFolderMap();
 
-    const {
+  const {
       commandState,
       recompute,
       handleSelectCommand,
       handleSelectArgSuggestion,
       intent,
       finalizeActiveArgWithPartial,
+      removeActivatedById,
+      reopenForEdit,
+      finalizeOnEnter,
     } = useCommandEngine({
       text,
       selectionStart: selection.start,
@@ -102,11 +104,25 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
           return;
         }
 
+        // Detect newline (Enter) typed in multiline input and delegate finalization
+        if ((/\r|\n/.test(value[value.length - 1] || ""))) {
+          // Do not accept the newline into state; ask engine to finalize
+          ignoreNextChangeRef.current = true; // prevent next setText echo cycle
+          const cleaned = finalizeOnEnter();
+          if (cleaned !== undefined) {
+            setText(cleaned);
+            updateFromIntent(cleaned, intent);
+          } else {
+            updateFromIntent(text, intent);
+          }
+          return;
+        }
+
         setText(value);
         updateFromIntent(value, intent);
         recompute(value, selection.end);
       },
-      [intent, recompute, selection.end, updateFromIntent]
+      [finalizeOnEnter, intent, recompute, selection.end, text, updateFromIntent]
     );
 
     // Helpers to work only with activated commands (no slash parsing)
@@ -121,7 +137,9 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         // Remove instances of "name" + optional space + single-word value at (approx) tracked indices
         let value = raw;
         // sort by index desc to avoid shifting
-        const acts = [...intent.activated].sort((a, b) => (b.index ?? 0) - (a.index ?? 0));
+        const acts = [...intent.activated]
+          .filter((a) => a.index != null && !a.detached)
+          .sort((a, b) => (b.index! ?? 0) - (a.index! ?? 0));
         for (const a of acts) {
           const name = a.name;
           const idx = a.index != null ? a.index : value.indexOf(name);
@@ -296,19 +314,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         }
       }
 
-      if ((key === " " || key === "Spacebar") && inArgMode && activeCommand?.name && argReplaceFrom != null) {
-        // finalize the current argument using the typed partial
-        const partial = commandState.argPartial ?? "";
-        const { newText, newCursor } = applyArgumentInsert(
-          text,
-          argReplaceFrom,
-          selection.start,
-          partial,
-          true
-        );
-        applyProgrammaticTextChange(newText, newCursor);
-        finalizeActiveArgWithPartial(partial);
-      }
+      // Enter handled via onChangeText newline detection to keep behavior consistent across platforms
     }
 
     return (
@@ -341,7 +347,14 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             onSelectArgSuggestion={handleSelectArgSuggestion}
             onSelectCommand={handleSelectCommand}
           />
-          <Badges preview={preview} fadeAnim={fadeAnim} folderMap={folderMap} intent={intent} />
+          <Badges
+            preview={preview}
+            fadeAnim={fadeAnim}
+            folderMap={folderMap}
+            intent={intent}
+            onRemoveCommand={(id) => removeActivatedById(id)}
+            onEditCommand={(id) => reopenForEdit(id)}
+          />
         </View>
       </View>
     );

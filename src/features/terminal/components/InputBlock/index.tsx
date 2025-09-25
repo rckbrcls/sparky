@@ -154,8 +154,8 @@ export const InputBlock: React.FC<InputBlockProps> = ({
               value={text}
               onChangeText={onChangeText}
               multiline
-              returnKeyType="done"
-              onSubmitEditing={onSubmit}
+              returnKeyType="default"
+              blurOnSubmit={false}
               editable={!isProcessing}
               onSelectionChange={(event) => {
                 const { start, end } = event.nativeEvent.selection;

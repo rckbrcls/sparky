@@ -36,4 +36,12 @@ export const styles = StyleSheet.create({
     ...Typography.caption,
     fontWeight: "600",
   },
+  badgeClose: {
+    marginLeft: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

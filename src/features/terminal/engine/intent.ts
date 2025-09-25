@@ -6,6 +6,8 @@ export interface ActivatedCommand {
   value?: string;
   // best-effort tracking of where the "/name" token starts in the text
   index?: number;
+  // when detached, the token was removed from text and should live only as metadata (badge)
+  detached?: boolean;
 }
 
 export interface IntentState {
@@ -60,6 +62,20 @@ export function intentSetCommandValue(intent: IntentState, id: string, value?: s
   };
 }
 
+export function intentDetachCommandToken(intent: IntentState, id: string): IntentState {
+  return {
+    ...intent,
+    activated: intent.activated.map((c) => (c.id === id ? { ...c, index: undefined, detached: true } : c)),
+  };
+}
+
+export function intentAttachCommand(intent: IntentState, id: string, index: number): IntentState {
+  return {
+    ...intent,
+    activated: intent.activated.map((c) => (c.id === id ? { ...c, index, detached: false } : c)),
+  };
+}
+
 export function findActivatedByNameNearIndex(
   intent: IntentState,
   name: string,
@@ -79,4 +95,3 @@ export function findActivatedByNameNearIndex(
   }
   return best;
 }
-

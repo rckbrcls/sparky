@@ -65,7 +65,7 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
   },
   hlCommandActive: {
-    color: Colors.dark.tint,
+    color: Colors.dark.warning,
     fontWeight: "700",
   },
   hlCommandArg: {

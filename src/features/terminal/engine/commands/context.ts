@@ -103,7 +103,6 @@ function computeCursorContext(
       const argStart = start + def.name.length + 1; // after a space
       if (cursor >= argStart) {
         const between = text.slice(argStart, cursor);
-        if (between.includes(" ")) continue; // single word only
         return {
           inArgMode: true,
           activeCommand: def,

@@ -6,7 +6,9 @@ function removeActivatedTokensFromText(text: string, intent: IntentState): strin
   if (!text) return "";
   if (!intent.activated.length) return text.trim();
   let value = text;
-  const acts = [...intent.activated].sort((a, b) => (b.index ?? 0) - (a.index ?? 0));
+  const acts = [...intent.activated]
+    .filter((a) => a.index != null && !a.detached)
+    .sort((a, b) => (b.index ?? 0) - (a.index ?? 0));
   for (const a of acts) {
     const name = a.name;
     const idx = a.index != null ? a.index : value.indexOf(name);
@@ -56,4 +58,3 @@ export function buildPreviewFromIntent(text: string, intent: IntentState): Parse
 
   return base;
 }
-
