@@ -2,12 +2,19 @@ import { defaultNormalize } from "../utils/text";
 
 export type ArgumentSourceKind = import("./sources").SourceKey;
 
+export type CommandRole = 'type' | 'property' | 'action';
+export type AppliesTo = 'any' | 'note' | 'reminder';
+
 export interface CommandDefinition {
   name: string; // without leading slash
   description: string;
-  category?: "entity" | "action" | "mode";
+  role?: CommandRole;
+  appliesTo?: AppliesTo[]; // where this command is valid
+  group?: 'type'; // exclusive groups (e.g., type)
+  conflictsWith?: string[]; // names of commands it conflicts with
   argument?: {
-    source: ArgumentSourceKind;
+    mode?: 'singleWord';
+    source?: ArgumentSourceKind;
     fetch?: () => Promise<string[]> | string[]; // overrides default source provider
     normalize?: (s: string) => string; // default slugify
     filter?: (candidate: string, partialNorm: string) => boolean; // custom filter logic
@@ -28,8 +35,9 @@ export function registerCommand(def: CommandDefinition) {
   const entry: CommandDefinition = {
     finalizeOnSelect: true,
     ...def,
+    appliesTo: def.appliesTo ?? ['any'],
     argument: def.argument
-      ? { normalize: defaultNormalize, ...def.argument }
+      ? { mode: 'singleWord', normalize: defaultNormalize, ...def.argument }
       : undefined,
   };
   registry.push(entry);
@@ -45,93 +53,58 @@ export function getCommandByName(name: string): CommandDefinition | undefined {
 }
 
 function bootstrap() {
+  // Type selection
   registerCommand({
-    name: "date",
-    description: "Insert a date/time command (/date ...)",
-    category: "entity",
+    name: 'date',
+    description: 'Create a time-based reminder',
+    role: 'type',
+    group: 'type',
+    appliesTo: ['any'],
+    argument: { allowEmptyInitialList: true },
   });
   registerCommand({
-    name: "note",
-    description: "Start quick note (/note ...)",
-    category: "mode",
+    name: 'note',
+    description: 'Create a quick note',
+    role: 'type',
+    group: 'type',
+    appliesTo: ['any'],
+  });
+
+  // Properties
+  registerCommand({
+    name: 'folder',
+    description: 'Assign note to a folder',
+    role: 'property',
+    appliesTo: ['note'],
+    argument: { source: 'folders', allowEmptyInitialList: true },
   });
   registerCommand({
-    name: "folder",
-    description: "Assign note/reminder to folder",
-    category: "entity",
-    argument: { source: "folders", allowEmptyInitialList: true },
+    name: 'tag',
+    description: 'Add a tag to the note',
+    role: 'property',
+    appliesTo: ['note'],
+    argument: { source: 'tags', allowEmptyInitialList: true },
   });
   registerCommand({
-    name: "createfolder",
-    description: "Create a new folder (/createfolder name)",
-    category: "action",
-    argument: { source: "folders", allowEmptyInitialList: true },
+    name: 'priority',
+    description: 'Set priority (!, !!, !!! | 1,2,3)',
+    role: 'property',
+    appliesTo: ['any'],
   });
   registerCommand({
-    name: "deletefolder",
-    description: "Delete an existing folder",
-    category: "action",
-    argument: {
-      source: "folders",
-      allowEmptyInitialList: true,
-      exclude: (v) => v.toLowerCase() === "all",
-    },
+    name: 'person',
+    description: 'Trigger by person (contact name)',
+    role: 'property',
+    appliesTo: ['any'],
+    argument: { source: 'persons', allowEmptyInitialList: true },
   });
   registerCommand({
-    name: "person",
-    description: "Link to a person trigger",
-    category: "entity",
-    argument: { source: "persons", allowEmptyInitialList: true },
-  });
-  registerCommand({
-    name: "people",
-    description: "Start people block (/people ... /endpeople)",
-    category: "mode",
-  });
-  registerCommand({
-    name: "location",
-    description: "Associate a location trigger",
-    category: "entity",
-    argument: { source: "locations", allowEmptyInitialList: true },
-  });
-  registerCommand({
-    name: "locations",
-    description: "Start locations block (/locations ... /endlocations)",
-    category: "mode",
-  });
-  registerCommand({
-    name: "tag",
-    description: "Insert an existing tag",
-    category: "entity",
-    argument: { source: "tags", allowEmptyInitialList: true },
-  });
-  registerCommand({
-    name: "tags",
-    description: "Start tags block (/tags ... /endtags)",
-    category: "mode",
-  });
-  registerCommand({
-    name: "priority",
-    description: "Set priority (/priority !!! | !! | ! | 3 | 2 | 1)",
-    category: "entity",
-  });
-  // Closing block commands (no arguments) for legacy block mode support
-  registerCommand({
-    name: "endtags",
-    description: "Close tags block (/endtags)",
-    category: "action",
-  });
-  registerCommand({
-    name: "endpeople",
-    description: "Close people block (/endpeople)",
-    category: "action",
-  });
-  registerCommand({
-    name: "endlocations",
-    description: "Close locations block (/endlocations)",
-    category: "action",
+    name: 'location',
+    description: 'Trigger by location',
+    role: 'property',
+    appliesTo: ['any'],
+    argument: { source: 'locations', allowEmptyInitialList: true },
   });
 }
 
 bootstrap();
-

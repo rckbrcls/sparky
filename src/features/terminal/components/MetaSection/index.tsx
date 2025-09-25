@@ -87,7 +87,7 @@ export const MetaSection: React.FC<MetaSectionProps> = ({
               ]}
               onPress={() => onSelectCommand(match)}
             >
-              <Text style={styles.commandName}>{`/${match.name}`}</Text>
+              <Text style={styles.commandName}>{match.name}</Text>
               <Text style={styles.commandDesc}>{match.description}</Text>
             </TouchableOpacity>
           ))}
@@ -98,9 +98,7 @@ export const MetaSection: React.FC<MetaSectionProps> = ({
 
   const argSuggestionsContent = renderArgSuggestions();
   const commandMatchesContent = renderCommandMatches();
-  const hasMetaContent = Boolean(
-    argSuggestionsContent || commandMatchesContent
-  );
+  const hasMetaContent = Boolean(argSuggestionsContent || commandMatchesContent);
 
   const containerStyles = [styles.container, !hasMetaContent && styles.hidden];
 

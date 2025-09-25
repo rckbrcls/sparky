@@ -10,11 +10,12 @@ export interface CommandComputationInput {
   text: string;
   cursor: number;
   requestId?: string; // for async race protection
+  activated?: { name: string; index?: number }[];
 }
 
 export interface CommandStateSegment {
   text: string;
-  kind: "command" | "commandArg" | "tag" | "normal";
+  kind: "command" | "commandArg" | "tag" | "normal" | "commandActive";
 }
 
 export interface ComputedCommandState {
@@ -79,54 +80,41 @@ function computeCursorContext(
   text: string,
   cursor: number,
   commands: CommandDefinition[],
-  openBlockKind: ComputedCommandState["openBlockKind"]
+  openBlockKind: ComputedCommandState["openBlockKind"],
+  activated: { name: string; index?: number }[] | undefined
 ): CursorContextResult {
   const uptoCursor = text.slice(0, cursor);
   const charAfterCursor = text[cursor];
   const result: CursorContextResult = { inArgMode: false };
 
-  const commandAtCursor = /\/(\w+)$/.exec(uptoCursor);
-  if (commandAtCursor) {
-    const command = getCommandByName(commandAtCursor[1]);
-    if (charAfterCursor === " " && command?.argument) {
-      return {
-        inArgMode: true,
-        activeCommand: command,
-        argPartial: "",
-        argReplaceFrom: cursor + 1,
-      };
-    }
-  }
-
-  const trailingSpaceMatch = /\/(\w+)\s+$/.exec(uptoCursor);
-  if (trailingSpaceMatch) {
-    const command = getCommandByName(trailingSpaceMatch[1]);
-    if (command?.argument) {
-      return {
-        inArgMode: true,
-        activeCommand: command,
-        argPartial: "",
-        argReplaceFrom: cursor,
-      };
-    }
-  }
-
-  const argModeMatch = /\/(\w+)\s+([^\/\n]*)$/.exec(uptoCursor);
-  if (argModeMatch) {
-    const command = getCommandByName(argModeMatch[1]);
-    if (command?.argument) {
-      const partial = argModeMatch[2] || "";
-      if (/\s$/.test(partial) && partial.trim().length > 0) {
-        return { inArgMode: false };
+  // Activated-command arg mode (single-word), without slash
+  if (activated && activated.length) {
+    for (const act of activated) {
+      const def = act.name ? getCommandByName(act.name) : undefined;
+      if (!def?.argument) continue;
+      // locate the token start
+      let start = act.index ?? -1;
+      if (start < 0) {
+        const re = new RegExp(`(?:^|\\s)${def.name}(?:\\s|$)`);
+        const m = re.exec(text);
+        if (m) start = m.index + (m[0].startsWith(" ") ? 1 : 0);
       }
-      return {
-        inArgMode: true,
-        activeCommand: command,
-        argPartial: partial,
-        argReplaceFrom: cursor - partial.length,
-      };
+      if (start < 0) continue;
+      const argStart = start + def.name.length + 1; // after a space
+      if (cursor >= argStart) {
+        const between = text.slice(argStart, cursor);
+        if (between.includes(" ")) continue; // single word only
+        return {
+          inArgMode: true,
+          activeCommand: def,
+          argPartial: between,
+          argReplaceFrom: argStart,
+        };
+      }
     }
   }
+
+  // Slash-typed commands do not activate arg mode anymore; activation only via selection
 
   const commandQueryMatch = /(?:^|\s)\/([^\s]*)$/.exec(uptoCursor);
   if (!commandQueryMatch) return result;
@@ -179,7 +167,8 @@ export function computeCommandState(
     text,
     cursor,
     commands,
-    openBlockKind
+    openBlockKind,
+    input.activated
   );
 
   const segments = buildSegments(text).map((segment) => ({
@@ -207,7 +196,8 @@ export async function resolveArgumentSuggestions(
         const result = await argument.fetch();
         return Array.isArray(result) ? result : [];
       }
-      return getSource(argument.source);
+      if (argument.source) return getSource(argument.source);
+      return [] as string[];
     })();
 
     const normalize = argument.normalize || ((value: string) => value.toLowerCase());
@@ -232,4 +222,3 @@ export async function resolveArgumentSuggestions(
     return base; // silent fail
   }
 }
-

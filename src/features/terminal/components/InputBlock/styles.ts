@@ -64,6 +64,10 @@ export const styles = StyleSheet.create({
     color: Colors.dark.tint,
     fontWeight: "600",
   },
+  hlCommandActive: {
+    color: Colors.dark.tint,
+    fontWeight: "700",
+  },
   hlCommandArg: {
     color: Colors.dark.icon,
   },

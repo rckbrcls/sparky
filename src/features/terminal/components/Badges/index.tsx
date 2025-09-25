@@ -4,7 +4,7 @@ import { Colors } from "../../../../constants/Colors";
 import type { AppIconKey } from "../../../../constants/iconMappings";
 import { AppIcon } from "../../../../components/AppIcon";
 import type { ParsedReminder } from "@/src/features/terminal/engine";
-import { matchCreateFolderCommand, matchFolderCommand } from "@/src/features/terminal/engine";
+import type { IntentState } from "@/src/features/terminal/engine/intent";
 import { styles } from "./styles";
 
 type BadgeTone = "neutral" | "accent" | "success" | "warning" | "danger";
@@ -80,45 +80,29 @@ const getPriorityLabel = (priority: number) => {
 interface BadgesProps {
   preview: ParsedReminder | null;
   fadeAnim: Animated.Value;
-  text: string;
   folderMap: Record<string, string>;
+  intent: IntentState;
 }
 
 const resolvePreviewFolderName = (
-  text: string,
   preview: ParsedReminder,
-  folderMap: Record<string, string>
+  folderMap: Record<string, string>,
+  intent: IntentState
 ) => {
-  const folderMatch = matchFolderCommand(text || "");
-  if (folderMatch?.[1]?.trim()) return folderMatch[1].trim();
-
-  const createMatch = matchCreateFolderCommand(text || "");
-  if (createMatch?.[1]?.trim()) return createMatch[1].trim();
-
+  const cmd = intent.activated.find((c) => c.name === "folder");
+  if (cmd?.value?.trim()) return cmd.value.trim();
   if (preview.folderId) {
-    return (
-      folderMap[preview.folderId] ||
-      (preview.folderId === "all" ? "All" : preview.folderId.replace(/-/g, " "))
-    );
+    return folderMap[preview.folderId] || (preview.folderId === "all" ? "All" : preview.folderId.replace(/-/g, " "));
   }
-
   return undefined;
 };
 
-export const Badges: React.FC<BadgesProps> = ({
-  preview,
-  fadeAnim,
-  text,
-  folderMap,
-}) => {
+export const Badges: React.FC<BadgesProps> = ({ preview, fadeAnim, folderMap, intent }) => {
   const previewBadges = useMemo<PreviewBadge[]>(() => {
     if (!preview) return [];
 
     const badges: PreviewBadge[] = [];
-    const folderName =
-      preview.type === "note"
-        ? resolvePreviewFolderName(text, preview, folderMap)
-        : undefined;
+    const folderName = preview.type === "note" ? resolvePreviewFolderName(preview, folderMap, intent) : undefined;
     const typeIcon = getTypeIcon(preview.type, preview.triggerType);
     const typeLabel = getTypeLabel(preview.type, preview.triggerType);
 
@@ -234,7 +218,7 @@ export const Badges: React.FC<BadgesProps> = ({
     }
 
     return badges;
-  }, [preview, text, folderMap]);
+  }, [preview, folderMap, intent]);
 
   if (!preview || previewBadges.length === 0) {
     return null;

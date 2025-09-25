@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { AppIcon } from "@/src/components/AppIcon";
 import { Colors } from "@/src/constants/Colors";
-import { buildSegments } from "@/src/features/terminal/engine";
 import type { Segment } from "@/src/features/terminal/engine";
+import type { ActivatedCommand } from "@/src/features/terminal/engine/intent";
 import { styles } from "./styles";
 
 interface InputBlockProps {
@@ -22,6 +22,7 @@ interface InputBlockProps {
   onSubmit: () => void;
   onSelectionChange: (start: number, end: number) => void;
   onKeyPress: (event: TextInputKeyPressEvent) => void;
+  activatedCommands?: ActivatedCommand[];
 }
 
 export const InputBlock: React.FC<InputBlockProps> = ({
@@ -32,11 +33,14 @@ export const InputBlock: React.FC<InputBlockProps> = ({
   onSubmit,
   onSelectionChange,
   onKeyPress,
+  activatedCommands = [],
 }) => {
   const highlightStyle = (kind: Segment["kind"]) => {
     switch (kind) {
       case "command":
         return styles.hlCommand;
+      case "commandActive":
+        return styles.hlCommandActive;
       case "commandArg":
         return styles.hlCommandArg;
       case "tag":
@@ -46,7 +50,42 @@ export const InputBlock: React.FC<InputBlockProps> = ({
     }
   };
 
-  const segments = useMemo(() => buildSegments(text), [text]);
+  const segments = useMemo(() => {
+    // Base rendering treats everything as normal text. We then overlay
+    // activated command name ranges (without slash) as commandActive.
+    const base: Segment[] = [{ text, kind: "normal" }];
+    if (!activatedCommands.length) return base;
+
+    const ranges = activatedCommands
+      .map((c) => (c.index != null ? { start: c.index!, end: c.index! + c.name.length } : null))
+      .filter(Boolean) as { start: number; end: number }[];
+    if (!ranges.length) return base;
+
+    const result: Segment[] = [];
+    const seg = base[0];
+    const start = 0;
+    const end = seg.text.length;
+    let cursor = start;
+    while (true) {
+      const nextRange = ranges.find((r) => r.start < end && r.end > cursor);
+      if (!nextRange) {
+        if (cursor < end) result.push({ text: seg.text.slice(cursor - start), kind: seg.kind });
+        break;
+      }
+      if (cursor < nextRange.start && nextRange.start < end) {
+        result.push({ text: seg.text.slice(cursor - start, nextRange.start - start), kind: seg.kind });
+      }
+      const a = Math.max(cursor, nextRange.start);
+      const b = Math.min(end, nextRange.end);
+      if (a < b) {
+        result.push({ text: seg.text.slice(a - start, b - start), kind: "commandActive" });
+      }
+      cursor = b;
+      if (cursor >= end) break;
+    }
+
+    return result;
+  }, [activatedCommands, text]);
 
   const renderSegments = () => {
     if (!text.length) {

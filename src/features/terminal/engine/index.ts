@@ -36,9 +36,5 @@ export {
   stripCreateDeleteCommands,
   stripAllSystemCommands,
   cleanSystemCommands,
-  shouldHidePreviewForText,
-  matchFolderCommand,
-  matchCreateFolderCommand,
-  matchDeleteFolderCommand,
   SLUG_ARG_COMMANDS,
 } from "./utils/text";

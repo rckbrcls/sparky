@@ -5,7 +5,7 @@
 
 export interface Segment {
   text: string;
-  kind: "command" | "commandArg" | "tag" | "normal";
+  kind: "command" | "commandArg" | "tag" | "normal" | "commandActive";
 }
 
 const COMMAND_PATTERN = /(\/[a-zA-Z]+)([\s\S]*?)(?=(?:\s\/[a-zA-Z]+)|$)/g;
@@ -63,4 +63,3 @@ export function buildSegments(value: string): Segment[] {
 
   return segments;
 }
-

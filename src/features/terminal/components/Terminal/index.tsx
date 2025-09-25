@@ -18,16 +18,8 @@ import { useCommandEngine } from "../../hooks/useCommandEngine";
 import { useFolderMap } from "@/src/features/notes/hooks/useFolderMap";
 
 import { ReminderService } from "@/src/features/timeline/services/ReminderService";
-import {
-  SmartTextParser,
-  cleanSystemCommands,
-  matchDeleteFolderCommand,
-  matchFolderCommand,
-  SLUG_ARG_COMMANDS,
-  slugifyForArgs,
-  stripAllSystemCommands,
-} from "@/src/features/terminal/engine";
-import type { ParsedReminder } from "@/src/features/terminal/engine";
+import { slugifyForArgs } from "@/src/features/terminal/engine";
+import { applyArgumentInsert } from "@/src/features/terminal/engine";
 import { Badges } from "../Badges";
 import { InputBlock } from "../InputBlock";
 import { MetaSection } from "../MetaSection";
@@ -50,7 +42,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
     const [isProcessing, setIsProcessing] = useState(false);
     const ignoreNextChangeRef = useRef(false);
 
-    const { preview, fadeAnim, updatePreview, hidePreview } =
+    const { preview, fadeAnim, updateFromIntent, hidePreview } =
       useReminderPreview();
     const { folderMap, setFolderMap } = useFolderMap();
 
@@ -59,6 +51,8 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       recompute,
       handleSelectCommand,
       handleSelectArgSuggestion,
+      intent,
+      finalizeActiveArgWithPartial,
     } = useCommandEngine({
       text,
       selectionStart: selection.start,
@@ -109,189 +103,119 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         }
 
         setText(value);
-        updatePreview(value);
+        updateFromIntent(value, intent);
         recompute(value, selection.end);
       },
-      [recompute, selection.end, updatePreview]
+      [intent, recompute, selection.end, updateFromIntent]
     );
 
-    const handleSubmitNote = useCallback(
-      async (parsed: ParsedReminder & { type: "note" }, rawText: string) => {
-        let chosenFolderId = parsed.folderId || "all";
-        const explicitFolderMatch = matchFolderCommand(rawText);
-        const createFolderInfo =
-          SmartTextParser.extractCreateFolderName(rawText);
-        const deleteFolderMatch = matchDeleteFolderCommand(rawText);
-        let commandOnly = false;
+    // Helpers to work only with activated commands (no slash parsing)
+    const getActivatedValues = useCallback(
+      (name: string) => intent.activated.filter((c) => c.name === name && (c.value ?? "").trim().length > 0).map((c) => c.value!.trim()),
+      [intent.activated]
+    );
 
+    const removeActivatedTokensFromText = useCallback(
+      (raw: string) => {
+        if (!intent.activated.length) return raw;
+        // Remove instances of "name" + optional space + single-word value at (approx) tracked indices
+        let value = raw;
+        // sort by index desc to avoid shifting
+        const acts = [...intent.activated].sort((a, b) => (b.index ?? 0) - (a.index ?? 0));
+        for (const a of acts) {
+          const name = a.name;
+          const idx = a.index != null ? a.index : value.indexOf(name);
+          if (idx < 0) continue;
+          const nameEnd = idx + name.length;
+          let end = nameEnd;
+          if (value[end] === " ") {
+            end += 1;
+            while (end < value.length && value[end] !== " ") end += 1;
+          }
+          value = (value.slice(0, idx) + value.slice(end)).replace(/\s{2,}/g, " ").trim();
+        }
+        return value.trim();
+      },
+      [intent.activated]
+    );
+
+    const handleSubmitUsingIntent = useCallback(async () => {
+      const cleaned = removeActivatedTokensFromText(text);
+      const type = intent.type === "reminder" ? "reminder" : "note";
+
+      if (type === "note") {
+        // Resolve folder by name (create if missing)
+        const folderName = getActivatedValues("folder")[0];
+        let chosenFolderId: string | undefined = undefined;
         try {
           const allFolders = await database.getAllFolders();
           const slugToId: Record<string, string> = {};
           allFolders.forEach((folder: any) => {
             slugToId[slugifyForArgs(folder.name)] = folder.id;
           });
-
-          if (createFolderInfo.id && createFolderInfo.id !== "all") {
-            let actual = slugToId[createFolderInfo.id];
-            if (!actual) {
-              const newId = await database.createFolder({
-                name: createFolderInfo.raw || createFolderInfo.id,
-                color: "#777777",
-              });
-              slugToId[createFolderInfo.id] = newId;
+          if (folderName) {
+            const rawSlug = slugifyForArgs(folderName);
+            let actual = slugToId[rawSlug];
+            if (!actual && rawSlug && rawSlug !== "all") {
+              const newId = await database.createFolder({ name: folderName, color: "#777777" });
               actual = newId;
-              setFolderMap((prev) => ({
-                ...prev,
-                [newId]: (createFolderInfo.raw || createFolderInfo.id) ?? "",
-              }));
+              setFolderMap((prev) => ({ ...prev, [newId]: folderName }));
             }
-            if (!parsed.folderId && actual) {
-              chosenFolderId = actual;
-            }
+            chosenFolderId = actual;
           }
+        } catch {}
 
-          if (explicitFolderMatch) {
-            const rawName = explicitFolderMatch[1];
-            const rawSlug = slugifyForArgs(rawName);
-            if (rawSlug && rawSlug !== "all") {
-              let actual = slugToId[rawSlug];
-              if (!actual) {
-                const newId = await database.createFolder({
-                  name: rawName,
-                  color: "#777777",
-                });
-                actual = newId;
-                slugToId[rawSlug] = newId;
-                setFolderMap((prev) => ({ ...prev, [newId]: rawName || "" }));
-              }
-              chosenFolderId = actual;
-            }
-          }
-
-          if (deleteFolderMatch) {
-            const raw = deleteFolderMatch[1].trim();
-            if (raw && raw.toLowerCase() !== "all") {
-              const normalizedSlug = slugifyForArgs(raw);
-              const existing = await database.getAllFolders();
-              const target = existing.find(
-                (folder: any) =>
-                  folder.id === raw ||
-                  folder.id === normalizedSlug ||
-                  folder.name.toLowerCase() === raw.toLowerCase() ||
-              slugifyForArgs(folder.name) === normalizedSlug
-              );
-              if (target && !target.isDefault) {
-                await database.deleteFolder(target.id);
-                if (chosenFolderId === target.id) {
-                  chosenFolderId = "all";
-                }
-              }
-            }
-          }
-
-          const remaining = stripAllSystemCommands(rawText).trim();
-          if (!remaining) commandOnly = true;
-        } catch {
-          // Database lookup failures should not block quick note creation.
-        }
-
-        if (!commandOnly) {
-          const cleanedTitle = cleanSystemCommands(parsed.title);
-          const cleanedBody = cleanSystemCommands(parsed.body || "");
-          const content = cleanedBody
-            ? `${cleanedTitle}\n${cleanedBody}`.trim()
-            : cleanedTitle;
-
+        if (cleaned) {
           await database.createQuickNote({
-            content,
-            folderId: chosenFolderId === "all" ? undefined : chosenFolderId,
+            content: cleaned,
+            folderId: chosenFolderId,
           });
         }
-      },
-      [setFolderMap]
-    );
+        return;
+      }
 
-    const handleSubmitReminder = useCallback(async (parsed: ParsedReminder) => {
+      // reminder
+      const persons = getActivatedValues("person");
+      const locations = getActivatedValues("location");
       const reminderId = await ReminderService.createReminder({
-        title: parsed.title,
-        person: parsed.person,
-        project: parsed.project,
-        location: parsed.location,
-        type:
-          parsed.type === "date"
-            ? "once"
-            : parsed.triggerType === "location"
-            ? "by_location"
-            : "by_person_project",
-        fireAt: parsed.fireAt,
+        title: cleaned || "",
+        person: persons[0],
+        project: undefined,
+        location: locations[0],
+        type: locations.length > 0 ? "by_location" : persons.length > 0 ? "by_person_project" : "once",
+        fireAt: undefined,
       });
 
-      if (parsed.type === "trigger") {
-        const triggerPromises: Promise<string>[] = [];
-
-        if (parsed.persons && parsed.persons.length) {
-          parsed.persons.forEach((personName) => {
-            triggerPromises.push(
-              database.createTrigger({
-                reminderId,
-                type: "person",
-                config: JSON.stringify({ contactName: personName }),
-                isActive: true,
-              })
-            );
-          });
-        } else if (parsed.person) {
-          triggerPromises.push(
-            database.createTrigger({
-              reminderId,
-              type: "person",
-              config: JSON.stringify({ contactName: parsed.person }),
-              isActive: true,
-            })
-          );
-        }
-
-        if (parsed.locations && parsed.locations.length) {
-          parsed.locations.forEach((location) => {
-            triggerPromises.push(
-              database.createTrigger({
-                reminderId,
-                type: "location",
-                config: JSON.stringify({ location }),
-                isActive: true,
-              })
-            );
-          });
-        } else if (parsed.location) {
-          triggerPromises.push(
-            database.createTrigger({
-              reminderId,
-              type: "location",
-              config: JSON.stringify({ location: parsed.location }),
-              isActive: true,
-            })
-          );
-        }
-
-        await Promise.all(triggerPromises);
-      }
-    }, []);
+      const triggerPromises: Promise<string>[] = [];
+      persons.forEach((p) => {
+        triggerPromises.push(
+          database.createTrigger({
+            reminderId,
+            type: "person",
+            config: JSON.stringify({ contactName: p }),
+            isActive: true,
+          })
+        );
+      });
+      locations.forEach((loc) => {
+        triggerPromises.push(
+          database.createTrigger({
+            reminderId,
+            type: "location",
+            config: JSON.stringify({ location: loc }),
+            isActive: true,
+          })
+        );
+      });
+      await Promise.all(triggerPromises);
+    }, [database, getActivatedValues, intent.type, removeActivatedTokensFromText, setFolderMap, slugifyForArgs, text]);
 
     const handleSubmit = useCallback(async () => {
       if (!text.trim()) return;
       setIsProcessing(true);
 
       try {
-        const parsed = SmartTextParser.parseText(text);
-
-        if (parsed.type === "note") {
-          await handleSubmitNote(
-            parsed as ParsedReminder & { type: "note" },
-            text
-          );
-        } else {
-          await handleSubmitReminder(parsed);
-        }
+        await handleSubmitUsingIntent();
 
         setText("");
         setSelection({ start: 0, end: 0 });
@@ -326,8 +250,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       }
     }, [
       fadeAnim,
-      handleSubmitNote,
-      handleSubmitReminder,
+      handleSubmitUsingIntent,
       hidePreview,
       onReminderCreated,
       recompute,
@@ -343,6 +266,10 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
       },
       [recompute, setSelection, setText]
     );
+
+    useEffect(() => {
+      updateFromIntent(text, intent);
+    }, [text, intent, updateFromIntent]);
 
     function onInputKeyPress(event: TextInputKeyPressEvent) {
       const key = event.nativeEvent.key;
@@ -369,20 +296,18 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         }
       }
 
-      if (
-        (key === " " || key === "Spacebar") &&
-        inArgMode &&
-        activeCommand?.name &&
-        SLUG_ARG_COMMANDS.has(activeCommand.name) &&
-        argReplaceFrom != null
-      ) {
-        const selStart = selection.start;
-        const selEnd = selection.end;
-        const before = text.slice(0, selStart);
-        const after = text.slice(selEnd);
-        const newText = `${before}-${after}`;
-        const newCursor = selStart + 1;
+      if ((key === " " || key === "Spacebar") && inArgMode && activeCommand?.name && argReplaceFrom != null) {
+        // finalize the current argument using the typed partial
+        const partial = commandState.argPartial ?? "";
+        const { newText, newCursor } = applyArgumentInsert(
+          text,
+          argReplaceFrom,
+          selection.start,
+          partial,
+          true
+        );
         applyProgrammaticTextChange(newText, newCursor);
+        finalizeActiveArgWithPartial(partial);
       }
     }
 
@@ -400,6 +325,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
               recompute(text, start);
             }}
             onKeyPress={onInputKeyPress}
+            activatedCommands={intent.activated}
           />
           <MetaSection
             inArgMode={inArgMode}
@@ -410,12 +336,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             onSelectArgSuggestion={handleSelectArgSuggestion}
             onSelectCommand={handleSelectCommand}
           />
-          <Badges
-            preview={preview}
-            fadeAnim={fadeAnim}
-            text={text}
-            folderMap={folderMap}
-          />
+          <Badges preview={preview} fadeAnim={fadeAnim} folderMap={folderMap} intent={intent} />
         </View>
       </View>
     );

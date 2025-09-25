@@ -1,15 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import { Animated } from "react-native";
-import {
-  SmartTextParser,
-  shouldHidePreviewForText,
-} from "@/src/features/terminal/engine";
 import type { ParsedReminder } from "@/src/features/terminal/engine";
+import { buildPreviewFromIntent } from "@/src/features/terminal/engine/preview";
+import type { IntentState } from "@/src/features/terminal/engine/intent";
 
 interface UseReminderPreviewResult {
   preview: ParsedReminder | null;
   fadeAnim: Animated.Value;
-  updatePreview: (value: string) => void;
+  updateFromIntent: (text: string, intent: IntentState) => void;
   hidePreview: () => void;
 }
 
@@ -42,22 +40,18 @@ export const useReminderPreview = (): UseReminderPreviewResult => {
     [fadeAnim]
   );
 
-  const updatePreview = useCallback(
-    (value: string) => {
-      if (shouldHidePreviewForText(value)) {
+  const updateFromIntent = useCallback(
+    (text: string, intent: IntentState) => {
+      const parsed = buildPreviewFromIntent(text, intent);
+      const cleanedTitle = (parsed.title || "").trim();
+      if (!cleanedTitle) {
         hidePreview();
         return;
       }
-
-      try {
-        const parsed = SmartTextParser.parseText(value);
-        showPreview(parsed);
-      } catch {
-        hidePreview();
-      }
+      showPreview(parsed);
     },
     [hidePreview, showPreview]
   );
 
-  return { preview, fadeAnim, updatePreview, hidePreview };
+  return { preview, fadeAnim, updateFromIntent, hidePreview };
 };
