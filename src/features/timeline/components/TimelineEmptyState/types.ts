@@ -1,3 +1,4 @@
 export interface TimelineEmptyStateProps {
-  message?: string;
+  title?: string;
+  subtitle?: string;
 }

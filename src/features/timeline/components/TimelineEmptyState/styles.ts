@@ -4,16 +4,22 @@ import { Colors } from "@/src/constants/Colors";
 import { Typography } from "@/src/constants/Typography";
 
 export const styles = StyleSheet.create({
-  emptyContainer: {
+  container: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 32,
+    paddingHorizontal: 32,
   },
-  emptyText: {
-    ...Typography.caption,
+  title: {
+    ...Typography.h3,
+    color: Colors.dark.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  subtitle: {
+    ...Typography.body,
     color: Colors.dark.muted,
     textAlign: "center",
-    marginTop: 32,
+    lineHeight: 24,
   },
 });
