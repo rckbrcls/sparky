@@ -15,7 +15,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.icantmiss"
@@ -31,7 +31,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
-          "color": "#ffffff"
+          "color": "#000000"
         }
       ],
       [
@@ -40,7 +40,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#000000"
         }
       ],
       "expo-font",

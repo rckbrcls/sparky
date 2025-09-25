@@ -44,7 +44,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
   onRefresh,
   onScrollMetrics,
 }) => {
-  // background follows current theme to avoid black overlay artifacts
   const { isInitialized, error: initError, initializeApp } = useApp();
   const [notes, setNotes] = useState<QuickNoteWithFolder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -571,7 +570,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
             style={[styles.stagePlane, notesStageStyle]}
             pointerEvents={showFolderList ? "none" : "auto"}
           >
-            {/* Inlined FolderNotesView component */}
             <View style={styles.notesStageContainer}>
               {settingsActions.length ? (
                 <NotesToolbar actions={settingsActions} />

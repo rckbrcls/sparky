@@ -36,16 +36,9 @@ export function AppProvider({ children }: AppProviderProps) {
   const initializeApp = async () => {
     try {
       setError(null);
-
-      // Initialize database
       await database.initialize();
-
-      // Initialize notification service
       await NotificationService.initialize();
-
-      // Update reminder statuses
       await ReminderService.updateReminderStatuses();
-
       setIsInitialized(true);
     } catch (err) {
       console.error("App initialization error:", err);
