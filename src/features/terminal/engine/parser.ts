@@ -499,3 +499,4 @@ export class SmartTextParser {
     return { raw, id: this.normalizeFolderId(raw) };
   }
 }
+

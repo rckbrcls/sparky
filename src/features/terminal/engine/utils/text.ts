@@ -70,3 +70,4 @@ export const matchCreateFolderCommand = (value: string) =>
   value.match(CREATE_FOLDER_MATCH_RE);
 export const matchDeleteFolderCommand = (value: string) =>
   value.match(DELETE_FOLDER_MATCH_RE);
+

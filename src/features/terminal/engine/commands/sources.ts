@@ -1,7 +1,7 @@
 import { database } from "@/src/database";
 import type { QuickNote } from "@/src/features/notes/types";
 import type { Reminder } from "@/src/features/timeline/types";
-import { slugify } from "@/src/features/terminal/utils/text";
+import { slugify } from "../utils/text";
 
 interface CacheEntry {
   data: string[];
@@ -126,3 +126,4 @@ export function invalidate(kind?: SourceKey) {
 export function normalizeValue(raw: string): string {
   return slugify(raw);
 }
+

@@ -19,17 +19,15 @@ import { useFolderMap } from "@/src/features/notes/hooks/useFolderMap";
 
 import { ReminderService } from "@/src/features/timeline/services/ReminderService";
 import {
-  ParsedReminder,
   SmartTextParser,
-} from "@/src/features/terminal/services/SmartTextParser";
-import {
   cleanSystemCommands,
   matchDeleteFolderCommand,
   matchFolderCommand,
   SLUG_ARG_COMMANDS,
   slugifyForArgs,
   stripAllSystemCommands,
-} from "@/src/features/terminal/utils/text";
+} from "@/src/features/terminal/engine";
+import type { ParsedReminder } from "@/src/features/terminal/engine";
 import { Badges } from "../Badges";
 import { InputBlock } from "../InputBlock";
 import { MetaSection } from "../MetaSection";

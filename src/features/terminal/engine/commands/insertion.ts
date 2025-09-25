@@ -1,4 +1,4 @@
-import { CommandDefinition } from "./CommandRegistry";
+import { CommandDefinition } from "./registry";
 
 const ARGUMENT_MAX_LENGTH = 64;
 
@@ -47,3 +47,4 @@ export function applyArgumentInsert(
   const newCursor = (before + insertion).length;
   return { newText, newCursor };
 }
+

@@ -1,7 +1,6 @@
-import { defaultNormalize } from "@/src/features/terminal/utils/text";
-import type { SourceKey } from "./CommandArgumentSources";
+import { defaultNormalize } from "../utils/text";
 
-export type ArgumentSourceKind = SourceKey;
+export type ArgumentSourceKind = import("./sources").SourceKey;
 
 export interface CommandDefinition {
   name: string; // without leading slash
@@ -135,3 +134,4 @@ function bootstrap() {
 }
 
 bootstrap();
+

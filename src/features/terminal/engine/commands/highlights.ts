@@ -63,3 +63,4 @@ export function buildSegments(value: string): Segment[] {
 
   return segments;
 }
+

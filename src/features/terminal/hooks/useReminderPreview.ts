@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import { Animated } from "react-native";
 import {
-  ParsedReminder,
   SmartTextParser,
-} from "../services/SmartTextParser";
-import { shouldHidePreviewForText } from "@/src/features/terminal/utils/text";
+  shouldHidePreviewForText,
+} from "@/src/features/terminal/engine";
+import type { ParsedReminder } from "@/src/features/terminal/engine";
 
 interface UseReminderPreviewResult {
   preview: ParsedReminder | null;

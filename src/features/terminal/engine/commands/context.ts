@@ -1,10 +1,10 @@
-import { getSource } from "./CommandArgumentSources";
-import { buildSegments } from "./CommandHighlights";
+import { getSource } from "./sources";
+import { buildSegments } from "./highlights";
 import {
   CommandDefinition,
   getAllCommands,
   getCommandByName,
-} from "./CommandRegistry";
+} from "./registry";
 
 export interface CommandComputationInput {
   text: string;
@@ -232,3 +232,4 @@ export async function resolveArgumentSuggestions(
     return base; // silent fail
   }
 }
+

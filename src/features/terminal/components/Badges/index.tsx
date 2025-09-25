@@ -3,11 +3,8 @@ import { Animated, ScrollView, Text, View } from "react-native";
 import { Colors } from "../../../../constants/Colors";
 import type { AppIconKey } from "../../../../constants/iconMappings";
 import { AppIcon } from "../../../../components/AppIcon";
-import type { ParsedReminder } from "@/src/features/terminal/services/SmartTextParser";
-import {
-  matchCreateFolderCommand,
-  matchFolderCommand,
-} from "@/src/features/terminal/utils/text";
+import type { ParsedReminder } from "@/src/features/terminal/engine";
+import { matchCreateFolderCommand, matchFolderCommand } from "@/src/features/terminal/engine";
 import { styles } from "./styles";
 
 type BadgeTone = "neutral" | "accent" | "success" | "warning" | "danger";

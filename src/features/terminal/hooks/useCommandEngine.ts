@@ -3,13 +3,10 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   applyArgumentInsert,
   applyCommandInsert as applyNewCommandInsert,
-} from "../services/commands/CommandInsertion";
-import { CommandDefinition } from "../services/commands/CommandRegistry";
-import {
   computeCommandState,
-  ComputedCommandState,
   resolveArgumentSuggestions,
-} from "../services/commands/CommandContextEngine";
+} from "@/src/features/terminal/engine";
+import type { CommandDefinition, ComputedCommandState } from "@/src/features/terminal/engine";
 
 interface UseCommandEngineParams {
   text: string;
