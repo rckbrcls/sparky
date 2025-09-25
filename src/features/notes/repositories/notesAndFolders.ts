@@ -129,8 +129,7 @@ export const observeQuickNotesByFolder = (folderId: string) =>
   );
 
 export const createQuickNote = async (input: {
-  title?: string;
-  body?: string;
+  content: string;
   folderId?: string;
 }) => {
   let id = "";
@@ -138,8 +137,7 @@ export const createQuickNote = async (input: {
     const rec = await quickNoteCollection.create((r: Model) => {
       const raw: any = r._raw;
       raw.id = (Math.random() + 1).toString(36).substring(2);
-      raw.content = input.title ?? null;
-      raw.body = input.body ?? null;
+      raw.content = input.content ?? null;
       raw.folder_id = input.folderId ?? null;
       const ts = Date.now();
       raw.created_at = ts;

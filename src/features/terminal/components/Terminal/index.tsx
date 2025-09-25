@@ -205,8 +205,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
             : cleanedTitle;
 
           await database.createQuickNote({
-            title: content,
-            body: content,
+            content,
             folderId: chosenFolderId === "all" ? undefined : chosenFolderId,
           });
         }
