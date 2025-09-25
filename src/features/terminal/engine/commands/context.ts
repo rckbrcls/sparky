@@ -122,32 +122,12 @@ export async function resolveArgumentSuggestions(
   if (!base.inArgMode || !base.activeCommand?.argument) return base;
   const { argument } = base.activeCommand;
   try {
-    const resolved = await (async () => {
-      if (argument.fetch) {
-        const result = await argument.fetch();
-        return Array.isArray(result) ? result : [];
-      }
-      if (argument.source) return getSource(argument.source);
-      return [] as string[];
-    })();
-
-    const normalize = argument.normalize || ((value: string) => value.toLowerCase());
-    const partialNorm = normalize(base.argPartial || "");
-
-    let filtered = Array.isArray(resolved) ? resolved.slice() : [];
-    if (argument.exclude) {
-      filtered = filtered.filter((candidate) => !argument.exclude!(candidate));
-    }
-
-    if (partialNorm) {
-      filtered = filtered.filter((candidate) => {
-        if (argument.filter) return argument.filter(candidate, partialNorm);
-        return normalize(candidate).includes(partialNorm);
-      });
-    } else if (!argument.allowEmptyInitialList) {
-      filtered = [];
-    }
-
+    const resolved = argument.source ? await getSource(argument.source) : [];
+    const partial = (base.argPartial || "").toLowerCase();
+    const list = Array.isArray(resolved) ? resolved : [];
+    const filtered = partial
+      ? list.filter((c) => (c || "").toLowerCase().includes(partial))
+      : list;
     return { ...base, argSuggestions: filtered.slice(0, MAX_SUGGESTIONS) };
   } catch {
     return base; // silent fail
