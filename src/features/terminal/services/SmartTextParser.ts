@@ -125,7 +125,7 @@ export class SmartTextParser {
       location,
     };
 
-    if (!commands.note && !commands.title) {
+    if (!commands.note) {
       const lines = input.split(/\n/);
       const cleanedLines: string[] = [];
       let skipBlock: string | null = null; // 'tags' | 'people' | 'locations'
@@ -157,10 +157,10 @@ export class SmartTextParser {
           continue; // skip the start marker line
         }
         // Remove inline single-line commands with their arguments (until next /command or EOL)
-        // Commands covered: /date /person /location /priority /title /note /folders
+        // Commands covered: /date /person /location /priority /note /folders
         let processed = line
           .replace(
-            /\/(date|person|location|priority|title|note|folders|folder|createfolder|deletefolder)\b[^\/\n]*/gi,
+            /\/(date|person|location|priority|note|folders|folder|createfolder|deletefolder)\b[^\/\n]*/gi,
             ""
           )
           .trimEnd();
@@ -185,8 +185,6 @@ export class SmartTextParser {
 
     if (commands.note) {
       result.title = commands.note.trim();
-    } else if (commands.title) {
-      result.title = commands.title.trim();
     }
 
     if (commands.priority) {
@@ -286,6 +284,10 @@ export class SmartTextParser {
       const tok = tokens[i];
       if (tok.startsWith("/")) {
         const name = tok.slice(1).toLowerCase();
+        if (name === "title") {
+          i++;
+          continue;
+        }
         let j = i + 1;
         const parts: string[] = [];
         if (BLOCKS[name]) {
