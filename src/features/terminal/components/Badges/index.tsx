@@ -7,7 +7,7 @@ import type { ParsedReminder } from "@/src/features/terminal/services/SmartTextP
 import {
   matchCreateFolderCommand,
   matchFolderCommand,
-} from "../../../../utils/terminal";
+} from "@/src/features/terminal/utils/text";
 import { styles } from "./styles";
 
 type BadgeTone = "neutral" | "accent" | "success" | "warning" | "danger";

@@ -4,7 +4,7 @@ import {
   ParsedReminder,
   SmartTextParser,
 } from "../services/SmartTextParser";
-import { shouldHidePreviewForText } from "../../../utils/terminal";
+import { shouldHidePreviewForText } from "@/src/features/terminal/utils/text";
 
 interface UseReminderPreviewResult {
   preview: ParsedReminder | null;

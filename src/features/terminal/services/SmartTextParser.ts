@@ -48,8 +48,6 @@ export class SmartTextParser {
     /na\s+(academia|farmácia|escola|universidade)/gi,
   ];
 
-  // PROJECT_PATTERNS removed
-
   private static readonly PRIORITY_PATTERNS = [
     { pattern: /(!{3}|urgent|urgente|importante)/gi, priority: 3 },
     { pattern: /(!{2}|important|médio|medio)/gi, priority: 2 },

@@ -27,9 +27,9 @@ import {
   matchDeleteFolderCommand,
   matchFolderCommand,
   SLUG_ARG_COMMANDS,
-  slugify,
+  slugifyForArgs,
   stripAllSystemCommands,
-} from "../../../../utils/terminal";
+} from "@/src/features/terminal/utils/text";
 import { Badges } from "../Badges";
 import { InputBlock } from "../InputBlock";
 import { MetaSection } from "../MetaSection";
@@ -130,7 +130,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
           const allFolders = await database.getAllFolders();
           const slugToId: Record<string, string> = {};
           allFolders.forEach((folder: any) => {
-            slugToId[slugify(folder.name)] = folder.id;
+            slugToId[slugifyForArgs(folder.name)] = folder.id;
           });
 
           if (createFolderInfo.id && createFolderInfo.id !== "all") {
@@ -154,7 +154,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
 
           if (explicitFolderMatch) {
             const rawName = explicitFolderMatch[1];
-            const rawSlug = slugify(rawName);
+            const rawSlug = slugifyForArgs(rawName);
             if (rawSlug && rawSlug !== "all") {
               let actual = slugToId[rawSlug];
               if (!actual) {
@@ -173,14 +173,14 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
           if (deleteFolderMatch) {
             const raw = deleteFolderMatch[1].trim();
             if (raw && raw.toLowerCase() !== "all") {
-              const normalizedSlug = slugify(raw);
+              const normalizedSlug = slugifyForArgs(raw);
               const existing = await database.getAllFolders();
               const target = existing.find(
                 (folder: any) =>
                   folder.id === raw ||
                   folder.id === normalizedSlug ||
                   folder.name.toLowerCase() === raw.toLowerCase() ||
-                  slugify(folder.name) === normalizedSlug
+              slugifyForArgs(folder.name) === normalizedSlug
               );
               if (target && !target.isDefault) {
                 await database.deleteFolder(target.id);
