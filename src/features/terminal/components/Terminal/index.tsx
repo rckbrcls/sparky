@@ -106,14 +106,24 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
 
         // Detect newline (Enter) typed in multiline input and delegate finalization
         if ((/\r|\n/.test(value[value.length - 1] || ""))) {
-          // Do not accept the newline into state; ask engine to finalize
-          ignoreNextChangeRef.current = true; // prevent next setText echo cycle
-          const cleaned = finalizeOnEnter();
-          if (cleaned !== undefined) {
-            setText(cleaned);
-            updateFromIntent(cleaned, intent);
+          // Do not accept the newline into state; finalize using freshest snapshot
+          ignoreNextChangeRef.current = true;
+          const trimmed = value.replace(/[\r\n]+$/, "");
+          if (inArgMode && activeCommand?.name && argReplaceFrom != null) {
+            const partial = trimmed.slice(argReplaceFrom);
+            finalizeActiveArgWithPartial(partial);
+            updateFromIntent(trimmed, intent);
           } else {
-            updateFromIntent(text, intent);
+            const cleaned = finalizeOnEnter(trimmed);
+            if (cleaned !== undefined) {
+              setText(cleaned);
+              const newCursor = Math.min(selection.end, cleaned.length);
+              setSelection({ start: newCursor, end: newCursor });
+              recompute(cleaned, newCursor);
+              updateFromIntent(cleaned, intent);
+            } else {
+              updateFromIntent(trimmed, intent);
+            }
           }
           return;
         }
@@ -122,7 +132,7 @@ export const Terminal = React.forwardRef<TerminalHandle, TerminalProps>(
         updateFromIntent(value, intent);
         recompute(value, selection.end);
       },
-      [finalizeOnEnter, intent, recompute, selection.end, text, updateFromIntent]
+      [activeCommand?.name, argReplaceFrom, finalizeActiveArgWithPartial, finalizeOnEnter, inArgMode, intent, recompute, selection.end, updateFromIntent]
     );
 
     // Helpers to work only with activated commands (no slash parsing)

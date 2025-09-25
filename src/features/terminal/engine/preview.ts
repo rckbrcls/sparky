@@ -1,4 +1,4 @@
-import type { ParsedReminder } from "./parser";
+import type { ParsedReminder } from "./types";
 import type { IntentState } from "./intent";
 import { slugifyForArgs } from "./utils/text";
 

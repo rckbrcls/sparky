@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { applyArgumentInsert, computeCommandState, resolveArgumentSuggestions, getCommandByName } from "@/src/features/terminal/engine";
 import type { CommandDefinition, ComputedCommandState } from "@/src/features/terminal/engine";
@@ -13,7 +13,8 @@ import {
   intentAttachCommand,
   IntentState,
 } from "@/src/features/terminal/engine/intent";
-import { filterCommandMatches } from "@/src/features/terminal/engine/policy";
+// Minimal in-place filter for command matches: hide other type commands when one is active,
+// and respect appliesTo against the current intent type (allow all during 'auto').
 
 interface UseCommandEngineParams {
   text: string;
@@ -32,7 +33,7 @@ interface UseCommandEngineResult {
   finalizeActiveArgWithPartial: (partial: string) => void;
   detachActivatedById: (id: string, rangeEnd?: number) => void;
   reopenForEdit: (id: string) => void;
-  finalizeOnEnter: () => string | undefined;
+  finalizeOnEnter: (snapshot?: string) => string | undefined;
 }
 
 export const useCommandEngine = ({
@@ -43,7 +44,6 @@ export const useCommandEngine = ({
 }: UseCommandEngineParams): UseCommandEngineResult => {
   const [commandState, setCommandState] = useState<ComputedCommandState>({
     inArgMode: false,
-    segments: [],
   });
   const [intent, setIntent] = useState<IntentState>(createInitialIntent());
   const requestCounterRef = useRef(0);
@@ -58,11 +58,21 @@ export const useCommandEngine = ({
         .filter((a) => !a.detached)
         .map((a) => ({ name: a.name, index: a.index })),
     });
+    const filteredMatches = (() => {
+      const list = base.commandMatches || [];
+      if (!list.length) return list;
+      const activeType = intent.activated.find((c) => c.name === 'note' || c.name === 'date');
+      return list.filter((cmd) => {
+        const applies = cmd.appliesTo ?? ['any'];
+        const okByType = applies.includes('any') || intent.type === 'auto' || applies.includes(intent.type);
+        if (!okByType) return false;
+        if (activeType && cmd.group === 'type' && cmd.name !== activeType.name) return false;
+        return true;
+      });
+    })();
     let filtered = {
       ...base,
-      commandMatches: base.commandMatches
-        ? filterCommandMatches(base.commandMatches, intent)
-        : base.commandMatches,
+      commandMatches: filteredMatches,
     } as ComputedCommandState;
     // Arg suggestions only for activated commands
     if (filtered.inArgMode && filtered.activeCommand) {
@@ -299,49 +309,33 @@ export const useCommandEngine = ({
     [intent.activated, recompute, selectionStart, setSelection, setText, text]
   );
 
-  const finalizeOnEnter = useCallback((): string | undefined => {
-    // Priority 1: active arg mode for an activated command
-    if (commandState.inArgMode && commandState.activeCommand) {
-      const partial = commandState.argPartial ?? "";
-      finalizeActiveArgWithPartial(partial);
-      // new text will be set by finalizeActiveArgWithPartial; compute an optimistic preview
-      const argStart = commandState.argReplaceFrom!;
-      const before = text.slice(0, argStart - (commandState.activeCommand.name.length + 1));
-      // remove the command token optimistically (name + space + partial + optional trailing space)
-      const approxEnd = argStart + partial.length + 1; // include trailing space
-      const optimistic = (before + text.slice(approxEnd)).replace(/\s{2,}/g, ' ').trimStart();
-      return optimistic;
-    }
+  const finalizeOnEnter = useCallback((snapshot?: string): string | undefined => {
+    const srcText = snapshot ?? text;
+    // Only fallback here: slash-typed command; active arg mode is handled at caller level for precision
 
-    // Fallback: finalize a slash-typed command near the cursor
-    const upto = text.slice(0, selectionStart);
     const re = /\/([a-zA-Z]+)/g;
     let m: RegExpExecArray | null;
     let last: RegExpExecArray | null = null;
-    while ((m = re.exec(upto)) !== null) last = m;
+    while ((m = re.exec(srcText)) !== null) last = m;
     if (!last) return undefined;
     const name = last[1];
     const def = getCommandByName(name);
     if (!def) return undefined;
     const slashStart = last.index;
     const afterName = slashStart + 1 + name.length;
-    if (text[afterName] !== ' ') return undefined; // need space before arg
+    if (srcText[afterName] !== ' ') return undefined; // need space before arg
     const argStart = afterName + 1;
-    const remainder = text.slice(argStart);
-    const nextBreak = remainder.search(/\s\/[a-zA-Z]+|\n/);
-    const argEnd = nextBreak >= 0 ? argStart + nextBreak : text.length;
-    const value = text.slice(argStart, argEnd).trim();
+    const remainder = srcText.slice(argStart);
+    const nextBreak = remainder.search(/\s\/[a-zA-Z]+/);
+    const argEnd = nextBreak >= 0 ? argStart + nextBreak : srcText.length;
+    const value = srcText.slice(argStart, argEnd).trim();
     if (!value) return undefined;
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const newText = (text.slice(0, slashStart) + text.slice(argEnd)).replace(/\s{2,}/g, ' ').trimStart();
-    const newCursor = Math.min(selectionStart, newText.length);
-    setText(newText);
-    setSelection({ start: newCursor, end: newCursor });
+    const newText = (srcText.slice(0, slashStart) + srcText.slice(argEnd)).replace(/\s{2,}/g, ' ').trimStart();
     setIntent((prev) => intentAddCommand(prev, { id, name: def.name, value, detached: true } as any));
-    recompute(newText, newCursor);
     return newText;
-  }, [commandState.activeCommand, commandState.argPartial, commandState.inArgMode, finalizeActiveArgWithPartial, recompute, selectionStart, setSelection, setText, text]);
+  }, [getCommandByName, intentAddCommand, setIntent, text]);
 
   return {
     commandState,

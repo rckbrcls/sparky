@@ -1,21 +1,11 @@
-import { getSource } from "./sources";
-import { buildSegments } from "./highlights";
-import {
-  CommandDefinition,
-  getAllCommands,
-  getCommandByName,
-} from "./registry";
+import { getSource, getAllCommands, getCommandByName } from "../commands";
+import type { CommandDefinition } from "../commands";
 
 export interface CommandComputationInput {
   text: string;
   cursor: number;
   requestId?: string; // for async race protection
   activated?: { name: string; index?: number }[];
-}
-
-export interface CommandStateSegment {
-  text: string;
-  kind: "command" | "commandArg" | "tag" | "normal" | "commandActive";
 }
 
 export interface ComputedCommandState {
@@ -26,46 +16,14 @@ export interface ComputedCommandState {
   argPartial?: string;
   argReplaceFrom?: number; // index where arg token starts (for replacement)
   argSuggestions?: string[];
-  segments: CommandStateSegment[]; // highlight info (kept simple for now)
   requestId?: string;
-  openBlockKind?: "tags" | "people" | "locations"; // legacy block support
 }
-
-const BLOCK_START = new Set(["/tags", "/people", "/locations"]);
-const BLOCK_END: Record<string, "tags" | "people" | "locations"> = {
-  "/endtags": "tags",
-  "/endpeople": "people",
-  "/endlocations": "locations",
-};
 
 const MAX_SUGGESTIONS = 30;
 
 const EMPTY_COMMAND_STATE: ComputedCommandState = {
   inArgMode: false,
-  segments: [],
 };
-
-function resolveOpenBlockKind(
-  text: string
-): ComputedCommandState["openBlockKind"] {
-  const tokens = text.split(/\s+/).filter(Boolean);
-  const stack: ("tags" | "people" | "locations")[] = [];
-  tokens.forEach((token) => {
-    if (BLOCK_START.has(token)) {
-      stack.push(token.slice(1) as typeof stack[number]);
-      return;
-    }
-    const closing = BLOCK_END[token];
-    if (!closing) return;
-    for (let i = stack.length - 1; i >= 0; i--) {
-      if (stack[i] === closing) {
-        stack.splice(i, 1);
-        break;
-      }
-    }
-  });
-  return stack.length > 0 ? stack[stack.length - 1] : undefined;
-}
 
 interface CursorContextResult {
   inArgMode: boolean;
@@ -80,11 +38,9 @@ function computeCursorContext(
   text: string,
   cursor: number,
   commands: CommandDefinition[],
-  openBlockKind: ComputedCommandState["openBlockKind"],
   activated: { name: string; index?: number }[] | undefined
 ): CursorContextResult {
   const uptoCursor = text.slice(0, cursor);
-  const charAfterCursor = text[cursor];
   const result: CursorContextResult = { inArgMode: false };
 
   // Activated-command arg mode (single-word), without slash
@@ -113,8 +69,6 @@ function computeCursorContext(
     }
   }
 
-  // Slash-typed commands do not activate arg mode anymore; activation only via selection
-
   const commandQueryMatch = /(?:^|\s)\/([^\s]*)$/.exec(uptoCursor);
   if (!commandQueryMatch) return result;
 
@@ -123,28 +77,16 @@ function computeCursorContext(
   if (hasExactMatch) return result;
 
   const lower = query.toLowerCase();
-  const closingName =
-    openBlockKind === "tags"
-      ? "endtags"
-      : openBlockKind === "people"
-      ? "endpeople"
-      : openBlockKind === "locations"
-      ? "endlocations"
-      : null;
-
   const prefixMatches = commands.filter((command) => {
-    if (closingName && command.name !== closingName) return false;
     return lower === "" || command.name.toLowerCase().startsWith(lower);
   });
 
   let containsMatches: CommandDefinition[] = [];
-  if (!closingName) {
-    containsMatches = commands.filter((command) => {
-      const normalized = command.name.toLowerCase();
-      if (!normalized.includes(lower)) return false;
-      return !prefixMatches.some((prefix) => prefix.name === command.name);
-    });
-  }
+  containsMatches = commands.filter((command) => {
+    const normalized = command.name.toLowerCase();
+    if (!normalized.includes(lower)) return false;
+    return !prefixMatches.some((prefix) => prefix.name === command.name);
+  });
 
   result.openCommandQuery = query;
   result.commandMatches = [...prefixMatches, ...containsMatches];
@@ -160,27 +102,17 @@ export function computeCommandState(
   if (!text) {
     return { ...EMPTY_COMMAND_STATE, requestId: input.requestId };
   }
-
-  const openBlockKind = resolveOpenBlockKind(text);
   const cursorContext = computeCursorContext(
     text,
     cursor,
     commands,
-    openBlockKind,
     input.activated
   );
-
-  const segments = buildSegments(text).map((segment) => ({
-    text: segment.text,
-    kind: segment.kind,
-  }));
 
   return {
     ...cursorContext,
     argSuggestions: [], // filled asynchronously
-    segments,
     requestId: input.requestId,
-    openBlockKind,
   };
 }
 

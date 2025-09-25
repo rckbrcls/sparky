@@ -2,39 +2,22 @@
 // Centralizes command registry, context engine, insertion helpers, syntax highlighting,
 // smart text parsing, and utilities in one cohesive module.
 
-// Command registry and types
-export type { CommandDefinition } from "./commands/registry";
-export {
-  getAllCommands,
-  getCommandByName,
-  registerCommand,
-} from "./commands/registry";
+// Command registry and types (single-file commands)
+export type { CommandDefinition } from "./commands";
+export { getAllCommands, getCommandByName } from "./commands";
 
 // Command context engine (state computation and suggestions)
-export type {
-  ComputedCommandState,
-  CommandStateSegment,
-} from "./commands/context";
+export type { ComputedCommandState } from "./commands/context";
 export { computeCommandState, resolveArgumentSuggestions } from "./commands/context";
 
 // Command insertion utilities
-export { applyCommandInsert, applyArgumentInsert } from "./commands/insertion";
+export { applyArgumentInsert } from "./commands/insertion";
 
-// Syntax highlighting segments
-export type { Segment } from "./commands/highlights";
-export { buildSegments } from "./commands/highlights";
+// Minimal segment type used by InputBlock highlights only
+export type { Segment } from "./types";
 
-// Smart parser for reminders/notes
-export type { ParsedReminder } from "./parser";
-export { SmartTextParser } from "./parser";
+// Reminder/Note preview types
+export type { ParsedReminder } from "./types";
 
-// Text utilities and command helpers
-export {
-  slugify,
-  defaultNormalize,
-  slugifyForArgs,
-  stripCreateDeleteCommands,
-  stripAllSystemCommands,
-  cleanSystemCommands,
-  SLUG_ARG_COMMANDS,
-} from "./utils/text";
+// Text utilities used by UI/helpers
+export { slugifyForArgs } from "./utils/text";
