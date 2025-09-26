@@ -157,4 +157,27 @@ export const styles = StyleSheet.create({
     color: Colors.dark.background,
     fontWeight: "600",
   },
+  swipeDeleteAction: {
+    width: 44,
+    height: 44,
+    backgroundColor: Colors.dark.error,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  swipeEditAction: {
+    width: 44,
+    height: 44,
+    backgroundColor: Colors.dark.tint,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+  },
+  swipeActionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: "100%",
+    paddingLeft: 8,
+  },
 });

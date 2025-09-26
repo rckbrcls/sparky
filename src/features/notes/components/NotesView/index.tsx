@@ -21,7 +21,7 @@ import {
   BottomSheetBackdropProps,
   BottomSheetModal,
 } from "@gorhom/bottom-sheet";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 
 import { styles } from "./styles";
 import type { NotesViewProps, QuickNoteWithFolder } from "./types";
@@ -629,6 +629,28 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
   const showFolderList = !selectedFolderId;
 
+  const renderNoteRightActions = useCallback(
+    (note: QuickNoteWithFolder) => (
+      <View style={styles.swipeActionsContainer}>
+        <TouchableOpacity
+          style={styles.swipeEditAction}
+          onPress={() => openNoteEditor(note)}
+          activeOpacity={0.85}
+        >
+          <AppIcon icon="edit" size={20} color={Colors.dark.background} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.swipeDeleteAction}
+          onPress={() => handleDeleteNote(note.id)}
+          activeOpacity={0.85}
+        >
+          <AppIcon icon="trash" size={20} color={Colors.dark.background} />
+        </TouchableOpacity>
+      </View>
+    ),
+    [handleDeleteNote, openNoteEditor]
+  );
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
@@ -696,72 +718,74 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   style={styles.notesList}
                   data={displayedNotes}
                   renderItem={({ item, index }) => (
-                    <TouchableOpacity
-                      activeOpacity={0.95}
-                      style={[
-                        styles.card,
-                        item.isPinned && styles.pinnedCard,
-                        { opacity: 1 },
-                      ]}
-                    >
-                      <View style={styles.cardContentRow}>
-                        <View style={styles.cardMain}>
-                          <View style={styles.cardHeader}>
-                            <View style={styles.cardInfo}>
-                              {item.isPinned && (
-                                <AppIcon
-                                  icon="pin"
-                                  size={16}
-                                  color={Colors.dark.tint}
-                                  style={styles.pinIcon}
-                                />
-                              )}
-                              {item.folder && (
-                                <View
-                                  style={[
-                                    styles.folderBadge,
-                                    { backgroundColor: item.folder.color },
-                                  ]}
-                                >
+                    <Swipeable renderRightActions={() => renderNoteRightActions(item)}>
+                      <TouchableOpacity
+                        activeOpacity={0.95}
+                        style={[
+                          styles.card,
+                          item.isPinned && styles.pinnedCard,
+                          { opacity: 1 },
+                        ]}
+                      >
+                        <View style={styles.cardContentRow}>
+                          <View style={styles.cardMain}>
+                            <View style={styles.cardHeader}>
+                              <View style={styles.cardInfo}>
+                                {item.isPinned && (
                                   <AppIcon
-                                    icon={item.folder.icon || "folder"}
-                                    size={12}
-                                    color={Colors.dark.background}
-                                    style={styles.folderBadgeIcon}
+                                    icon="pin"
+                                    size={16}
+                                    color={Colors.dark.tint}
+                                    style={styles.pinIcon}
                                   />
-                                  <Text style={styles.folderBadgeText}>
-                                    {item.folder.name}
-                                  </Text>
-                                </View>
-                              )}
+                                )}
+                                {item.folder && (
+                                  <View
+                                    style={[
+                                      styles.folderBadge,
+                                      { backgroundColor: item.folder.color },
+                                    ]}
+                                  >
+                                    <AppIcon
+                                      icon={item.folder.icon || "folder"}
+                                      size={12}
+                                      color={Colors.dark.background}
+                                      style={styles.folderBadgeIcon}
+                                    />
+                                    <Text style={styles.folderBadgeText}>
+                                      {item.folder.name}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                              <TouchableOpacity
+                                style={styles.editButton}
+                                onPress={() => openNoteEditor(item)}
+                              >
+                                <AppIcon
+                                  icon="eye"
+                                  size={18}
+                                  color={Colors.dark.background}
+                                />
+                              </TouchableOpacity>
                             </View>
-                            <TouchableOpacity
-                              style={styles.editButton}
-                              onPress={() => openNoteEditor(item)}
-                            >
-                              <AppIcon
-                                icon="eye"
-                                size={18}
-                                color={Colors.dark.background}
-                              />
-                            </TouchableOpacity>
-                          </View>
 
-                          <Text style={styles.noteContent}>{item.content}</Text>
+                            <Text style={styles.noteContent}>{item.content}</Text>
 
-                          <View style={styles.cardFooter}>
-                            <Text style={styles.noteDate}>
-                              {new Date(item.updatedAt).toLocaleDateString()}
-                            </Text>
-                            {formatTags(item.tags) ? (
-                              <Text style={styles.noteTags}>
-                                {formatTags(item.tags)}
+                            <View style={styles.cardFooter}>
+                              <Text style={styles.noteDate}>
+                                {new Date(item.updatedAt).toLocaleDateString()}
                               </Text>
-                            ) : null}
+                              {formatTags(item.tags) ? (
+                                <Text style={styles.noteTags}>
+                                  {formatTags(item.tags)}
+                                </Text>
+                              ) : null}
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
+                    </Swipeable>
                   )}
                   keyExtractor={(item) => item.id}
                   ListEmptyComponent={
