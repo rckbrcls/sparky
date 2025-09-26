@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -54,6 +54,13 @@ export const EditFolderSheet: React.FC<EditFolderSheetProps> = ({
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    // Keep local state in sync when opening for a different folder
+    setName(initialName);
+    setColor(initialColor ?? PRESET_COLORS[0]);
+    setIcon(initialIcon ?? "folder");
+  }, [initialName, initialColor, initialIcon]);
 
   return (
     <BottomSheetModal
@@ -158,4 +165,3 @@ export const EditFolderSheet: React.FC<EditFolderSheetProps> = ({
     </BottomSheetModal>
   );
 };
-
