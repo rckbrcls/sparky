@@ -34,6 +34,7 @@ import { useApp } from "@/src/context/AppContext";
 import { database } from "@/src/database";
 import { EditNoteSheet } from "../EditNoteSheet";
 import { CreateFolderSheet } from "../CreateFolderSheet";
+import { EditFolderSheet } from "../EditFolderSheet";
 import { NotesEmptyState } from "../EmptyState";
 import { FolderListView } from "../FolderListView";
 import { NotesToolbar } from "../NotesToolbar";
@@ -67,12 +68,14 @@ export const NotesView: React.FC<NotesViewProps> = ({
   >({});
   const editSheetRef = useRef<BottomSheetModal | null>(null);
   const createFolderSheetRef = useRef<BottomSheetModal | null>(null);
+  const editFolderSheetRef = useRef<BottomSheetModal | null>(null);
   const listContentHeight = useRef(0);
   const listLayoutHeight = useRef(0);
   const stageTransition = useRef(new Animated.Value(0)).current;
 
   const editSheetSnapPoints = useMemo(() => ["60%", "92%"], []);
   const createFolderSnapPoints = useMemo(() => ["60%", "92%"], []);
+  const editFolderSnapPoints = useMemo(() => ["60%", "92%"], []);
 
   const renderEditSheetBackdrop = useCallback(
     (backdropProps: BottomSheetBackdropProps) => (
@@ -87,6 +90,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   );
 
   const renderCreateFolderBackdrop = renderEditSheetBackdrop;
+  const renderEditFolderBackdrop = renderEditSheetBackdrop;
 
   const availableFolders = useMemo(
     () => folders.filter((folder) => folder.id !== "all"),
@@ -323,6 +327,45 @@ export const NotesView: React.FC<NotesViewProps> = ({
       }
     },
     [loadFolders]
+  );
+
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editingFolderName, setEditingFolderName] = useState("");
+  const [editingFolderColor, setEditingFolderColor] = useState<string | null>(null);
+  const [editingFolderIcon, setEditingFolderIcon] = useState<string | null>(null);
+
+  const handleStartEditFolder = useCallback(
+    (folderId: string) => {
+      const folder = folders.find((f) => f.id === folderId);
+      if (!folder) return;
+      setEditingFolderId(folder.id);
+      setEditingFolderName(folder.name);
+      setEditingFolderColor(folder.color ?? null);
+      setEditingFolderIcon(folder.icon ?? null);
+      requestAnimationFrame(() => {
+        editFolderSheetRef.current?.present();
+      });
+    },
+    [folders]
+  );
+
+  const handleConfirmEditFolder = useCallback(
+    async ({ name, color, icon }: { name: string; color?: string | null; icon?: string | null }) => {
+      if (!editingFolderId) return;
+      try {
+        await database.updateFolder(editingFolderId, {
+          name,
+          color: color ?? undefined,
+          icon: icon ?? undefined,
+        });
+        await loadFolders();
+        editFolderSheetRef.current?.dismiss();
+      } catch (error) {
+        console.error("Error updating folder:", error);
+        Alert.alert("Error", "Failed to update folder");
+      }
+    },
+    [editingFolderId, loadFolders]
   );
 
   const handleDeleteFolder = useCallback(
@@ -618,6 +661,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
               refreshing={refreshing}
               onAddFolder={handleStartCreateFolder}
               onDeleteFolder={handleDeleteFolder}
+              onEditFolder={handleStartEditFolder}
             />
           </Animated.View>
 
@@ -780,6 +824,17 @@ export const NotesView: React.FC<NotesViewProps> = ({
         onDismiss={() => {}}
         onClose={() => createFolderSheetRef.current?.dismiss()}
         onCreate={handleConfirmCreateFolder}
+      />
+      <EditFolderSheet
+        sheetRef={editFolderSheetRef}
+        snapPoints={editFolderSnapPoints}
+        renderBackdrop={renderEditFolderBackdrop}
+        onDismiss={() => {}}
+        onClose={() => editFolderSheetRef.current?.dismiss()}
+        initialName={editingFolderName}
+        initialColor={editingFolderColor}
+        initialIcon={editingFolderIcon}
+        onSave={handleConfirmEditFolder}
       />
     </GestureHandlerRootView>
   );

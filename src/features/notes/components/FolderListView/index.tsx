@@ -24,19 +24,28 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
   refreshing,
   onAddFolder,
   onDeleteFolder,
+  onEditFolder,
 }) => {
   const renderRightActions = useCallback(
     (item: FolderListItem) => (
-      <TouchableOpacity
-        style={styles.swipeDeleteAction}
-        onPress={() => onDeleteFolder?.(item.id)}
-        activeOpacity={0.85}
-      >
-        <AppIcon icon="trash" size={18} color={Colors.dark.background} />
-        <Text style={styles.swipeDeleteText}>Delete</Text>
-      </TouchableOpacity>
+      <View style={styles.swipeActionsContainer}>
+        <TouchableOpacity
+          style={styles.swipeEditAction}
+          onPress={() => onEditFolder?.(item.id)}
+          activeOpacity={0.85}
+        >
+          <AppIcon icon="edit" size={20} color={Colors.dark.background} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.swipeDeleteAction}
+          onPress={() => onDeleteFolder?.(item.id)}
+          activeOpacity={0.85}
+        >
+          <AppIcon icon="trash" size={20} color={Colors.dark.background} />
+        </TouchableOpacity>
+      </View>
     ),
-    [onDeleteFolder]
+    [onDeleteFolder, onEditFolder]
   );
 
   const renderFolderCard = useCallback(
@@ -100,14 +109,14 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
         </TouchableOpacity>
       );
 
-      if (item.id === "all" || !onDeleteFolder) return card;
+      if (item.id === "all" || (!onDeleteFolder && !onEditFolder)) return card;
       return (
         <Swipeable renderRightActions={() => renderRightActions(item)}>
           {card}
         </Swipeable>
       );
     },
-    [folderNoteCounts, loading, onDeleteFolder, onSelect, refreshing, renderRightActions, selectedFolderId]
+    [folderNoteCounts, loading, onDeleteFolder, onEditFolder, onSelect, refreshing, renderRightActions, selectedFolderId]
   );
 
   return (

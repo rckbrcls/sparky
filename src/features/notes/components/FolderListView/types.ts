@@ -14,4 +14,5 @@ export interface FolderListViewProps {
   refreshing: boolean;
   onAddFolder?: () => void;
   onDeleteFolder?: (folderId: string) => void;
+  onEditFolder?: (folderId: string) => void;
 }

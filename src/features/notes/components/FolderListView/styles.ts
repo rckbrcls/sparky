@@ -85,7 +85,8 @@ export const styles = StyleSheet.create({
     height: 12,
   },
   swipeDeleteAction: {
-    width: 110,
+    height: "100%",
+    aspectRatio: 1,
     backgroundColor: Colors.dark.error,
     alignItems: "center",
     justifyContent: "center",
@@ -93,10 +94,19 @@ export const styles = StyleSheet.create({
     marginVertical: 0,
     marginLeft: 8,
   },
-  swipeDeleteText: {
-    ...Typography.caption,
-    color: Colors.dark.background,
-    marginTop: 6,
-    fontWeight: "700",
+  swipeEditAction: {
+    height: "100%",
+    aspectRatio: 1,
+    backgroundColor: Colors.dark.tint,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    marginVertical: 0,
+  },
+  swipeActionsContainer: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    height: "100%",
+    paddingLeft: 8,
   },
 });
