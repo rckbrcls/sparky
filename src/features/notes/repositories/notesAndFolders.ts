@@ -67,7 +67,11 @@ export const getAllFolders = async () => {
   return records.map(mapFolder);
 };
 
-export const createFolder = async (input: { name: string; color?: string }) => {
+export const createFolder = async (input: {
+  name: string;
+  color?: string | null;
+  icon?: string | null;
+}) => {
   let id = "";
   await database.write(async () => {
     const rec = await folderCollection.create((r: Model) => {
@@ -75,6 +79,7 @@ export const createFolder = async (input: { name: string; color?: string }) => {
       raw.id = (Math.random() + 1).toString(36).substring(2);
       raw.name = input.name;
       raw.color = input.color ?? null;
+      raw.icon = input.icon ?? null;
       const ts = Date.now();
       raw.created_at = ts;
       raw.updated_at = ts;
@@ -87,7 +92,7 @@ export const createFolder = async (input: { name: string; color?: string }) => {
 
 export const updateFolder = async (
   id: string,
-  updates: Partial<{ name: string; color: string }>
+  updates: Partial<{ name: string; color: string; icon: string }>
 ) => {
   const rec = await folderCollection.find(id);
   const ts = Date.now();
@@ -96,6 +101,7 @@ export const updateFolder = async (
       const raw: any = m._raw;
       if (updates.name !== undefined) raw.name = updates.name;
       if (updates.color !== undefined) raw.color = updates.color;
+      if (updates.icon !== undefined) raw.icon = updates.icon;
       raw.updated_at = ts;
     });
   });

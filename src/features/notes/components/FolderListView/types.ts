@@ -12,4 +12,6 @@ export interface FolderListViewProps {
   folderNoteCounts: Record<string, number>;
   loading: boolean;
   refreshing: boolean;
+  onAddFolder?: () => void;
+  onDeleteFolder?: (folderId: string) => void;
 }

@@ -33,6 +33,7 @@ import { Colors } from "@/src/constants/Colors";
 import { useApp } from "@/src/context/AppContext";
 import { database } from "@/src/database";
 import { EditNoteSheet } from "../EditNoteSheet";
+import { CreateFolderSheet } from "../CreateFolderSheet";
 import { NotesEmptyState } from "../EmptyState";
 import { FolderListView } from "../FolderListView";
 import { NotesToolbar } from "../NotesToolbar";
@@ -65,11 +66,13 @@ export const NotesView: React.FC<NotesViewProps> = ({
     Record<string, number>
   >({});
   const editSheetRef = useRef<BottomSheetModal | null>(null);
+  const createFolderSheetRef = useRef<BottomSheetModal | null>(null);
   const listContentHeight = useRef(0);
   const listLayoutHeight = useRef(0);
   const stageTransition = useRef(new Animated.Value(0)).current;
 
   const editSheetSnapPoints = useMemo(() => ["60%", "92%"], []);
+  const createFolderSnapPoints = useMemo(() => ["55%", "80%"], []);
 
   const renderEditSheetBackdrop = useCallback(
     (backdropProps: BottomSheetBackdropProps) => (
@@ -82,6 +85,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
     ),
     []
   );
+
+  const renderCreateFolderBackdrop = renderEditSheetBackdrop;
 
   const availableFolders = useMemo(
     () => folders.filter((folder) => folder.id !== "all"),
@@ -298,6 +303,54 @@ export const NotesView: React.FC<NotesViewProps> = ({
     // drag removed
     setShowPinnedOnly(false);
   }, []);
+
+  const handleStartCreateFolder = useCallback(() => {
+    requestAnimationFrame(() => {
+      createFolderSheetRef.current?.present();
+    });
+  }, []);
+
+  const handleConfirmCreateFolder = useCallback(
+    async ({ name, color, icon }: { name: string; color?: string | null; icon?: string | null }) => {
+      try {
+        const newId = await database.createFolder({ name, color: color ?? undefined, icon: icon ?? undefined });
+        await loadFolders();
+        setSelectedFolderId(newId);
+        createFolderSheetRef.current?.dismiss();
+      } catch (error) {
+        console.error("Error creating folder:", error);
+        Alert.alert("Error", "Failed to create folder");
+      }
+    },
+    [loadFolders]
+  );
+
+  const handleDeleteFolder = useCallback(
+    (folderId: string) => {
+      const target = folders.find((f) => f.id === folderId);
+      const title = target ? `Delete “${target.name}”` : "Delete Folder";
+      Alert.alert(title, "Are you sure you want to delete this folder?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await database.deleteFolder(folderId);
+              if (selectedFolderId === folderId) {
+                handleBackToFolders();
+              }
+              await loadFolders();
+            } catch (error) {
+              console.error("Error deleting folder:", error);
+              Alert.alert("Error", "Failed to delete folder");
+            }
+          },
+        },
+      ]);
+    },
+    [folders, handleBackToFolders, loadFolders, selectedFolderId]
+  );
 
   const handleDeleteNote = (
     noteId: string,
@@ -563,6 +616,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
               folderNoteCounts={folderNoteCounts}
               loading={loading}
               refreshing={refreshing}
+              onAddFolder={handleStartCreateFolder}
+              onDeleteFolder={handleDeleteFolder}
             />
           </Animated.View>
 
@@ -717,6 +772,14 @@ export const NotesView: React.FC<NotesViewProps> = ({
         onClose={closeNoteEditor}
         onSave={handleSaveNoteEdit}
         onDelete={handleDeleteNote}
+      />
+      <CreateFolderSheet
+        sheetRef={createFolderSheetRef}
+        snapPoints={createFolderSnapPoints}
+        renderBackdrop={renderCreateFolderBackdrop}
+        onDismiss={() => {}}
+        onClose={() => createFolderSheetRef.current?.dismiss()}
+        onCreate={handleConfirmCreateFolder}
       />
     </GestureHandlerRootView>
   );

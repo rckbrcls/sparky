@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 
 import { AppIcon } from "@/src/components/AppIcon";
 import { Colors } from "@/src/constants/Colors";
@@ -21,7 +22,23 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
   folderNoteCounts,
   loading,
   refreshing,
+  onAddFolder,
+  onDeleteFolder,
 }) => {
+  const renderRightActions = useCallback(
+    (item: FolderListItem) => (
+      <TouchableOpacity
+        style={styles.swipeDeleteAction}
+        onPress={() => onDeleteFolder?.(item.id)}
+        activeOpacity={0.85}
+      >
+        <AppIcon icon="trash" size={18} color={Colors.dark.background} />
+        <Text style={styles.swipeDeleteText}>Delete</Text>
+      </TouchableOpacity>
+    ),
+    [onDeleteFolder]
+  );
+
   const renderFolderCard = useCallback(
     ({ item }: { item: FolderListItem }) => {
       const accentColor = item.color || Colors.dark.tint;
@@ -33,7 +50,7 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
         noteCount === 1 ? "note" : "notes"
       }`;
 
-      return (
+      const card = (
         <TouchableOpacity
           style={[
             styles.folderCard,
@@ -71,17 +88,26 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
               style={styles.folderCardIndicator}
             />
           ) : (
-            <AppIcon
-              icon="chevronRight"
-              size={18}
-              color={Colors.dark.muted}
-              style={styles.folderCardChevron}
-            />
+            <View style={styles.folderCardActions}>
+              <AppIcon
+                icon="chevronRight"
+                size={18}
+                color={Colors.dark.muted}
+                style={styles.folderCardChevron}
+              />
+            </View>
           )}
         </TouchableOpacity>
       );
+
+      if (item.id === "all" || !onDeleteFolder) return card;
+      return (
+        <Swipeable renderRightActions={() => renderRightActions(item)}>
+          {card}
+        </Swipeable>
+      );
     },
-    [folderNoteCounts, loading, onSelect, refreshing, selectedFolderId]
+    [folderNoteCounts, loading, onDeleteFolder, onSelect, refreshing, renderRightActions, selectedFolderId]
   );
 
   return (
@@ -95,6 +121,20 @@ export const FolderListView: React.FC<FolderListViewProps> = ({
           <View style={styles.folderCardSeparator} />
         )}
         contentContainerStyle={styles.folderFilterList}
+        ListHeaderComponent={
+          onAddFolder ? (
+            <View style={styles.folderListHeader}>
+              <Text style={styles.folderListHeaderTitle}>Folders</Text>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={onAddFolder}
+                activeOpacity={0.88}
+              >
+                <AppIcon icon="plus" size={18} color={Colors.dark.background} />
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
       />
     </View>
   );
