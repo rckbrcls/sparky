@@ -179,13 +179,13 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
           style={[styles.stagePlane, listStageStyle]}
           pointerEvents={selectedTypeId ? "auto" : "none"}
         >
-          <View style={styles.stageContainer}>
-            <View style={styles.headerRow}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => setSelectedTypeId(null)}
-                activeOpacity={0.88}
-              >
+        <View style={styles.stageContainer}>
+          <View style={styles.backWrapper}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => setSelectedTypeId(null)}
+              activeOpacity={0.88}
+            >
                 <AppIcon
                   icon="chevronLeft"
                   size={18}
@@ -196,6 +196,7 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
               </TouchableOpacity>
               <Text style={styles.headerCount}>{triggersCountLabel}</Text>
             </View>
+          <View style={styles.listWrapper}>
             <AnimatedSectionList
               sections={sections}
               renderItem={({ item }) => <TriggerCard trigger={item} />}
@@ -211,7 +212,11 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
                   tintColor={Colors.dark.tint}
                 />
               }
-              contentContainerStyle={contentContainerStyle}
+              contentContainerStyle={[
+                styles.listContainer,
+                styles.listContentInset,
+                { flexGrow: sections.some((s) => s.data.length > 0) ? 0 : 1 },
+              ]}
               showsVerticalScrollIndicator={false}
               stickySectionHeadersEnabled={false}
               onScroll={onScroll}
@@ -222,7 +227,8 @@ export const TriggersView: React.FC<TriggersViewProps> = ({
               overScrollMode="never"
             />
           </View>
-        </RNAnimated.View>
+        </View>
+      </RNAnimated.View>
       </View>
     </View>
   );

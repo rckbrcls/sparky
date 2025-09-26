@@ -23,13 +23,15 @@ export const styles = StyleSheet.create({
   },
   stageContainer: {
     flex: 1,
-    padding: 16,
+    backgroundColor: Colors.dark.background,
   },
-  headerRow: {
+  backWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    backgroundColor: Colors.dark.background,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
   },
   backButton: {
     flexDirection: "row",
@@ -49,5 +51,12 @@ export const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.dark.muted,
     fontWeight: "500",
+  },
+  listWrapper: {
+    flex: 1,
+    backgroundColor: Colors.dark.background,
+  },
+  listContentInset: {
+    paddingBottom: 80,
   },
 });
