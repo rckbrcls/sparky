@@ -137,6 +137,8 @@ export const observeQuickNotesByFolder = (folderId: string) =>
 export const createQuickNote = async (input: {
   content: string;
   folderId?: string;
+  tags?: string;
+  isPinned?: boolean;
 }) => {
   let id = "";
   await database.write(async () => {
@@ -145,6 +147,8 @@ export const createQuickNote = async (input: {
       raw.id = (Math.random() + 1).toString(36).substring(2);
       raw.content = input.content ?? null;
       raw.folder_id = input.folderId ?? null;
+      raw.tags = input.tags ?? "[]";
+      raw.is_pinned = input.isPinned ? 1 : 0;
       const ts = Date.now();
       raw.created_at = ts;
       raw.updated_at = ts;

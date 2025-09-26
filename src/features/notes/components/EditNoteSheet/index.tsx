@@ -42,7 +42,9 @@ export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
   onDelete,
 }) => {
   const insets = useSafeAreaInsets();
-  const accentColor = note?.folder?.color ?? Colors.dark.tint;
+  const selectedFolder =
+    availableFolders.find((f) => f.id === editedFolderId) || undefined;
+  const accentColor = note?.folder?.color ?? selectedFolder?.color ?? Colors.dark.tint;
   const timestampLabel = note?.updatedAt
     ? new Date(note.updatedAt).toLocaleString()
     : "";
@@ -62,221 +64,189 @@ export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
       <BottomSheetView
         style={[styles.editSheetContainer, { paddingBottom: Math.max(24, 12 + insets.bottom) }]}
       >
-        {note ? (
-          <>
-            <BottomSheetScrollView
-              contentContainerStyle={styles.editSheetContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
+        <BottomSheetScrollView
+          contentContainerStyle={styles.editSheetContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.editTopBar}>
+            <View
+              style={[
+                styles.editHeroBadge,
+                { backgroundColor: `${accentColor}33` },
+              ]}
             >
-              <View style={styles.editTopBar}>
-                <View
-                  style={[
-                    styles.editHeroBadge,
-                    { backgroundColor: `${accentColor}33` },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.editHeroIconWrap,
-                      { backgroundColor: accentColor },
-                    ]}
-                  >
-                    <AppIcon
-                      icon={note.folder?.icon || "notes"}
-                      size={16}
-                      color={Colors.dark.background}
-                    />
-                  </View>
-                  <Text style={styles.editHeroBadgeText}>Quick note</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.editCloseButton}
-                  onPress={() => onClose()}
-                  disabled={saving}
-                >
-                  <AppIcon icon="close" size={20} color={Colors.dark.muted} />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.editTitle}>Polish your thought</Text>
-              {timestampLabel ? (
-                <Text
-                  style={styles.editSubtitle}
-                >{`Updated ${timestampLabel}`}</Text>
-              ) : null}
-              <TouchableOpacity
+              <View
                 style={[
-                  styles.pinToggle,
-                  editedPinned && styles.pinToggleActive,
+                  styles.editHeroIconWrap,
+                  { backgroundColor: accentColor },
                 ]}
-                onPress={onTogglePinned}
+              >
+                <AppIcon
+                  icon={note?.folder?.icon || selectedFolder?.icon || "notes"}
+                  size={16}
+                  color={Colors.dark.background}
+                />
+              </View>
+              <Text style={styles.editHeroBadgeText}>
+                {note ? "Quick note" : "New note"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.editCloseButton}
+              onPress={() => onClose()}
+              disabled={saving}
+            >
+              <AppIcon icon="close" size={20} color={Colors.dark.muted} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.editTitle}>Polish your thought</Text>
+          {timestampLabel ? (
+            <Text style={styles.editSubtitle}>{`Updated ${timestampLabel}`}</Text>
+          ) : null}
+          <TouchableOpacity
+            style={[styles.pinToggle, editedPinned && styles.pinToggleActive]}
+            onPress={onTogglePinned}
+            disabled={saving}
+          >
+            <AppIcon
+              icon="pin"
+              size={18}
+              color={editedPinned ? Colors.dark.background : Colors.dark.muted}
+              style={styles.pinToggleIcon}
+            />
+            <Text
+              style={[styles.pinToggleText, editedPinned && styles.pinToggleTextActive]}
+            >
+              {editedPinned ? "Pinned" : "Pin note"}
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Content</Text>
+            <TextInput
+              style={styles.editContentInput}
+              multiline
+              value={editedContent}
+              onChangeText={onChangeContent}
+              placeholder="Capture your note..."
+              placeholderTextColor={Colors.dark.muted}
+              editable={!saving}
+            />
+          </View>
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Tags</Text>
+            <TextInput
+              style={styles.editTagInput}
+              value={editedTags}
+              onChangeText={onChangeTags}
+              placeholder="Add tags separated by space or comma"
+              placeholderTextColor={Colors.dark.muted}
+              editable={!saving}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={styles.editHelperText}>
+              Add tags with `#` or separated by comma.
+            </Text>
+          </View>
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Folder</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.editFolderChips}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableOpacity
+                style={[styles.folderChip, !editedFolderId && styles.folderChipActive]}
+                onPress={() => onChangeFolder(null)}
                 disabled={saving}
               >
                 <AppIcon
-                  icon="pin"
-                  size={18}
-                  color={
-                    editedPinned ? Colors.dark.background : Colors.dark.muted
-                  }
-                  style={styles.pinToggleIcon}
+                  icon="notes"
+                  size={14}
+                  color={!editedFolderId ? Colors.dark.tint : Colors.dark.muted}
+                  style={styles.folderChipIcon}
                 />
                 <Text
-                  style={[
-                    styles.pinToggleText,
-                    editedPinned && styles.pinToggleTextActive,
-                  ]}
+                  style={[styles.folderChipText, !editedFolderId && styles.folderChipTextActive]}
                 >
-                  {editedPinned ? "Pinned" : "Pin note"}
+                  No folder
                 </Text>
               </TouchableOpacity>
-              <View style={styles.editSection}>
-                <Text style={styles.editLabel}>Content</Text>
-                <TextInput
-                  style={styles.editContentInput}
-                  multiline
-                  value={editedContent}
-                  onChangeText={onChangeContent}
-                  placeholder="Capture your note..."
-                  placeholderTextColor={Colors.dark.muted}
-                  editable={!saving}
-                />
-              </View>
-              <View style={styles.editSection}>
-                <Text style={styles.editLabel}>Tags</Text>
-                <TextInput
-                  style={styles.editTagInput}
-                  value={editedTags}
-                  onChangeText={onChangeTags}
-                  placeholder="Add tags separated by space or comma"
-                  placeholderTextColor={Colors.dark.muted}
-                  editable={!saving}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <Text style={styles.editHelperText}>
-                  Add tags with `#` or separated by comma.
-                </Text>
-              </View>
-              <View style={styles.editSection}>
-                <Text style={styles.editLabel}>Folder</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.editFolderChips}
-                  keyboardShouldPersistTaps="handled"
-                >
+              {availableFolders.map((folder) => {
+                const isSelected = editedFolderId === folder.id;
+                return (
                   <TouchableOpacity
-                    style={[
-                      styles.folderChip,
-                      !editedFolderId && styles.folderChipActive,
-                    ]}
-                    onPress={() => onChangeFolder(null)}
+                    key={folder.id}
+                    style={[styles.folderChip, isSelected && styles.folderChipActive]}
+                    onPress={() => onChangeFolder(folder.id)}
                     disabled={saving}
                   >
                     <AppIcon
-                      icon="notes"
+                      icon={folder.icon || "folder"}
                       size={14}
-                      color={
-                        !editedFolderId ? Colors.dark.tint : Colors.dark.muted
-                      }
+                      color={isSelected ? Colors.dark.tint : Colors.dark.muted}
                       style={styles.folderChipIcon}
                     />
                     <Text
-                      style={[
-                        styles.folderChipText,
-                        !editedFolderId && styles.folderChipTextActive,
-                      ]}
+                      style={[styles.folderChipText, isSelected && styles.folderChipTextActive]}
                     >
-                      No folder
+                      {folder.name}
                     </Text>
                   </TouchableOpacity>
-                  {availableFolders.map((folder) => {
-                    const isSelected = editedFolderId === folder.id;
-                    return (
-                      <TouchableOpacity
-                        key={folder.id}
-                        style={[
-                          styles.folderChip,
-                          isSelected && styles.folderChipActive,
-                        ]}
-                        onPress={() => onChangeFolder(folder.id)}
-                        disabled={saving}
-                      >
-                        <AppIcon
-                          icon={folder.icon || "folder"}
-                          size={14}
-                          color={
-                            isSelected ? Colors.dark.tint : Colors.dark.muted
-                          }
-                          style={styles.folderChipIcon}
-                        />
-                        <Text
-                          style={[
-                            styles.folderChipText,
-                            isSelected && styles.folderChipTextActive,
-                          ]}
-                        >
-                          {folder.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            </BottomSheetScrollView>
-            <View style={styles.editFooterArea}>
-              <TouchableOpacity
-                style={styles.editDeleteButton}
-                onPress={() =>
-                  note &&
-                  onDelete(note.id, {
-                    afterDelete: () => onClose(true),
-                  })
-                }
-                disabled={saving}
-              >
-                <AppIcon
-                  icon="trash"
-                  size={16}
-                  color={Colors.dark.error}
-                  style={styles.editDeleteIcon}
-                />
-                <Text style={styles.editDeleteText}>Delete note</Text>
-              </TouchableOpacity>
-              <View style={styles.editFooterActions}>
-                <TouchableOpacity
-                  style={styles.editCancelButton}
-                  onPress={() => onClose()}
-                  disabled={saving}
-                >
-                  <Text style={styles.editCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.editSaveButton,
-                    (saving || !editedContent.trim()) &&
-                      styles.editSaveButtonDisabled,
-                  ]}
-                  onPress={onSave}
-                  disabled={saving || !editedContent.trim()}
-                >
-                  {saving ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={Colors.dark.background}
-                    />
-                  ) : (
-                    <Text style={styles.editSaveText}>Save changes</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
-        ) : (
-          <View style={styles.editSheetPlaceholder}>
-            <ActivityIndicator size="small" color={Colors.dark.tint} />
+                );
+              })}
+            </ScrollView>
           </View>
-        )}
+        </BottomSheetScrollView>
+        <View style={styles.editFooterArea}>
+          {note ? (
+            <TouchableOpacity
+              style={styles.editDeleteButton}
+              onPress={() =>
+                note &&
+                onDelete(note.id, {
+                  afterDelete: () => onClose(true),
+                })
+              }
+              disabled={saving}
+            >
+              <AppIcon
+                icon="trash"
+                size={16}
+                color={Colors.dark.error}
+                style={styles.editDeleteIcon}
+              />
+              <Text style={styles.editDeleteText}>Delete note</Text>
+            </TouchableOpacity>
+          ) : null}
+          <View style={styles.editFooterActions}>
+            <TouchableOpacity
+              style={styles.editCancelButton}
+              onPress={() => onClose()}
+              disabled={saving}
+            >
+              <Text style={styles.editCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.editSaveButton,
+                (saving || !editedContent.trim()) && styles.editSaveButtonDisabled,
+              ]}
+              onPress={onSave}
+              disabled={saving || !editedContent.trim()}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={Colors.dark.background} />
+              ) : (
+                <Text style={styles.editSaveText}>
+                  {note ? "Save changes" : "Create note"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </BottomSheetView>
     </BottomSheetModal>
   );

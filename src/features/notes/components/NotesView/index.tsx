@@ -439,6 +439,19 @@ export const NotesView: React.FC<NotesViewProps> = ({
     });
   }, []);
 
+  const openNewNoteEditor = useCallback(() => {
+    const preselectedFolderId =
+      selectedFolderId && selectedFolderId !== "all" ? selectedFolderId : null;
+    setEditingNote(null);
+    setEditedContent("");
+    setEditedTags("");
+    setEditedFolderId(preselectedFolderId);
+    setEditedPinned(false);
+    requestAnimationFrame(() => {
+      editSheetRef.current?.present();
+    });
+  }, [selectedFolderId]);
+
   const closeNoteEditor = (force = false) => {
     if (savingEdit && !force) return;
     editSheetRef.current?.dismiss();
@@ -460,7 +473,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   }, []);
 
   const handleSaveNoteEdit = async () => {
-    if (!editingNote || savingEdit) return;
+    if (savingEdit) return;
 
     const trimmedContent = editedContent.trim();
     if (!trimmedContent) {
@@ -472,57 +485,64 @@ export const NotesView: React.FC<NotesViewProps> = ({
     const serializedTags = JSON.stringify(tagsArray);
     const normalizedFolderId = editedFolderId;
 
-    const updates: Record<string, unknown> = {
-      content: trimmedContent,
-      tags: serializedTags,
-      isPinned: editedPinned,
-    };
-
-    if ((normalizedFolderId ?? null) !== (editingNote.folderId ?? null)) {
-      updates.folderId = normalizedFolderId ?? null;
-    }
-
     try {
       setSavingEdit(true);
-      await database.updateQuickNote(
-        editingNote.id,
-        updates as Partial<QuickNote>
-      );
+      if (editingNote) {
+        const updates: Record<string, unknown> = {
+          content: trimmedContent,
+          tags: serializedTags,
+          isPinned: editedPinned,
+        };
+        if ((normalizedFolderId ?? null) !== (editingNote.folderId ?? null)) {
+          updates.folderId = normalizedFolderId ?? null;
+        }
+        await database.updateQuickNote(
+          editingNote.id,
+          updates as Partial<QuickNote>
+        );
 
-      const updatedAt = new Date().toISOString();
-
-      setNotes((prevNotes) => {
-        const updatedNotes = prevNotes.map((note) => {
-          if (note.id !== editingNote.id) return note;
-
-          const nextFolder =
-            typeof normalizedFolderId === "string"
-              ? folders.find((folder) => folder.id === normalizedFolderId)
-              : undefined;
-
-          return {
-            ...note,
-            content: trimmedContent,
-            tags: serializedTags,
-            folderId:
+        const updatedAt = new Date().toISOString();
+        setNotes((prevNotes) => {
+          const updatedNotes = prevNotes.map((note) => {
+            if (note.id !== editingNote.id) return note;
+            const nextFolder =
               typeof normalizedFolderId === "string"
-                ? normalizedFolderId
-                : undefined,
-            folder: nextFolder,
-            isPinned: editedPinned,
-            updatedAt,
-          };
+                ? folders.find((folder) => folder.id === normalizedFolderId)
+                : undefined;
+            return {
+              ...note,
+              content: trimmedContent,
+              tags: serializedTags,
+              folderId:
+                typeof normalizedFolderId === "string"
+                  ? normalizedFolderId
+                  : undefined,
+              folder: nextFolder,
+              isPinned: editedPinned,
+              updatedAt,
+            };
+          });
+          return sortNotes(updatedNotes);
         });
-
-        return sortNotes(updatedNotes);
-      });
+      } else {
+        // create new note
+        // @ts-ignore extended repo supports tags/isPinned
+        await database.createQuickNote({
+          content: trimmedContent,
+          folderId: normalizedFolderId ?? undefined,
+          // @ts-ignore
+          tags: serializedTags,
+          // @ts-ignore
+          isPinned: editedPinned,
+        });
+        await loadNotes({ showLoading: false, targetFolderId: selectedFolderId });
+      }
 
       await loadFolderCounts();
-
       closeNoteEditor(true);
     } catch (error) {
-      console.error("Error updating note:", error);
-      Alert.alert("Error", "Failed to update note");
+      console.error("Error saving note:", error);
+      Alert.alert("Error", "Failed to save note");
     } finally {
       setSavingEdit(false);
     }
@@ -651,36 +671,10 @@ export const NotesView: React.FC<NotesViewProps> = ({
     [handleDeleteNote, openNoteEditor]
   );
 
-  const handleAddNote = useCallback(async () => {
+  const handleAddNote = useCallback(() => {
     if (!selectedFolderId) return;
-    try {
-      const targetFolderId = selectedFolderId === "all" ? undefined : selectedFolderId;
-      const newId = await database.createQuickNote({ content: "", folderId: targetFolderId });
-      // Refresh notes
-      await loadNotes({ showLoading: false, targetFolderId: selectedFolderId });
-      // Try to open the created note in editor
-      try {
-        const list =
-          selectedFolderId === "all"
-            ? await database.getAllQuickNotes()
-            : await database.getQuickNotesByFolder(selectedFolderId);
-        const created = list.find((n: any) => n.id === newId);
-        if (created) {
-          const normalizedSortOrder =
-            created.sortOrder === null || created.sortOrder === undefined
-              ? undefined
-              : Number(created.sortOrder);
-          const folder = created.folderId
-            ? folders.find((f) => f.id === created.folderId)
-            : undefined;
-          openNoteEditor({ ...created, sortOrder: normalizedSortOrder, folder });
-        }
-      } catch {}
-    } catch (error) {
-      console.error("Error creating note:", error);
-      Alert.alert("Error", "Failed to create note");
-    }
-  }, [folders, loadNotes, openNoteEditor, selectedFolderId]);
+    openNewNoteEditor();
+  }, [openNewNoteEditor, selectedFolderId]);
 
   return (
     <GestureHandlerRootView style={styles.container}>
