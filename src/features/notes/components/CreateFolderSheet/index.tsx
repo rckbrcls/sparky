@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/src/constants/Colors";
 import { AppIcon } from "@/src/components/AppIcon";
@@ -28,6 +29,7 @@ export const CreateFolderSheet: React.FC<CreateFolderSheetProps> = ({
   onClose,
   onCreate,
 }) => {
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [color, setColor] = useState<string | null>(PRESET_COLORS[0]);
   const [icon, setIcon] = useState<string | null>("folder");
@@ -65,7 +67,7 @@ export const CreateFolderSheet: React.FC<CreateFolderSheetProps> = ({
       handleIndicatorStyle={styles.sheetHandleIndicator}
       onDismiss={onDismiss}
     >
-      <BottomSheetView style={styles.container}>
+      <BottomSheetView style={[styles.container, { paddingBottom: Math.max(24, 12 + insets.bottom) }]}>
         <BottomSheetScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -156,4 +158,3 @@ export const CreateFolderSheet: React.FC<CreateFolderSheetProps> = ({
     </BottomSheetModal>
   );
 };
-

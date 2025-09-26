@@ -12,6 +12,7 @@ import {
   BottomSheetScrollView,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppIcon } from "@/src/components/AppIcon";
 import { Colors } from "@/src/constants/Colors";
@@ -40,6 +41,7 @@ export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
   onSave,
   onDelete,
 }) => {
+  const insets = useSafeAreaInsets();
   const accentColor = note?.folder?.color ?? Colors.dark.tint;
   const timestampLabel = note?.updatedAt
     ? new Date(note.updatedAt).toLocaleString()
@@ -57,7 +59,9 @@ export const EditNoteSheet: React.FC<EditNoteSheetProps> = ({
       handleIndicatorStyle={styles.sheetHandleIndicator}
       onDismiss={onDismiss}
     >
-      <BottomSheetView style={styles.editSheetContainer}>
+      <BottomSheetView
+        style={[styles.editSheetContainer, { paddingBottom: Math.max(24, 12 + insets.bottom) }]}
+      >
         {note ? (
           <>
             <BottomSheetScrollView

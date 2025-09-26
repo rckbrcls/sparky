@@ -72,7 +72,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
   const stageTransition = useRef(new Animated.Value(0)).current;
 
   const editSheetSnapPoints = useMemo(() => ["60%", "92%"], []);
-  const createFolderSnapPoints = useMemo(() => ["55%", "80%"], []);
+  const createFolderSnapPoints = useMemo(() => ["60%", "92%"], []);
 
   const renderEditSheetBackdrop = useCallback(
     (backdropProps: BottomSheetBackdropProps) => (
