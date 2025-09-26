@@ -599,7 +599,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   renderItem={({ item, index }) => (
                     <TouchableOpacity
                       activeOpacity={0.95}
-                      onPress={() => openNoteEditor(item)}
                       style={[
                         styles.card,
                         item.isPinned && styles.pinnedCard,
