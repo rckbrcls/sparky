@@ -48,6 +48,19 @@ export const styles = StyleSheet.create({
     color: Colors.dark.muted,
     fontWeight: "600",
   },
+  notesHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  addButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: Colors.dark.tint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
+  },
   notesListWrapper: {
     flex: 1,
     backgroundColor: Colors.dark.background,

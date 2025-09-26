@@ -651,6 +651,37 @@ export const NotesView: React.FC<NotesViewProps> = ({
     [handleDeleteNote, openNoteEditor]
   );
 
+  const handleAddNote = useCallback(async () => {
+    if (!selectedFolderId) return;
+    try {
+      const targetFolderId = selectedFolderId === "all" ? undefined : selectedFolderId;
+      const newId = await database.createQuickNote({ content: "", folderId: targetFolderId });
+      // Refresh notes
+      await loadNotes({ showLoading: false, targetFolderId: selectedFolderId });
+      // Try to open the created note in editor
+      try {
+        const list =
+          selectedFolderId === "all"
+            ? await database.getAllQuickNotes()
+            : await database.getQuickNotesByFolder(selectedFolderId);
+        const created = list.find((n: any) => n.id === newId);
+        if (created) {
+          const normalizedSortOrder =
+            created.sortOrder === null || created.sortOrder === undefined
+              ? undefined
+              : Number(created.sortOrder);
+          const folder = created.folderId
+            ? folders.find((f) => f.id === created.folderId)
+            : undefined;
+          openNoteEditor({ ...created, sortOrder: normalizedSortOrder, folder });
+        }
+      } catch {}
+    } catch (error) {
+      console.error("Error creating note:", error);
+      Alert.alert("Error", "Failed to create note");
+    }
+  }, [folders, loadNotes, openNoteEditor, selectedFolderId]);
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
@@ -710,7 +741,18 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   />
                   <Text style={styles.notesBackText}>back</Text>
                 </TouchableOpacity>
-                <Text style={styles.notesHeaderCount}>{notesCountLabel}</Text>
+                <View style={styles.notesHeaderRight}>
+                  <Text style={styles.notesHeaderCount}>{notesCountLabel}</Text>
+                  {selectedFolderId ? (
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={handleAddNote}
+                      activeOpacity={0.88}
+                    >
+                      <AppIcon icon="plus" size={18} color={Colors.dark.background} />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               </View>
 
               <View style={styles.notesListWrapper}>
