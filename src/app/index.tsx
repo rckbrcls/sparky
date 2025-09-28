@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   useAnimatedScrollHandler,
@@ -292,7 +298,6 @@ export default function HomeScreen() {
               flexDirection: "row",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: 8,
             }}
           >
             <ThemedText style={[Typography.h3, { color: themeColors.text }]}>
@@ -334,7 +339,10 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <Terminal ref={terminalRef} onReminderCreated={handleReminderCreated} />
+          <Terminal
+            ref={terminalRef}
+            onReminderCreated={handleReminderCreated}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
