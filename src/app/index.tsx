@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedScrollHandler,
@@ -27,7 +27,7 @@ import { useGlobalTouchDismiss } from "../context/GlobalTouchDismissContext";
 import { useColorScheme } from "../hooks/useColorScheme";
 import { NotesView } from "../features/notes/components/NotesView";
 
-const DEFAULT_INPUT_HEIGHT = 168;
+const DEFAULT_INPUT_HEIGHT = 64;
 const BOTTOM_THRESHOLD_PX = 2;
 const BOTTOM_RELEASE_DELTA_PX = 12;
 const HEADER_SCROLL_ANIMATION = {
@@ -260,7 +260,11 @@ export default function HomeScreen() {
       // Use capture only; no nested onStartShouldSetResponder in children
       onStartShouldSetResponderCapture={handleCapture}
     >
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
         <Animated.View
           onLayout={(event) => {
             const measuredHeight = event.nativeEvent.layout.height;
@@ -301,10 +305,6 @@ export default function HomeScreen() {
               <IconSymbol name="gear" color={themeColors.tint} size={22} />
             </TouchableOpacity>
           </View>
-          <Terminal
-            ref={terminalRef}
-            onReminderCreated={handleReminderCreated}
-          />
           <Animated.View
             pointerEvents="none"
             style={[
@@ -325,7 +325,18 @@ export default function HomeScreen() {
             {renderActiveView()}
           </MainNavigation>
         </Animated.View>
-      </View>
+        <View
+          style={[
+            styles.bottomSection,
+            {
+              backgroundColor: themeColors.background,
+              borderTopColor: themeColors.border,
+            },
+          ]}
+        >
+          <Terminal ref={terminalRef} onReminderCreated={handleReminderCreated} />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -354,6 +365,12 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
+  },
+  bottomSection: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderTopWidth: 1,
   },
   settingsButton: {
     padding: 10,
