@@ -39,7 +39,7 @@ export class ReminderService {
       location: reminderData.location,
       type: reminderData.type,
       rrule: reminderData.rrule,
-      nextFireAt: nextFireAt?.toISOString(),
+      nextFireAt: nextFireAt ? nextFireAt.getTime() : undefined,
       status: "active",
     });
 
@@ -99,7 +99,7 @@ export class ReminderService {
 
     const updateData: Partial<ReminderDTO> = {
       ...updates,
-      nextFireAt: nextFireAt ? nextFireAt.toISOString() : undefined,
+      nextFireAt: nextFireAt ? nextFireAt.getTime() : undefined,
     };
 
     // Schedule new notification
