@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -45,6 +45,7 @@ export const EditReminderSheet: React.FC<EditReminderSheetProps> = ({
   const [recurrence, setRecurrence] = useState<"daily" | "weekly" | "monthly" | null>(null);
   const [recurrenceTime, setRecurrenceTime] = useState<Date | null>(null);
   const [showRecurrenceTimePicker, setShowRecurrenceTimePicker] = useState(false);
+  const isPickerOpen = showDatePicker || showTimePicker || showRecurrenceTimePicker;
 
   const canSave = useMemo(() => !!title.trim() && !!reminder, [title, reminder]);
 
@@ -93,9 +94,30 @@ export const EditReminderSheet: React.FC<EditReminderSheetProps> = ({
     const hour = dt.getHours();
     const minute = dt.getMinutes();
     const base = `BYHOUR=${hour};BYMINUTE=${minute}`;
+    const existing = (reminder?.rrule ?? "").toUpperCase();
+
     if (recurrence === "daily") return `FREQ=DAILY;${base}`;
-    if (recurrence === "weekly") return `FREQ=WEEKLY;${base}`;
-    if (recurrence === "monthly") return `FREQ=MONTHLY;${base}`;
+
+    if (recurrence === "weekly") {
+      // Try preserve BYDAY from existing rrule when possible
+      let byday: string | undefined;
+      const m = existing.match(/BYDAY=([A-Z,]+)/);
+      if (m && m[1]) byday = m[1].split(",")[0];
+      if (!byday) {
+        const map = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const;
+        byday = map[new Date().getDay()];
+      }
+      return `FREQ=WEEKLY;BYDAY=${byday};${base}`;
+    }
+
+    if (recurrence === "monthly") {
+      // Try preserve BYMONTHDAY from existing rrule when possible
+      let bymonthday: number | undefined;
+      const m = existing.match(/BYMONTHDAY=(-?\d{1,2})/);
+      if (m && m[1]) bymonthday = parseInt(m[1], 10);
+      if (!bymonthday) bymonthday = new Date().getDate();
+      return `FREQ=MONTHLY;BYMONTHDAY=${bymonthday};${base}`;
+    }
     return undefined;
   };
 
@@ -137,7 +159,9 @@ export const EditReminderSheet: React.FC<EditReminderSheetProps> = ({
     <BottomSheetModal
       ref={sheetRef}
       snapPoints={snapPoints}
-      enablePanDownToClose
+      enablePanDownToClose={!isPickerOpen}
+      enableHandlePanningGesture={!isPickerOpen}
+      enableContentPanningGesture={!isPickerOpen}
       backdropComponent={renderBackdrop}
       android_keyboardInputMode="adjustResize"
       backgroundStyle={styles.sheetBackground}
@@ -147,6 +171,7 @@ export const EditReminderSheet: React.FC<EditReminderSheetProps> = ({
     >
       <BottomSheetView style={[styles.container, { paddingBottom: Math.max(24, 12 + insets.bottom) }]}>
         {reminder ? (
+          <>
           <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.topBar}>
               <View style={styles.heroBadge}>
@@ -196,61 +221,34 @@ export const EditReminderSheet: React.FC<EditReminderSheetProps> = ({
             {type === "once" && (
               <View style={styles.section}>
                 <Text style={styles.label}>Date & Time</Text>
-                {Platform.OS === "ios" ? (
-                  <View style={styles.chipRow}>
-                    <DateTimePicker
-                      value={date ?? new Date()}
-                      mode="date"
-                      display="compact"
-                      onChange={(_, d) => {
-                        if (d) setDate(d);
-                      }}
-                    />
-                    <DateTimePicker
-                      value={time ?? new Date()}
-                      mode="time"
-                      display="compact"
-                      onChange={(_, d) => {
-                        if (d) setTime(d);
-                      }}
-                    />
-                  </View>
-                ) : (
-                  <>
-                    <View style={styles.chipRow}>
-                      <TouchableOpacity style={styles.chip} onPress={() => setShowDatePicker(true)} disabled={saving}>
-                        <Text style={styles.chipText}>{date ? date.toDateString() : "Pick date"}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.chip} onPress={() => setShowTimePicker(true)} disabled={saving}>
-                        <Text style={styles.chipText}>
-                          {time ? `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}` : "Pick time"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={date ?? new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={(_, d) => {
-                          setShowDatePicker(false);
-                          if (d) setDate(d);
-                        }}
-                      />
-                    )}
-                    {showTimePicker && (
-                      <DateTimePicker
-                        value={time ?? new Date()}
-                        mode="time"
-                        display="default"
-                        onChange={(_, d) => {
-                          setShowTimePicker(false);
-                          if (d) setTime(d);
-                        }}
-                      />
-                    )}
-                  </>
-                )}
+                <View style={styles.chipRow}>
+                  <TouchableOpacity
+                    style={styles.chip}
+                    onPress={() => {
+                      setShowTimePicker(false);
+                      setShowRecurrenceTimePicker(false);
+                      setShowDatePicker(true);
+                    }}
+                    disabled={saving}
+                  >
+                    <Text style={styles.chipText}>{date ? date.toDateString() : "Pick date"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.chip}
+                    onPress={() => {
+                      setShowDatePicker(false);
+                      setShowRecurrenceTimePicker(false);
+                      setShowTimePicker(true);
+                    }}
+                    disabled={saving}
+                  >
+                    <Text style={styles.chipText}>
+                      {time
+                        ? `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`
+                        : "Pick time"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
@@ -268,38 +266,23 @@ export const EditReminderSheet: React.FC<EditReminderSheetProps> = ({
                       </TouchableOpacity>
                     );
                   })}
-                  {Platform.OS === "ios" ? (
-                    <DateTimePicker
-                      value={recurrenceTime ?? new Date()}
-                      mode="time"
-                      display="compact"
-                      onChange={(_, d) => {
-                        if (d) setRecurrenceTime(d);
-                      }}
-                    />
-                  ) : (
-                    <TouchableOpacity style={styles.chip} onPress={() => setShowRecurrenceTimePicker(true)}>
-                      <Text style={styles.chipText}>
-                        {recurrenceTime
-                          ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
-                              recurrenceTime.getMinutes()
-                            ).padStart(2, "0")}`
-                          : "Pick time"}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {Platform.OS !== "ios" && showRecurrenceTimePicker && (
-                  <DateTimePicker
-                    value={recurrenceTime ?? new Date()}
-                    mode="time"
-                    display="default"
-                    onChange={(_, d) => {
-                      setShowRecurrenceTimePicker(false);
-                      if (d) setRecurrenceTime(d);
+                  <TouchableOpacity
+                    style={styles.chip}
+                    onPress={() => {
+                      setShowDatePicker(false);
+                      setShowTimePicker(false);
+                      setShowRecurrenceTimePicker(true);
                     }}
-                  />
-                )}
+                  >
+                    <Text style={styles.chipText}>
+                      {recurrenceTime
+                        ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
+                            recurrenceTime.getMinutes()
+                          ).padStart(2, "0")}`
+                        : "Pick time"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
@@ -351,6 +334,69 @@ export const EditReminderSheet: React.FC<EditReminderSheetProps> = ({
               />
             </View>
           </BottomSheetScrollView>
+          {(showDatePicker || showTimePicker || showRecurrenceTimePicker) && (
+            <View style={styles.pickerPanel} onStartShouldSetResponder={() => true}>
+              <View style={styles.pickerToolbar}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setShowTimePicker(false);
+                    setShowRecurrenceTimePicker(false);
+                  }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setShowTimePicker(false);
+                    setShowRecurrenceTimePicker(false);
+                  }}
+                >
+                  <Text style={styles.createText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.pickerContent}>
+                <View style={[styles.pickerSlot, { opacity: showDatePicker ? 1 : 0 }]} pointerEvents={showDatePicker ? "auto" : "none"}>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={date ?? new Date()}
+                      mode="date"
+                      display="spinner"
+                      onChange={(_, d) => {
+                        if (d) setDate(d);
+                      }}
+                    />
+                  )}
+                </View>
+                <View style={[styles.pickerSlot, { opacity: showTimePicker ? 1 : 0 }]} pointerEvents={showTimePicker ? "auto" : "none"}>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={time ?? new Date()}
+                      mode="time"
+                      display="spinner"
+                      onChange={(_, d) => {
+                        if (d) setTime(d);
+                      }}
+                    />
+                  )}
+                </View>
+                <View style={[styles.pickerSlot, { opacity: showRecurrenceTimePicker ? 1 : 0 }]} pointerEvents={showRecurrenceTimePicker ? "auto" : "none"}>
+                  {showRecurrenceTimePicker && (
+                    <DateTimePicker
+                      value={recurrenceTime ?? new Date()}
+                      mode="time"
+                      display="spinner"
+                      onChange={(_, d) => {
+                        if (d) setRecurrenceTime(d);
+                      }}
+                    />
+                  )}
+                </View>
+              </View>
+            </View>
+          )}
+          </>
         ) : (
           <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator size="small" color={Colors.dark.tint} />

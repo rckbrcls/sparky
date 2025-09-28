@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -36,6 +36,11 @@ export const CreateReminderSheet: React.FC<CreateReminderSheetProps> = ({
   const [recurrenceWeekday, setRecurrenceWeekday] = useState<number | null>(null); // 0-6 (Sun-Sat)
   const [monthlyDay, setMonthlyDay] = useState<number | null>(null); // 1-31
   const [showRecurrenceDatePicker, setShowRecurrenceDatePicker] = useState(false);
+  const isPickerOpen =
+    showDatePicker ||
+    showTimePicker ||
+    showRecurrenceTimePicker ||
+    showRecurrenceDatePicker;
 
   const canCreate = useMemo(() => {
     if (!title.trim()) return false;
@@ -135,7 +140,9 @@ export const CreateReminderSheet: React.FC<CreateReminderSheetProps> = ({
     <BottomSheetModal
       ref={sheetRef}
       snapPoints={snapPoints}
-      enablePanDownToClose
+      enablePanDownToClose={!isPickerOpen}
+      enableHandlePanningGesture={!isPickerOpen}
+      enableContentPanningGesture={!isPickerOpen}
       backdropComponent={renderBackdrop}
       android_keyboardInputMode="adjustResize"
       backgroundStyle={styles.sheetBackground}
@@ -200,69 +207,36 @@ export const CreateReminderSheet: React.FC<CreateReminderSheetProps> = ({
           {type === "once" && (
             <View style={styles.section}>
               <Text style={styles.label}>Date & Time</Text>
-              {Platform.OS === "ios" ? (
-                <View style={styles.chipRow}>
-                  <DateTimePicker
-                    value={date ?? new Date()}
-                    mode="date"
-                    display="compact"
-                    onChange={(_, d) => {
-                      if (d) setDate(d);
-                    }}
-                  />
-                  <DateTimePicker
-                    value={time ?? new Date()}
-                    mode="time"
-                    display="compact"
-                    onChange={(_, d) => {
-                      if (d) setTime(d);
-                    }}
-                  />
-                </View>
-              ) : (
-                <>
-                  <View style={styles.chipRow}>
-                    <TouchableOpacity
-                      style={styles.chip}
-                      onPress={() => setShowDatePicker(true)}
-                      disabled={saving}
-                    >
-                      <Text style={styles.chipText}>{date ? date.toDateString() : "Pick date"}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.chip}
-                      onPress={() => setShowTimePicker(true)}
-                      disabled={saving}
-                    >
-                      <Text style={styles.chipText}>
-                        {time ? `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}` : "Pick time"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={date ?? new Date()}
-                      mode="date"
-                      display="default"
-                      onChange={(_, d) => {
-                        setShowDatePicker(false);
-                        if (d) setDate(d);
-                      }}
-                    />
-                  )}
-                  {showTimePicker && (
-                    <DateTimePicker
-                      value={time ?? new Date()}
-                      mode="time"
-                      display="default"
-                      onChange={(_, d) => {
-                        setShowTimePicker(false);
-                        if (d) setTime(d);
-                      }}
-                    />
-                  )}
-                </>
-              )}
+              <View style={styles.chipRow}>
+                <TouchableOpacity
+                  style={styles.chip}
+                  onPress={() => {
+                    setShowTimePicker(false);
+                    setShowRecurrenceTimePicker(false);
+                    setShowRecurrenceDatePicker(false);
+                    setShowDatePicker(true);
+                  }}
+                  disabled={saving}
+                >
+                  <Text style={styles.chipText}>{date ? date.toDateString() : "Pick date"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.chip}
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setShowRecurrenceTimePicker(false);
+                    setShowRecurrenceDatePicker(false);
+                    setShowTimePicker(true);
+                  }}
+                  disabled={saving}
+                >
+                  <Text style={styles.chipText}>
+                    {time
+                      ? `${String(time.getHours()).padStart(2, "0")}:${String(time.getMinutes()).padStart(2, "0")}`
+                      : "Pick time"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
@@ -312,170 +286,183 @@ export const CreateReminderSheet: React.FC<CreateReminderSheetProps> = ({
                           );
                         })}
                       </View>
-                      {Platform.OS === "ios" ? (
-                        <View style={styles.chipRow}>
-                          <DateTimePicker
-                            value={recurrenceTime ?? new Date()}
-                            mode="time"
-                            display="compact"
-                            onChange={(_, d) => {
-                              if (d) setRecurrenceTime(d);
-                            }}
-                          />
-                        </View>
-                      ) : (
-                        <>
-                          <View style={styles.chipRow}>
-                            <TouchableOpacity
-                              style={styles.chip}
-                              onPress={() => setShowRecurrenceTimePicker(true)}
-                            >
-                              <Text style={styles.chipText}>
-                                {recurrenceTime
-                                  ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
-                                      recurrenceTime.getMinutes()
-                                    ).padStart(2, "0")}`
-                                  : "Pick time"}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                          {showRecurrenceTimePicker && (
-                            <DateTimePicker
-                              value={recurrenceTime ?? new Date()}
-                              mode="time"
-                              display="default"
-                              onChange={(_, d) => {
-                                setShowRecurrenceTimePicker(false);
-                                if (d) setRecurrenceTime(d);
-                              }}
-                            />
-                          )}
-                        </>
-                      )}
+                      <View style={styles.chipRow}>
+                        <TouchableOpacity
+                          style={styles.chip}
+                          onPress={() => {
+                            setShowDatePicker(false);
+                            setShowTimePicker(false);
+                            setShowRecurrenceDatePicker(false);
+                            setShowRecurrenceTimePicker(true);
+                          }}
+                        >
+                          <Text style={styles.chipText}>
+                            {recurrenceTime
+                              ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
+                                  recurrenceTime.getMinutes()
+                                ).padStart(2, "0")}`
+                              : "Pick time"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </>
                   )}
 
                   {/* Daily: only time */}
                   {recurrence === "daily" && (
-                    <>
-                      {Platform.OS === "ios" ? (
-                        <View style={styles.chipRow}>
-                          <DateTimePicker
-                            value={recurrenceTime ?? new Date()}
-                            mode="time"
-                            display="compact"
-                            onChange={(_, d) => {
-                              if (d) setRecurrenceTime(d);
-                            }}
-                          />
-                        </View>
-                      ) : (
-                        <>
-                          <View style={styles.chipRow}>
-                            <TouchableOpacity
-                              style={styles.chip}
-                              onPress={() => setShowRecurrenceTimePicker(true)}
-                            >
-                              <Text style={styles.chipText}>
-                                {recurrenceTime
-                                  ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
-                                      recurrenceTime.getMinutes()
-                                    ).padStart(2, "0")}`
-                                  : "Pick time"}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                          {showRecurrenceTimePicker && (
-                            <DateTimePicker
-                              value={recurrenceTime ?? new Date()}
-                              mode="time"
-                              display="default"
-                              onChange={(_, d) => {
-                                setShowRecurrenceTimePicker(false);
-                                if (d) setRecurrenceTime(d);
-                              }}
-                            />
-                          )}
-                        </>
-                      )}
-                    </>
+                    <View style={styles.chipRow}>
+                      <TouchableOpacity
+                        style={styles.chip}
+                        onPress={() => {
+                          setShowDatePicker(false);
+                          setShowTimePicker(false);
+                          setShowRecurrenceDatePicker(false);
+                          setShowRecurrenceTimePicker(true);
+                        }}
+                      >
+                        <Text style={styles.chipText}>
+                          {recurrenceTime
+                            ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
+                                recurrenceTime.getMinutes()
+                              ).padStart(2, "0")}`
+                            : "Pick time"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
 
                   {/* Monthly: pick day of month + time */}
                   {recurrence === "monthly" && (
                     <>
-                      {Platform.OS === "ios" ? (
-                        <View style={styles.chipRow}>
-                          <DateTimePicker
-                            value={new Date(new Date().setDate(monthlyDay ?? new Date().getDate()))}
-                            mode="date"
-                            display="compact"
-                            onChange={(_, d) => {
-                              if (d) setMonthlyDay(d.getDate());
-                            }}
-                          />
-                          <DateTimePicker
-                            value={recurrenceTime ?? new Date()}
-                            mode="time"
-                            display="compact"
-                            onChange={(_, d) => {
-                              if (d) setRecurrenceTime(d);
-                            }}
-                          />
-                        </View>
-                      ) : (
-                        <>
-                          <View style={styles.chipRow}>
-                            <TouchableOpacity
-                              style={styles.chip}
-                              onPress={() => setShowRecurrenceDatePicker(true)}
-                            >
-                              <Text style={styles.chipText}>
-                                {monthlyDay ? `Day ${monthlyDay}` : "Pick day"}
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={styles.chip}
-                              onPress={() => setShowRecurrenceTimePicker(true)}
-                            >
-                              <Text style={styles.chipText}>
-                                {recurrenceTime
-                                  ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
-                                      recurrenceTime.getMinutes()
-                                    ).padStart(2, "0")}`
-                                  : "Pick time"}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                          {showRecurrenceDatePicker && (
-                            <DateTimePicker
-                              value={new Date()}
-                              mode="date"
-                              display="default"
-                              onChange={(_, d) => {
-                                setShowRecurrenceDatePicker(false);
-                                if (d) setMonthlyDay(d.getDate());
-                              }}
-                            />
-                          )}
-                          {showRecurrenceTimePicker && (
-                            <DateTimePicker
-                              value={recurrenceTime ?? new Date()}
-                              mode="time"
-                              display="default"
-                              onChange={(_, d) => {
-                                setShowRecurrenceTimePicker(false);
-                                if (d) setRecurrenceTime(d);
-                              }}
-                            />
-                          )}
-                        </>
-                      )}
+                      <View style={styles.chipRow}>
+                        <TouchableOpacity
+                          style={styles.chip}
+                          onPress={() => {
+                            setShowDatePicker(false);
+                            setShowTimePicker(false);
+                            setShowRecurrenceTimePicker(false);
+                            setShowRecurrenceDatePicker(true);
+                          }}
+                        >
+                          <Text style={styles.chipText}>
+                            {monthlyDay ? `Day ${monthlyDay}` : "Pick day"}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.chip}
+                          onPress={() => {
+                            setShowDatePicker(false);
+                            setShowRecurrenceDatePicker(false);
+                            setShowTimePicker(false);
+                            setShowRecurrenceTimePicker(true);
+                          }}
+                        >
+                          <Text style={styles.chipText}>
+                            {recurrenceTime
+                              ? `${String(recurrenceTime.getHours()).padStart(2, "0")}:${String(
+                                  recurrenceTime.getMinutes()
+                                ).padStart(2, "0")}`
+                              : "Pick time"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </>
                   )}
                 </View>
               )}
             </>
+          )}
+
+          {(showDatePicker || showTimePicker || showRecurrenceTimePicker || showRecurrenceDatePicker) && (
+            <View
+              style={styles.pickerPanel}
+              onStartShouldSetResponder={() => true}
+            >
+              <View style={styles.pickerToolbar}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setShowTimePicker(false);
+                    setShowRecurrenceDatePicker(false);
+                    setShowRecurrenceTimePicker(false);
+                  }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setShowTimePicker(false);
+                    setShowRecurrenceDatePicker(false);
+                    setShowRecurrenceTimePicker(false);
+                  }}
+                >
+                  <Text style={styles.createText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.pickerContent}>
+                <View
+                  style={[styles.pickerSlot, { opacity: showDatePicker ? 1 : 0 }]}
+                  pointerEvents={showDatePicker ? "auto" : "none"}
+                >
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={date ?? new Date()}
+                      mode="date"
+                      display="spinner"
+                      onChange={(_, d) => {
+                        if (d) setDate(d);
+                      }}
+                    />
+                  )}
+                </View>
+                <View
+                  style={[styles.pickerSlot, { opacity: showTimePicker ? 1 : 0 }]}
+                  pointerEvents={showTimePicker ? "auto" : "none"}
+                >
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={time ?? new Date()}
+                      mode="time"
+                      display="spinner"
+                      onChange={(_, d) => {
+                        if (d) setTime(d);
+                      }}
+                    />
+                  )}
+                </View>
+                <View
+                  style={[styles.pickerSlot, { opacity: showRecurrenceDatePicker ? 1 : 0 }]}
+                  pointerEvents={showRecurrenceDatePicker ? "auto" : "none"}
+                >
+                  {showRecurrenceDatePicker && (
+                    <DateTimePicker
+                      value={new Date(new Date().setDate(monthlyDay ?? new Date().getDate()))}
+                      mode="date"
+                      display="spinner"
+                      onChange={(_, d) => {
+                        if (d) setMonthlyDay(d.getDate());
+                      }}
+                    />
+                  )}
+                </View>
+                <View
+                  style={[styles.pickerSlot, { opacity: showRecurrenceTimePicker ? 1 : 0 }]}
+                  pointerEvents={showRecurrenceTimePicker ? "auto" : "none"}
+                >
+                  {showRecurrenceTimePicker && (
+                    <DateTimePicker
+                      value={recurrenceTime ?? new Date()}
+                      mode="time"
+                      display="spinner"
+                      onChange={(_, d) => {
+                        if (d) setRecurrenceTime(d);
+                      }}
+                    />
+                  )}
+                </View>
+              </View>
+            </View>
           )}
 
           {type === "by_person_project" && (
