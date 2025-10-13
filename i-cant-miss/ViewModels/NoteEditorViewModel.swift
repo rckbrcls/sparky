@@ -67,6 +67,10 @@ final class NoteEditorViewModel: ObservableObject {
         return environment.noteService.notes.first(where: { $0.id == noteId })
     }
 
+    var isNewNote: Bool {
+        existingNoteID == nil
+    }
+
     func toggleTag(id: UUID) {
         if selectedTagIDs.contains(id) {
             selectedTagIDs.remove(id)

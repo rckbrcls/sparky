@@ -79,9 +79,9 @@ struct NoteEditorView: View {
                     Button {
                         isShowingDetails = true
                     } label: {
-                        Image(systemName: "slider.horizontal.3")
+                        Image(systemName: "gearshape")
                     }
-                    .accessibilityLabel("Note details")
+                    .accessibilityLabel("Note options")
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -162,7 +162,55 @@ struct NoteEditorView: View {
         viewModel.title.isEmpty ? "New Note" : "Edit Note"
     }
 
+    @ViewBuilder
     private var metadataSummary: some View {
+        if viewModel.isNewNote && metadataIsEmpty {
+            newNoteDetailsCallout
+        } else {
+            standardMetadataSummary
+        }
+    }
+
+    private var metadataIsEmpty: Bool {
+        !viewModel.isPinned && viewModel.selectedFolderID == nil && selectedTagNames.isEmpty
+    }
+
+    private var newNoteDetailsCallout: some View {
+        Button {
+            isShowingDetails = true
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "gearshape.fill")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Note options")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("Pin, choose folder or add tags")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.12))
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open note options")
+    }
+
+    private var standardMetadataSummary: some View {
         HStack(spacing: 12) {
             if viewModel.isPinned {
                 Label("Pinned", systemImage: "pin.fill")
