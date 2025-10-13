@@ -11,7 +11,6 @@ import Combine
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @StateObject private var tabRouter = TabRouter()
-    @StateObject private var terminalViewModel: TerminalCommandViewModel
     @State private var showReminderSheet = false
     @State private var showNoteSheet = false
     @State private var selectedReminder: ReminderModel?
@@ -19,7 +18,6 @@ struct ContentView: View {
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
-        _terminalViewModel = StateObject(wrappedValue: TerminalCommandViewModel(environment: environment))
     }
 
     var body: some View {
@@ -55,10 +53,6 @@ struct ContentView: View {
                 Label("Notes", systemImage: "square.and.pencil")
             }
             .tag(TabRouter.Selection.notes)
-        }
-        .safeAreaInset(edge: .top) {
-            TerminalInputBar(viewModel: terminalViewModel)
-                .padding(.top, 8)
         }
         .sheet(isPresented: $showReminderSheet, onDismiss: { selectedReminder = nil }) {
             ReminderEditorView(

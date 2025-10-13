@@ -58,6 +58,7 @@ struct NotesView: View {
                 }
                 .padding(.top)
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Notes")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

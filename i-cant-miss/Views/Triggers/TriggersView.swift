@@ -46,6 +46,7 @@ struct TriggersView: View {
                     .listStyle(.insetGrouped)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Triggers")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

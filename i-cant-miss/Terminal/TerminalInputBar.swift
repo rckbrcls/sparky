@@ -9,6 +9,11 @@ import SwiftUI
 
 struct TerminalInputBar: View {
     @ObservedObject var viewModel: TerminalCommandViewModel
+    @Binding var isFocused: Bool
+    @State private var textViewHeight: CGFloat = 32
+
+    private let minHeight: CGFloat = 32
+    private let maxHeight: CGFloat = 100
 
     var body: some View {
         VStack(spacing: 8) {
@@ -44,41 +49,42 @@ struct TerminalInputBar: View {
                 .transition(.move(edge: .bottom))
             }
 
-            HStack(alignment: .bottom, spacing: 10) {
+            HStack(alignment: .bottom, spacing: 8) {
                 Image(systemName: "terminal")
-                    .font(.headline)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
 
                 ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color(uiColor: .secondarySystemBackground))
 
                     if viewModel.input.isEmpty {
                         Text("Type reminder with / commands")
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
                     }
 
-                    TextEditor(text: $viewModel.input)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .frame(minHeight: 36, maxHeight: 96)
-                        .scrollContentBackground(.hidden)
-                        .textInputAutocapitalization(.sentences)
-                        .disableAutocorrection(false)
+                    GrowingTextView(
+                        text: $viewModel.input,
+                        calculatedHeight: $textViewHeight,
+                        isFocused: $isFocused,
+                        minHeight: minHeight,
+                        maxHeight: maxHeight
+                    )
+                    .frame(height: textViewHeight)
                 }
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .stroke(Color.secondary.opacity(0.2))
                 )
 
-                Button(action: viewModel.handleSubmit) {
+                Button(action: submit) {
                     if viewModel.isProcessing {
                         ProgressView()
                     } else {
                         Image(systemName: "paperplane.circle.fill")
-                            .font(.title3)
+                            .font(.body)
                     }
                 }
                 .buttonStyle(.borderless)
@@ -112,12 +118,13 @@ struct TerminalInputBar: View {
                 .transition(.move(edge: .bottom))
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 1)
         )
     }
 }
@@ -173,9 +180,124 @@ private struct TerminalPreviewView: View {
     }
 }
 
+#if canImport(UIKit)
+extension UIApplication {
+    func endEditing() {
+        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}
+#endif
+
+private extension TerminalInputBar {
+    func submit() {
+        guard !viewModel.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isFocused = false
+        viewModel.handleSubmit()
+    }
+}
+
+struct GrowingTextView: UIViewRepresentable {
+    @Binding var text: String
+    @Binding var calculatedHeight: CGFloat
+    @Binding var isFocused: Bool
+    let minHeight: CGFloat
+    let maxHeight: CGFloat
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.delegate = context.coordinator
+        textView.font = UIFont.preferredFont(forTextStyle: .body)
+        textView.backgroundColor = .clear
+        textView.textContainerInset = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
+        textView.textContainer.lineFragmentPadding = 0
+        textView.isScrollEnabled = false
+        textView.keyboardDismissMode = .interactive
+        textView.autocapitalizationType = .sentences
+        textView.autocorrectionType = .yes
+        textView.smartDashesType = .no
+        textView.smartQuotesType = .no
+        textView.setContentCompressionResistancePriority(.required, for: .vertical)
+        context.coordinator.updateHeight(for: textView)
+        return textView
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        context.coordinator.parent = self
+        context.coordinator.updateHeight(for: uiView)
+
+        let shouldScroll = calculatedHeight >= maxHeight - 0.5
+        if uiView.isScrollEnabled != shouldScroll {
+            uiView.isScrollEnabled = shouldScroll
+        }
+
+        if isFocused && !uiView.isFirstResponder {
+            uiView.becomeFirstResponder()
+        } else if !isFocused && uiView.isFirstResponder {
+            uiView.resignFirstResponder()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: GrowingTextView
+
+        init(parent: GrowingTextView) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = textView.text
+            updateHeight(for: textView)
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.isFocused = true
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            parent.isFocused = false
+        }
+
+        func updateHeight(for textView: UITextView) {
+            // Compute one-line height (font line height + top/bottom insets)
+            let lineHeight = (textView.font ?? UIFont.preferredFont(forTextStyle: .body)).lineHeight
+            let oneLine = lineHeight + textView.textContainerInset.top + textView.textContainerInset.bottom
+            let minCap = max(parent.minHeight, oneLine)
+
+            // If width is not laid out yet, default to a single line height
+            guard textView.bounds.width > 0 else {
+                if abs(self.parent.calculatedHeight - minCap) > 0.5 {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.parent.calculatedHeight = minCap
+                    }
+                }
+                return
+            }
+
+            let fitting = textView.sizeThatFits(CGSize(width: textView.bounds.width, height: .greatestFiniteMagnitude))
+            let target = min(parent.maxHeight, max(minCap, fitting.height))
+            if abs(self.parent.calculatedHeight - target) > 0.5 {
+                DispatchQueue.main.async { [weak self] in
+                    self?.parent.calculatedHeight = target
+                }
+            }
+        }
+    }
+}
+
+#if canImport(UIKit)
+import UIKit
+#endif
+
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
     let viewModel = TerminalCommandViewModel(environment: environment)
-    return TerminalInputBar(viewModel: viewModel)
+    return TerminalInputBar(viewModel: viewModel, isFocused: .constant(false))
 }

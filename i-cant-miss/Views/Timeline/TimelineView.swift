@@ -59,6 +59,7 @@ struct TimelineView: View {
                     .listStyle(.insetGrouped)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .refreshable {
                 viewModel.refresh(force: true)
             }
