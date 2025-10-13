@@ -20,11 +20,15 @@ final class TriggersViewModel: ObservableObject {
         let id: ReminderTriggerType
         let items: [TriggerDisplay]
     }
-
-    @Published var selectedType: ReminderTriggerType? {
-        didSet { regroupTriggers() }
+    
+    struct TriggerTypeFolder: Identifiable {
+        let id: ReminderTriggerType
+        var type: ReminderTriggerType { id }
+        let items: [TriggerDisplay]
+        var count: Int { items.count }
     }
-    @Published private(set) var groups: [TriggerGroup] = []
+
+    @Published private(set) var triggerTypeFolders: [TriggerTypeFolder] = []
 
     private let environment: AppEnvironment
     private var cancellables = Set<AnyCancellable>()
@@ -32,7 +36,7 @@ final class TriggersViewModel: ObservableObject {
     init(environment: AppEnvironment) {
         self.environment = environment
         bind()
-        regroupTriggers()
+        organizeTriggers()
     }
 
     func refresh() {
@@ -45,25 +49,29 @@ final class TriggersViewModel: ObservableObject {
         environment.reminderService.$reminders
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                self?.regroupTriggers()
+                self?.organizeTriggers()
             }
             .store(in: &cancellables)
     }
 
-    private func regroupTriggers() {
+    private func organizeTriggers() {
         var grouped: [ReminderTriggerType: [TriggerDisplay]] = [:]
+        
+        // Inicializa todos os tipos de triggers com arrays vazios
+        for type in ReminderTriggerType.allCases {
+            grouped[type] = []
+        }
+        
+        // Popula com os triggers existentes
         for reminder in environment.reminderService.reminders {
             for trigger in reminder.triggers {
-                if let filterType = selectedType, trigger.type != filterType {
-                    continue
-                }
                 grouped[trigger.type, default: []]
                     .append(TriggerDisplay(id: trigger.id, reminder: reminder, trigger: trigger))
             }
         }
 
-        groups = grouped
+        triggerTypeFolders = grouped
             .sorted(by: { lhs, rhs in lhs.key.label < rhs.key.label })
-            .map { TriggerGroup(id: $0.key, items: $0.value) }
+            .map { TriggerTypeFolder(id: $0.key, items: $0.value) }
     }
 }

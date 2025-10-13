@@ -22,7 +22,7 @@ struct TriggersView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.groups.isEmpty {
+                if viewModel.triggerTypeFolders.isEmpty {
                     ScrollView {
                         EmptyStateView(systemImage: "bolt.slash",
                                        title: "No triggers yet",
@@ -31,15 +31,32 @@ struct TriggersView: View {
                     }
                 } else {
                     List {
-                        ForEach(viewModel.groups) { group in
-                            Section(group.id.label) {
-                                ForEach(group.items) { display in
-                                    TriggerRowView(display: display)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            onEditReminder(display.reminder)
-                                        }
+                        ForEach(viewModel.triggerTypeFolders) { folder in
+                            NavigationLink(destination: TriggerListView(
+                                folder: folder,
+                                onEditReminder: onEditReminder
+                            )) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: folder.type.systemImage)
+                                        .font(.title2)
+                                        .foregroundStyle(.blue)
+                                        .frame(width: 32)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(folder.type.label)
+                                            .font(.headline)
+                                        Text("\(folder.count) trigger\(folder.count == 1 ? "" : "s")")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "folder.fill")
+                                        .foregroundStyle(.secondary)
+                                        .font(.title3)
                                 }
+                                .padding(.vertical, 4)
                             }
                         }
                     }
@@ -48,27 +65,31 @@ struct TriggersView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Triggers")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button("All Triggers") {
-                            viewModel.selectedType = nil
-                        }
-                        Divider()
-                        ForEach(ReminderTriggerType.allCases) { type in
-                            Button(type.label) {
-                                viewModel.selectedType = type
-                            }
-                        }
-                    } label: {
-                        Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
-                    }
-                }
-            }
         }
         .onAppear {
             viewModel.refresh()
         }
+    }
+}
+
+// MARK: - Trigger List View
+struct TriggerListView: View {
+    let folder: TriggersViewModel.TriggerTypeFolder
+    let onEditReminder: (ReminderModel) -> Void
+    
+    var body: some View {
+        List {
+            ForEach(folder.items) { display in
+                TriggerRowView(display: display)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onEditReminder(display.reminder)
+                    }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(folder.type.label)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
