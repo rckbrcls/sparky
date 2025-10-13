@@ -28,6 +28,7 @@ struct TimelineView: View {
                 Section {
                     filterPicker
                         .pickerStyle(.segmented)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 4, trailing: 0))
                         .listRowBackground(Color(.systemGroupedBackground))
                         .listRowSeparator(.hidden)
                 }
@@ -66,6 +67,7 @@ struct TimelineView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
             .scrollDismissesKeyboard(.interactively)
             .refreshable {
                 viewModel.refresh(force: true)
