@@ -72,6 +72,20 @@ final class NotesViewModel: ObservableObject {
         }
     }
 
+    func updateFolder(_ folder: FolderModel, name: String, colorHex: String?, iconName: String?) {
+        Task {
+            var updatedFolder = folder
+            updatedFolder.name = name
+            updatedFolder.colorHex = colorHex
+            updatedFolder.iconName = iconName
+
+            _ = try? await environment.folderService.updateFolder(updatedFolder)
+            async let folders = environment.folderService.refreshFolders(force: true)
+            async let notes = environment.noteService.refresh(force: true)
+            _ = await (folders, notes)
+        }
+    }
+
     func deleteFolder(_ folder: FolderModel) {
         Task {
             _ = try? await environment.folderService.deleteFolder(id: folder.id)

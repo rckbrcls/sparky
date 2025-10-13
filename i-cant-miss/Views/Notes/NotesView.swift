@@ -12,11 +12,17 @@ struct NotesView: View {
     let environment: AppEnvironment
     let onCreateNote: () -> Void
     let onEditNote: (NoteModel) -> Void
+    private static let defaultFolderColorHex = "#6366F1"
+    private static let defaultFolderIconName = "folder.fill"
 
     @State private var showingCreateFolder = false
     @State private var newFolderName = ""
-    @State private var newFolderIcon = "folder.fill"
-    @State private var newFolderColor = "#6366F1"
+    @State private var newFolderIcon = Self.defaultFolderIconName
+    @State private var newFolderColor = Self.defaultFolderColorHex
+    @State private var editingFolder: FolderModel?
+    @State private var editFolderName = ""
+    @State private var editFolderIcon = Self.defaultFolderIconName
+    @State private var editFolderColor = Self.defaultFolderColorHex
 
     init(environment: AppEnvironment,
          onCreateNote: @escaping () -> Void,
@@ -80,9 +86,9 @@ struct NotesView: View {
                         }
                     )) {
                         HStack(spacing: 12) {
-                            Image(systemName: folder.iconName ?? "folder.fill")
+                            Image(systemName: folder.iconName ?? Self.defaultFolderIconName)
                                 .font(.title2)
-                                .foregroundStyle(Color(hex: folder.colorHex ?? "#6366F1") ?? .blue)
+                                .foregroundStyle(Color(hex: folder.colorHex ?? Self.defaultFolderColorHex) ?? .blue)
                                 .frame(width: 32)
 
                             VStack(alignment: .leading, spacing: 2) {
@@ -102,6 +108,13 @@ struct NotesView: View {
                         .padding(.vertical, 4)
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            prepareFolderEditing(with: folder)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(.accentColor)
+                        
                         Button(role: .destructive) {
                             viewModel.deleteFolder(folder)
                         } label: {
@@ -132,6 +145,9 @@ struct NotesView: View {
             }
             .sheet(isPresented: $showingCreateFolder) {
                 createFolderSheet
+            }
+            .sheet(item: $editingFolder) { folder in
+                editFolderSheet(for: folder)
             }
         }
         .onAppear {
@@ -207,10 +223,92 @@ struct NotesView: View {
         }
     }
 
+    private func editFolderSheet(for folder: FolderModel) -> some View {
+        NavigationStack {
+            Form {
+                Section("Folder Details") {
+                    TextField("Folder Name", text: $editFolderName)
+
+                    Picker("Icon", selection: $editFolderIcon) {
+                        ForEach(folderIcons, id: \.self) { icon in
+                            Label(icon, systemImage: icon)
+                        }
+                    }
+                }
+
+                Section("Color") {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 12) {
+                        ForEach(Color.PresetColors.all) { presetColor in
+                            Button(action: {
+                                editFolderColor = presetColor.hex
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(presetColor.color)
+                                        .frame(width: 50, height: 50)
+
+                                    if editFolderColor == presetColor.hex {
+                                        Circle()
+                                            .strokeBorder(.white, lineWidth: 3)
+                                            .frame(width: 50, height: 50)
+                                            .shadow(radius: 2)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .navigationTitle("Edit Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        resetEditFolderForm()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        viewModel.updateFolder(
+                            folder,
+                            name: editFolderName,
+                            colorHex: editFolderColor,
+                            iconName: editFolderIcon
+                        )
+                        resetEditFolderForm()
+                    }
+                    .disabled(editFolderName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+
     private func resetFolderForm() {
         newFolderName = ""
-        newFolderIcon = "folder.fill"
-        newFolderColor = "#6366F1"
+        newFolderIcon = Self.defaultFolderIconName
+        newFolderColor = Self.defaultFolderColorHex
+    }
+
+    private func prepareFolderEditing(with folder: FolderModel) {
+        editFolderName = folder.name
+        let icon = folder.iconName ?? Self.defaultFolderIconName
+        editFolderIcon = folderIcons.contains(icon) ? icon : Self.defaultFolderIconName
+        editFolderColor = folder.colorHex ?? Self.defaultFolderColorHex
+        editingFolder = folder
+    }
+
+    private func resetEditFolderForm() {
+        editingFolder = nil
+        editFolderName = ""
+        editFolderIcon = Self.defaultFolderIconName
+        editFolderColor = Self.defaultFolderColorHex
     }
 
     private let folderIcons = [
