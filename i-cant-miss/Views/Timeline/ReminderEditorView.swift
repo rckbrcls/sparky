@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Contacts
 
 struct ReminderEditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -386,14 +387,44 @@ private struct PersonTriggerForm: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
     @State private var identifier: String = ""
+    @State private var showContactPicker = false
+    @State private var showAccessDeniedAlert = false
     let onAdd: (String, String?) -> Void
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Contact") {
-                    TextField("Name", text: $name)
-                    TextField("Notes or identifier", text: $identifier)
+                    HStack {
+                        TextField("Name", text: $name)
+
+                        Button(action: {
+                            Task {
+                                await requestContactsAndShow()
+                            }
+                        }) {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+
+                    if !identifier.isEmpty {
+                        HStack {
+                            Text("Contact ID")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(identifier)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section {
+                    Text("You can manually enter a name or select a contact from your iPhone contacts.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Person Trigger")
@@ -409,6 +440,45 @@ private struct PersonTriggerForm: View {
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+            .sheet(isPresented: $showContactPicker) {
+                ContactPickerView { contactName, contactId in
+                    name = contactName
+                    identifier = contactId ?? ""
+                    showContactPicker = false
+                }
+            }
+            .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } message: {
+                Text("Please allow access to contacts in Settings to select a person from your contacts.")
+            }
+        }
+    }
+
+    private func requestContactsAndShow() async {
+        let status = ContactAccessHelper.checkAuthorizationStatus()
+
+        switch status {
+        case .authorized:
+            showContactPicker = true
+        case .notDetermined:
+            let granted = await ContactAccessHelper.requestAccess()
+            if granted {
+                showContactPicker = true
+            } else {
+                showAccessDeniedAlert = true
+            }
+        case .denied, .restricted:
+            showAccessDeniedAlert = true
+        case .limited:
+            showContactPicker = true
+        @unknown default:
+            showAccessDeniedAlert = true
         }
     }
 }

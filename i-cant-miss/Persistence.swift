@@ -97,12 +97,9 @@ final class PersistenceController {
     }
 
     func performBackgroundTask(_ block: @escaping (NSManagedObjectContext) -> Void) {
-        container.performBackgroundTask { [weak self] context in
-            guard let self = self else { return }
-
+        container.performBackgroundTask { context in
             context.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
             block(context)
-
             if context.hasChanges {
                 do {
                     try context.save()

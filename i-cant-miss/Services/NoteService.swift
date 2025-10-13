@@ -44,26 +44,24 @@ final class NoteService: ObservableObject {
 
     private func loadInitialData() {
         let context = persistence.container.viewContext
-        context.performAndWait {
-            do {
-                let request: NSFetchRequest<Note> = Note.fetchRequest()
-                request.sortDescriptors = [
-                    NSSortDescriptor(keyPath: \Note.isPinned, ascending: false),
-                    NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
-                ]
-                let results = try context.fetch(request)
-                let noteModels = results.map { $0.toModel() }
-                let now = Date()
 
-                // Update properties on MainActor
-                MainActor.assumeIsolated {
-                    self.notes = noteModels
-                    self.lastRefreshed = now
-                }
-            } catch {
-                logger.error("Failed to load initial notes: \(error.localizedDescription)")
-            }
+        let noteModels: [NoteModel]
+        do {
+            let request: NSFetchRequest<Note> = Note.fetchRequest()
+            request.sortDescriptors = [
+                NSSortDescriptor(keyPath: \Note.isPinned, ascending: false),
+                NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
+            ]
+            let results = try context.fetch(request)
+            noteModels = results.map { $0.toModel() }
+        } catch {
+            logger.error("Failed to load initial notes: \(error.localizedDescription)")
+            noteModels = []
         }
+
+        // Update properties directly - we're already on MainActor
+        self.notes = noteModels
+        self.lastRefreshed = Date()
     }
 
     func configureAutoRefresh() {

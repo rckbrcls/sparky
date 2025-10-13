@@ -20,12 +20,11 @@ final class NotesViewModel: ObservableObject {
     init(environment: AppEnvironment) {
         self.environment = environment
 
-        // Initialize with current data from services
-        self.allNotes = environment.noteService.notes
-        self.folders = environment.folderService.folders
-        self.tags = environment.folderService.tags
-
+        // Don't initialize data here - let bind() handle it
         bind()
+
+        // Force initial update after binding is set up
+        updateNotesSnapshot()
     }
 
     func refresh(force: Bool) {
@@ -104,6 +103,10 @@ final class NotesViewModel: ObservableObject {
                 self?.tags = tags
             }
             .store(in: &cancellables)
+
+        // Initialize data from services immediately
+        self.folders = environment.folderService.folders
+        self.tags = environment.folderService.tags
     }
 
     private func updateNotesSnapshot() {

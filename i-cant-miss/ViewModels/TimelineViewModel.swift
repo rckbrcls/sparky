@@ -25,10 +25,11 @@ final class TimelineViewModel: ObservableObject {
     init(environment: AppEnvironment) {
         self.environment = environment
 
-        // Initialize with current data from service
-        self.reminders = environment.reminderService.reminders(for: .today)
-
+        // Don't initialize data here - let bind() handle it
         bind()
+
+        // Force initial update after binding is set up
+        updateRemindersSnapshot()
     }
 
     func refresh(force: Bool) {

@@ -38,37 +38,37 @@ final class FolderService: ObservableObject {
 
     private func loadInitialData() {
         let context = persistence.container.viewContext
-        context.performAndWait {
-            do {
-                // Load folders
-                let folderRequest: NSFetchRequest<Folder> = Folder.fetchRequest()
-                folderRequest.sortDescriptors = [
-                    NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true)
-                ]
-                let folderResults = try context.fetch(folderRequest)
-                let folderModels = folderResults.map { $0.toModel() }
 
-                // Load tags
-                let tagRequest: NSFetchRequest<Tag> = Tag.fetchRequest()
-                tagRequest.sortDescriptors = [
-                    NSSortDescriptor(keyPath: \Tag.name, ascending: true)
-                ]
-                let tagResults = try context.fetch(tagRequest)
-                let tagModels = tagResults.map { $0.toModel() }
+        var folderModels: [FolderModel]
+        var tagModels: [TagModel]
 
-                let now = Date()
+        do {
+            // Load folders
+            let folderRequest: NSFetchRequest<Folder> = Folder.fetchRequest()
+            folderRequest.sortDescriptors = [
+                NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true)
+            ]
+            let folderResults = try context.fetch(folderRequest)
+            folderModels = folderResults.map { $0.toModel() }
 
-                // Update properties on MainActor
-                MainActor.assumeIsolated {
-                    self.folders = folderModels
-                    self.tags = tagModels
-                    self.lastFoldersRefresh = now
-                    self.lastTagsRefresh = now
-                }
-            } catch {
-                logger.error("Failed to load initial folders/tags: \(error.localizedDescription)")
-            }
+            // Load tags
+            let tagRequest: NSFetchRequest<Tag> = Tag.fetchRequest()
+            tagRequest.sortDescriptors = [
+                NSSortDescriptor(keyPath: \Tag.name, ascending: true)
+            ]
+            let tagResults = try context.fetch(tagRequest)
+            tagModels = tagResults.map { $0.toModel() }
+        } catch {
+            logger.error("Failed to load initial folders/tags: \(error.localizedDescription)")
+            folderModels = []
+            tagModels = []
         }
+
+        // Update properties directly - we're already on MainActor
+        self.folders = folderModels
+        self.tags = tagModels
+        self.lastFoldersRefresh = Date()
+        self.lastTagsRefresh = Date()
     }
     func configureAutoRefresh() {
         refreshTimer?.cancel()

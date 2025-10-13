@@ -36,6 +36,7 @@ final class TriggersViewModel: ObservableObject {
     init(environment: AppEnvironment) {
         self.environment = environment
         bind()
+        // Force initial organization after binding
         organizeTriggers()
     }
 

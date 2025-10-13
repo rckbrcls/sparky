@@ -49,25 +49,23 @@ final class ReminderService: ObservableObject {
 
     private func loadInitialData() {
         let context = persistence.container.viewContext
-        context.performAndWait {
-            do {
-                let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
-                request.sortDescriptors = [
-                    NSSortDescriptor(keyPath: \Reminder.createdAt, ascending: false)
-                ]
-                let results = try context.fetch(request)
-                let reminderModels = results.map { $0.toModel() }
-                let now = Date()
 
-                // Update properties on MainActor
-                MainActor.assumeIsolated {
-                    self.reminders = reminderModels
-                    self.lastRefreshed = now
-                }
-            } catch {
-                logger.error("Failed to load initial reminders: \(error.localizedDescription)")
-            }
+        let reminderModels: [ReminderModel]
+        do {
+            let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
+            request.sortDescriptors = [
+                NSSortDescriptor(keyPath: \Reminder.createdAt, ascending: false)
+            ]
+            let results = try context.fetch(request)
+            reminderModels = results.map { $0.toModel() }
+        } catch {
+            logger.error("Failed to load initial reminders: \(error.localizedDescription)")
+            reminderModels = []
         }
+
+        // Update properties directly - we're already on MainActor
+        self.reminders = reminderModels
+        self.lastRefreshed = Date()
     }
 
     func configureAutoRefresh() {
