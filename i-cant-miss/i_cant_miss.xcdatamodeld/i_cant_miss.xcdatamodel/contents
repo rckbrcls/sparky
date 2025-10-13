@@ -1,9 +1,97 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="true" userDefinedModelVersionIdentifier="">
-    <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
-        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    <entity name="Folder" representedClassName="Folder" syncable="YES" codeGenerationType="class">
+        <attribute name="colorHex" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="iconName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isDefault" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="sortOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Note" inverseName="folder" inverseEntity="Note" syncable="YES"/>
+    </entity>
+    <entity name="ImportantDate" representedClassName="ImportantDate" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isBirthday" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="personName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="title" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <relationship name="leadTimes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ImportantDateLeadTime" inverseName="importantDate" inverseEntity="ImportantDateLeadTime" maxCount="0" syncable="YES"/>
+        <relationship name="reminder" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Reminder" inverseName="importantDate" inverseEntity="Reminder" syncable="YES"/>
+    </entity>
+    <entity name="ImportantDateLeadTime" representedClassName="ImportantDateLeadTime" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="offsetSeconds" optional="NO" attributeType="Integer 64" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <relationship name="importantDate" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="ImportantDate" inverseName="leadTimes" inverseEntity="ImportantDate" syncable="YES"/>
+    </entity>
+    <entity name="Note" representedClassName="Note" syncable="YES" codeGenerationType="class">
+        <attribute name="content" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isPinned" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="title" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <relationship name="folder" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="notes" inverseEntity="Folder" syncable="YES"/>
+        <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tag" inverseName="notes" inverseEntity="Tag" syncable="YES"/>
+    </entity>
+    <entity name="Reminder" representedClassName="Reminder" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="lastCompletionDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="notes" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="priority" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="1" syncable="YES"/>
+        <attribute name="snoozeCount" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="statusRaw" optional="NO" attributeType="String" defaultValueString="active" syncable="YES"/>
+        <attribute name="title" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="userOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <relationship name="importantDate" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="ImportantDate" inverseName="reminder" inverseEntity="ImportantDate" syncable="YES"/>
+        <relationship name="snoozes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReminderSnooze" inverseName="reminder" inverseEntity="ReminderSnooze" syncable="YES"/>
+        <relationship name="triggers" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReminderTrigger" inverseName="reminder" inverseEntity="ReminderTrigger" syncable="YES"/>
+    </entity>
+    <entity name="ReminderSnooze" representedClassName="ReminderSnooze" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="newFireDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="originalFireDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <relationship name="reminder" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Reminder" inverseName="snoozes" inverseEntity="Reminder" syncable="YES"/>
+    </entity>
+    <entity name="ReminderTrigger" representedClassName="ReminderTrigger" syncable="YES" codeGenerationType="class">
+        <attribute name="fireDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="ignoreCount" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="isActive" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="1" syncable="YES"/>
+        <attribute name="lastReviewDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="locationEventRaw" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="locationLatitude" optional="YES" attributeType="Double" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="locationLongitude" optional="YES" attributeType="Double" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="locationName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="locationRadius" optional="YES" attributeType="Double" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="personContactIdentifier" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="personName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="recurrenceRule" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="spacedStage" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="startDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="timeZoneIdentifier" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="typeRaw" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="weekdayMask" optional="YES" attributeType="Integer 16" usesScalarValueType="YES" syncable="YES"/>
+        <relationship name="reminder" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Reminder" inverseName="triggers" inverseEntity="Reminder" syncable="YES"/>
+    </entity>
+    <entity name="Tag" representedClassName="Tag" syncable="YES" codeGenerationType="class">
+        <attribute name="colorHex" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Note" inverseName="tags" inverseEntity="Note" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Item" positionX="-63" positionY="-18" width="128" height="44"/>
+        <element name="Folder" positionX="-63" positionY="-18" width="128" height="148"/>
+        <element name="ImportantDate" positionX="174" positionY="-18" width="128" height="180"/>
+        <element name="ImportantDateLeadTime" positionX="405" positionY="-18" width="128" height="88"/>
+        <element name="Note" positionX="-63" positionY="154" width="128" height="180"/>
+        <element name="Reminder" positionX="174" positionY="154" width="128" height="208"/>
+        <element name="ReminderSnooze" positionX="405" positionY="154" width="128" height="132"/>
+        <element name="ReminderTrigger" positionX="636" positionY="154" width="128" height="324"/>
+        <element name="Tag" positionX="405" positionY="12" width="128" height="116"/>
     </elements>
 </model>

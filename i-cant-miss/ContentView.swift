@@ -6,81 +6,94 @@
 //
 
 import SwiftUI
-import CoreData
+import Combine
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @ObservedObject private var environment: AppEnvironment
+    @StateObject private var tabRouter = TabRouter()
+    @StateObject private var terminalViewModel: TerminalCommandViewModel
+    @State private var showReminderSheet = false
+    @State private var showNoteSheet = false
+    @State private var selectedReminder: ReminderModel?
+    @State private var selectedNote: NoteModel?
 
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
+    init(environment: AppEnvironment) {
+        _environment = ObservedObject(wrappedValue: environment)
+        _terminalViewModel = StateObject(wrappedValue: TerminalCommandViewModel(environment: environment))
+    }
 
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
-                    }
+        ZStack(alignment: .bottom) {
+            TabView(selection: $tabRouter.selection) {
+                TimelineView(environment: environment,
+                             onCreateReminder: { showReminderSheet = true },
+                             onEditReminder: { reminder in
+                                 selectedReminder = reminder
+                                 showReminderSheet = true
+                             })
+                .tabItem {
+                    Label("Timeline", systemImage: "list.bullet.rectangle")
                 }
-                .onDelete(perform: deleteItems)
+                .tag(TabRouter.Selection.timeline)
+
+                TriggersView(environment: environment,
+                             onEditReminder: { reminder in
+                                 selectedReminder = reminder
+                                 showReminderSheet = true
+                             })
+                .tabItem {
+                    Label("Triggers", systemImage: "bolt.circle")
+                }
+                .tag(TabRouter.Selection.triggers)
+
+                NotesView(environment: environment,
+                          onCreateNote: { showNoteSheet = true },
+                          onEditNote: { note in
+                              selectedNote = note
+                              showNoteSheet = true
+                          })
+                .tabItem {
+                    Label("Notes", systemImage: "square.and.pencil")
+                }
+                .tag(TabRouter.Selection.notes)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-            Text("Select an item")
+
+            TerminalInputBar(viewModel: terminalViewModel)
+                .padding(.bottom, 16)
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
+        .sheet(isPresented: $showReminderSheet, onDismiss: { selectedReminder = nil }) {
+            ReminderEditorView(
+                environment: environment,
+                existingReminder: selectedReminder
+            )
         }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
+        .sheet(isPresented: $showNoteSheet, onDismiss: { selectedNote = nil }) {
+            NoteEditorView(
+                environment: environment,
+                existingNote: selectedNote
+            )
+        }
+        .task {
+            await environment.reminderService.refresh(force: true)
+            await environment.folderService.refreshFolders(force: true)
+            await environment.folderService.refreshTags(force: true)
+            await environment.noteService.refresh(force: true)
         }
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
+final class TabRouter: ObservableObject {
+    enum Selection {
+        case timeline
+        case triggers
+        case notes
+    }
+
+    @Published var selection: Selection = .timeline
+}
 
 #Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    environment.bootstrap()
+    return ContentView(environment: environment)
 }

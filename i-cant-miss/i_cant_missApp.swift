@@ -10,12 +10,15 @@ import CoreData
 
 @main
 struct i_cant_missApp: App {
-    let persistenceController = PersistenceController.shared
+    @StateObject private var appEnvironment = AppEnvironment()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            ContentView(environment: appEnvironment)
+                .environment(\.managedObjectContext, appEnvironment.persistence.container.viewContext)
+                .task {
+                    appEnvironment.bootstrap()
+                }
         }
     }
 }

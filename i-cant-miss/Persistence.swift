@@ -7,51 +7,200 @@
 
 import CoreData
 
-struct PersistenceController {
+final class PersistenceController {
     static let shared = PersistenceController()
 
     @MainActor
     static let preview: PersistenceController = {
-        let result = PersistenceController(inMemory: true)
-        let viewContext = result.container.viewContext
-        for _ in 0..<10 {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-        }
-        do {
-            try viewContext.save()
-        } catch {
-            // Replace this implementation with code to handle the error appropriately.
-            // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-            let nsError = error as NSError
-            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-        }
-        return result
+        let controller = PersistenceController(inMemory: true)
+        controller.seedPreviewData()
+        return controller
     }()
 
-    let container: NSPersistentCloudKitContainer
+    let container: NSPersistentContainer
+    let backgroundContext: NSManagedObjectContext
 
     init(inMemory: Bool = false) {
-        container = NSPersistentCloudKitContainer(name: "i_cant_miss")
-        if inMemory {
-            container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
-        }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+        container = NSPersistentContainer(name: "i_cant_miss")
+        if let description = container.persistentStoreDescriptions.first {
+            description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+            if inMemory {
+                description.url = URL(fileURLWithPath: "/dev/null")
             }
-        })
+        }
+
+        container.loadPersistentStores { _, error in
+            if let error {
+                fatalError("Unresolved CoreData error \(error)")
+            }
+        }
+
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         container.viewContext.automaticallyMergesChangesFromParent = true
+        container.viewContext.transactionAuthor = "main"
+
+        backgroundContext = container.newBackgroundContext()
+        backgroundContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
+        backgroundContext.automaticallyMergesChangesFromParent = true
+        backgroundContext.transactionAuthor = "background"
+    }
+
+    func save(context: NSManagedObjectContext? = nil) {
+        let context = context ?? container.viewContext
+        guard context.hasChanges else { return }
+        do {
+            try context.save()
+        } catch {
+            let nsError = error as NSError
+            assertionFailure("Unresolved CoreData error \(nsError), \(nsError.userInfo)")
+        }
+    }
+
+    func performBackgroundTask(_ block: @escaping (NSManagedObjectContext) -> Void) {
+        container.performBackgroundTask { context in
+            context.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
+            block(context)
+            if context.hasChanges {
+                do {
+                    try context.save()
+                } catch {
+                    let nsError = error as NSError
+                    assertionFailure("Failed to save background context \(nsError), \(nsError.userInfo)")
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Preview seeding
+
+private extension PersistenceController {
+    func seedPreviewData() {
+        let context = container.viewContext
+        let calendar = Calendar.current
+        let now = Date()
+
+        let defaultFolder = Folder(context: context)
+        defaultFolder.id = UUID()
+        defaultFolder.name = "Personal"
+        defaultFolder.iconName = "person"
+        defaultFolder.colorHex = "#4F46E5"
+        defaultFolder.isDefault = true
+        defaultFolder.sortOrder = 0
+
+        let workFolder = Folder(context: context)
+        workFolder.id = UUID()
+        workFolder.name = "Work"
+        workFolder.iconName = "briefcase"
+        workFolder.colorHex = "#10B981"
+        workFolder.isDefault = false
+        workFolder.sortOrder = 1
+
+        let swiftTag = Tag(context: context)
+        swiftTag.id = UUID()
+        swiftTag.name = "SwiftUI"
+        swiftTag.colorHex = "#F97316"
+
+        let designTag = Tag(context: context)
+        designTag.id = UUID()
+        designTag.name = "Design"
+        designTag.colorHex = "#EC4899"
+
+        let note = Note(context: context)
+        note.id = UUID()
+        note.title = "Ideas for next release"
+        note.content = """
+        • Improve timeline grouping
+        • Add quick templates for recurring reminders
+        • Experiment with AI powered suggestions
+        """
+        note.createdAt = now
+        note.updatedAt = now
+        note.isPinned = true
+        note.folder = workFolder
+        note.addToTags(NSSet(array: [swiftTag, designTag]))
+
+        let reminder = Reminder(context: context)
+        reminder.id = UUID()
+        reminder.title = "Send status update to Maya"
+        reminder.notes = "Include metrics and next week's plan."
+        reminder.setStatus(.active)
+        reminder.setPriority(.high)
+        reminder.createdAt = now
+        reminder.updatedAt = now
+        reminder.userOrder = 0
+        reminder.snoozeCount = 1
+
+        let timeTrigger = ReminderTrigger(context: context)
+        timeTrigger.id = UUID()
+        timeTrigger.setType(.time)
+        timeTrigger.fireDate = calendar.date(byAdding: .hour, value: 3, to: now)
+        timeTrigger.startDate = now
+        timeTrigger.setRecurrence(RecurrenceRule(frequency: .weekly, interval: 1))
+        timeTrigger.timeZoneIdentifier = TimeZone.current.identifier
+        timeTrigger.weekdayMask = 0
+        timeTrigger.isActive = true
+        timeTrigger.locationLatitude = 0
+        timeTrigger.locationLongitude = 0
+        timeTrigger.locationRadius = 0
+        timeTrigger.spacedStage = 0
+        timeTrigger.ignoreCount = 0
+        reminder.addToTriggers(timeTrigger)
+
+        let locationTrigger = ReminderTrigger(context: context)
+        locationTrigger.id = UUID()
+        locationTrigger.setType(.location)
+        locationTrigger.isActive = true
+        locationTrigger.locationLatitude = 37.3327
+        locationTrigger.locationLongitude = -122.0053
+        locationTrigger.locationRadius = 150
+        locationTrigger.locationName = "Apple Park"
+        locationTrigger.setLocationEvent(.onEntry)
+        locationTrigger.spacedStage = 0
+        locationTrigger.ignoreCount = 0
+        reminder.addToTriggers(locationTrigger)
+
+        let snooze = ReminderSnooze(context: context)
+        snooze.id = UUID()
+        snooze.originalFireDate = now
+        snooze.newFireDate = calendar.date(byAdding: .minute, value: 30, to: now) ?? now
+        snooze.createdAt = now
+        reminder.addToSnoozes(snooze)
+
+        let birthdayReminder = Reminder(context: context)
+        birthdayReminder.id = UUID()
+        birthdayReminder.title = "Celebrate Leo's birthday"
+        birthdayReminder.notes = "Pick up a gift and write a card."
+        birthdayReminder.setStatus(.active)
+        birthdayReminder.setPriority(.medium)
+        birthdayReminder.createdAt = now
+        birthdayReminder.updatedAt = now
+        birthdayReminder.userOrder = 1
+        birthdayReminder.snoozeCount = 0
+
+        let importantDate = ImportantDate(context: context)
+        importantDate.id = UUID()
+        importantDate.title = "Leo's Birthday"
+        importantDate.personName = "Leo"
+        importantDate.isBirthday = true
+        importantDate.date = calendar.nextDate(after: now, matching: DateComponents(month: 11, day: 5), matchingPolicy: .nextTimePreservingSmallerComponents) ?? now
+        importantDate.createdAt = now
+        importantDate.updatedAt = now
+        importantDate.reminder = birthdayReminder
+
+        let oneWeekLead = ImportantDateLeadTime(context: context)
+        oneWeekLead.id = UUID()
+        oneWeekLead.offsetSeconds = Int64(7 * 24 * 60 * 60)
+        oneWeekLead.importantDate = importantDate
+
+        let oneDayLead = ImportantDateLeadTime(context: context)
+        oneDayLead.id = UUID()
+        oneDayLead.offsetSeconds = Int64(24 * 60 * 60)
+        oneDayLead.importantDate = importantDate
+
+        importantDate.addToLeadTimes(NSSet(array: [oneWeekLead, oneDayLead]))
+
+        save(context: context)
     }
 }
