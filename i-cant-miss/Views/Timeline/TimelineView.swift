@@ -28,7 +28,7 @@ struct TimelineView: View {
                 Section {
                     filterPicker
                         .pickerStyle(.segmented)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 4, trailing: 0))
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 2, trailing: 0))
                         .listRowBackground(Color(.systemGroupedBackground))
                         .listRowSeparator(.hidden)
                 }
@@ -76,8 +76,10 @@ struct TimelineView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onCreateReminder) {
-                        Image(systemName: "plus.circle.fill")
+                        Image(systemName: "plus")
                     }
+                    .tint(.accentColor)
+                    .accessibilityLabel("Create Reminder")
                 }
             }
         }

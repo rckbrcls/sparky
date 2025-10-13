@@ -30,7 +30,6 @@ struct TriggersView: View {
                         HStack(spacing: 12) {
                             Image(systemName: folder.type.systemImage)
                                 .font(.title2)
-                                .foregroundStyle(.blue)
                                 .frame(width: 32)
 
                             VStack(alignment: .leading, spacing: 2) {

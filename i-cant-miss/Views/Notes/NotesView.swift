@@ -46,7 +46,6 @@ struct NotesView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "square.grid.2x2.fill")
                             .font(.title2)
-                            .foregroundStyle(.blue)
                             .frame(width: 32)
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -123,8 +122,10 @@ struct NotesView: View {
                             Label("New Folder", systemImage: "folder.badge.plus")
                         }
                     } label: {
-                        Image(systemName: "plus.circle.fill")
+                        Image(systemName: "plus")
                     }
+                    .tint(.accentColor)
+                    .accessibilityLabel("Create Note or Folder")
                 }
             }
             .sheet(isPresented: $showingCreateFolder) {
