@@ -83,7 +83,7 @@ struct TriggerRowView: View {
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     let trigger = ReminderTriggerModel(
         id: UUID(),
         type: .location,
@@ -114,5 +114,4 @@ struct TriggerRowView: View {
     )
     TriggerRowView(display: .init(id: trigger.id, reminder: reminder, trigger: trigger))
         .padding()
-        .previewLayout(.sizeThatFits)
 }

@@ -18,7 +18,7 @@ final class AppEnvironment: ObservableObject {
     let notificationScheduler: NotificationScheduler
     let geofenceManager: GeofenceManager
 
-    init(persistence: PersistenceController = .shared) {
+    init(persistence: PersistenceController) {
         self.persistence = persistence
         self.folderService = FolderService(persistence: persistence)
         self.reminderService = ReminderService(persistence: persistence)

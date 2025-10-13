@@ -84,7 +84,7 @@ struct ReminderEditorView: View {
                     }
                 }
             }
-            .navigationTitle(viewModelTitle)
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -159,7 +159,7 @@ struct ReminderEditorView: View {
         }
     }
 
-    private var viewModelTitle: String {
+    private var navigationTitleText: String {
         viewModelTitle(for: viewModel)
     }
 

@@ -44,14 +44,14 @@ final class NotesViewModel: ObservableObject {
 
     func delete(note: NoteModel) {
         Task {
-            try? await environment.noteService.deleteNote(id: note.id)
+            _ = try? await environment.noteService.deleteNote(id: note.id)
             await environment.noteService.refresh(force: true)
         }
     }
 
     func togglePin(note: NoteModel) {
         Task {
-            try? await environment.noteService.togglePin(noteID: note.id)
+            _ = try? await environment.noteService.togglePin(noteID: note.id)
             await environment.noteService.refresh(force: true)
         }
     }

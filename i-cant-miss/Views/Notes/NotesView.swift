@@ -87,7 +87,7 @@ struct NotesView: View {
                     viewModel.selectedFolderID = nil
                 }
 
-                for folder in viewModel.folders {
+                ForEach(viewModel.folders, id: \.id) { folder in
                     folderChip(title: folder.name,
                                icon: folder.iconName,
                                colorHex: folder.colorHex,

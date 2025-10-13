@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Combine
-import CoreData
+@preconcurrency import CoreData
 import os.log
 
 @MainActor
@@ -310,15 +310,15 @@ final class ReminderService: ObservableObject {
     }
 
     private func fetchReminders(in context: NSManagedObjectContext) async throws -> [ReminderModel] {
-        let request = Reminder.fetchRequest()
-        request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \Reminder.statusRaw, ascending: true),
-            NSSortDescriptor(keyPath: \Reminder.userOrder, ascending: true),
-            NSSortDescriptor(keyPath: \Reminder.updatedAt, ascending: false)
-        ]
         return try await withCheckedThrowingContinuation { continuation in
             context.perform {
                 do {
+                    let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
+                    request.sortDescriptors = [
+                        NSSortDescriptor(keyPath: \Reminder.statusRaw, ascending: true),
+                        NSSortDescriptor(keyPath: \Reminder.userOrder, ascending: true),
+                        NSSortDescriptor(keyPath: \Reminder.updatedAt, ascending: false)
+                    ]
                     let entities = try context.fetch(request)
                     continuation.resume(returning: entities.map { $0.toModel() })
                 } catch {
@@ -385,7 +385,10 @@ final class ReminderService: ObservableObject {
     }
 
     private func syncTriggers(of reminder: Reminder, with models: [ReminderTriggerModel], context: NSManagedObjectContext) throws {
-        let existing = Dictionary(uniqueKeysWithValues: reminder.triggerSet.map { ($0.id, $0) })
+        let existing = Dictionary(uniqueKeysWithValues: reminder.triggerSet.compactMap { trigger -> (UUID, ReminderTrigger)? in
+            guard let id = trigger.id else { return nil }
+            return (id, trigger)
+        })
         let incoming = Dictionary(uniqueKeysWithValues: models.map { ($0.id, $0) })
 
         for (id, trigger) in existing where incoming[id] == nil {
@@ -539,7 +542,6 @@ extension ReminderTriggerModel {
         guard !targetDays.isEmpty else { return fireDate ?? startDate }
 
         let refDate = reference
-        let refWeekday = calendar.component(.weekday, from: refDate)
 
         for dayOffset in 0..<7 {
             let candidate = calendar.date(byAdding: .day, value: dayOffset, to: refDate) ?? refDate

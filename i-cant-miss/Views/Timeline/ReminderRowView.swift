@@ -140,7 +140,7 @@ private struct TriggerBadge: View {
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     let trigger = ReminderTriggerModel(
         id: UUID(),
         type: .time,
@@ -171,5 +171,4 @@ private struct TriggerBadge: View {
     )
     ReminderRowView(reminder: reminder)
         .padding()
-        .previewLayout(.sizeThatFits)
 }

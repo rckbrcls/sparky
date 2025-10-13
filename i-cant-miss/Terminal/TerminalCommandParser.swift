@@ -65,7 +65,7 @@ struct TerminalCommandParser {
                     commandFragment = rawName
                 }
             } else {
-                if var command = currentCommand {
+                if let command = currentCommand {
                     // Known command argument.
                     currentArgs.append(token)
                     let isLastToken = index == tokens.count - 1

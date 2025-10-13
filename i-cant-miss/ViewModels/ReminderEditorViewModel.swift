@@ -29,7 +29,7 @@ final class ReminderEditorViewModel: ObservableObject {
         self.notes = reminder?.notes ?? ""
         self.priority = reminder?.priority ?? .medium
         self.status = reminder?.status ?? .active
-        self.triggers = reminder?.triggers.map { draft(from: $0) } ?? []
+        self.triggers = reminder?.triggers.map(ReminderEditorViewModel.draft(from:)) ?? []
         self.importantDate = reminder?.importantDate
     }
 

@@ -14,6 +14,11 @@ struct LocationPickerView: View {
     @StateObject private var searchModel = LocationSearchViewModel()
     @State private var region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
                                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+    @State private var mapCameraPosition = MapCameraPosition.region(
+        MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
+                           span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+    )
+    @State private var mapCenter = CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902)
     @State private var selectedCoordinate: CLLocationCoordinate2D?
     @State private var selectedName: String = ""
     @State private var radius: Double = 200
@@ -50,25 +55,7 @@ struct LocationPickerView: View {
                     .frame(height: 160)
                 }
 
-                Map(coordinateRegion: $region, interactionModes: [.all], showsUserLocation: true)
-                    .frame(height: 250)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(alignment: .center) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.title)
-                            .foregroundStyle(.red)
-                            .shadow(radius: 4)
-                    }
-                    .overlay(alignment: .bottomTrailing) {
-                        Button {
-                            selectedCoordinate = region.center
-                        } label: {
-                            Label("Use center", systemImage: "scope")
-                                .padding(8)
-                                .background(.ultraThinMaterial, in: Capsule())
-                        }
-                        .padding()
-                    }
+                mapView
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -100,13 +87,73 @@ struct LocationPickerView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
-                        let coordinate = selectedCoordinate ?? region.center
+                        let coordinate = selectedCoordinate ?? currentMapCenter
                         let name = selectedName.isEmpty ? "Custom Location" : selectedName
                         onAdd(name, coordinate.latitude, coordinate.longitude, radius, event)
                         dismiss()
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var mapView: some View {
+        if #available(iOS 17, *) {
+            Map(position: $mapCameraPosition)
+                .frame(height: 250)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(alignment: .center) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.red)
+                        .shadow(radius: 4)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        selectedCoordinate = currentMapCenter
+                    } label: {
+                        Label("Use center", systemImage: "scope")
+                            .padding(8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                    }
+                    .padding()
+                }
+                .onMapCameraChange { context in
+                    if let regionValue = context.region {
+                        mapCenter = regionValue.center
+                    } else {
+                        mapCenter = context.camera.centerCoordinate
+                    }
+                }
+        } else {
+            Map(coordinateRegion: $region, interactionModes: .all, showsUserLocation: true)
+                .frame(height: 250)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(alignment: .center) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.red)
+                        .shadow(radius: 4)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        selectedCoordinate = currentMapCenter
+                    } label: {
+                        Label("Use center", systemImage: "scope")
+                            .padding(8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                    }
+                    .padding()
+                }
+        }
+    }
+
+    private var currentMapCenter: CLLocationCoordinate2D {
+        if #available(iOS 17, *) {
+            return mapCenter
+        } else {
+            return region.center
         }
     }
 
@@ -129,10 +176,15 @@ struct LocationPickerView: View {
     private func selectSuggestion(_ suggestion: MKLocalSearchCompletion) async {
         if let result = await searchModel.search(for: suggestion) {
             await MainActor.run {
-                selectedCoordinate = result.placemark.coordinate
-                selectedName = result.name ?? suggestion.title
-                region = MKCoordinateRegion(center: result.placemark.coordinate,
-                                            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+                let resolvedName = result.name ?? suggestion.title
+                let coordinate = result.location.coordinate
+                selectedCoordinate = coordinate
+                mapCenter = coordinate
+                let updatedRegion = MKCoordinateRegion(center: coordinate,
+                                                       span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+                mapCameraPosition = .region(updatedRegion)
+                region = updatedRegion
+                selectedName = resolvedName
                 searchModel.query = suggestion.title
                 searchModel.suggestions = []
             }

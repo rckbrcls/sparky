@@ -10,7 +10,7 @@ import CoreData
 
 @main
 struct i_cant_missApp: App {
-    @StateObject private var appEnvironment = AppEnvironment()
+    @StateObject private var appEnvironment = AppEnvironment(persistence: PersistenceController.shared)
 
     var body: some Scene {
         WindowGroup {

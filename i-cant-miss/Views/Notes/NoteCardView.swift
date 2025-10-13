@@ -127,7 +127,7 @@ private struct FlexibleView<Data: RandomAccessCollection, Content: View>: View w
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     let note = NoteModel(
         id: UUID(),
         title: "Design checklist",
@@ -147,5 +147,4 @@ private struct FlexibleView<Data: RandomAccessCollection, Content: View>: View w
     )
     NoteCardView(note: note)
         .padding()
-        .previewLayout(.sizeThatFits)
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 import Combine
-import CoreData
+@preconcurrency import CoreData
 import os.log
 
 @MainActor
@@ -270,14 +270,14 @@ final class FolderService: ObservableObject {
     // MARK: - Core Data fetch helpers
 
     private func fetchFolders(in context: NSManagedObjectContext) async throws -> [FolderModel] {
-        let request = Folder.fetchRequest()
-        request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true),
-            NSSortDescriptor(keyPath: \Folder.name, ascending: true)
-        ]
         return try await withCheckedThrowingContinuation { continuation in
             context.perform {
                 do {
+                    let request: NSFetchRequest<Folder> = Folder.fetchRequest()
+                    request.sortDescriptors = [
+                        NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true),
+                        NSSortDescriptor(keyPath: \Folder.name, ascending: true)
+                    ]
                     let results = try context.fetch(request)
                     continuation.resume(returning: results.map { $0.toModel() })
                 } catch {
@@ -288,13 +288,13 @@ final class FolderService: ObservableObject {
     }
 
     private func fetchTags(in context: NSManagedObjectContext) async throws -> [TagModel] {
-        let request = Tag.fetchRequest()
-        request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \Tag.name, ascending: true)
-        ]
         return try await withCheckedThrowingContinuation { continuation in
             context.perform {
                 do {
+                    let request: NSFetchRequest<Tag> = Tag.fetchRequest()
+                    request.sortDescriptors = [
+                        NSSortDescriptor(keyPath: \Tag.name, ascending: true)
+                    ]
                     let results = try context.fetch(request)
                     continuation.resume(returning: results.map { $0.toModel() })
                 } catch {

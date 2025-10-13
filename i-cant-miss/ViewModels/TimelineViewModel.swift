@@ -35,6 +35,10 @@ final class TimelineViewModel: ObservableObject {
         }
     }
 
+    func dismissError() {
+        errorMessage = nil
+    }
+
     func complete(_ reminder: ReminderModel) {
         Task {
             do {

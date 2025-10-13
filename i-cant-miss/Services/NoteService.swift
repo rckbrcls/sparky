@@ -7,7 +7,7 @@
 
 import Foundation
 import Combine
-import CoreData
+@preconcurrency import CoreData
 import os.log
 
 @MainActor
@@ -185,14 +185,14 @@ final class NoteService: ObservableObject {
     // MARK: - Private helpers
 
     private func fetchNotes(in context: NSManagedObjectContext) async throws -> [NoteModel] {
-        let request = Note.fetchRequest()
-        request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \Note.isPinned, ascending: false),
-            NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
-        ]
         return try await withCheckedThrowingContinuation { continuation in
             context.perform {
                 do {
+                    let request: NSFetchRequest<Note> = Note.fetchRequest()
+                    request.sortDescriptors = [
+                        NSSortDescriptor(keyPath: \Note.isPinned, ascending: false),
+                        NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
+                    ]
                     let results = try context.fetch(request)
                     continuation.resume(returning: results.map { $0.toModel() })
                 } catch {

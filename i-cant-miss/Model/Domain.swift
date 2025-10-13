@@ -307,6 +307,10 @@ extension Reminder {
         ReminderStatus(rawValue: statusRaw ?? "active") ?? .active
     }
 
+    var triggerSet: Set<ReminderTrigger> {
+        (triggers as? Set<ReminderTrigger>) ?? []
+    }
+
     func setStatus(_ status: ReminderStatus) {
         statusRaw = status.rawValue
     }
@@ -320,7 +324,7 @@ extension Reminder {
     }
 
     func toModel() -> ReminderModel {
-        let triggerSet = (triggers as? Set<ReminderTrigger>) ?? []
+        let triggerSet = self.triggerSet
 
         return ReminderModel(
             id: id ?? UUID(),
@@ -461,8 +465,12 @@ extension Tag {
 }
 
 extension ImportantDate {
+    var leadTimeSet: Set<ImportantDateLeadTime> {
+        (leadTimes as? Set<ImportantDateLeadTime>) ?? []
+    }
+
     func toModel() -> ImportantDateModel {
-        let leadTimesSet = (leadTimes as? Set<ImportantDateLeadTime>) ?? []
+        let leadTimesSet = self.leadTimeSet
 
         return ImportantDateModel(
             id: id ?? UUID(),
