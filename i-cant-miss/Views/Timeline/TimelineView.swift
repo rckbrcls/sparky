@@ -24,52 +24,49 @@ struct TimelineView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Filtro abaixo do título
-                filterPicker
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
+            List {
+                Section {
+                    filterPicker
+                        .pickerStyle(.segmented)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color(.systemGroupedBackground))
+                        .listRowSeparator(.hidden)
+                }
 
-                // Conteúdo principal
-                Group {
-                    if viewModel.reminders.isEmpty {
-                        ScrollView {
-                            EmptyStateView(systemImage: "bell.slash",
-                                           title: "Stay on top of things",
-                                           message: "Create a reminder to populate your timeline.")
-                                .frame(maxWidth: .infinity)
-                        }
-                    } else {
-                        List {
-                            ForEach(Array(viewModel.reminders.enumerated()), id: \.element.id) { index, reminder in
-                                ReminderRowView(reminder: reminder)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        onEditReminder(reminder)
-                                    }
-                                    .contextMenu {
-                                        Button("Complete", systemImage: "checkmark.circle") {
-                                            viewModel.complete(reminder)
-                                        }
-                                        Button("Snooze 15 min", systemImage: "zzz") {
-                                            viewModel.snooze(reminder, minutes: 15)
-                                        }
-                                        Button("Postpone 1 hr", systemImage: "clock.arrow.circlepath") {
-                                            viewModel.postpone(reminder, hours: 1)
-                                        }
-                                        Button("Archive", systemImage: "archivebox") {
-                                            viewModel.archive(reminder)
-                                        }
-                                    }
-                                    .listRowSeparator(index == viewModel.reminders.count - 1 ? .hidden : .visible, edges: .bottom)
-                                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                if viewModel.reminders.isEmpty {
+                    EmptyStateView(systemImage: "bell.slash",
+                                   title: "Stay on top of things",
+                                   message: "Create a reminder to populate your timeline.")
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                } else {
+                    ForEach(Array(viewModel.reminders.enumerated()), id: \.element.id) { index, reminder in
+                        ReminderRowView(reminder: reminder)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onEditReminder(reminder)
                             }
-                        }
-                        .listStyle(.insetGrouped)
+                            .contextMenu {
+                                Button("Complete", systemImage: "checkmark.circle") {
+                                    viewModel.complete(reminder)
+                                }
+                                Button("Snooze 15 min", systemImage: "zzz") {
+                                    viewModel.snooze(reminder, minutes: 15)
+                                }
+                                Button("Postpone 1 hr", systemImage: "clock.arrow.circlepath") {
+                                    viewModel.postpone(reminder, hours: 1)
+                                }
+                                Button("Archive", systemImage: "archivebox") {
+                                    viewModel.archive(reminder)
+                                }
+                            }
+                            .listRowSeparator(index == viewModel.reminders.count - 1 ? .hidden : .visible, edges: .bottom)
+                            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     }
                 }
             }
+            .listStyle(.insetGrouped)
             .scrollDismissesKeyboard(.interactively)
             .refreshable {
                 viewModel.refresh(force: true)
