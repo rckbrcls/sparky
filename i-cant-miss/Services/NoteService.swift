@@ -52,8 +52,14 @@ final class NoteService: ObservableObject {
                 NSSortDescriptor(keyPath: \Note.isPinned, ascending: false),
                 NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
             ]
+            // Prefetch relationships to avoid faulting issues
+            request.relationshipKeyPathsForPrefetching = ["folder", "tags"]
             let results = try context.fetch(request)
             noteModels = results.map { $0.toModel() }
+            logger.info("📚 NoteService loadInitialData: Loaded \(noteModels.count) notes")
+            if let first = noteModels.first {
+                logger.info("📚 First note - title: \(first.title ?? "nil"), folder: \(first.folder?.name ?? "nil"), tags: \(first.tags.count)")
+            }
         } catch {
             logger.error("Failed to load initial notes: \(error.localizedDescription)")
             noteModels = []
@@ -213,6 +219,27 @@ final class NoteService: ObservableObject {
         }
     }
 
+    func fetchNoteWithRelationships(id: UUID) -> NoteModel? {
+        let context = persistence.container.viewContext
+        do {
+            let request: NSFetchRequest<Note> = Note.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+            request.relationshipKeyPathsForPrefetching = ["folder", "tags"]
+            request.fetchLimit = 1
+            
+            guard let note = try context.fetch(request).first else {
+                return nil
+            }
+            
+            let model = note.toModel()
+            logger.info("📚 fetchNoteWithRelationships - id: \(id), title: \(model.title ?? "nil"), folder: \(model.folder?.name ?? "nil"), tags: \(model.tags.count)")
+            return model
+        } catch {
+            logger.error("Failed to fetch note with relationships: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     // MARK: - Private helpers
 
     private func fetchNoteFromViewContext(objectID: NSManagedObjectID) async throws -> NoteModel {
@@ -247,6 +274,8 @@ final class NoteService: ObservableObject {
                         NSSortDescriptor(keyPath: \Note.isPinned, ascending: false),
                         NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
                     ]
+                    // Prefetch relationships to avoid faulting issues
+                    request.relationshipKeyPathsForPrefetching = ["folder", "tags"]
                     let results = try context.fetch(request)
                     continuation.resume(returning: results.map { $0.toModel() })
                 } catch {

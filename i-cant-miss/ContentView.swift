@@ -11,8 +11,8 @@ import Combine
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @StateObject private var tabRouter = TabRouter()
-    @State private var showReminderSheet = false
-    @State private var showNoteSheet = false
+    @State private var showReminderForCreate = false
+    @State private var showNoteForCreate = false
     @State private var selectedReminder: ReminderModel?
     @State private var selectedNote: NoteModel?
 
@@ -23,10 +23,9 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $tabRouter.selection) {
             TimelineView(environment: environment,
-                         onCreateReminder: { showReminderSheet = true },
+                         onCreateReminder: { showReminderForCreate = true },
                          onEditReminder: { reminder in
                              selectedReminder = reminder
-                             showReminderSheet = true
                          })
             .tabItem {
                 Label("Timeline", systemImage: "list.bullet.rectangle")
@@ -36,7 +35,6 @@ struct ContentView: View {
             TriggersView(environment: environment,
                          onEditReminder: { reminder in
                              selectedReminder = reminder
-                             showReminderSheet = true
                          })
             .tabItem {
                 Label("Triggers", systemImage: "bolt.circle")
@@ -44,26 +42,39 @@ struct ContentView: View {
             .tag(TabRouter.Selection.triggers)
 
             NotesView(environment: environment,
-                      onCreateNote: { showNoteSheet = true },
+                      onCreateNote: { showNoteForCreate = true },
                       onEditNote: { note in
                           selectedNote = note
-                          showNoteSheet = true
                       })
             .tabItem {
                 Label("Notes", systemImage: "square.and.pencil")
             }
             .tag(TabRouter.Selection.notes)
         }
-        .sheet(isPresented: $showReminderSheet, onDismiss: { selectedReminder = nil }) {
+        .sheet(isPresented: $showReminderForCreate) {
             ReminderEditorView(
                 environment: environment,
-                existingReminder: selectedReminder
+                existingReminder: nil
             )
         }
-        .sheet(isPresented: $showNoteSheet, onDismiss: { selectedNote = nil }) {
+        .sheet(item: $selectedReminder) { reminder in
+            let _ = print("📋 Sheet presented with selectedReminder: \(reminder.id.uuidString), title: '\(reminder.title)'")
+            ReminderEditorView(
+                environment: environment,
+                existingReminder: reminder
+            )
+        }
+        .sheet(isPresented: $showNoteForCreate) {
             NoteEditorView(
                 environment: environment,
-                existingNote: selectedNote
+                existingNote: nil
+            )
+        }
+        .sheet(item: $selectedNote) { note in
+            let _ = print("📋 Sheet presented with selectedNote: \(note.id.uuidString), title: '\(note.title ?? "")'")
+            NoteEditorView(
+                environment: environment,
+                existingNote: note
             )
         }
     }

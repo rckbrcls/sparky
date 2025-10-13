@@ -10,27 +10,87 @@ import Combine
 
 @MainActor
 final class ReminderEditorViewModel: ObservableObject {
-    @Published var title: String
-    @Published var notes: String
-    @Published var priority: ReminderPriority
-    @Published var status: ReminderStatus
-    @Published var triggers: [ReminderTriggerDraft]
+    @Published var title: String = ""
+    @Published var notes: String = ""
+    @Published var priority: ReminderPriority = .medium
+    @Published var status: ReminderStatus = .active
+    @Published var triggers: [ReminderTriggerDraft] = []
     @Published var importantDate: ImportantDateModel?
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
 
     private let environment: AppEnvironment
-    private let existingReminder: ReminderModel?
+    private let existingReminderID: UUID?
 
     init(environment: AppEnvironment, reminder: ReminderModel?) {
         self.environment = environment
-        self.existingReminder = reminder
-        self.title = reminder?.title ?? ""
-        self.notes = reminder?.notes ?? ""
-        self.priority = reminder?.priority ?? .medium
-        self.status = reminder?.status ?? .active
-        self.triggers = reminder?.triggers.map(ReminderEditorViewModel.draft(from:)) ?? []
-        self.importantDate = reminder?.importantDate
+        self.existingReminderID = reminder?.id
+
+        print("⏰ ReminderEditorViewModel init - reminder ID: \((reminder?.id).map { $0.uuidString } ?? "nil")")
+        if let reminder = reminder {
+            print("⏰ Reminder object received - title: '\(reminder.title)', id: \(reminder.id.uuidString)")
+            print("⏰ Reminder has \(reminder.triggers.count) triggers, notes: '\(reminder.notes ?? "")'")
+        } else {
+            print("⏰ No reminder object received (creating new)")
+        }
+        print("⏰ Service has \(environment.reminderService.reminders.count) reminders loaded")
+        
+        // Load data immediately in init to ensure it's available when view appears
+        // First try to fetch fresh data from Core Data with relationships
+        if let reminderId = reminder?.id,
+           let freshReminder = environment.reminderService.fetchReminderWithRelationships(id: reminderId) {
+            print("⏰ Found reminder via fetchReminderWithRelationships - title: \(freshReminder.title), triggers: \(freshReminder.triggers.count)")
+            self.title = freshReminder.title
+            self.notes = freshReminder.notes ?? ""
+            self.priority = freshReminder.priority
+            self.status = freshReminder.status
+            self.triggers = freshReminder.triggers.map(ReminderEditorViewModel.draft(from:))
+            self.importantDate = freshReminder.importantDate
+        } else if let reminderId = reminder?.id,
+                  let existingReminder = environment.reminderService.reminders.first(where: { $0.id == reminderId }) {
+            print("⏰ Found reminder in service array - title: \(existingReminder.title), triggers: \(existingReminder.triggers.count)")
+            self.title = existingReminder.title
+            self.notes = existingReminder.notes ?? ""
+            self.priority = existingReminder.priority
+            self.status = existingReminder.status
+            self.triggers = existingReminder.triggers.map(ReminderEditorViewModel.draft(from:))
+            self.importantDate = existingReminder.importantDate
+        } else {
+            print("⏰ Reminder not found in service or new reminder - using passed data")
+            // New reminder or not found in service - use defaults
+            self.title = reminder?.title ?? ""
+            self.notes = reminder?.notes ?? ""
+            self.priority = reminder?.priority ?? .medium
+            self.status = reminder?.status ?? .active
+            self.triggers = reminder?.triggers.map(ReminderEditorViewModel.draft(from:)) ?? []
+            self.importantDate = reminder?.importantDate
+        }
+        
+        print("⏰ Init complete - title: '\(self.title)', notes length: \(self.notes.count), triggers: \(self.triggers.count)")
+    }
+
+    func loadData() {
+        // Reload data from the existing reminder to ensure all relationships are populated
+        // This fixes the issue where on first load, relationships might not be available
+        print("⏰ loadData called")
+        if let reminderId = existingReminderID,
+           let updatedReminder = environment.reminderService.reminders.first(where: { $0.id == reminderId }) {
+            print("⏰ loadData - Found reminder - title: \(updatedReminder.title), triggers: \(updatedReminder.triggers.count)")
+            self.title = updatedReminder.title
+            self.notes = updatedReminder.notes ?? ""
+            self.priority = updatedReminder.priority
+            self.status = updatedReminder.status
+            self.triggers = updatedReminder.triggers.map(ReminderEditorViewModel.draft(from:))
+            self.importantDate = updatedReminder.importantDate
+            print("⏰ loadData complete - updated fields")
+        } else {
+            print("⏰ loadData - Reminder not found in service")
+        }
+    }
+
+    var existingReminder: ReminderModel? {
+        guard let reminderId = existingReminderID else { return nil }
+        return environment.reminderService.reminders.first(where: { $0.id == reminderId })
     }
 
     func addTimeTrigger(date: Date, recurrence: RecurrenceRule?) {

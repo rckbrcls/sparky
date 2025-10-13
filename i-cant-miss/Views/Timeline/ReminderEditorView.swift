@@ -85,6 +85,9 @@ struct ReminderEditorView: View {
                     }
                 }
             }
+            .onAppear {
+                viewModel.loadData()
+            }
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

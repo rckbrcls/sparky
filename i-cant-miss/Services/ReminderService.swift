@@ -56,6 +56,8 @@ final class ReminderService: ObservableObject {
             request.sortDescriptors = [
                 NSSortDescriptor(keyPath: \Reminder.createdAt, ascending: false)
             ]
+            // Prefetch relationships to avoid faulting issues
+            request.relationshipKeyPathsForPrefetching = ["triggers", "importantDate", "importantDate.leadTimes"]
             let results = try context.fetch(request)
             reminderModels = results.map { $0.toModel() }
         } catch {
@@ -275,6 +277,27 @@ final class ReminderService: ObservableObject {
         geofenceManager?.removeGeofences(for: id)
     }
 
+    func fetchReminderWithRelationships(id: UUID) -> ReminderModel? {
+        let context = persistence.container.viewContext
+        do {
+            let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+            request.relationshipKeyPathsForPrefetching = ["triggers", "importantDate", "importantDate.leadTimes"]
+            request.fetchLimit = 1
+            
+            guard let reminder = try context.fetch(request).first else {
+                return nil
+            }
+            
+            let model = reminder.toModel()
+            logger.info("⏰ fetchReminderWithRelationships - id: \(id), title: \(model.title), triggers: \(model.triggers.count)")
+            return model
+        } catch {
+            logger.error("Failed to fetch reminder with relationships: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     // MARK: - Private
 
     private func fetchReminderFromViewContext(objectID: NSManagedObjectID) async throws -> ReminderModel {
@@ -381,6 +404,8 @@ final class ReminderService: ObservableObject {
                         NSSortDescriptor(keyPath: \Reminder.userOrder, ascending: true),
                         NSSortDescriptor(keyPath: \Reminder.updatedAt, ascending: false)
                     ]
+                    // Prefetch relationships to avoid faulting issues
+                    request.relationshipKeyPathsForPrefetching = ["triggers", "importantDate", "importantDate.leadTimes"]
                     let entities = try context.fetch(request)
                     continuation.resume(returning: entities.map { $0.toModel() })
                 } catch {

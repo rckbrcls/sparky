@@ -55,6 +55,9 @@ struct NoteEditorView: View {
                     }
                 }
             }
+            .onAppear {
+                viewModel.loadData()
+            }
             .navigationTitle(viewModelTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
