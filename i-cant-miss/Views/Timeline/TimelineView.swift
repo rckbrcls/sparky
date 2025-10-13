@@ -65,15 +65,14 @@ struct TimelineView: View {
             }
             .navigationTitle("Timeline")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    filterPicker
+                        .pickerStyle(.segmented)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onCreateReminder) {
                         Image(systemName: "plus.circle.fill")
                     }
-                }
-                ToolbarItem(placement: .bottomBar) {
-                    filterPicker
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: .infinity)
                 }
             }
         }
