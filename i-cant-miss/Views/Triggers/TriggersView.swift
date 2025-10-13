@@ -41,7 +41,7 @@ struct TriggersView: View {
                                         .font(.title2)
                                         .foregroundStyle(.blue)
                                         .frame(width: 32)
-                                    
+
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(folder.type.label)
                                             .font(.headline)
@@ -49,9 +49,9 @@ struct TriggersView: View {
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
-                                    
+
                                     Spacer()
-                                    
+
                                     Image(systemName: "folder.fill")
                                         .foregroundStyle(.secondary)
                                         .font(.title3)
@@ -76,7 +76,7 @@ struct TriggersView: View {
 struct TriggerListView: View {
     let folder: TriggersViewModel.TriggerTypeFolder
     let onEditReminder: (ReminderModel) -> Void
-    
+
     var body: some View {
         List {
             ForEach(folder.items) { display in

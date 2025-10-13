@@ -20,7 +20,7 @@ final class TriggersViewModel: ObservableObject {
         let id: ReminderTriggerType
         let items: [TriggerDisplay]
     }
-    
+
     struct TriggerTypeFolder: Identifiable {
         let id: ReminderTriggerType
         var type: ReminderTriggerType { id }
@@ -56,12 +56,12 @@ final class TriggersViewModel: ObservableObject {
 
     private func organizeTriggers() {
         var grouped: [ReminderTriggerType: [TriggerDisplay]] = [:]
-        
+
         // Inicializa todos os tipos de triggers com arrays vazios
         for type in ReminderTriggerType.allCases {
             grouped[type] = []
         }
-        
+
         // Popula com os triggers existentes
         for reminder in environment.reminderService.reminders {
             for trigger in reminder.triggers {
