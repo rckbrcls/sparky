@@ -28,7 +28,6 @@ struct TimelineView: View {
                 Section {
                     filterPicker
                         .pickerStyle(.segmented)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowBackground(Color(.systemGroupedBackground))
                         .listRowSeparator(.hidden)
                 }
