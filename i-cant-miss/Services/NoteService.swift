@@ -36,7 +36,34 @@ final class NoteService: ObservableObject {
     init(persistence: PersistenceController, folderService: FolderService) {
         self.persistence = persistence
         self.folderService = folderService
+
+        // Load initial data synchronously to ensure data is available immediately
+        loadInitialData()
         configureAutoRefresh()
+    }
+
+    private func loadInitialData() {
+        let context = persistence.container.viewContext
+        context.performAndWait {
+            do {
+                let request: NSFetchRequest<Note> = Note.fetchRequest()
+                request.sortDescriptors = [
+                    NSSortDescriptor(keyPath: \Note.isPinned, ascending: false),
+                    NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
+                ]
+                let results = try context.fetch(request)
+                let noteModels = results.map { $0.toModel() }
+                let now = Date()
+
+                // Update properties on MainActor
+                MainActor.assumeIsolated {
+                    self.notes = noteModels
+                    self.lastRefreshed = now
+                }
+            } catch {
+                logger.error("Failed to load initial notes: \(error.localizedDescription)")
+            }
+        }
     }
 
     func configureAutoRefresh() {
@@ -59,8 +86,13 @@ final class NoteService: ObservableObject {
         let context = persistence.container.viewContext
         do {
             let fetched = try await fetchNotes(in: context)
-            notes = fetched
-            lastRefreshed = Date()
+
+            // Always update on main thread to ensure UI updates
+            await MainActor.run {
+                self.notes = fetched
+                self.lastRefreshed = Date()
+            }
+
             return fetched
         } catch {
             logger.error("Failed to refresh notes: \(error.localizedDescription)")
@@ -80,7 +112,7 @@ final class NoteService: ObservableObject {
     }
 
     func createNote(title: String?, content: String, folderID: UUID?, tagIDs: [UUID], isPinned: Bool) async throws -> NoteModel {
-        try await withCheckedThrowingContinuation { continuation in
+        let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -106,19 +138,19 @@ final class NoteService: ObservableObject {
                     }
 
                     try context.save()
-
-                    self.fetchNote(by: note.objectID) { result in
-                        continuation.resume(with: result)
-                    }
+                    continuation.resume(returning: note.objectID)
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
+
+        // Now fetch from view context after save is complete
+        return try await fetchNoteFromViewContext(objectID: objectID)
     }
 
     func updateNote(_ model: NoteModel) async throws -> NoteModel {
-        try await withCheckedThrowingContinuation { continuation in
+        let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     guard let note = try self.fetchNote(by: model.id, context: context) else {
@@ -148,14 +180,15 @@ final class NoteService: ObservableObject {
                     }
 
                     try context.save()
-                    self.fetchNote(by: note.objectID) { result in
-                        continuation.resume(with: result)
-                    }
+                    continuation.resume(returning: note.objectID)
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
+
+        // Now fetch from view context after save is complete
+        return try await fetchNoteFromViewContext(objectID: objectID)
     }
 
     func togglePin(noteID: UUID) async throws -> NoteModel {
@@ -183,6 +216,29 @@ final class NoteService: ObservableObject {
     }
 
     // MARK: - Private helpers
+
+    private func fetchNoteFromViewContext(objectID: NSManagedObjectID) async throws -> NoteModel {
+        return try await withCheckedThrowingContinuation { continuation in
+            let viewContext = persistence.container.viewContext
+
+            // Give a small delay to ensure the save notification has been processed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                viewContext.perform {
+                    do {
+                        // Refresh to get the latest merged changes
+                        viewContext.refresh(viewContext.object(with: objectID), mergeChanges: true)
+
+                        guard let note = try? viewContext.existingObject(with: objectID) as? Note else {
+                            throw NoteServiceError.noteNotFound
+                        }
+                        continuation.resume(returning: note.toModel())
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
 
     private func fetchNotes(in context: NSManagedObjectContext) async throws -> [NoteModel] {
         return try await withCheckedThrowingContinuation { continuation in
@@ -223,14 +279,22 @@ final class NoteService: ObservableObject {
 
     private func fetchNote(by objectID: NSManagedObjectID, completion: @escaping (Result<NoteModel, Error>) -> Void) {
         let viewContext = persistence.container.viewContext
-        viewContext.perform {
-            do {
-                guard let note = try viewContext.existingObject(with: objectID) as? Note else {
-                    throw NoteServiceError.noteNotFound
+
+        // Wait a bit to ensure background context save has completed and merged
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            viewContext.perform {
+                do {
+                    // Refresh to ensure we have latest data
+                    viewContext.refreshAllObjects()
+
+                    let note = try viewContext.existingObject(with: objectID) as? Note
+                    guard let note = note else {
+                        throw NoteServiceError.noteNotFound
+                    }
+                    completion(.success(note.toModel()))
+                } catch {
+                    completion(.failure(error))
                 }
-                completion(.success(note.toModel()))
-            } catch {
-                completion(.failure(error))
             }
         }
     }

@@ -11,6 +11,7 @@ import CoreData
 @main
 struct i_cant_missApp: App {
     @StateObject private var appEnvironment = AppEnvironment(persistence: PersistenceController.shared)
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -18,6 +19,17 @@ struct i_cant_missApp: App {
                 .environment(\.managedObjectContext, appEnvironment.persistence.container.viewContext)
                 .task {
                     appEnvironment.bootstrap()
+                }
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    if newPhase == .active {
+                        // Refresh data when app becomes active
+                        Task {
+                            await appEnvironment.noteService.refresh(force: false)
+                            await appEnvironment.reminderService.refresh(force: false)
+                            await appEnvironment.folderService.refreshFolders(force: false)
+                            await appEnvironment.folderService.refreshTags(force: false)
+                        }
+                    }
                 }
         }
     }

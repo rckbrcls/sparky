@@ -19,17 +19,24 @@ final class NotesViewModel: ObservableObject {
 
     init(environment: AppEnvironment) {
         self.environment = environment
+
+        // Initialize with current data from services
+        self.allNotes = environment.noteService.notes
+        self.folders = environment.folderService.folders
+        self.tags = environment.folderService.tags
+
         bind()
-        updateNotesSnapshot()
     }
 
     func refresh(force: Bool) {
+        // Avoid duplicate refreshes if already loading
+        guard !environment.isBootstrapping else { return }
+
         Task {
             async let notesRefresh = environment.noteService.refresh(force: force)
             async let foldersRefresh = environment.folderService.refreshFolders(force: force)
             async let tagsRefresh = environment.folderService.refreshTags(force: force)
             _ = await (notesRefresh, foldersRefresh, tagsRefresh)
-            updateNotesSnapshot()
         }
     }
 
@@ -40,14 +47,16 @@ final class NotesViewModel: ObservableObject {
     func delete(note: NoteModel) {
         Task {
             _ = try? await environment.noteService.deleteNote(id: note.id)
-            await environment.noteService.refresh(force: true)
+            // Force immediate refresh to update UI
+            _ = await environment.noteService.refresh(force: true)
         }
     }
 
     func togglePin(note: NoteModel) {
         Task {
             _ = try? await environment.noteService.togglePin(noteID: note.id)
-            await environment.noteService.refresh(force: true)
+            // Force immediate refresh to update UI
+            _ = await environment.noteService.refresh(force: true)
         }
     }
 
@@ -59,15 +68,18 @@ final class NotesViewModel: ObservableObject {
                 iconName: iconName,
                 isDefault: false
             )
-            await environment.folderService.refreshFolders(force: true)
+            // Force immediate refresh to update UI
+            _ = await environment.folderService.refreshFolders(force: true)
         }
     }
 
     func deleteFolder(_ folder: FolderModel) {
         Task {
             _ = try? await environment.folderService.deleteFolder(id: folder.id)
-            await environment.folderService.refreshFolders(force: true)
-            await environment.noteService.refresh(force: true)
+            // Force immediate refresh to update UI
+            async let folders = environment.folderService.refreshFolders(force: true)
+            async let notes = environment.noteService.refresh(force: true)
+            _ = await (folders, notes)
         }
     }
 

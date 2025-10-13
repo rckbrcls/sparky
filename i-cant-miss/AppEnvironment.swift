@@ -18,8 +18,13 @@ final class AppEnvironment: ObservableObject {
     let notificationScheduler: NotificationScheduler
     let geofenceManager: GeofenceManager
 
+    @Published var isBootstrapping = true
+    @Published var hasBootstrapped = false
+
     init(persistence: PersistenceController) {
         self.persistence = persistence
+
+        // Initialize services - they will load data synchronously in their init
         self.folderService = FolderService(persistence: persistence)
         self.reminderService = ReminderService(persistence: persistence)
         self.noteService = NoteService(persistence: persistence, folderService: folderService)
@@ -29,15 +34,29 @@ final class AppEnvironment: ObservableObject {
         reminderService.notificationScheduler = notificationScheduler
         reminderService.geofenceManager = geofenceManager
         geofenceManager.notificationScheduler = notificationScheduler
+
+        // Mark initialization as complete
+        self.isBootstrapping = false
     }
 
     func bootstrap() {
+        guard !hasBootstrapped else { return }
+
         Task {
-            await folderService.refreshFolders(force: true)
-            await folderService.refreshTags(force: true)
-            await reminderService.refresh(force: true)
-            await noteService.refresh(force: true)
+            isBootstrapping = true
+
+            // Perform a force refresh to ensure data is up-to-date
+            async let foldersTask = folderService.refreshFolders(force: true)
+            async let tagsTask = folderService.refreshTags(force: true)
+            async let remindersTask = reminderService.refresh(force: true)
+            async let notesTask = noteService.refresh(force: true)
+
+            _ = await (foldersTask, tagsTask, remindersTask, notesTask)
+
             await notificationScheduler.requestAuthorizationIfNeeded()
+
+            hasBootstrapped = true
+            isBootstrapping = false
         }
     }
 }

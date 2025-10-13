@@ -27,6 +27,10 @@ final class PersistenceController {
             description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
             if inMemory {
                 description.url = URL(fileURLWithPath: "/dev/null")
+            } else {
+                // Configure store location explicitly
+                description.shouldMigrateStoreAutomatically = true
+                description.shouldInferMappingModelAutomatically = true
             }
         }
 
@@ -36,14 +40,43 @@ final class PersistenceController {
             }
         }
 
+        // Enhanced merge policies for better data consistency
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.transactionAuthor = "main"
+        container.viewContext.undoManager = nil // Disable undo for better performance
+
+        // Ensure changes are immediately visible
+        container.viewContext.stalenessInterval = 0
 
         backgroundContext = container.newBackgroundContext()
         backgroundContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
         backgroundContext.automaticallyMergesChangesFromParent = true
         backgroundContext.transactionAuthor = "background"
+        backgroundContext.undoManager = nil
+
+        // Setup notification observers for context synchronization
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(contextDidSave(_:)),
+            name: .NSManagedObjectContextDidSave,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func contextDidSave(_ notification: Notification) {
+        guard let context = notification.object as? NSManagedObjectContext,
+              context !== container.viewContext else {
+            return
+        }
+
+        container.viewContext.perform {
+            self.container.viewContext.mergeChanges(fromContextDidSave: notification)
+        }
     }
 
     func save(context: NSManagedObjectContext? = nil) {
@@ -51,6 +84,12 @@ final class PersistenceController {
         guard context.hasChanges else { return }
         do {
             try context.save()
+            // Force refresh view context to ensure UI updates
+            if context !== container.viewContext {
+                container.viewContext.perform {
+                    self.container.viewContext.refreshAllObjects()
+                }
+            }
         } catch {
             let nsError = error as NSError
             assertionFailure("Unresolved CoreData error \(nsError), \(nsError.userInfo)")
@@ -58,12 +97,18 @@ final class PersistenceController {
     }
 
     func performBackgroundTask(_ block: @escaping (NSManagedObjectContext) -> Void) {
-        container.performBackgroundTask { context in
+        container.performBackgroundTask { [weak self] context in
+            guard let self = self else { return }
+
             context.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
             block(context)
+
             if context.hasChanges {
                 do {
                     try context.save()
+
+                    // Wait for the save notification to be processed
+                    // The contextDidSave observer will handle the merge
                 } catch {
                     let nsError = error as NSError
                     assertionFailure("Failed to save background context \(nsError), \(nsError.userInfo)")

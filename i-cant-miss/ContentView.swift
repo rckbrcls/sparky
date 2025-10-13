@@ -66,12 +66,6 @@ struct ContentView: View {
                 existingNote: selectedNote
             )
         }
-        .task {
-            await environment.reminderService.refresh(force: true)
-            await environment.folderService.refreshFolders(force: true)
-            await environment.folderService.refreshTags(force: true)
-            await environment.noteService.refresh(force: true)
-        }
     }
 }
 

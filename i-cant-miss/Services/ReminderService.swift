@@ -41,7 +41,33 @@ final class ReminderService: ObservableObject {
 
     init(persistence: PersistenceController) {
         self.persistence = persistence
+
+        // Load initial data synchronously to ensure data is available immediately
+        loadInitialData()
         configureAutoRefresh()
+    }
+
+    private func loadInitialData() {
+        let context = persistence.container.viewContext
+        context.performAndWait {
+            do {
+                let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
+                request.sortDescriptors = [
+                    NSSortDescriptor(keyPath: \Reminder.createdAt, ascending: false)
+                ]
+                let results = try context.fetch(request)
+                let reminderModels = results.map { $0.toModel() }
+                let now = Date()
+
+                // Update properties on MainActor
+                MainActor.assumeIsolated {
+                    self.reminders = reminderModels
+                    self.lastRefreshed = now
+                }
+            } catch {
+                logger.error("Failed to load initial reminders: \(error.localizedDescription)")
+            }
+        }
     }
 
     func configureAutoRefresh() {
@@ -64,10 +90,15 @@ final class ReminderService: ObservableObject {
         let context = persistence.container.viewContext
         do {
             let fetchedModels = try await fetchReminders(in: context)
-            reminders = fetchedModels
-            lastRefreshed = Date()
-            cache.removeAll()
-            cacheTimestamps.removeAll()
+
+            // Always update on main thread to ensure UI updates
+            await MainActor.run {
+                self.reminders = fetchedModels
+                self.lastRefreshed = Date()
+                self.cache.removeAll()
+                self.cacheTimestamps.removeAll()
+            }
+
             if let scheduler = notificationScheduler {
                 await scheduler.refreshNotifications(reminders: fetchedModels)
             }
@@ -114,25 +145,26 @@ final class ReminderService: ObservableObject {
     }
 
     func createReminder(from draft: ReminderDraft) async throws -> ReminderModel {
-        try await withCheckedThrowingContinuation { continuation in
+        let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     let reminder = try self.insertReminder(draft: draft, context: context)
                     let objectID = reminder.objectID
                     try context.save()
 
-                    self.fetchReminder(by: objectID) { result in
-                        continuation.resume(with: result)
-                    }
+                    continuation.resume(returning: objectID)
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
+
+        // Now fetch from view context after save is complete
+        return try await fetchReminderFromViewContext(objectID: objectID)
     }
 
     func updateReminder(_ model: ReminderModel) async throws -> ReminderModel {
-        try await withCheckedThrowingContinuation { continuation in
+        let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     guard let reminder = try self.fetchReminder(by: model.id, context: context) else {
@@ -155,14 +187,15 @@ final class ReminderService: ObservableObject {
 
                     try context.save()
 
-                    self.fetchReminder(by: reminder.objectID) { result in
-                        continuation.resume(with: result)
-                    }
+                    continuation.resume(returning: reminder.objectID)
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
+
+        // Now fetch from view context after save is complete
+        return try await fetchReminderFromViewContext(objectID: objectID)
     }
 
     func completeReminder(id: UUID) async throws -> ReminderModel {
@@ -246,16 +279,47 @@ final class ReminderService: ObservableObject {
 
     // MARK: - Private
 
+    private func fetchReminderFromViewContext(objectID: NSManagedObjectID) async throws -> ReminderModel {
+        return try await withCheckedThrowingContinuation { continuation in
+            let viewContext = persistence.container.viewContext
+
+            // Give a small delay to ensure the save notification has been processed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                viewContext.perform {
+                    do {
+                        // Refresh to get the latest merged changes
+                        viewContext.refresh(viewContext.object(with: objectID), mergeChanges: true)
+
+                        guard let reminder = try? viewContext.existingObject(with: objectID) as? Reminder else {
+                            throw ReminderServiceError.reminderNotFound
+                        }
+                        continuation.resume(returning: reminder.toModel())
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
     private func fetchReminder(by objectID: NSManagedObjectID, completion: @escaping (Result<ReminderModel, Error>) -> Void) {
         let viewContext = persistence.container.viewContext
-        viewContext.perform {
-            do {
-                guard let reminder = try viewContext.existingObject(with: objectID) as? Reminder else {
-                    throw ReminderServiceError.reminderNotFound
+
+        // Wait a bit to ensure background context save has completed and merged
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            viewContext.perform {
+                do {
+                    // Refresh to ensure we have latest data
+                    viewContext.refreshAllObjects()
+
+                    let reminder = try viewContext.existingObject(with: objectID) as? Reminder
+                    guard let reminder = reminder else {
+                        throw ReminderServiceError.reminderNotFound
+                    }
+                    completion(.success(reminder.toModel()))
+                } catch {
+                    completion(.failure(error))
                 }
-                completion(.success(reminder.toModel()))
-            } catch {
-                completion(.failure(error))
             }
         }
     }

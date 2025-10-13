@@ -11,7 +11,9 @@ import Combine
 @MainActor
 final class TimelineViewModel: ObservableObject {
     @Published var filter: ReminderService.TimelineFilter = .today {
-        didSet { updateRemindersSnapshot() }
+        didSet {
+            updateRemindersSnapshot()
+        }
     }
     @Published private(set) var reminders: [ReminderModel] = []
     @Published private(set) var isLoading = false
@@ -22,16 +24,21 @@ final class TimelineViewModel: ObservableObject {
 
     init(environment: AppEnvironment) {
         self.environment = environment
+
+        // Initialize with current data from service
+        self.reminders = environment.reminderService.reminders(for: .today)
+
         bind()
-        updateRemindersSnapshot()
     }
 
     func refresh(force: Bool) {
+        // Avoid duplicate refreshes if already loading
+        guard !environment.isBootstrapping && !isLoading else { return }
+
         Task {
             isLoading = true
             defer { isLoading = false }
             await environment.reminderService.refresh(force: force)
-            updateRemindersSnapshot()
         }
     }
 
@@ -43,7 +50,8 @@ final class TimelineViewModel: ObservableObject {
         Task {
             do {
                 _ = try await environment.reminderService.completeReminder(id: reminder.id)
-                await environment.reminderService.refresh(force: true)
+                // Force immediate refresh to update UI
+                _ = await environment.reminderService.refresh(force: true)
             } catch {
                 errorMessage = "Failed to complete reminder."
             }
@@ -54,7 +62,8 @@ final class TimelineViewModel: ObservableObject {
         Task {
             do {
                 _ = try await environment.reminderService.snoozeReminder(id: reminder.id, by: TimeInterval(minutes * 60))
-                await environment.reminderService.refresh(force: true)
+                // Force immediate refresh to update UI
+                _ = await environment.reminderService.refresh(force: true)
             } catch {
                 errorMessage = "Failed to snooze reminder."
             }
@@ -65,7 +74,8 @@ final class TimelineViewModel: ObservableObject {
         Task {
             do {
                 _ = try await environment.reminderService.postponeReminder(id: reminder.id, by: TimeInterval(hours * 3600))
-                await environment.reminderService.refresh(force: true)
+                // Force immediate refresh to update UI
+                _ = await environment.reminderService.refresh(force: true)
             } catch {
                 errorMessage = "Failed to postpone reminder."
             }
@@ -76,7 +86,8 @@ final class TimelineViewModel: ObservableObject {
         Task {
             do {
                 _ = try await environment.reminderService.archiveReminder(id: reminder.id)
-                await environment.reminderService.refresh(force: true)
+                // Force immediate refresh to update UI
+                _ = await environment.reminderService.refresh(force: true)
             } catch {
                 errorMessage = "Failed to archive reminder."
             }

@@ -30,9 +30,46 @@ final class FolderService: ObservableObject {
 
     init(persistence: PersistenceController) {
         self.persistence = persistence
+
+        // Load initial data synchronously to ensure data is available immediately
+        loadInitialData()
         configureAutoRefresh()
     }
 
+    private func loadInitialData() {
+        let context = persistence.container.viewContext
+        context.performAndWait {
+            do {
+                // Load folders
+                let folderRequest: NSFetchRequest<Folder> = Folder.fetchRequest()
+                folderRequest.sortDescriptors = [
+                    NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true)
+                ]
+                let folderResults = try context.fetch(folderRequest)
+                let folderModels = folderResults.map { $0.toModel() }
+
+                // Load tags
+                let tagRequest: NSFetchRequest<Tag> = Tag.fetchRequest()
+                tagRequest.sortDescriptors = [
+                    NSSortDescriptor(keyPath: \Tag.name, ascending: true)
+                ]
+                let tagResults = try context.fetch(tagRequest)
+                let tagModels = tagResults.map { $0.toModel() }
+
+                let now = Date()
+
+                // Update properties on MainActor
+                MainActor.assumeIsolated {
+                    self.folders = folderModels
+                    self.tags = tagModels
+                    self.lastFoldersRefresh = now
+                    self.lastTagsRefresh = now
+                }
+            } catch {
+                logger.error("Failed to load initial folders/tags: \(error.localizedDescription)")
+            }
+        }
+    }
     func configureAutoRefresh() {
         refreshTimer?.cancel()
         refreshTimer = Timer.publish(every: cacheTTL, on: .main, in: .common)
@@ -55,8 +92,13 @@ final class FolderService: ObservableObject {
 
         do {
             let fetched = try await fetchFolders(in: persistence.container.viewContext)
-            folders = fetched
-            lastFoldersRefresh = Date()
+
+            // Always update on main thread to ensure UI updates
+            await MainActor.run {
+                self.folders = fetched
+                self.lastFoldersRefresh = Date()
+            }
+
             return fetched
         } catch {
             logger.error("Failed to refresh folders: \(error.localizedDescription)")
@@ -74,8 +116,13 @@ final class FolderService: ObservableObject {
 
         do {
             let fetched = try await fetchTags(in: persistence.container.viewContext)
-            tags = fetched
-            lastTagsRefresh = Date()
+
+            // Always update on main thread to ensure UI updates
+            await MainActor.run {
+                self.tags = fetched
+                self.lastTagsRefresh = Date()
+            }
+
             return fetched
         } catch {
             logger.error("Failed to refresh tags: \(error.localizedDescription)")
