@@ -117,9 +117,11 @@ struct NotesView: View {
                     Menu {
                         Button(action: onCreateNote) {
                             Label("New Note", systemImage: "square.and.pencil")
+                                .tint(.accentColor)
                         }
                         Button(action: { showingCreateFolder = true }) {
                             Label("New Folder", systemImage: "folder.badge.plus")
+                                .tint(.accentColor)
                         }
                     } label: {
                         Image(systemName: "plus")

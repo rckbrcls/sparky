@@ -12,6 +12,14 @@ struct NoteEditorView: View {
     @StateObject private var viewModel: NoteEditorViewModel
     let environment: AppEnvironment
 
+    @State private var isShowingDetails = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case title
+        case body
+    }
+
     init(environment: AppEnvironment, existingNote: NoteModel?) {
         self.environment = environment
         _viewModel = StateObject(wrappedValue: NoteEditorViewModel(environment: environment, note: existingNote))
@@ -19,44 +27,46 @@ struct NoteEditorView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Content") {
-                    TextField("Title (optional)", text: $viewModel.title)
-                    TextEditor(text: $viewModel.content)
-                        .frame(minHeight: 200)
-                }
+            ZStack {
+                Color(uiColor: .systemBackground)
+                    .ignoresSafeArea()
 
-                Section("Organization") {
-                    Toggle("Pin note", isOn: $viewModel.isPinned)
-
-                    Picker("Folder", selection: $viewModel.selectedFolderID) {
-                        Text("No folder").tag(UUID?.none)
-                        ForEach(environment.folderService.folders, id: \.id) { folder in
-                            Text(folder.name).tag(Optional(folder.id))
-                        }
-                    }
-                }
-
-                if !environment.folderService.tags.isEmpty {
-                    Section("Tags") {
-                        ForEach(environment.folderService.tags, id: \.id) { tag in
-                            Button {
-                                viewModel.toggleTag(id: tag.id)
-                            } label: {
-                                HStack {
-                                    Text(tag.name)
-                                    Spacer()
-                                    if viewModel.selectedTagIDs.contains(tag.id) {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        metadataSummary
+                        Divider()
+                            .padding(.top, 12)
+                        
+                        TextField("Title", text: $viewModel.title)
+                            .font(.system(size: 32, weight: .bold, design: .default))
+                            .textInputAutocapitalization(.sentences)
+                            .disableAutocorrection(false)
+                            .focused($focusedField, equals: .title)
+                            .submitLabel(.next)
+                            .onSubmit {
+                                focusedField = .body
                             }
-                        }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 28)
+
+                    ZStack(alignment: .topLeading) {
+                        if viewModel.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text("Note")
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 28)
+                                .padding(.top, 20)
+                        }
+
+                        TextEditor(text: $viewModel.content)
+                            .focused($focusedField, equals: .body)
+                            .padding(.horizontal, 12)
+                            .padding(.top, 12)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.clear)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
-            }
-            .onAppear {
-                viewModel.loadData()
             }
             .navigationTitle(viewModelTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -64,6 +74,16 @@ struct NoteEditorView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel", role: .cancel) { dismiss() }
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        isShowingDetails = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                    .accessibilityLabel("Note details")
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task {
@@ -88,11 +108,89 @@ struct NoteEditorView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
+            .sheet(isPresented: $isShowingDetails) {
+                NavigationStack {
+                    Form {
+                        Section("Organization") {
+                            Toggle("Pin note", isOn: $viewModel.isPinned)
+
+                            Picker("Folder", selection: $viewModel.selectedFolderID) {
+                                Text("No folder").tag(UUID?.none)
+                                ForEach(environment.folderService.folders, id: \.id) { folder in
+                                    Text(folder.name).tag(Optional(folder.id))
+                                }
+                            }
+                        }
+
+                        if !environment.folderService.tags.isEmpty {
+                            Section("Tags") {
+                                ForEach(environment.folderService.tags, id: \.id) { tag in
+                                    Button {
+                                        viewModel.toggleTag(id: tag.id)
+                                    } label: {
+                                        HStack {
+                                            Text(tag.name)
+                                            Spacer()
+                                            if viewModel.selectedTagIDs.contains(tag.id) {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .navigationTitle("Note Details")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                isShowingDetails = false
+                            }
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                viewModel.loadData()
+            }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
     }
 
     private var viewModelTitle: String {
         viewModel.title.isEmpty ? "New Note" : "Edit Note"
+    }
+
+    private var metadataSummary: some View {
+        HStack(spacing: 12) {
+            if viewModel.isPinned {
+                Label("Pinned", systemImage: "pin.fill")
+            }
+
+            if let folderName = selectedFolderName {
+                Label(folderName, systemImage: "folder")
+            }
+
+            if !selectedTagNames.isEmpty {
+                Label(selectedTagNames.joined(separator: ", "), systemImage: "tag")
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+    }
+
+    private var selectedFolderName: String? {
+        environment.folderService.folders.first(where: { $0.id == viewModel.selectedFolderID })?.name
+    }
+
+    private var selectedTagNames: [String] {
+        environment.folderService.tags
+            .filter { viewModel.selectedTagIDs.contains($0.id) }
+            .map(\.name)
     }
 }
 
