@@ -11,7 +11,7 @@ struct TerminalInputBar: View {
     @ObservedObject var viewModel: TerminalCommandViewModel
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             if let preview = viewModel.preview {
                 TerminalPreviewView(preview: preview)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -44,23 +44,41 @@ struct TerminalInputBar: View {
                 .transition(.move(edge: .bottom))
             }
 
-            HStack(alignment: .bottom, spacing: 12) {
+            HStack(alignment: .bottom, spacing: 10) {
                 Image(systemName: "terminal")
-                    .font(.title3)
+                    .font(.headline)
                     .foregroundStyle(.secondary)
-                TextField("Type reminder with / commands", text: $viewModel.input, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...3)
-                    .submitLabel(.go)
-                    .onSubmit {
-                        viewModel.handleSubmit()
+
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(uiColor: .secondarySystemBackground))
+
+                    if viewModel.input.isEmpty {
+                        Text("Type reminder with / commands")
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
                     }
+
+                    TextEditor(text: $viewModel.input)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .frame(minHeight: 36, maxHeight: 96)
+                        .scrollContentBackground(.hidden)
+                        .textInputAutocapitalization(.sentences)
+                        .disableAutocorrection(false)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.secondary.opacity(0.2))
+                )
+
                 Button(action: viewModel.handleSubmit) {
                     if viewModel.isProcessing {
                         ProgressView()
                     } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
+                        Image(systemName: "paperplane.circle.fill")
+                            .font(.title3)
                     }
                 }
                 .buttonStyle(.borderless)
@@ -94,13 +112,13 @@ struct TerminalInputBar: View {
                 .transition(.move(edge: .bottom))
             }
         }
-        .padding()
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: -4)
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
         )
-        .padding(.horizontal)
     }
 }
 

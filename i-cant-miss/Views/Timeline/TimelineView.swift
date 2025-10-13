@@ -69,12 +69,11 @@ struct TimelineView: View {
                         Image(systemName: "plus.circle.fill")
                     }
                 }
-            }
-            .safeAreaInset(edge: .top) {
-                filterPicker
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                    .background(.thinMaterial)
+                ToolbarItem(placement: .bottomBar) {
+                    filterPicker
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: .infinity)
+                }
             }
         }
         .alert("Something went wrong", isPresented: Binding(
@@ -97,7 +96,6 @@ struct TimelineView: View {
                     .tag(filter)
             }
         }
-        .pickerStyle(.segmented)
     }
 }
 

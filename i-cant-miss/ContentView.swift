@@ -23,43 +23,42 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $tabRouter.selection) {
-                TimelineView(environment: environment,
-                             onCreateReminder: { showReminderSheet = true },
-                             onEditReminder: { reminder in
-                                 selectedReminder = reminder
-                                 showReminderSheet = true
-                             })
-                .tabItem {
-                    Label("Timeline", systemImage: "list.bullet.rectangle")
-                }
-                .tag(TabRouter.Selection.timeline)
-
-                TriggersView(environment: environment,
-                             onEditReminder: { reminder in
-                                 selectedReminder = reminder
-                                 showReminderSheet = true
-                             })
-                .tabItem {
-                    Label("Triggers", systemImage: "bolt.circle")
-                }
-                .tag(TabRouter.Selection.triggers)
-
-                NotesView(environment: environment,
-                          onCreateNote: { showNoteSheet = true },
-                          onEditNote: { note in
-                              selectedNote = note
-                              showNoteSheet = true
-                          })
-                .tabItem {
-                    Label("Notes", systemImage: "square.and.pencil")
-                }
-                .tag(TabRouter.Selection.notes)
+        TabView(selection: $tabRouter.selection) {
+            TimelineView(environment: environment,
+                         onCreateReminder: { showReminderSheet = true },
+                         onEditReminder: { reminder in
+                             selectedReminder = reminder
+                             showReminderSheet = true
+                         })
+            .tabItem {
+                Label("Timeline", systemImage: "list.bullet.rectangle")
             }
+            .tag(TabRouter.Selection.timeline)
 
+            TriggersView(environment: environment,
+                         onEditReminder: { reminder in
+                             selectedReminder = reminder
+                             showReminderSheet = true
+                         })
+            .tabItem {
+                Label("Triggers", systemImage: "bolt.circle")
+            }
+            .tag(TabRouter.Selection.triggers)
+
+            NotesView(environment: environment,
+                      onCreateNote: { showNoteSheet = true },
+                      onEditNote: { note in
+                          selectedNote = note
+                          showNoteSheet = true
+                      })
+            .tabItem {
+                Label("Notes", systemImage: "square.and.pencil")
+            }
+            .tag(TabRouter.Selection.notes)
+        }
+        .safeAreaInset(edge: .top) {
             TerminalInputBar(viewModel: terminalViewModel)
-                .padding(.bottom, 16)
+                .padding(.top, 8)
         }
         .sheet(isPresented: $showReminderSheet, onDismiss: { selectedReminder = nil }) {
             ReminderEditorView(

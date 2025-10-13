@@ -120,11 +120,7 @@ struct LocationPickerView: View {
                     .padding()
                 }
                 .onMapCameraChange { context in
-                    if let regionValue = context.region {
-                        mapCenter = regionValue.center
-                    } else {
-                        mapCenter = context.camera.centerCoordinate
-                    }
+                    mapCenter = context.camera.centerCoordinate
                 }
         } else {
             Map(coordinateRegion: $region, interactionModes: .all, showsUserLocation: true)
