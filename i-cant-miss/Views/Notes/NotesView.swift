@@ -147,11 +147,36 @@ struct NotesView: View {
                             Label(icon, systemImage: icon)
                         }
                     }
+                }
 
-                    ColorPicker("Color", selection: Binding(
-                        get: { Color(hex: newFolderColor) ?? .blue },
-                        set: { newFolderColor = $0.toHex() ?? "#6366F1" }
-                    ))
+                Section("Color") {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 12) {
+                        ForEach(Color.PresetColors.all) { presetColor in
+                            Button(action: {
+                                newFolderColor = presetColor.hex
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(presetColor.color)
+                                        .frame(width: 50, height: 50)
+
+                                    if newFolderColor == presetColor.hex {
+                                        Circle()
+                                            .strokeBorder(.white, lineWidth: 3)
+                                            .frame(width: 50, height: 50)
+                                            .shadow(radius: 2)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 8)
                 }
             }
             .navigationTitle("New Folder")
