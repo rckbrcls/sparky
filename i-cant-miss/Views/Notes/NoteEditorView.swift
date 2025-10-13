@@ -51,14 +51,7 @@ struct NoteEditorView: View {
                     .padding(.top, 28)
 
                     ZStack(alignment: .topLeading) {
-                        if viewModel.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text("Note")
-                                .foregroundStyle(.tertiary)
-                                .padding(.horizontal, 28)
-                                .padding(.top, 20)
-                        }
-
-                        TextEditor(text: $viewModel.content)
+                        TextEditor("Note", text: $viewModel.content)
                             .focused($focusedField, equals: .body)
                             .padding(.horizontal, 12)
                             .padding(.top, 12)
