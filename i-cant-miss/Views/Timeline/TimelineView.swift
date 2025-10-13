@@ -30,7 +30,7 @@ struct TimelineView: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                
+
                 // Conteúdo principal
                 Group {
                     if viewModel.reminders.isEmpty {
