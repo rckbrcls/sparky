@@ -24,41 +24,50 @@ struct TimelineView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.reminders.isEmpty {
-                    ScrollView {
-                        EmptyStateView(systemImage: "bell.slash",
-                                       title: "Stay on top of things",
-                                       message: "Create a reminder to populate your timeline.")
-                            .frame(maxWidth: .infinity)
-                    }
-                } else {
-                    List {
-                        ForEach(Array(viewModel.reminders.enumerated()), id: \.element.id) { index, reminder in
-                            ReminderRowView(reminder: reminder)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    onEditReminder(reminder)
-                                }
-                                .contextMenu {
-                                    Button("Complete", systemImage: "checkmark.circle") {
-                                        viewModel.complete(reminder)
-                                    }
-                                    Button("Snooze 15 min", systemImage: "zzz") {
-                                        viewModel.snooze(reminder, minutes: 15)
-                                    }
-                                    Button("Postpone 1 hr", systemImage: "clock.arrow.circlepath") {
-                                        viewModel.postpone(reminder, hours: 1)
-                                    }
-                                    Button("Archive", systemImage: "archivebox") {
-                                        viewModel.archive(reminder)
-                                    }
-                                }
-                                .listRowSeparator(index == viewModel.reminders.count - 1 ? .hidden : .visible, edges: .bottom)
-                                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+            VStack(spacing: 0) {
+                // Filtro abaixo do título
+                filterPicker
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                
+                // Conteúdo principal
+                Group {
+                    if viewModel.reminders.isEmpty {
+                        ScrollView {
+                            EmptyStateView(systemImage: "bell.slash",
+                                           title: "Stay on top of things",
+                                           message: "Create a reminder to populate your timeline.")
+                                .frame(maxWidth: .infinity)
                         }
+                    } else {
+                        List {
+                            ForEach(Array(viewModel.reminders.enumerated()), id: \.element.id) { index, reminder in
+                                ReminderRowView(reminder: reminder)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        onEditReminder(reminder)
+                                    }
+                                    .contextMenu {
+                                        Button("Complete", systemImage: "checkmark.circle") {
+                                            viewModel.complete(reminder)
+                                        }
+                                        Button("Snooze 15 min", systemImage: "zzz") {
+                                            viewModel.snooze(reminder, minutes: 15)
+                                        }
+                                        Button("Postpone 1 hr", systemImage: "clock.arrow.circlepath") {
+                                            viewModel.postpone(reminder, hours: 1)
+                                        }
+                                        Button("Archive", systemImage: "archivebox") {
+                                            viewModel.archive(reminder)
+                                        }
+                                    }
+                                    .listRowSeparator(index == viewModel.reminders.count - 1 ? .hidden : .visible, edges: .bottom)
+                                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                            }
+                        }
+                        .listStyle(.insetGrouped)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
@@ -67,10 +76,6 @@ struct TimelineView: View {
             }
             .navigationTitle("Timeline")
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    filterPicker
-                        .pickerStyle(.segmented)
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onCreateReminder) {
                         Image(systemName: "plus.circle.fill")
