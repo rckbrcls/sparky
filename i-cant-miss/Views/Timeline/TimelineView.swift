@@ -34,7 +34,7 @@ struct TimelineView: View {
                     }
                 } else {
                     List {
-                        ForEach(viewModel.reminders, id: \.id) { reminder in
+                        ForEach(Array(viewModel.reminders.enumerated()), id: \.element.id) { index, reminder in
                             ReminderRowView(reminder: reminder)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
@@ -54,6 +54,8 @@ struct TimelineView: View {
                                         viewModel.archive(reminder)
                                     }
                                 }
+                                .listRowSeparator(index == viewModel.reminders.count - 1 ? .hidden : .visible, edges: .bottom)
+                                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                         }
                     }
                     .listStyle(.insetGrouped)

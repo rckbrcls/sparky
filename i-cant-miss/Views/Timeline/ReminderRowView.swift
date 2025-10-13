@@ -58,7 +58,7 @@ struct ReminderRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(reminder.title)
                     .font(.headline)
@@ -99,7 +99,7 @@ struct ReminderRowView: View {
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
     }
 }

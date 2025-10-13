@@ -10,16 +10,7 @@ import Combine
 
 @MainActor
 final class NotesViewModel: ObservableObject {
-    @Published var selectedFolderID: UUID? {
-        didSet { updateNotesSnapshot() }
-    }
-    @Published var showPinnedOnly = false {
-        didSet { updateNotesSnapshot() }
-    }
-    @Published var searchText = "" {
-        didSet { updateNotesSnapshot() }
-    }
-    @Published private(set) var notes: [NoteModel] = []
+    @Published private(set) var allNotes: [NoteModel] = []
     @Published private(set) var folders: [FolderModel] = []
     @Published private(set) var tags: [TagModel] = []
 
@@ -42,6 +33,10 @@ final class NotesViewModel: ObservableObject {
         }
     }
 
+    func notes(in folder: FolderModel) -> [NoteModel] {
+        allNotes.filter { $0.folder?.id == folder.id }
+    }
+
     func delete(note: NoteModel) {
         Task {
             _ = try? await environment.noteService.deleteNote(id: note.id)
@@ -52,6 +47,26 @@ final class NotesViewModel: ObservableObject {
     func togglePin(note: NoteModel) {
         Task {
             _ = try? await environment.noteService.togglePin(noteID: note.id)
+            await environment.noteService.refresh(force: true)
+        }
+    }
+
+    func createFolder(name: String, colorHex: String, iconName: String) {
+        Task {
+            _ = try? await environment.folderService.createFolder(
+                name: name,
+                colorHex: colorHex,
+                iconName: iconName,
+                isDefault: false
+            )
+            await environment.folderService.refreshFolders(force: true)
+        }
+    }
+
+    func deleteFolder(_ folder: FolderModel) {
+        Task {
+            _ = try? await environment.folderService.deleteFolder(id: folder.id)
+            await environment.folderService.refreshFolders(force: true)
             await environment.noteService.refresh(force: true)
         }
     }
@@ -80,24 +95,6 @@ final class NotesViewModel: ObservableObject {
     }
 
     private func updateNotesSnapshot() {
-        var filtered = environment.noteService.notes
-
-        if let folderID = selectedFolderID {
-            filtered = filtered.filter { $0.folder?.id == folderID }
-        }
-
-        if showPinnedOnly {
-            filtered = filtered.filter(\.isPinned)
-        }
-
-        if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-            let query = searchText.lowercased()
-            filtered = filtered.filter { note in
-                note.content.lowercased().contains(query) ||
-                (note.title?.lowercased().contains(query) ?? false)
-            }
-        }
-
-        notes = filtered
+        allNotes = environment.noteService.notes
     }
 }

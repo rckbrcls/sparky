@@ -10,28 +10,21 @@ import SwiftUI
 struct NoteCardView: View {
     let note: NoteModel
 
-    private var headerColor: Color {
+    private var folderColor: Color {
         guard let hex = note.folder?.colorHex,
               let color = Color(hex: hex) else {
-            return .accentColor.opacity(0.25)
+            return .blue
         }
-        return color.opacity(0.25)
+        return color
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(note.title?.isEmpty == false ? note.title! : note.content.prefix(40) + "…")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    if let folder = note.folder {
-                        Label(folder.name, systemImage: folder.iconName ?? "folder")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(note.title?.isEmpty == false ? note.title! : note.content.prefix(40) + "…")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
                 Spacer()
                 if note.isPinned {
                     Image(systemName: "pin.fill")
@@ -43,39 +36,31 @@ struct NoteCardView: View {
 
             Text(note.content)
                 .font(.subheadline)
-                .foregroundStyle(.primary)
-                .lineLimit(6)
-
-            if !note.tags.isEmpty {
-                FlexibleView(data: note.tags, spacing: 6, alignment: .leading) { tag in
-                    Text(tag.name)
-                        .font(.caption)
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(hex: tag.colorHex ?? "#d1d5db")?.opacity(0.15) ?? Color.secondary.opacity(0.15))
-                        )
-                }
-            }
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
 
             HStack {
-                Text("Updated \(note.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                if let folder = note.folder {
+                    HStack(spacing: 4) {
+                        Image(systemName: folder.iconName ?? "folder.fill")
+                        Text(folder.name)
+                    }
+                    .font(.caption.weight(.medium))
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(.thinMaterial, in: Capsule())
+                    .foregroundStyle(folderColor)
+                }
+
+                Spacer()
+
+                Label(note.updatedAt.formatted(date: .abbreviated, time: .shortened), systemImage: "clock")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Spacer()
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.background)
-                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(headerColor, lineWidth: 1)
-                )
-        )
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 }
 

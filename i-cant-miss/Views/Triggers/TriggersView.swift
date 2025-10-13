@@ -21,48 +21,37 @@ struct TriggersView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.triggerTypeFolders.isEmpty {
-                    ScrollView {
-                        EmptyStateView(systemImage: "bolt.slash",
-                                       title: "No triggers yet",
-                                       message: "Add triggers to your reminders to see them organized here.")
-                            .frame(maxWidth: .infinity)
-                    }
-                } else {
-                    List {
-                        ForEach(viewModel.triggerTypeFolders) { folder in
-                            NavigationLink(destination: TriggerListView(
-                                folder: folder,
-                                onEditReminder: onEditReminder
-                            )) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: folder.type.systemImage)
-                                        .font(.title2)
-                                        .foregroundStyle(.blue)
-                                        .frame(width: 32)
+            List {
+                ForEach(viewModel.triggerTypeFolders) { folder in
+                    NavigationLink(destination: TriggerListView(
+                        folder: folder,
+                        onEditReminder: onEditReminder
+                    )) {
+                        HStack(spacing: 12) {
+                            Image(systemName: folder.type.systemImage)
+                                .font(.title2)
+                                .foregroundStyle(.blue)
+                                .frame(width: 32)
 
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(folder.type.label)
-                                            .font(.headline)
-                                        Text("\(folder.count) trigger\(folder.count == 1 ? "" : "s")")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-
-                                    Spacer()
-
-                                    Image(systemName: "folder.fill")
-                                        .foregroundStyle(.secondary)
-                                        .font(.title3)
-                                }
-                                .padding(.vertical, 4)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(folder.type.label)
+                                    .font(.headline)
+                                Text("\(folder.count) trigger\(folder.count == 1 ? "" : "s")")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
+
+                            Spacer()
+
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(.secondary)
+                                .font(.title3)
                         }
+                        .padding(.vertical, 4)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
+            .listStyle(.insetGrouped)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Triggers")
         }
@@ -78,16 +67,31 @@ struct TriggerListView: View {
     let onEditReminder: (ReminderModel) -> Void
 
     var body: some View {
-        List {
-            ForEach(folder.items) { display in
-                TriggerRowView(display: display)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        onEditReminder(display.reminder)
+        Group {
+            if folder.items.isEmpty {
+                ScrollView {
+                    EmptyStateView(
+                        systemImage: folder.type.systemImage,
+                        title: "No \(folder.type.label) Triggers",
+                        message: "Add a \(folder.type.label.lowercased()) trigger to your reminders to see them here."
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+            } else {
+                List {
+                    ForEach(Array(folder.items.enumerated()), id: \.element.id) { index, display in
+                        TriggerRowView(display: display)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onEditReminder(display.reminder)
+                            }
+                            .listRowSeparator(index == folder.items.count - 1 ? .hidden : .visible, edges: .bottom)
+                            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     }
+                }
+                .listStyle(.insetGrouped)
             }
         }
-        .listStyle(.insetGrouped)
         .navigationTitle(folder.type.label)
         .navigationBarTitleDisplayMode(.inline)
     }
