@@ -58,7 +58,6 @@ struct ContentView: View {
             )
         }
         .sheet(item: $selectedReminder) { reminder in
-            let _ = print("📋 Sheet presented with selectedReminder: \(reminder.id.uuidString), title: '\(reminder.title)'")
             ReminderEditorView(
                 environment: environment,
                 existingReminder: reminder
@@ -71,7 +70,6 @@ struct ContentView: View {
             )
         }
         .sheet(item: $selectedNote) { note in
-            let _ = print("📋 Sheet presented with selectedNote: \(note.id.uuidString), title: '\(note.title ?? "")'")
             NoteEditorView(
                 environment: environment,
                 existingNote: note

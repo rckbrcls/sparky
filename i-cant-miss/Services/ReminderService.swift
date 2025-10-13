@@ -284,21 +284,17 @@ final class ReminderService: ObservableObject {
             request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
             request.relationshipKeyPathsForPrefetching = ["triggers", "importantDate", "importantDate.leadTimes"]
             request.fetchLimit = 1
-            
+
             guard let reminder = try context.fetch(request).first else {
                 return nil
             }
-            
-            let model = reminder.toModel()
-            logger.info("⏰ fetchReminderWithRelationships - id: \(id), title: \(model.title), triggers: \(model.triggers.count)")
-            return model
+
+            return reminder.toModel()
         } catch {
             logger.error("Failed to fetch reminder with relationships: \(error.localizedDescription)")
             return nil
         }
-    }
-
-    // MARK: - Private
+    }    // MARK: - Private
 
     private func fetchReminderFromViewContext(objectID: NSManagedObjectID) async throws -> ReminderModel {
         return try await withCheckedThrowingContinuation { continuation in
