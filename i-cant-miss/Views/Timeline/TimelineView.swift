@@ -99,7 +99,7 @@ struct TimelineView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { showTriggers = true }) {
-                        Image(systemName: "bolt.circle")
+                        Image(systemName: "bolt.fill")
                     }
                     .tint(.accentColor)
                     .accessibilityLabel("Triggers")
