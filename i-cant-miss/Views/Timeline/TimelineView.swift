@@ -13,6 +13,7 @@ struct TimelineView: View {
     let environment: AppEnvironment
     let onCreateReminder: () -> Void
     let onEditReminder: (ReminderModel) -> Void
+    @State private var showTriggers = false
 
     init(environment: AppEnvironment,
          onCreateReminder: @escaping () -> Void,
@@ -96,6 +97,13 @@ struct TimelineView: View {
             }
             .navigationTitle("Timeline")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showTriggers = true }) {
+                        Image(systemName: "bolt.circle")
+                    }
+                    .tint(.accentColor)
+                    .accessibilityLabel("Triggers")
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onCreateReminder) {
                         Image(systemName: "plus")
@@ -104,6 +112,10 @@ struct TimelineView: View {
                     .accessibilityLabel("Create Reminder")
                 }
             }
+        }
+        .sheet(isPresented: $showTriggers) {
+            TriggersView(environment: environment,
+                         onEditReminder: onEditReminder)
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { viewModel.errorMessage != nil },

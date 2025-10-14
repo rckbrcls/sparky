@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct TriggersView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: TriggersViewModel
     let environment: AppEnvironment
     let onEditReminder: (ReminderModel) -> Void
@@ -33,7 +34,7 @@ struct TriggersView: View {
                                 .foregroundStyle(Color.accentColor)
                                 .frame(width: 32)
 
-                            
+
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(folder.type.label)
                                     .font(.headline)
@@ -55,6 +56,11 @@ struct TriggersView: View {
             .listStyle(.insetGrouped)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Triggers")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel", role: .cancel) { dismiss() }
+                }
+            }
         }
         .onAppear {
             viewModel.refresh()

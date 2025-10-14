@@ -530,7 +530,7 @@ private struct TriggerEditSheet: View {
     let trigger: ReminderTriggerDraft
     let viewModel: ReminderEditorViewModel
     let onDismiss: () -> Void
-    
+
     var body: some View {
         Group {
             switch trigger.type {
@@ -555,11 +555,11 @@ private struct TimeTriggerEditForm: View {
     let trigger: ReminderTriggerDraft
     let viewModel: ReminderEditorViewModel
     let onDismiss: () -> Void
-    
+
     @State private var date: Date
     @State private var selectedFrequency: RecurrenceRule.Frequency?
     @State private var repeatInterval: Int
-    
+
     init(trigger: ReminderTriggerDraft, viewModel: ReminderEditorViewModel, onDismiss: @escaping () -> Void) {
         self.trigger = trigger
         self.viewModel = viewModel
@@ -568,12 +568,12 @@ private struct TimeTriggerEditForm: View {
         _selectedFrequency = State(initialValue: trigger.recurrenceRule?.frequency)
         _repeatInterval = State(initialValue: trigger.recurrenceRule?.interval ?? 1)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 DatePicker("Fire date", selection: $date, displayedComponents: [.date, .hourAndMinute])
-                
+
                 Section("Repeats") {
                     Picker("Frequency", selection: $selectedFrequency) {
                         Text("None").tag(nil as RecurrenceRule.Frequency?)
@@ -581,7 +581,7 @@ private struct TimeTriggerEditForm: View {
                             Text(frequency.title).tag(Optional(frequency))
                         }
                     }
-                    
+
                     if selectedFrequency != nil {
                         Stepper(value: $repeatInterval, in: 1...30) {
                             Text("Every \(repeatInterval) interval\(repeatInterval == 1 ? "" : "s")")
@@ -593,7 +593,7 @@ private struct TimeTriggerEditForm: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel", role: .cancel) { 
+                    Button("Cancel", role: .cancel) {
                         dismiss()
                         onDismiss()
                     }
@@ -621,14 +621,14 @@ private struct WeekdayTriggerEditForm: View {
     let trigger: ReminderTriggerDraft
     let viewModel: ReminderEditorViewModel
     let onDismiss: () -> Void
-    
+
     @State private var selections: Set<Int>
-    
+
     init(trigger: ReminderTriggerDraft, viewModel: ReminderEditorViewModel, onDismiss: @escaping () -> Void) {
         self.trigger = trigger
         self.viewModel = viewModel
         self.onDismiss = onDismiss
-        
+
         var initialSelections = Set<Int>()
         for day in 1...7 {
             let bit = Int16(1 << day)
@@ -638,7 +638,7 @@ private struct WeekdayTriggerEditForm: View {
         }
         _selections = State(initialValue: initialSelections)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -664,7 +664,7 @@ private struct WeekdayTriggerEditForm: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel", role: .cancel) { 
+                    Button("Cancel", role: .cancel) {
                         dismiss()
                         onDismiss()
                     }
@@ -685,7 +685,7 @@ private struct WeekdayTriggerEditForm: View {
             }
         }
     }
-    
+
     private func weekdayName(for day: Int) -> String {
         let formatter = DateFormatter()
         return formatter.weekdaySymbols[(day - 1) % formatter.weekdaySymbols.count]
@@ -697,7 +697,7 @@ private struct LocationTriggerEditForm: View {
     let trigger: ReminderTriggerDraft
     let viewModel: ReminderEditorViewModel
     let onDismiss: () -> Void
-    
+
     var body: some View {
         LocationPickerView { name, latitude, longitude, radius, event in
             var updated = trigger
@@ -720,12 +720,12 @@ private struct PersonTriggerEditForm: View {
     let trigger: ReminderTriggerDraft
     let viewModel: ReminderEditorViewModel
     let onDismiss: () -> Void
-    
+
     @State private var name: String
     @State private var identifier: String
     @State private var showContactPicker = false
     @State private var showAccessDeniedAlert = false
-    
+
     init(trigger: ReminderTriggerDraft, viewModel: ReminderEditorViewModel, onDismiss: @escaping () -> Void) {
         self.trigger = trigger
         self.viewModel = viewModel
@@ -733,14 +733,14 @@ private struct PersonTriggerEditForm: View {
         _name = State(initialValue: trigger.person?.name ?? "")
         _identifier = State(initialValue: trigger.person?.contactIdentifier ?? "")
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Contact") {
                     HStack {
                         TextField("Name", text: $name)
-                        
+
                         Button(action: {
                             Task {
                                 await requestContactsAndShow()
@@ -751,7 +751,7 @@ private struct PersonTriggerEditForm: View {
                         }
                         .buttonStyle(.borderless)
                     }
-                    
+
                     if !identifier.isEmpty {
                         HStack {
                             Text("Contact ID")
@@ -763,7 +763,7 @@ private struct PersonTriggerEditForm: View {
                         }
                     }
                 }
-                
+
                 Section {
                     Text("You can manually enter a name or select a contact from your iPhone contacts.")
                         .font(.caption)
@@ -774,7 +774,7 @@ private struct PersonTriggerEditForm: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel", role: .cancel) { 
+                    Button("Cancel", role: .cancel) {
                         dismiss()
                         onDismiss()
                     }
@@ -809,10 +809,10 @@ private struct PersonTriggerEditForm: View {
             }
         }
     }
-    
+
     private func requestContactsAndShow() async {
         let status = ContactAccessHelper.checkAuthorizationStatus()
-        
+
         switch status {
         case .authorized:
             showContactPicker = true

@@ -32,15 +32,6 @@ struct ContentView: View {
             }
             .tag(TabRouter.Selection.timeline)
 
-            TriggersView(environment: environment,
-                         onEditReminder: { reminder in
-                             selectedReminder = reminder
-                         })
-            .tabItem {
-                Label("Triggers", systemImage: "bolt.circle")
-            }
-            .tag(TabRouter.Selection.triggers)
-
             NotesView(environment: environment,
                       onCreateNote: { showNoteForCreate = true },
                       onEditNote: { note in
@@ -87,7 +78,6 @@ struct ContentView: View {
 final class TabRouter: ObservableObject {
     enum Selection {
         case timeline
-        case triggers
         case notes
         case settings
     }
