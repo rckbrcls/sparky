@@ -102,6 +102,18 @@ final class TimelineViewModel: ObservableObject {
         }
     }
 
+    func delete(_ reminder: ReminderModel) {
+        Task {
+            do {
+                try await environment.reminderService.deleteReminder(id: reminder.id)
+                // Force immediate refresh to update UI
+                _ = await environment.reminderService.refresh(force: true)
+            } catch {
+                errorMessage = "Failed to delete reminder."
+            }
+        }
+    }
+
     private func bind() {
         environment.reminderService.$reminders
             .receive(on: RunLoop.main)

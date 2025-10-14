@@ -127,6 +127,12 @@ final class ReminderEditorViewModel: ObservableObject {
         triggers.removeAll { $0.id == id }
     }
 
+    func updateTrigger(id: UUID, with updatedDraft: ReminderTriggerDraft) {
+        if let index = triggers.firstIndex(where: { $0.id == id }) {
+            triggers[index] = updatedDraft
+        }
+    }
+
     func save() async -> Bool {
         do {
             guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {

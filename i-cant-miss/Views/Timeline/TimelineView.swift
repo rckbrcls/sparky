@@ -49,6 +49,21 @@ struct TimelineView: View {
                             .onTapGesture {
                                 onEditReminder(reminder)
                             }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.delete(reminder)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    viewModel.complete(reminder)
+                                } label: {
+                                    Label("Complete", systemImage: "checkmark.circle")
+                                }
+                                .tint(.green)
+                            }
                             .contextMenu {
                                 Button("Complete", systemImage: "checkmark.circle") {
                                     viewModel.complete(reminder)
@@ -61,6 +76,10 @@ struct TimelineView: View {
                                 }
                                 Button("Archive", systemImage: "archivebox") {
                                     viewModel.archive(reminder)
+                                }
+                                Divider()
+                                Button("Delete", systemImage: "trash", role: .destructive) {
+                                    viewModel.delete(reminder)
                                 }
                             }
                             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))

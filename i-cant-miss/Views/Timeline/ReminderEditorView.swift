@@ -12,6 +12,7 @@ struct ReminderEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: ReminderEditorViewModel
     @State private var creationType: TriggerCreationType?
+    @State private var editingTrigger: ReminderTriggerDraft?
     let environment: AppEnvironment
 
     init(environment: AppEnvironment, existingReminder: ReminderModel?) {
@@ -50,8 +51,12 @@ struct ReminderEditorView: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(viewModel.triggers, id: \.id) { trigger in
-                            TriggerDraftRow(draft: trigger) {
-                                viewModel.removeTrigger(id: trigger.id)
+                            TriggerDraftRow(draft: trigger, onEdit: {
+                                editingTrigger = trigger
+                            })
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                editingTrigger = trigger
                             }
                         }
                         .onDelete { indexSet in
@@ -150,6 +155,11 @@ struct ReminderEditorView: View {
                     }
                 }
             })
+            .sheet(item: $editingTrigger) { trigger in
+                TriggerEditSheet(trigger: trigger, viewModel: viewModel, onDismiss: {
+                    editingTrigger = nil
+                })
+            }
         }
     }
 
@@ -191,7 +201,7 @@ private func viewModelTitle(for viewModel: ReminderEditorViewModel) -> String {
 
 private struct TriggerDraftRow: View {
     let draft: ReminderTriggerDraft
-    let onDelete: () -> Void
+    let onEdit: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -199,10 +209,9 @@ private struct TriggerDraftRow: View {
                 Label(draft.type.label, systemImage: draft.type.systemImage)
                     .font(.subheadline)
                 Spacer()
-                Button(role: .destructive, action: onDelete) {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.borderless)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
             Text(description)
                 .font(.caption)
@@ -275,6 +284,7 @@ private struct TriggerChooserView: View {
                 }
             }
             .navigationTitle("Add Trigger")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel", role: .cancel) { dismiss() }
@@ -321,6 +331,7 @@ private struct TimeTriggerForm: View {
                 }
             }
             .navigationTitle("Time Trigger")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel", role: .cancel) { dismiss() }
@@ -366,6 +377,7 @@ private struct WeekdayTriggerForm: View {
                 }
             }
             .navigationTitle("Days of Week")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel", role: .cancel) { dismiss() }
@@ -431,6 +443,7 @@ private struct PersonTriggerForm: View {
                 }
             }
             .navigationTitle("Person Trigger")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel", role: .cancel) { dismiss() }
@@ -509,6 +522,313 @@ private extension RecurrenceRule.Frequency {
         case .weekly: return "Weekly"
         case .monthly: return "Monthly"
         case .yearly: return "Yearly"
+        }
+    }
+}
+
+private struct TriggerEditSheet: View {
+    let trigger: ReminderTriggerDraft
+    let viewModel: ReminderEditorViewModel
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        Group {
+            switch trigger.type {
+            case .time:
+                TimeTriggerEditForm(trigger: trigger, viewModel: viewModel, onDismiss: onDismiss)
+            case .dayOfWeek:
+                WeekdayTriggerEditForm(trigger: trigger, viewModel: viewModel, onDismiss: onDismiss)
+            case .location:
+                LocationTriggerEditForm(trigger: trigger, viewModel: viewModel, onDismiss: onDismiss)
+            case .person:
+                PersonTriggerEditForm(trigger: trigger, viewModel: viewModel, onDismiss: onDismiss)
+            case .importantDate:
+                Text("Important date triggers cannot be edited directly")
+                    .padding()
+            }
+        }
+    }
+}
+
+private struct TimeTriggerEditForm: View {
+    @Environment(\.dismiss) private var dismiss
+    let trigger: ReminderTriggerDraft
+    let viewModel: ReminderEditorViewModel
+    let onDismiss: () -> Void
+    
+    @State private var date: Date
+    @State private var selectedFrequency: RecurrenceRule.Frequency?
+    @State private var repeatInterval: Int
+    
+    init(trigger: ReminderTriggerDraft, viewModel: ReminderEditorViewModel, onDismiss: @escaping () -> Void) {
+        self.trigger = trigger
+        self.viewModel = viewModel
+        self.onDismiss = onDismiss
+        _date = State(initialValue: trigger.fireDate ?? Date())
+        _selectedFrequency = State(initialValue: trigger.recurrenceRule?.frequency)
+        _repeatInterval = State(initialValue: trigger.recurrenceRule?.interval ?? 1)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                DatePicker("Fire date", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                
+                Section("Repeats") {
+                    Picker("Frequency", selection: $selectedFrequency) {
+                        Text("None").tag(nil as RecurrenceRule.Frequency?)
+                        ForEach(RecurrenceRule.Frequency.allCases, id: \.self) { frequency in
+                            Text(frequency.title).tag(Optional(frequency))
+                        }
+                    }
+                    
+                    if selectedFrequency != nil {
+                        Stepper(value: $repeatInterval, in: 1...30) {
+                            Text("Every \(repeatInterval) interval\(repeatInterval == 1 ? "" : "s")")
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Edit Time Trigger")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel", role: .cancel) { 
+                        dismiss()
+                        onDismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        let recurrence = selectedFrequency.map {
+                            RecurrenceRule(frequency: $0, interval: repeatInterval)
+                        }
+                        var updated = trigger
+                        updated.fireDate = date
+                        updated.recurrenceRule = recurrence
+                        viewModel.updateTrigger(id: trigger.id, with: updated)
+                        dismiss()
+                        onDismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct WeekdayTriggerEditForm: View {
+    @Environment(\.dismiss) private var dismiss
+    let trigger: ReminderTriggerDraft
+    let viewModel: ReminderEditorViewModel
+    let onDismiss: () -> Void
+    
+    @State private var selections: Set<Int>
+    
+    init(trigger: ReminderTriggerDraft, viewModel: ReminderEditorViewModel, onDismiss: @escaping () -> Void) {
+        self.trigger = trigger
+        self.viewModel = viewModel
+        self.onDismiss = onDismiss
+        
+        var initialSelections = Set<Int>()
+        for day in 1...7 {
+            let bit = Int16(1 << day)
+            if (trigger.weekdayMask & bit) != 0 {
+                initialSelections.insert(day)
+            }
+        }
+        _selections = State(initialValue: initialSelections)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                ForEach(1...7, id: \.self) { day in
+                    Button {
+                        if selections.contains(day) {
+                            selections.remove(day)
+                        } else {
+                            selections.insert(day)
+                        }
+                    } label: {
+                        HStack {
+                            Text(weekdayName(for: day))
+                            Spacer()
+                            if selections.contains(day) {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Edit Days of Week")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel", role: .cancel) { 
+                        dismiss()
+                        onDismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        let mask = selections.reduce(into: Int16(0)) { partialResult, day in
+                            let bit = Int16(1 << day)
+                            partialResult |= bit
+                        }
+                        var updated = trigger
+                        updated.weekdayMask = mask
+                        viewModel.updateTrigger(id: trigger.id, with: updated)
+                        dismiss()
+                        onDismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func weekdayName(for day: Int) -> String {
+        let formatter = DateFormatter()
+        return formatter.weekdaySymbols[(day - 1) % formatter.weekdaySymbols.count]
+    }
+}
+
+private struct LocationTriggerEditForm: View {
+    @Environment(\.dismiss) private var dismiss
+    let trigger: ReminderTriggerDraft
+    let viewModel: ReminderEditorViewModel
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        LocationPickerView { name, latitude, longitude, radius, event in
+            var updated = trigger
+            updated.location = .init(
+                latitude: latitude,
+                longitude: longitude,
+                radius: radius,
+                name: name,
+                event: event
+            )
+            viewModel.updateTrigger(id: trigger.id, with: updated)
+            dismiss()
+            onDismiss()
+        }
+    }
+}
+
+private struct PersonTriggerEditForm: View {
+    @Environment(\.dismiss) private var dismiss
+    let trigger: ReminderTriggerDraft
+    let viewModel: ReminderEditorViewModel
+    let onDismiss: () -> Void
+    
+    @State private var name: String
+    @State private var identifier: String
+    @State private var showContactPicker = false
+    @State private var showAccessDeniedAlert = false
+    
+    init(trigger: ReminderTriggerDraft, viewModel: ReminderEditorViewModel, onDismiss: @escaping () -> Void) {
+        self.trigger = trigger
+        self.viewModel = viewModel
+        self.onDismiss = onDismiss
+        _name = State(initialValue: trigger.person?.name ?? "")
+        _identifier = State(initialValue: trigger.person?.contactIdentifier ?? "")
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Contact") {
+                    HStack {
+                        TextField("Name", text: $name)
+                        
+                        Button(action: {
+                            Task {
+                                await requestContactsAndShow()
+                            }
+                        }) {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    
+                    if !identifier.isEmpty {
+                        HStack {
+                            Text("Contact ID")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(identifier)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                
+                Section {
+                    Text("You can manually enter a name or select a contact from your iPhone contacts.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Edit Person Trigger")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel", role: .cancel) { 
+                        dismiss()
+                        onDismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        var updated = trigger
+                        updated.person = .init(name: name, contactIdentifier: identifier.isEmpty ? nil : identifier)
+                        viewModel.updateTrigger(id: trigger.id, with: updated)
+                        dismiss()
+                        onDismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .sheet(isPresented: $showContactPicker) {
+                ContactPickerView { contactName, contactId in
+                    name = contactName
+                    identifier = contactId ?? ""
+                    showContactPicker = false
+                }
+            }
+            .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } message: {
+                Text("Please allow access to contacts in Settings to select a person from your contacts.")
+            }
+        }
+    }
+    
+    private func requestContactsAndShow() async {
+        let status = ContactAccessHelper.checkAuthorizationStatus()
+        
+        switch status {
+        case .authorized:
+            showContactPicker = true
+        case .notDetermined:
+            let granted = await ContactAccessHelper.requestAccess()
+            if granted {
+                showContactPicker = true
+            } else {
+                showAccessDeniedAlert = true
+            }
+        case .denied, .restricted:
+            showAccessDeniedAlert = true
+        case .limited:
+            showContactPicker = true
+        @unknown default:
+            showAccessDeniedAlert = true
         }
     }
 }
