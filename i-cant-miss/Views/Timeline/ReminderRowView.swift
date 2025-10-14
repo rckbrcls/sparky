@@ -92,10 +92,10 @@ struct ReminderRowView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .padding(.bottom, 12)
-
-                Divider()
-                    .padding(.bottom, 8)
             }
+            
+            Divider()
+                .padding(.bottom, 8)
 
             // Status and metadata section
             HStack(spacing: 16) {
@@ -186,7 +186,7 @@ private struct TriggerBadge: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(Color(.tertiarySystemGroupedBackground))
-        .cornerRadius(24)
+        .cornerRadius(.infinity)
     }
 }
 
