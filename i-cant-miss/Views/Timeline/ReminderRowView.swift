@@ -61,11 +61,9 @@ struct ReminderRowView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Triggers section
             if !reminder.triggers.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(reminder.triggers, id: \.id) { trigger in
-                            TriggerBadge(trigger: trigger)
-                        }
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(reminder.triggers, id: \.id) { trigger in
+                        TriggerBadge(trigger: trigger)
                     }
                 }
                 .padding(.bottom, 12)
@@ -142,21 +140,53 @@ private struct TriggerBadge: View {
             return trigger.person?.name ?? "Person"
         case .importantDate:
             if let date = trigger.fireDate {
-                return "On \(date.formatted(date: .abbreviated, time: .omitted))"
+                return date.formatted(date: .abbreviated, time: .omitted)
             }
             return "Important date"
         }
     }
 
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: trigger.type.systemImage)
-            Text(labelText)
+    private var typeLabel: String {
+        switch trigger.type {
+        case .time:
+            return "Time"
+        case .dayOfWeek:
+            return "Recurring"
+        case .location:
+            return "Location"
+        case .person:
+            return "Contact"
+        case .importantDate:
+            return "Important Date"
         }
-        .font(.caption.weight(.medium))
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(.thinMaterial, in: Capsule())
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Icon
+            Image(systemName: trigger.type.systemImage)
+                .font(.title3)
+                .foregroundStyle(.primary)
+                .frame(width: 28)
+
+            // Content
+            VStack(alignment: .leading, spacing: 2) {
+                Text(typeLabel)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                Text(labelText)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(.tertiarySystemGroupedBackground))
+        .cornerRadius(12)
     }
 }
 
