@@ -27,65 +27,80 @@ struct TimelineView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    filterPicker
-                        .pickerStyle(.segmented)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 2, trailing: 0))
-                        .listRowBackground(Color(.systemGroupedBackground))
-                        .listRowSeparator(.hidden)
+            VStack(spacing: 0) {
+                // Quick filters
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach([ReminderService.TimelineFilter.all, .overdue, .today, .upcoming, .thisWeek], id: \.self) { filter in
+                            Button(action: {
+                                viewModel.filter = filter
+                            }) {
+                                Text(filter.title)
+                                    .font(.caption)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(viewModel.filter == filter ? Color.accentColor : Color(.systemGray5))
+                                    .foregroundColor(viewModel.filter == filter ? .white : .primary)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
+                .padding(.vertical, 8)
+
+                Divider()
 
                 if viewModel.reminders.isEmpty {
                     EmptyStateView(systemImage: "bell.slash",
                                    title: "Stay on top of things",
                                    message: "Create a reminder to populate your timeline.")
-                        .frame(maxWidth: .infinity)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    ForEach(Array(viewModel.reminders.enumerated()), id: \.element.id) { index, reminder in
-                        ReminderRowView(reminder: reminder)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                onEditReminder(reminder)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    viewModel.delete(reminder)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                    List {
+                        ForEach(viewModel.reminders) { reminder in
+                            ReminderRowView(reminder: reminder)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    onEditReminder(reminder)
                                 }
-                            }
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                Button {
-                                    viewModel.complete(reminder)
-                                } label: {
-                                    Label("Complete", systemImage: "checkmark.circle")
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        viewModel.delete(reminder)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
-                                .tint(.green)
-                            }
-                            .contextMenu {
-                                Button("Complete", systemImage: "checkmark.circle") {
-                                    viewModel.complete(reminder)
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button {
+                                        viewModel.complete(reminder)
+                                    } label: {
+                                        Label("Complete", systemImage: "checkmark.circle")
+                                    }
+                                    .tint(.green)
                                 }
-                                Button(snoozeLabel, systemImage: "zzz") {
-                                    viewModel.snooze(reminder, minutes: settings.defaultSnoozeMinutes)
+                                .contextMenu {
+                                    Button("Complete", systemImage: "checkmark.circle") {
+                                        viewModel.complete(reminder)
+                                    }
+                                    Button(snoozeLabel, systemImage: "zzz") {
+                                        viewModel.snooze(reminder, minutes: settings.defaultSnoozeMinutes)
+                                    }
+                                    Button(postponeLabel, systemImage: "clock.arrow.circlepath") {
+                                        viewModel.postpone(reminder, minutes: settings.defaultPostponeMinutes)
+                                    }
+                                    Button("Archive", systemImage: "archivebox") {
+                                        viewModel.archive(reminder)
+                                    }
+                                    Divider()
+                                    Button("Delete", systemImage: "trash", role: .destructive) {
+                                        viewModel.delete(reminder)
+                                    }
                                 }
-                                Button(postponeLabel, systemImage: "clock.arrow.circlepath") {
-                                    viewModel.postpone(reminder, minutes: settings.defaultPostponeMinutes)
-                                }
-                                Button("Archive", systemImage: "archivebox") {
-                                    viewModel.archive(reminder)
-                                }
-                                Divider()
-                                Button("Delete", systemImage: "trash", role: .destructive) {
-                                    viewModel.delete(reminder)
-                                }
-                            }
-                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
+                        }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
@@ -104,6 +119,30 @@ struct TimelineView: View {
                     .tint(.accentColor)
                     .accessibilityLabel("Triggers")
                 }
+
+                ToolbarItem(placement: .principal) {
+                    Menu {
+                        ForEach(ReminderService.TimelineFilter.allCases, id: \.self) { filter in
+                            Button(action: {
+                                viewModel.filter = filter
+                            }) {
+                                Label(filter.title, systemImage: filter.iconName)
+                                if viewModel.filter == filter {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(viewModel.filter.title)
+                                .font(.headline)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.primary)
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onCreateReminder) {
                         Image(systemName: "plus")
@@ -163,6 +202,25 @@ private extension ReminderService.TimelineFilter {
         case .overdue: return "Overdue"
         case .today: return "Today"
         case .upcoming: return "Upcoming"
+        case .thisWeek: return "This Week"
+        case .byPriority: return "Priority"
+        case .byTriggerType: return "Type"
+        case .recurring: return "Recurring"
+        case .noTriggers: return "No Triggers"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .all: return "list.bullet"
+        case .overdue: return "exclamationmark.triangle"
+        case .today: return "calendar"
+        case .upcoming: return "calendar.badge.clock"
+        case .thisWeek: return "calendar.day.timeline.leading"
+        case .byPriority: return "exclamationmark.3"
+        case .byTriggerType: return "tag"
+        case .recurring: return "arrow.clockwise"
+        case .noTriggers: return "bell.slash"
         }
     }
 }

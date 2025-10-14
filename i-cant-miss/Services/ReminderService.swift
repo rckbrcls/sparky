@@ -17,6 +17,11 @@ final class ReminderService: ObservableObject {
         case overdue
         case today
         case upcoming
+        case thisWeek
+        case byPriority
+        case byTriggerType
+        case recurring
+        case noTriggers
     }
 
     enum ReminderServiceError: Error {
@@ -117,25 +122,74 @@ final class ReminderService: ObservableObject {
             return cached
         }
 
+        let activeReminders = reminders.filter { $0.status == .active || $0.status == .overdue }
+        let now = Date()
+        let calendar = Calendar.current
+
         let values: [ReminderModel]
         switch filter {
         case .all:
             values = reminders
+
         case .overdue:
-            values = reminders.filter { model in
-                guard model.status == .active || model.status == .overdue else { return false }
+            values = activeReminders.filter { model in
                 guard let next = model.nextFireDate() else { return false }
-                return next < Date()
+                return next < now
             }
+
         case .today:
-            values = reminders.filter { model in
+            values = activeReminders.filter { model in
                 guard let next = model.nextFireDate() else { return false }
-                return Calendar.current.isDate(next, inSameDayAs: Date())
+                return calendar.isDateInToday(next)
             }
+
         case .upcoming:
-            values = reminders.filter { model in
+            let startOfTomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now) ?? now)
+            values = activeReminders.filter { model in
                 guard let next = model.nextFireDate() else { return false }
-                return next >= Date().addingTimeInterval(60 * 15)
+                return next >= startOfTomorrow
+            }
+
+        case .thisWeek:
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+            let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek) ?? now
+            values = activeReminders.filter { model in
+                guard let next = model.nextFireDate() else { return false }
+                return next >= startOfWeek && next < endOfWeek
+            }
+
+        case .byPriority:
+            values = activeReminders.sorted { lhs, rhs in
+                if lhs.priority != rhs.priority {
+                    return lhs.priority.rawValue > rhs.priority.rawValue
+                }
+                let lhsDate = lhs.nextFireDate() ?? .distantFuture
+                let rhsDate = rhs.nextFireDate() ?? .distantFuture
+                return lhsDate < rhsDate
+            }
+
+        case .byTriggerType:
+            values = activeReminders.sorted { lhs, rhs in
+                let lhsType = lhs.triggers.first?.type ?? .time
+                let rhsType = rhs.triggers.first?.type ?? .time
+                if lhsType != rhsType {
+                    return lhsType.rawValue < rhsType.rawValue
+                }
+                let lhsDate = lhs.nextFireDate() ?? .distantFuture
+                let rhsDate = rhs.nextFireDate() ?? .distantFuture
+                return lhsDate < rhsDate
+            }
+
+        case .recurring:
+            values = activeReminders.filter { model in
+                model.triggers.contains { trigger in
+                    trigger.recurrenceRule != nil
+                }
+            }
+
+        case .noTriggers:
+            values = activeReminders.filter { model in
+                model.triggers.isEmpty || model.triggers.allSatisfy { !$0.isActive }
             }
         }
 

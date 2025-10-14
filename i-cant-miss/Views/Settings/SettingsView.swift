@@ -186,6 +186,11 @@ private extension ReminderService.TimelineFilter {
         case .overdue: return "Overdue"
         case .today: return "Today"
         case .upcoming: return "Upcoming"
+        case .thisWeek: return "This Week"
+        case .byPriority: return "Priority"
+        case .byTriggerType: return "Type"
+        case .recurring: return "Recurring"
+        case .noTriggers: return "No Triggers"
         }
     }
 }

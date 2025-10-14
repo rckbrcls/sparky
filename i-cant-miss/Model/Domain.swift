@@ -486,3 +486,157 @@ extension ImportantDate {
         )
     }
 }
+
+// MARK: - ReminderModel Extensions
+
+extension ReminderModel {
+    func nextFireDate() -> Date? {
+        let activeTriggers = triggers.filter { $0.isActive }
+        guard !activeTriggers.isEmpty else { return nil }
+        
+        let now = Date()
+        var nextDates: [Date] = []
+        
+        for trigger in activeTriggers {
+            if let date = trigger.nextFireDate(after: now) {
+                nextDates.append(date)
+            }
+        }
+        
+        return nextDates.min()
+    }
+    
+    var hasRecurringTriggers: Bool {
+        triggers.contains { $0.recurrenceRule != nil }
+    }
+    
+    var primaryTriggerType: ReminderTriggerType? {
+        triggers.first?.type
+    }
+    
+    var hasActiveTriggers: Bool {
+        triggers.contains { $0.isActive }
+    }
+}
+
+extension ReminderTriggerModel {
+    func nextFireDate(after date: Date = Date()) -> Date? {
+        guard isActive else { return nil }
+        
+        switch type {
+        case .time:
+            return nextTimeTriggerDate(after: date)
+        case .dayOfWeek:
+            return nextWeekdayTriggerDate(after: date)
+        case .importantDate:
+            return fireDate
+        case .location, .person:
+            // Location and person triggers don't have specific fire dates
+            return nil
+        }
+    }
+    
+    private func nextTimeTriggerDate(after date: Date) -> Date? {
+        guard let fireDate = fireDate else { return nil }
+        
+        if let rule = recurrenceRule {
+            return nextRecurringDate(from: fireDate, rule: rule, after: date)
+        }
+        
+        return fireDate >= date ? fireDate : nil
+    }
+    
+    private func nextWeekdayTriggerDate(after date: Date) -> Date? {
+        guard let startDate = startDate else { return nil }
+        guard weekdayMask > 0 else { return nil }
+        
+        let calendar = Calendar.current
+        var searchDate = max(date, startDate)
+        
+        // Search up to 14 days ahead for the next matching weekday
+        for _ in 0..<14 {
+            let weekday = calendar.component(.weekday, from: searchDate)
+            let weekdayBit = 1 << (weekday - 1)
+            
+            if (Int(weekdayMask) & weekdayBit) != 0 {
+                // Match found
+                let components = calendar.dateComponents([.year, .month, .day], from: searchDate)
+                if let fireComponents = fireDate.map({ calendar.dateComponents([.hour, .minute, .second], from: $0) }),
+                   let resultDate = calendar.date(from: DateComponents(
+                    year: components.year,
+                    month: components.month,
+                    day: components.day,
+                    hour: fireComponents.hour,
+                    minute: fireComponents.minute,
+                    second: fireComponents.second
+                   )) {
+                    if resultDate >= date {
+                        return resultDate
+                    }
+                }
+            }
+            
+            searchDate = calendar.date(byAdding: .day, value: 1, to: searchDate) ?? searchDate
+        }
+        
+        return nil
+    }
+    
+    private func nextRecurringDate(from baseDate: Date, rule: RecurrenceRule, after date: Date) -> Date? {
+        let calendar = Calendar.current
+        var currentDate = baseDate
+        
+        // If base date is in the future, return it
+        if baseDate >= date {
+            return baseDate
+        }
+        
+        // Check end conditions
+        if let endDate = rule.endDate, endDate < date {
+            return nil
+        }
+        
+        // Calculate next occurrence
+        let component: Calendar.Component
+        switch rule.frequency {
+        case .daily: component = .day
+        case .weekly: component = .weekOfYear
+        case .monthly: component = .month
+        case .yearly: component = .year
+        }
+        
+        // Fast-forward to approximate next date
+        let timeInterval = date.timeIntervalSince(baseDate)
+        let approximateOccurrences: Int
+        switch rule.frequency {
+        case .daily: approximateOccurrences = Int(timeInterval / 86400)
+        case .weekly: approximateOccurrences = Int(timeInterval / (86400 * 7))
+        case .monthly: approximateOccurrences = Int(timeInterval / (86400 * 30))
+        case .yearly: approximateOccurrences = Int(timeInterval / (86400 * 365))
+        }
+        
+        let skipOccurrences = max(0, (approximateOccurrences / rule.interval) - 1) * rule.interval
+        if skipOccurrences > 0,
+           let fastForward = calendar.date(byAdding: component, value: skipOccurrences, to: currentDate) {
+            currentDate = fastForward
+        }
+        
+        // Find exact next date
+        var iterations = 0
+        let maxIterations = 100
+        
+        while currentDate < date && iterations < maxIterations {
+            guard let next = calendar.date(byAdding: component, value: rule.interval, to: currentDate) else {
+                return nil
+            }
+            currentDate = next
+            iterations += 1
+            
+            if let endDate = rule.endDate, currentDate > endDate {
+                return nil
+            }
+        }
+        
+        return currentDate >= date ? currentDate : nil
+    }
+}
