@@ -149,6 +149,7 @@ struct TimelineView: View {
                                 Button(action: { viewModel.refresh(force: true) }) {
                                     Label("Refresh", systemImage: "arrow.clockwise")
                                 }
+                                .tint(.accentColor)
                             }
 
                             Section("Filter Options") {
@@ -162,6 +163,7 @@ struct TimelineView: View {
                                         systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
                                     )
                                 }
+                                .tint(.accentColor)
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
