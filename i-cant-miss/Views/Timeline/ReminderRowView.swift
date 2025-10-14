@@ -58,25 +58,7 @@ struct ReminderRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(reminder.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Spacer()
-                Image(systemName: reminder.priority.iconName)
-                    .font(.caption)
-                    .foregroundStyle(priorityColor)
-                    .accessibilityLabel("Priority \(reminder.priority.rawValue + 1)")
-            }
-
-            if let notes = reminder.notes, !notes.isEmpty {
-                Text(notes)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-
+        VStack(alignment: .leading, spacing: 12) {
             if !reminder.triggers.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -85,6 +67,26 @@ struct ReminderRowView: View {
                         }
                     }
                 }
+            }
+            
+            HStack(alignment: .firstTextBaseline) {
+                Text(reminder.title)
+                    .font(.title3)
+                    .bold()
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: reminder.priority.iconName)
+                    .font(.caption)
+                    .foregroundStyle(priorityColor)
+                    .accessibilityLabel("Priority \(reminder.priority.rawValue + 1)")
+            }
+            .padding(.top, 8)
+
+            if let notes = reminder.notes, !notes.isEmpty {
+                Text(notes)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
 
             HStack {
@@ -140,7 +142,8 @@ private struct TriggerBadge: View {
 }
 
 #Preview(traits: .sizeThatFitsLayout) {
-    let trigger = ReminderTriggerModel(
+    // Multiple triggers for richer preview
+    let timeTrigger = ReminderTriggerModel(
         id: UUID(),
         type: .time,
         fireDate: Date().addingTimeInterval(3600),
@@ -155,6 +158,42 @@ private struct TriggerBadge: View {
         lastReviewDate: nil,
         ignoreCount: 0
     )
+
+    let weekdayTrigger = ReminderTriggerModel(
+        id: UUID(),
+        type: .dayOfWeek,
+        fireDate: nil,
+        startDate: Date(),
+        recurrenceRule: RecurrenceRule(frequency: .weekly),
+        timeZoneIdentifier: TimeZone.current.identifier,
+        weekdayMask: 0b0111110, // Mon-Fri
+        isActive: true,
+        location: nil,
+        person: nil,
+        spacedStage: 0,
+        lastReviewDate: nil,
+        ignoreCount: 0
+    )
+
+
+  
+
+    let importantDateTrigger = ReminderTriggerModel(
+        id: UUID(),
+        type: .importantDate,
+        fireDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()),
+        startDate: Date(),
+        recurrenceRule: nil,
+        timeZoneIdentifier: TimeZone.current.identifier,
+        weekdayMask: 0,
+        isActive: true,
+        location: nil,
+        person: nil,
+        spacedStage: 0,
+        lastReviewDate: nil,
+        ignoreCount: 0
+    )
+
     let reminder = ReminderModel(
         id: UUID(),
         title: "Submit project report",
@@ -165,7 +204,7 @@ private struct TriggerBadge: View {
         updatedAt: Date(),
         lastCompletionDate: nil,
         snoozeCount: 1,
-        triggers: [trigger],
+        triggers: [timeTrigger, weekdayTrigger, importantDateTrigger],
         importantDate: nil
     )
     ReminderRowView(reminder: reminder)
