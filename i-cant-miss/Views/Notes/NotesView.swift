@@ -23,6 +23,7 @@ struct NotesView: View {
     @State private var editFolderName = ""
     @State private var editFolderIcon = Self.defaultFolderIconName
     @State private var editFolderColor = Self.defaultFolderColorHex
+    private let gridColumns = Array(repeating: GridItem(.flexible()), count: 4)
 
     init(environment: AppEnvironment,
          onCreateNote: @escaping () -> Void,
@@ -107,6 +108,19 @@ struct NotesView: View {
                         }
                         .padding(.vertical, 4)
                     }
+                    .contextMenu {
+                        Button {
+                            prepareFolderEditing(with: folder)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+
+                        Button(role: .destructive) {
+                            viewModel.deleteFolder(folder)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button {
                             prepareFolderEditing(with: folder)
@@ -129,12 +143,22 @@ struct NotesView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: onCreateNote) {
-                            Label("New Note", systemImage: "square.and.pencil")
-                                .tint(.accentColor)
+                            Label {
+                                Text("New Note")
+                            } icon: {
+                                Image(systemName: "square.and.pencil")
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(Color.accentColor)
+                            }
                         }
                         Button(action: { showingCreateFolder = true }) {
-                            Label("New Folder", systemImage: "folder.badge.plus")
-                                .tint(.accentColor)
+                            Label {
+                                Text("New Folder")
+                            } icon: {
+                                Image(systemName: "folder.badge.plus")
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(Color.accentColor)
+                            }
                         }
                     } label: {
                         Image(systemName: "plus")
@@ -160,21 +184,14 @@ struct NotesView: View {
             Form {
                 Section("Folder Details") {
                     TextField("Folder Name", text: $newFolderName)
+                }
 
-                    Picker("Icon", selection: $newFolderIcon) {
-                        ForEach(folderIcons, id: \.self) { icon in
-                            Label(icon, systemImage: icon)
-                        }
-                    }
+                Section("Icon") {
+                    iconSelectionGrid(selection: $newFolderIcon)
                 }
 
                 Section("Color") {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 12) {
+                    LazyVGrid(columns: gridColumns, spacing: 12) {
                         ForEach(Color.PresetColors.all) { presetColor in
                             Button(action: {
                                 newFolderColor = presetColor.hex
@@ -228,21 +245,14 @@ struct NotesView: View {
             Form {
                 Section("Folder Details") {
                     TextField("Folder Name", text: $editFolderName)
+                }
 
-                    Picker("Icon", selection: $editFolderIcon) {
-                        ForEach(folderIcons, id: \.self) { icon in
-                            Label(icon, systemImage: icon)
-                        }
-                    }
+                Section("Icon") {
+                    iconSelectionGrid(selection: $editFolderIcon)
                 }
 
                 Section("Color") {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 12) {
+                    LazyVGrid(columns: gridColumns, spacing: 12) {
                         ForEach(Color.PresetColors.all) { presetColor in
                             Button(action: {
                                 editFolderColor = presetColor.hex
@@ -311,6 +321,31 @@ struct NotesView: View {
         editFolderColor = Self.defaultFolderColorHex
     }
 
+    @ViewBuilder
+    private func iconSelectionGrid(selection: Binding<String>) -> some View {
+        LazyVGrid(columns: gridColumns, spacing: 12) {
+            ForEach(folderIcons, id: \.self) { icon in
+                Button {
+                    selection.wrappedValue = icon
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(selection.wrappedValue == icon ? Color.accentColor.opacity(0.18) : Color(.systemGray6))
+                            .frame(width: 50, height: 50)
+                        Image(systemName: icon)
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(selection.wrappedValue == icon ? Color.accentColor : Color.primary)
+                    }
+                    .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(iconAccessibilityLabel(for: icon)))
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
     private let folderIcons = [
         "folder.fill",
         "folder.badge.person.crop",
@@ -323,6 +358,23 @@ struct NotesView: View {
         "lightbulb.fill",
         "cart.fill"
     ]
+
+    private let iconDisplayNames: [String: String] = [
+        "folder.fill": "Folder",
+        "folder.badge.person.crop": "Shared Folder",
+        "briefcase.fill": "Briefcase",
+        "house.fill": "House",
+        "heart.fill": "Heart",
+        "star.fill": "Star",
+        "flag.fill": "Flag",
+        "book.fill": "Book",
+        "lightbulb.fill": "Lightbulb",
+        "cart.fill": "Cart"
+    ]
+
+    private func iconAccessibilityLabel(for icon: String) -> String {
+        iconDisplayNames[icon] ?? icon.replacingOccurrences(of: ".", with: " ")
+    }
 }
 
 // MARK: - Folder Notes View
