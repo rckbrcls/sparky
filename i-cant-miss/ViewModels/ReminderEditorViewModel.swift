@@ -72,29 +72,14 @@ final class ReminderEditorViewModel: ObservableObject {
         return environment.reminderService.reminders.first(where: { $0.id == reminderId })
     }
 
-    func addTimeTrigger(date: Date, recurrence: RecurrenceRule?) {
-        let draft = ReminderTriggerDraft(
-            type: .time,
-            fireDate: date,
-            startDate: Date(),
-            recurrenceRule: recurrence,
-            timeZoneIdentifier: TimeZone.current.identifier
-        )
-        triggers.append(draft)
-    }
-
-    func addWeekdayTrigger(selectedWeekdays: [Int]) {
-        let mask = selectedWeekdays.reduce(into: Int16(0)) { partialResult, day in
-            let bit = Int16(1 << day)
-            partialResult |= bit
-        }
-        let draft = ReminderTriggerDraft(
-            type: .dayOfWeek,
-            fireDate: nil,
-            startDate: Date(),
-            weekdayMask: mask
-        )
-        triggers.append(draft)
+    func updateSchedule(
+        fireDate: Date?,
+        recurrence: RecurrenceRule?,
+        weekdaySelection: Set<Int>,
+        weekdayReferenceTime: Date
+    ) {
+        updateTimeTrigger(fireDate: fireDate, recurrence: recurrence)
+        updateWeekdayTrigger(weekdaySelection: weekdaySelection, referenceTime: weekdayReferenceTime)
     }
 
     func addLocationTrigger(name: String, latitude: Double, longitude: Double, radius: Double, event: LocationEvent) {
@@ -131,6 +116,10 @@ final class ReminderEditorViewModel: ObservableObject {
         if let index = triggers.firstIndex(where: { $0.id == id }) {
             triggers[index] = updatedDraft
         }
+    }
+
+    func clearScheduleTriggers() {
+        triggers.removeAll { $0.type == .time || $0.type == .dayOfWeek }
     }
 
     func save() async -> Bool {
@@ -195,5 +184,71 @@ final class ReminderEditorViewModel: ObservableObject {
             lastReviewDate: model.lastReviewDate,
             ignoreCount: model.ignoreCount
         )
+    }
+}
+
+private extension ReminderEditorViewModel {
+    func updateTimeTrigger(fireDate: Date?, recurrence: RecurrenceRule?) {
+        let existingIndex = triggers.firstIndex { $0.type == .time }
+
+        guard let fireDate else {
+            if let existingIndex {
+                triggers.remove(at: existingIndex)
+            }
+            return
+        }
+
+        var updated = existingIndex.map { triggers[$0] } ?? ReminderTriggerDraft(
+            type: .time,
+            startDate: Date(),
+            timeZoneIdentifier: TimeZone.current.identifier
+        )
+
+        updated.fireDate = fireDate
+        updated.recurrenceRule = recurrence
+        updated.timeZoneIdentifier = TimeZone.current.identifier
+
+        if let existingIndex {
+            triggers[existingIndex] = updated
+        } else {
+            triggers.append(updated)
+        }
+    }
+
+    func updateWeekdayTrigger(weekdaySelection: Set<Int>, referenceTime: Date) {
+        let mask = weekdaySelection.reduce(into: Int16(0)) { partialResult, day in
+            partialResult |= Int16(1 << day)
+        }
+
+        if mask == 0 {
+            triggers.removeAll { $0.type == .dayOfWeek }
+            return
+        }
+
+        let existingIndex = triggers.firstIndex { $0.type == .dayOfWeek }
+        var updated = existingIndex.map { triggers[$0] } ?? ReminderTriggerDraft(
+            type: .dayOfWeek,
+            startDate: Date(),
+            timeZoneIdentifier: TimeZone.current.identifier
+        )
+
+        updated.weekdayMask = mask
+        updated.fireDate = normalizedWeekdayTime(from: referenceTime)
+        updated.timeZoneIdentifier = TimeZone.current.identifier
+
+        if let existingIndex {
+            triggers[existingIndex] = updated
+        } else {
+            triggers.append(updated)
+        }
+    }
+
+    func normalizedWeekdayTime(from date: Date) -> Date {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return calendar.date(bySettingHour: components.hour ?? 9,
+                             minute: components.minute ?? 0,
+                             second: 0,
+                             of: Date()) ?? date
     }
 }
