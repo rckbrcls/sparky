@@ -58,7 +58,7 @@ struct TriggersView: View {
             .navigationTitle("Triggers")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    Button("Close", role: .close) { dismiss() }
                 }
             }
         }
