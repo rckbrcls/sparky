@@ -50,6 +50,12 @@ struct ContentView: View {
                 Label("Notes", systemImage: "square.and.pencil")
             }
             .tag(TabRouter.Selection.notes)
+
+            SettingsView(environment: environment)
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .tag(TabRouter.Selection.settings)
         }
         .sheet(isPresented: $showReminderForCreate) {
             ReminderEditorView(
@@ -83,6 +89,7 @@ final class TabRouter: ObservableObject {
         case timeline
         case triggers
         case notes
+        case settings
     }
 
     @Published var selection: Selection = .timeline

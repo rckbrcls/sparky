@@ -17,18 +17,20 @@ final class AppEnvironment: ObservableObject {
     let noteService: NoteService
     let notificationScheduler: NotificationScheduler
     let geofenceManager: GeofenceManager
+    let settings: SettingsStore
 
     @Published var isBootstrapping = true
     @Published var hasBootstrapped = false
 
     init(persistence: PersistenceController) {
         self.persistence = persistence
+        self.settings = SettingsStore()
 
         // Initialize services - they will load data synchronously in their init
         self.folderService = FolderService(persistence: persistence)
         self.reminderService = ReminderService(persistence: persistence)
         self.noteService = NoteService(persistence: persistence, folderService: folderService)
-        self.notificationScheduler = NotificationScheduler()
+        self.notificationScheduler = NotificationScheduler(settings: settings)
         self.geofenceManager = GeofenceManager()
 
         reminderService.notificationScheduler = notificationScheduler

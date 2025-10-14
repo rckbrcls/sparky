@@ -12,6 +12,11 @@ import UserNotifications
 final class NotificationScheduler {
     private let center = UNUserNotificationCenter.current()
     private var hasRequestedAuthorization = false
+    private let settings: SettingsStore
+
+    init(settings: SettingsStore) {
+        self.settings = settings
+    }
 
     func requestAuthorizationIfNeeded() async {
         guard !hasRequestedAuthorization else { return }
@@ -27,6 +32,13 @@ final class NotificationScheduler {
         }
     }
 
+    func requestAuthorization(force: Bool) async {
+        if force {
+            hasRequestedAuthorization = false
+        }
+        await requestAuthorizationIfNeeded()
+    }
+
     func scheduleNotifications(for reminder: ReminderModel) async {
         await requestAuthorizationIfNeeded()
         guard reminder.status == .active else {
@@ -40,7 +52,7 @@ final class NotificationScheduler {
         if let notes = reminder.notes {
             content.body = notes
         }
-        content.sound = .default
+        content.sound = settings.notificationSoundEnabled ? .default : nil
         content.categoryIdentifier = "REMINDER_ACTIONS"
 
         var requests: [UNNotificationRequest] = []

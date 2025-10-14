@@ -48,7 +48,7 @@ final class ReminderEditorViewModel: ObservableObject {
             // New reminder or not found in service - use defaults
             self.title = reminder?.title ?? ""
             self.notes = reminder?.notes ?? ""
-            self.priority = reminder?.priority ?? .medium
+            self.priority = reminder?.priority ?? environment.settings.defaultReminderPriority
             self.status = reminder?.status ?? .active
             self.triggers = reminder?.triggers.map(ReminderEditorViewModel.draft(from:)) ?? []
             self.importantDate = reminder?.importantDate

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TimelineView: View {
     @StateObject private var viewModel: TimelineViewModel
+    @ObservedObject private var settings: SettingsStore
     let environment: AppEnvironment
     let onCreateReminder: () -> Void
     let onEditReminder: (ReminderModel) -> Void
@@ -19,6 +20,7 @@ struct TimelineView: View {
         self.environment = environment
         self.onCreateReminder = onCreateReminder
         self.onEditReminder = onEditReminder
+        _settings = ObservedObject(wrappedValue: environment.settings)
         _viewModel = StateObject(wrappedValue: TimelineViewModel(environment: environment))
     }
 
@@ -51,11 +53,11 @@ struct TimelineView: View {
                                 Button("Complete", systemImage: "checkmark.circle") {
                                     viewModel.complete(reminder)
                                 }
-                                Button("Snooze 15 min", systemImage: "zzz") {
-                                    viewModel.snooze(reminder, minutes: 15)
+                                Button(snoozeLabel, systemImage: "zzz") {
+                                    viewModel.snooze(reminder, minutes: settings.defaultSnoozeMinutes)
                                 }
-                                Button("Postpone 1 hr", systemImage: "clock.arrow.circlepath") {
-                                    viewModel.postpone(reminder, hours: 1)
+                                Button(postponeLabel, systemImage: "clock.arrow.circlepath") {
+                                    viewModel.postpone(reminder, minutes: settings.defaultPostponeMinutes)
                                 }
                                 Button("Archive", systemImage: "archivebox") {
                                     viewModel.archive(reminder)
@@ -103,6 +105,22 @@ struct TimelineView: View {
                     .tag(filter)
             }
         }
+    }
+
+    private var snoozeLabel: String {
+        formattedDuration(prefix: "Snooze", minutes: settings.defaultSnoozeMinutes)
+    }
+
+    private var postponeLabel: String {
+        formattedDuration(prefix: "Postpone", minutes: settings.defaultPostponeMinutes)
+    }
+
+    private func formattedDuration(prefix: String, minutes: Int) -> String {
+        guard minutes >= 60, minutes % 60 == 0 else {
+            return "\(prefix) \(minutes) min"
+        }
+        let hours = minutes / 60
+        return "\(prefix) \(hours) hour" + (hours == 1 ? "" : "s")
     }
 }
 
