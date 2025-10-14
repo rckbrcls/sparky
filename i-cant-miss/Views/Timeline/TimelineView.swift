@@ -28,34 +28,13 @@ struct TimelineView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Quick filters
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach([ReminderService.TimelineFilter.all, .overdue, .today, .upcoming, .thisWeek], id: \.self) { filter in
-                            Button(action: {
-                                viewModel.filter = filter
-                            }) {
-                                Text(filter.title)
-                                    .font(.caption)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(viewModel.filter == filter ? Color.accentColor : Color(.systemGray5))
-                                    .foregroundColor(viewModel.filter == filter ? .white : .primary)
-                                    .clipShape(Capsule())
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 8)
-
-                Divider()
-
                 if viewModel.reminders.isEmpty {
-                    EmptyStateView(systemImage: "bell.slash",
-                                   title: "Stay on top of things",
-                                   message: "Create a reminder to populate your timeline.")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    EmptyStateView(
+                        systemImage: viewModel.filter.iconName,
+                        title: emptyStateTitle,
+                        message: emptyStateMessage
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
                         ForEach(viewModel.reminders) { reminder in
@@ -122,33 +101,79 @@ struct TimelineView: View {
 
                 ToolbarItem(placement: .principal) {
                     Menu {
-                        ForEach(ReminderService.TimelineFilter.allCases, id: \.self) { filter in
-                            Button(action: {
-                                viewModel.filter = filter
-                            }) {
-                                Label(filter.title, systemImage: filter.iconName)
-                                if viewModel.filter == filter {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
+                        // Time-based filters
+                        Section("Time") {
+                            filterButton(.today)
+                            filterButton(.overdue)
+                            filterButton(.thisWeek)
+                            filterButton(.upcoming)
                         }
+                        
+                        // Organization filters
+                        Section("Organization") {
+                            filterButton(.byPriority)
+                            filterButton(.byTriggerType)
+                        }
+                        
+                        // Special filters
+                        Section("Special") {
+                            filterButton(.recurring)
+                            filterButton(.noTriggers)
+                        }
+                        
+                        Divider()
+                        
+                        filterButton(.all)
                     } label: {
                         HStack(spacing: 4) {
+                            Image(systemName: viewModel.filter.iconName)
+                                .font(.subheadline)
                             Text(viewModel.filter.title)
                                 .font(.headline)
+                            if viewModel.reminders.count > 0 {
+                                Text("(\(viewModel.reminders.count))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
                             Image(systemName: "chevron.down")
-                                .font(.caption)
+                                .font(.caption2)
                         }
                         .foregroundColor(.primary)
                     }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: onCreateReminder) {
-                        Image(systemName: "plus")
+                    HStack(spacing: 12) {
+                        Menu {
+                            Section("Quick Actions") {
+                                Button(action: { viewModel.refresh(force: true) }) {
+                                    Label("Refresh", systemImage: "arrow.clockwise")
+                                }
+                            }
+                            
+                            Section("Filter Options") {
+                                Button(action: { 
+                                    withAnimation {
+                                        viewModel.toggleShowCompleted()
+                                    }
+                                }) {
+                                    Label(
+                                        viewModel.showCompleted ? "Hide Completed" : "Show Completed",
+                                        systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
+                                    )
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                        .tint(.accentColor)
+                        
+                        Button(action: onCreateReminder) {
+                            Image(systemName: "plus")
+                        }
+                        .tint(.accentColor)
+                        .accessibilityLabel("Create Reminder")
                     }
-                    .tint(.accentColor)
-                    .accessibilityLabel("Create Reminder")
                 }
             }
         }
@@ -177,6 +202,52 @@ struct TimelineView: View {
             }
         }
     }
+    
+    private var emptyStateTitle: String {
+        switch viewModel.filter {
+        case .all:
+            return "No Reminders Yet"
+        case .overdue:
+            return "All Clear!"
+        case .today:
+            return "Nothing for Today"
+        case .upcoming:
+            return "No Upcoming Reminders"
+        case .thisWeek:
+            return "Free Week Ahead"
+        case .byPriority:
+            return "No Prioritized Items"
+        case .byTriggerType:
+            return "No Reminders"
+        case .recurring:
+            return "No Recurring Reminders"
+        case .noTriggers:
+            return "All Reminders Have Triggers"
+        }
+    }
+    
+    private var emptyStateMessage: String {
+        switch viewModel.filter {
+        case .all:
+            return "Create a reminder to get started."
+        case .overdue:
+            return "You're all caught up! No overdue reminders."
+        case .today:
+            return "You have no reminders scheduled for today."
+        case .upcoming:
+            return "No reminders scheduled for the future."
+        case .thisWeek:
+            return "You have no reminders for this week."
+        case .byPriority:
+            return "Create reminders with different priorities."
+        case .byTriggerType:
+            return "Create reminders to see them organized by type."
+        case .recurring:
+            return "No reminders are set to repeat."
+        case .noTriggers:
+            return "All your reminders have active triggers."
+        }
+    }
 
     private var snoozeLabel: String {
         formattedDuration(prefix: "Snooze", minutes: settings.defaultSnoozeMinutes)
@@ -192,6 +263,30 @@ struct TimelineView: View {
         }
         let hours = minutes / 60
         return "\(prefix) \(hours) hour" + (hours == 1 ? "" : "s")
+    }
+    
+    @ViewBuilder
+    private func filterButton(_ filter: ReminderService.TimelineFilter) -> some View {
+        Button(action: { 
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.filter = filter
+            }
+        }) {
+            HStack {
+                Label(filter.title, systemImage: filter.iconName)
+                Spacer()
+                let count = viewModel.count(for: filter)
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                if viewModel.filter == filter {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.accentColor)
+                }
+            }
+        }
     }
 }
 
