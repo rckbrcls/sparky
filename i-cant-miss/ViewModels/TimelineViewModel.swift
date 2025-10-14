@@ -58,18 +58,18 @@ final class TimelineViewModel: ObservableObject {
     func dismissError() {
         errorMessage = nil
     }
-    
+
     func toggleShowCompleted() {
         showCompleted.toggle()
     }
-    
+
     func count(for filter: ReminderService.TimelineFilter) -> Int {
         var filteredReminders = environment.reminderService.reminders(for: filter)
-        
+
         if !showCompleted {
             filteredReminders = filteredReminders.filter { $0.status != .completed }
         }
-        
+
         return filteredReminders.count
     }
 
@@ -156,11 +156,11 @@ final class TimelineViewModel: ObservableObject {
 
     private func updateRemindersSnapshot() {
         var filteredReminders = environment.reminderService.reminders(for: filter)
-        
+
         if !showCompleted {
             filteredReminders = filteredReminders.filter { $0.status != .completed }
         }
-        
+
         reminders = filteredReminders
     }
 }

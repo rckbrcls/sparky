@@ -108,21 +108,21 @@ struct TimelineView: View {
                             filterButton(.thisWeek)
                             filterButton(.upcoming)
                         }
-                        
+
                         // Organization filters
                         Section("Organization") {
                             filterButton(.byPriority)
                             filterButton(.byTriggerType)
                         }
-                        
+
                         // Special filters
                         Section("Special") {
                             filterButton(.recurring)
                             filterButton(.noTriggers)
                         }
-                        
+
                         Divider()
-                        
+
                         filterButton(.all)
                     } label: {
                         HStack(spacing: 4) {
@@ -150,9 +150,9 @@ struct TimelineView: View {
                                     Label("Refresh", systemImage: "arrow.clockwise")
                                 }
                             }
-                            
+
                             Section("Filter Options") {
-                                Button(action: { 
+                                Button(action: {
                                     withAnimation {
                                         viewModel.toggleShowCompleted()
                                     }
@@ -167,7 +167,7 @@ struct TimelineView: View {
                             Image(systemName: "ellipsis.circle")
                         }
                         .tint(.accentColor)
-                        
+
                         Button(action: onCreateReminder) {
                             Image(systemName: "plus")
                         }
@@ -202,7 +202,7 @@ struct TimelineView: View {
             }
         }
     }
-    
+
     private var emptyStateTitle: String {
         switch viewModel.filter {
         case .all:
@@ -225,7 +225,7 @@ struct TimelineView: View {
             return "All Reminders Have Triggers"
         }
     }
-    
+
     private var emptyStateMessage: String {
         switch viewModel.filter {
         case .all:
@@ -264,10 +264,10 @@ struct TimelineView: View {
         let hours = minutes / 60
         return "\(prefix) \(hours) hour" + (hours == 1 ? "" : "s")
     }
-    
+
     @ViewBuilder
     private func filterButton(_ filter: ReminderService.TimelineFilter) -> some View {
-        Button(action: { 
+        Button(action: {
             withAnimation(.easeInOut(duration: 0.2)) {
                 viewModel.filter = filter
             }
