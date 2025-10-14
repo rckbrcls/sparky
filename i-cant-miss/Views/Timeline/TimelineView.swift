@@ -63,8 +63,9 @@ struct TimelineView: View {
                                     viewModel.archive(reminder)
                                 }
                             }
-                            .listRowSeparator(index == viewModel.reminders.count - 1 ? .hidden : .visible, edges: .bottom)
-                            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                     }
                 }
             }

@@ -58,7 +58,8 @@ struct ReminderRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
+            // Triggers section
             if !reminder.triggers.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -67,40 +68,58 @@ struct ReminderRowView: View {
                         }
                     }
                 }
+                .padding(.bottom, 12)
+
+                Divider()
+                    .padding(.bottom, 12)
             }
-            
+
+            // Title and priority section
             HStack(alignment: .firstTextBaseline) {
                 Text(reminder.title)
-                    .font(.title3)
-                    .bold()
+                    .font(.headline)
                     .foregroundStyle(.primary)
                 Spacer()
                 Image(systemName: reminder.priority.iconName)
-                    .font(.caption)
-                    .foregroundStyle(priorityColor)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .accessibilityLabel("Priority \(reminder.priority.rawValue + 1)")
             }
-            .padding(.top, 8)
+            .padding(.bottom, 8)
 
+            // Notes section
             if let notes = reminder.notes, !notes.isEmpty {
                 Text(notes)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .padding(.bottom, 12)
+
+                Divider()
+                    .padding(.bottom, 8)
             }
 
-            HStack {
+            // Status and metadata section
+            HStack(spacing: 16) {
                 Label(statusText, systemImage: "clock.badge")
                     .font(.caption)
-                    .foregroundStyle(statusColor)
-                Spacer()
+                    .foregroundStyle(.secondary)
+
                 if reminder.snoozeCount > 0 {
+                    Divider()
+                        .frame(height: 12)
+
                     Label("\(reminder.snoozeCount) snoozes", systemImage: "zzz")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                Spacer()
             }
         }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(24)
         .accessibilityElement(children: .combine)
     }
 }
@@ -176,7 +195,7 @@ private struct TriggerBadge: View {
     )
 
 
-  
+
 
     let importantDateTrigger = ReminderTriggerModel(
         id: UUID(),
