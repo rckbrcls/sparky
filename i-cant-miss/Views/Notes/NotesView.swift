@@ -23,6 +23,7 @@ struct NotesView: View {
     @State private var editFolderName = ""
     @State private var editFolderIcon = Self.defaultFolderIconName
     @State private var editFolderColor = Self.defaultFolderColorHex
+    private let accentColor = Color("AccentColor")
     private let gridColumns = Array(repeating: GridItem(.flexible()), count: 4)
 
     init(environment: AppEnvironment,
@@ -127,7 +128,7 @@ struct NotesView: View {
                         } label: {
                             Label("Edit", systemImage: "pencil")
                         }
-                        .tint(.accentColor)
+                        .tint(accentColor)
                         
                         Button(role: .destructive) {
                             viewModel.deleteFolder(folder)
@@ -143,27 +144,17 @@ struct NotesView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: onCreateNote) {
-                            Label {
-                                Text("New Note")
-                            } icon: {
-                                Image(systemName: "square.and.pencil")
-                                    .symbolRenderingMode(.hierarchical)
-                                    .foregroundStyle(Color.accentColor)
-                            }
+                            Label("New Note", systemImage: "square.and.pencil")
                         }
+                        .tint(accentColor)
                         Button(action: { showingCreateFolder = true }) {
-                            Label {
-                                Text("New Folder")
-                            } icon: {
-                                Image(systemName: "folder.badge.plus")
-                                    .symbolRenderingMode(.hierarchical)
-                                    .foregroundStyle(Color.accentColor)
-                            }
+                            Label("New Folder", systemImage: "folder.badge.plus")
                         }
+                        .tint(accentColor)
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .tint(.accentColor)
+                    .tint(accentColor)
                     .accessibilityLabel("Create Note or Folder")
                 }
             }
@@ -330,12 +321,12 @@ struct NotesView: View {
                 } label: {
                     ZStack {
                         Circle()
-                            .fill(selection.wrappedValue == icon ? Color.accentColor.opacity(0.18) : Color(.systemGray6))
+                            .fill(selection.wrappedValue == icon ? accentColor.opacity(0.18) : Color(.systemGray6))
                             .frame(width: 50, height: 50)
                         Image(systemName: icon)
                             .font(.title2)
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(selection.wrappedValue == icon ? Color.accentColor : Color.primary)
+                            .foregroundStyle(selection.wrappedValue == icon ? accentColor : Color.primary)
                     }
                     .contentShape(Circle())
                 }
