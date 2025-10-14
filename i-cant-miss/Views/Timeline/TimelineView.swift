@@ -14,6 +14,7 @@ struct TimelineView: View {
     let onCreateReminder: () -> Void
     let onEditReminder: (ReminderModel) -> Void
     @State private var showTriggers = false
+    private let accentColor = Color("AccentColor")
 
     init(environment: AppEnvironment,
          onCreateReminder: @escaping () -> Void,
@@ -95,7 +96,7 @@ struct TimelineView: View {
                     Button(action: { showTriggers = true }) {
                         Image(systemName: "bolt.fill")
                     }
-                    .tint(.accentColor)
+                    .tint(accentColor)
                     .accessibilityLabel("Triggers")
                 }
 
@@ -149,7 +150,7 @@ struct TimelineView: View {
                                 Button(action: { viewModel.refresh(force: true) }) {
                                     Label("Refresh", systemImage: "arrow.clockwise")
                                 }
-                                .tint(.accentColor)
+                                .tint(accentColor)
                             }
 
                             Section("Filter Options") {
@@ -163,17 +164,17 @@ struct TimelineView: View {
                                         systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
                                     )
                                 }
-                                .tint(.accentColor)
+                                .tint(accentColor)
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
-                        .tint(.accentColor)
+                        .tint(accentColor)
 
                         Button(action: onCreateReminder) {
                             Image(systemName: "plus")
                         }
-                        .tint(.accentColor)
+                        .tint(accentColor)
                         .accessibilityLabel("Create Reminder")
                     }
                 }
@@ -285,7 +286,7 @@ struct TimelineView: View {
                 }
                 if viewModel.filter == filter {
                     Image(systemName: "checkmark")
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(accentColor)
                 }
             }
         }
