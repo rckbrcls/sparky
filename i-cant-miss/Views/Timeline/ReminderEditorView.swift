@@ -16,6 +16,7 @@ struct ReminderEditorView: View {
     @State private var showLocationPicker = false
     @State private var showTimeTriggerSheet = false
     @State private var showWeekdayTriggerSheet = false
+    @State private var showPersonTriggerSheet = false
     let environment: AppEnvironment
 
     init(environment: AppEnvironment, existingReminder: ReminderModel?) {
@@ -73,8 +74,7 @@ struct ReminderEditorView: View {
                 Section {
                     PersonTriggerInlineForm(
                         viewModel: viewModel,
-                        showContactPicker: $showContactPicker,
-                        showAccessDeniedAlert: $showAccessDeniedAlert
+                        showSheet: $showPersonTriggerSheet
                     )
                 } header: {
                     Label("Person", systemImage: "person.crop.circle")
@@ -121,6 +121,10 @@ struct ReminderEditorView: View {
                         }
                     }
                     .disabled(viewModel.isSaving)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { hideKeyboard() }
                 }
             }
             .alert("Could not save", isPresented: Binding(
@@ -181,6 +185,13 @@ struct ReminderEditorView: View {
             .sheet(isPresented: $showWeekdayTriggerSheet) {
                 WeekdayTriggerSheet(viewModel: viewModel)
             }
+            .sheet(isPresented: $showPersonTriggerSheet) {
+                PersonTriggerSheet(
+                    viewModel: viewModel,
+                    showContactPicker: $showContactPicker,
+                    showAccessDeniedAlert: $showAccessDeniedAlert
+                )
+            }
         }
     }
 
@@ -204,10 +215,24 @@ struct ReminderEditorView: View {
         case .archived: return "Archived"
         }
     }
+
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 }
 
 private func viewModelTitle(for viewModel: ReminderEditorViewModel) -> String {
     viewModel.title.isEmpty ? "New Reminder" : "Edit Reminder"
+}
+
+private extension View {
+    func formRowButton(action: @escaping () -> Void) -> some View {
+        self
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, action)
+    }
 }
 
 // MARK: - Inline Trigger Forms
@@ -222,55 +247,39 @@ private struct TimeTriggerInlineForm: View {
 
     var body: some View {
         if let trigger = existingTrigger {
-            VStack(alignment: .leading, spacing: 8) {
-                if let fireDate = trigger.fireDate {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(fireDate.formatted(date: .abbreviated, time: .shortened))
-                                .font(.body)
-                            if let recurrence = trigger.recurrenceRule {
-                                Text("Repeats \(recurrence.frequency.title.lowercased())")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let fireDate = trigger.fireDate {
+                        Text(fireDate.formatted(date: .abbreviated, time: .shortened))
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        if let recurrence = trigger.recurrenceRule {
+                            Text("Repeats \(recurrence.frequency.title.lowercased())")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
-                        Spacer()
                     }
                 }
-
-                HStack(spacing: 12) {
-                    Button {
-                        showSheet = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "pencil")
-                            Text("Edit")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(role: .destructive) {
-                        viewModel.removeTrigger(id: trigger.id)
-                    } label: {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Remove")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .formRowButton { showSheet = true }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    viewModel.removeTrigger(id: trigger.id)
+                } label: {
+                    Label("Delete", systemImage: "trash")
                 }
             }
         } else {
-            Button {
-                showSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Add time trigger")
-                }
+            HStack {
+                Label("Add time trigger", systemImage: "plus.circle.fill")
+                Spacer()
             }
+            .foregroundStyle(.accent)
+            .formRowButton { showSheet = true }
         }
     }
 }
@@ -285,48 +294,30 @@ private struct WeekdayTriggerInlineForm: View {
 
     var body: some View {
         if let trigger = existingTrigger {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(selectedDaysText(mask: trigger.weekdayMask))
-                            .font(.body)
-                    }
-                    Spacer()
-                }
-
-                HStack(spacing: 12) {
-                    Button {
-                        showSheet = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "pencil")
-                            Text("Edit")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(role: .destructive) {
-                        viewModel.removeTrigger(id: trigger.id)
-                    } label: {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Remove")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
+            HStack {
+                Text(selectedDaysText(mask: trigger.weekdayMask))
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .formRowButton { showSheet = true }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    viewModel.removeTrigger(id: trigger.id)
+                } label: {
+                    Label("Delete", systemImage: "trash")
                 }
             }
         } else {
-            Button {
-                showSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Add weekday trigger")
-                }
+            HStack {
+                Label("Add weekday trigger", systemImage: "plus.circle.fill")
+                Spacer()
             }
+            .foregroundStyle(.accent)
+            .formRowButton { showSheet = true }
         }
     }
 
@@ -353,149 +344,86 @@ private struct LocationTriggerInlineForm: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let trigger = existingTrigger, let location = trigger.location {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(location.name ?? "Unknown")
-                                .font(.body)
-                            Text("\(Int(location.radius))m • \(location.event.label)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-
-                    Button {
-                        showLocationPicker = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "pencil")
-                            Text("Edit Location")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Divider()
-
-                    Button(role: .destructive) {
-                        viewModel.removeTrigger(id: trigger.id)
-                    } label: {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Remove")
-                        }
-                    }
+        if let trigger = existingTrigger, let location = trigger.location {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(location.name ?? "Unknown")
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                    Text("\(Int(location.radius))m • \(location.event.label)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-            } else {
-                Button {
-                    showLocationPicker = true
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .formRowButton { showLocationPicker = true }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    viewModel.removeTrigger(id: trigger.id)
                 } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add location trigger")
-                    }
+                    Label("Delete", systemImage: "trash")
                 }
             }
+        } else {
+            HStack {
+                Label("Add location trigger", systemImage: "plus.circle.fill")
+                Spacer()
+            }
+            .foregroundStyle(.accent)
+            .formRowButton { showLocationPicker = true }
         }
     }
 }
 
 private struct PersonTriggerInlineForm: View {
     @ObservedObject var viewModel: ReminderEditorViewModel
-    @Binding var showContactPicker: Bool
-    @Binding var showAccessDeniedAlert: Bool
-    @State private var manualName: String = ""
+    @Binding var showSheet: Bool
 
     private var existingTrigger: ReminderTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .person })
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let trigger = existingTrigger {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        TextField("Name", text: Binding(
-                            get: { trigger.person?.name ?? "" },
-                            set: { newName in
-                                var updated = trigger
-                                updated.person = .init(
-                                    name: newName,
-                                    contactIdentifier: trigger.person?.contactIdentifier
-                                )
-                                viewModel.updateTrigger(id: trigger.id, with: updated)
-                            }
-                        ))
-
-                        Button(action: {
-                            Task {
-                                await requestContactsAndShow()
-                            }
-                        }) {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                                .foregroundStyle(.blue)
-                        }
-                        .buttonStyle(.borderless)
-                    }
-
+        if let trigger = existingTrigger {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trigger.person?.name ?? "No name")
+                        .font(.body)
+                        .foregroundStyle(.primary)
                     if let contactId = trigger.person?.contactIdentifier, !contactId.isEmpty {
-                        HStack {
-                            Text("Contact linked")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
+                        HStack(spacing: 4) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.green)
-                        }
-                    }
-
-                    Divider()
-
-                    Button(role: .destructive) {
-                        viewModel.removeTrigger(id: trigger.id)
-                    } label: {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Remove")
+                            Text("Contact linked")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
-            } else {
-                Button {
-                    viewModel.addPersonTrigger(name: "", identifier: nil)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .formRowButton { showSheet = true }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    viewModel.removeTrigger(id: trigger.id)
                 } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add person trigger")
-                    }
+                    Label("Delete", systemImage: "trash")
                 }
             }
-        }
-    }
-
-    private func requestContactsAndShow() async {
-        let status = ContactAccessHelper.checkAuthorizationStatus()
-
-        switch status {
-        case .authorized:
-            showContactPicker = true
-        case .notDetermined:
-            let granted = await ContactAccessHelper.requestAccess()
-            if granted {
-                showContactPicker = true
-            } else {
-                showAccessDeniedAlert = true
+        } else {
+            HStack {
+                Label("Add person trigger", systemImage: "plus.circle.fill")
+                Spacer()
             }
-        case .denied, .restricted:
-            showAccessDeniedAlert = true
-        case .limited:
-            showContactPicker = true
-        @unknown default:
-            showAccessDeniedAlert = true
+            .foregroundStyle(.accent)
+            .formRowButton { showSheet = true }
         }
     }
 }
@@ -681,6 +609,132 @@ private struct WeekdayTriggerSheet: View {
     private func weekdayName(for day: Int) -> String {
         let formatter = DateFormatter()
         return formatter.weekdaySymbols[(day - 1) % formatter.weekdaySymbols.count]
+    }
+}
+
+private struct PersonTriggerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: ReminderEditorViewModel
+    @Binding var showContactPicker: Bool
+    @Binding var showAccessDeniedAlert: Bool
+    @State private var name: String
+    @State private var contactIdentifier: String
+
+    private var existingTrigger: ReminderTriggerDraft? {
+        viewModel.triggers.first(where: { $0.type == .person })
+    }
+
+    init(viewModel: ReminderEditorViewModel, showContactPicker: Binding<Bool>, showAccessDeniedAlert: Binding<Bool>) {
+        self.viewModel = viewModel
+        self._showContactPicker = showContactPicker
+        self._showAccessDeniedAlert = showAccessDeniedAlert
+
+        let trigger = viewModel.triggers.first(where: { $0.type == .person })
+        _name = State(initialValue: trigger?.person?.name ?? "")
+        _contactIdentifier = State(initialValue: trigger?.person?.contactIdentifier ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Contact Information") {
+                    HStack {
+                        TextField("Name", text: $name)
+
+                        Button(action: {
+                            Task {
+                                await requestContactsAndShow()
+                            }
+                        }) {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+
+                    if !contactIdentifier.isEmpty {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("Contact linked")
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.caption)
+                    }
+                }
+
+                Section {
+                    Text("You can manually enter a name or select a contact from your contacts.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle(existingTrigger == nil ? "Add Person Trigger" : "Edit Person Trigger")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(existingTrigger == nil ? "Add" : "Save") {
+                        if let trigger = existingTrigger {
+                            var updated = trigger
+                            updated.person = .init(
+                                name: name,
+                                contactIdentifier: contactIdentifier.isEmpty ? nil : contactIdentifier
+                            )
+                            viewModel.updateTrigger(id: trigger.id, with: updated)
+                        } else {
+                            viewModel.addPersonTrigger(
+                                name: name,
+                                identifier: contactIdentifier.isEmpty ? nil : contactIdentifier
+                            )
+                        }
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .sheet(isPresented: $showContactPicker) {
+                ContactPickerView { contactName, contactId in
+                    name = contactName
+                    contactIdentifier = contactId ?? ""
+                    showContactPicker = false
+                }
+            }
+            .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } message: {
+                Text("Please allow access to contacts in Settings to select a person from your contacts.")
+            }
+        }
+    }
+
+    private func requestContactsAndShow() async {
+        let status = ContactAccessHelper.checkAuthorizationStatus()
+
+        switch status {
+        case .authorized:
+            showContactPicker = true
+        case .notDetermined:
+            let granted = await ContactAccessHelper.requestAccess()
+            if granted {
+                showContactPicker = true
+            } else {
+                showAccessDeniedAlert = true
+            }
+        case .denied, .restricted:
+            showAccessDeniedAlert = true
+        case .limited:
+            showContactPicker = true
+        @unknown default:
+            showAccessDeniedAlert = true
+        }
     }
 }
 
