@@ -124,39 +124,12 @@ struct TimelineView: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        Menu {
-                            Section("Quick Actions") {
-                                Button(action: { viewModel.refresh(force: true) }) {
-                                    Label("Refresh", systemImage: "arrow.clockwise")
-                                }
-                                .tint(accentColor)
-                            }
-
-                            Section("Filter Options") {
-                                Button(action: {
-                                    withAnimation {
-                                        viewModel.toggleShowCompleted()
-                                    }
-                                }) {
-                                    Label(
-                                        viewModel.showCompleted ? "Hide Completed" : "Show Completed",
-                                        systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
-                                    )
-                                }
-                                .tint(accentColor)
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                        .tint(accentColor)
-
-                        Button(action: onCreateReminder) {
-                            Image(systemName: "plus")
-                        }
-                        .tint(accentColor)
-                        .accessibilityLabel("Create Reminder")
+                    Button(action: onCreateReminder) {
+                        Image(systemName: "plus")
                     }
+                    .buttonStyle(.glassProminent)
+                    .tint(accentColor)
+                    .accessibilityLabel("Create Reminder")
                 }
             }
         }
@@ -167,6 +140,22 @@ struct TimelineView: View {
         .sheet(isPresented: $showFilterSheet) {
             NavigationStack {
                 List {
+                    Section("Display") {
+                        Toggle(
+                            isOn: Binding(
+                                get: { viewModel.showCompleted },
+                                set: { newValue in
+                                    withAnimation {
+                                        viewModel.showCompleted = newValue
+                                    }
+                                }
+                            )
+                        ) {
+                            Label("Show Completed", systemImage: viewModel.showCompleted ? "eye" : "eye.slash")
+                        }
+                        .tint(accentColor)
+                    }
+
                     Section("Time") {
                         filterButton(.today)
                         filterButton(.overdue)

@@ -154,6 +154,7 @@ struct NotesView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .buttonStyle(.glassProminent)
                     .tint(accentColor)
                     .accessibilityLabel("Create Note or Folder")
                 }
