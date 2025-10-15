@@ -141,22 +141,22 @@ struct NotesView: View {
             .listStyle(.insetGrouped)
             .navigationTitle("Notes")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button(action: onCreateNote) {
-                            Label("New Note", systemImage: "square.and.pencil")
-                        }
-                        .tint(accentColor)
-                        Button(action: { showingCreateFolder = true }) {
-                            Label("New Folder", systemImage: "folder.badge.plus")
-                        }
-                        .tint(accentColor)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingCreateFolder = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "folder.badge.plus")
+                    }
+                    .tint(accentColor)
+                    .accessibilityLabel("Create Folder")
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: onCreateNote) {
+                        Image(systemName: "square.and.pencil")
                     }
                     .buttonStyle(.glassProminent)
                     .tint(accentColor)
-                    .accessibilityLabel("Create Note or Folder")
+                    .accessibilityLabel("Create Note")
                 }
             }
             .sheet(isPresented: $showingCreateFolder) {
@@ -377,6 +377,7 @@ struct FolderNotesView: View {
     let onEditNote: (NoteModel) -> Void
     let onDeleteNote: (NoteModel) -> Void
     let onTogglePin: (NoteModel) -> Void
+    private let accentColor = Color("AccentColor")
 
     @State private var searchText = ""
 
@@ -433,6 +434,9 @@ struct FolderNotesView: View {
                 Button(action: onCreateNote) {
                     Image(systemName: "square.and.pencil")
                 }
+                .buttonStyle(.glassProminent)
+                .tint(accentColor)
+                .accessibilityLabel("Create Note")
             }
         }
     }
