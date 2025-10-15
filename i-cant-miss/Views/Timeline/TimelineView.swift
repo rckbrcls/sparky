@@ -201,7 +201,6 @@ struct TimelineView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
-            .presentationBackground(.glass)
             .presentationCornerRadius(32)
         }
         .alert("Something went wrong", isPresented: Binding(
