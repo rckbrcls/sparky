@@ -71,24 +71,6 @@ struct ReminderEditorView: View {
                 } header: {
                     Label("Person", systemImage: "person.crop.circle")
                 }
-
-                if let important = viewModel.importantDate {
-                    Section("Important Date") {
-                        Text(important.title)
-                        Text("Occurs on \(important.date.formatted(date: .long, time: .omitted))")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        ForEach(important.leadTimes) { lead in
-                            Text("Notify \(lead.offset.formattedLeadTime)")
-                                .font(.caption)
-                        }
-                        Button(role: .destructive) {
-                            viewModel.importantDate = nil
-                        } label: {
-                            Label("Remove important date", systemImage: "trash")
-                        }
-                    }
-                }
             }
             .onAppear {
                 viewModel.loadData()
@@ -411,33 +393,6 @@ private struct PersonTriggerInlineForm: View {
             }
             .foregroundStyle(.accent)
             .formRowButton { showSheet = true }
-        }
-    }
-}
-
-private extension TimeInterval {
-    var formattedLeadTime: String {
-        let minutes = self / 60
-        if minutes >= 1440 {
-            let days = Int(minutes / 1440)
-            return "\(days) day\(days == 1 ? "" : "s") before"
-        } else if minutes >= 60 {
-            let hours = Int(minutes / 60)
-            return "\(hours) hour\(hours == 1 ? "" : "s") before"
-        } else {
-            let mins = Int(minutes)
-            return "\(mins) minute\(mins == 1 ? "" : "s") before"
-        }
-    }
-}
-
-private extension RecurrenceRule.Frequency {
-    var title: String {
-        switch self {
-        case .daily: return "Daily"
-        case .weekly: return "Weekly"
-        case .monthly: return "Monthly"
-        case .yearly: return "Yearly"
         }
     }
 }

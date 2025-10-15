@@ -98,6 +98,17 @@ struct RecurrenceRule: Hashable, Codable {
     }
 }
 
+extension RecurrenceRule.Frequency {
+    var title: String {
+        switch self {
+        case .daily: return "Daily"
+        case .weekly: return "Weekly"
+        case .monthly: return "Monthly"
+        case .yearly: return "Yearly"
+        }
+    }
+}
+
 struct SpacedRepetitionSchedule: Hashable, Codable {
     let stages: [Int]
     var currentStageIndex: Int

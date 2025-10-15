@@ -13,6 +13,86 @@ struct ReminderRowView: View {
         reminder.nextFireDate()
     }
 
+    private var displayTriggers: [TriggerDisplayItem] {
+        var items: [TriggerDisplayItem] = []
+        if let schedule = scheduleBadgeData {
+            items.append(.schedule(schedule))
+        }
+        let additional = reminder.triggers.filter { $0.type != .time && $0.type != .dayOfWeek }
+        items.append(contentsOf: additional.map { TriggerDisplayItem.trigger($0) })
+        return items
+    }
+
+    private var scheduleBadgeData: ScheduleBadgeData? {
+        let timeTrigger = reminder.triggers.first(where: { $0.type == .time })
+        let weekdayTrigger = reminder.triggers.first(where: { $0.type == .dayOfWeek })
+
+        guard timeTrigger != nil || weekdayTrigger != nil else { return nil }
+
+        let scheduleId = timeTrigger?.id ?? weekdayTrigger?.id ?? UUID()
+        let weekdayMask = weekdayTrigger?.weekdayMask ?? 0
+        let hasWeekdays = weekdayMask != 0
+        let scheduleDate = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate
+
+        var primary: String
+        var detailParts: [String] = []
+
+        if let fireDate = timeTrigger?.fireDate {
+            primary = fireDate.formatted(date: .abbreviated, time: .shortened)
+        } else if hasWeekdays {
+            primary = weekdaySummary(mask: weekdayMask)
+        } else if let fireDate = scheduleDate {
+            primary = fireDate.formatted(date: .abbreviated, time: .shortened)
+        } else {
+            primary = "Schedule"
+        }
+
+        if let recurrence = timeTrigger?.recurrenceRule {
+            detailParts.append(recurrenceDescription(recurrence))
+        }
+
+        if hasWeekdays {
+            let summary = weekdaySummary(mask: weekdayMask)
+            if summary != primary {
+                detailParts.append(summary)
+            }
+        }
+
+        if timeTrigger == nil, let fireDate = scheduleDate {
+            let timeText = fireDate.formatted(date: .omitted, time: .shortened)
+            if !timeText.isEmpty {
+                detailParts.append(timeText)
+            }
+        }
+
+        return ScheduleBadgeData(
+            id: scheduleId,
+            primary: primary,
+            detail: detailParts.isEmpty ? nil : detailParts.joined(separator: " • ")
+        )
+    }
+
+    private func recurrenceDescription(_ recurrence: RecurrenceRule) -> String {
+        var text = "Repeats \(recurrence.frequency.title.lowercased())"
+        if recurrence.interval > 1 {
+            text += " every \(recurrence.interval)"
+        }
+        return text
+    }
+
+    private func weekdaySummary(mask: Int16) -> String {
+        guard mask != 0 else { return "Weekdays" }
+        let formatter = DateFormatter()
+        let symbols = formatter.shortWeekdaySymbols ?? []
+        guard !symbols.isEmpty else { return "Weekdays" }
+        let days = (1...7).compactMap { day -> String? in
+            let bit = 1 << day
+            guard mask & Int16(bit) != 0 else { return nil }
+            return symbols[(day - 1) % symbols.count]
+        }
+        return days.isEmpty ? "Weekdays" : days.joined(separator: ", ")
+    }
+
     private var statusText: String {
         switch reminder.status {
         case .active:
@@ -60,10 +140,15 @@ struct ReminderRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Triggers section
-            if !reminder.triggers.isEmpty {
+            if !displayTriggers.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    ForEach(reminder.triggers, id: \.id) { trigger in
-                        TriggerBadge(trigger: trigger)
+                    ForEach(displayTriggers) { item in
+                        switch item {
+                        case .schedule(let data):
+                            ScheduleBadge(data: data)
+                        case .trigger(let trigger):
+                            TriggerBadge(trigger: trigger)
+                        }
                     }
                 }
                 .padding(.bottom, 12)
@@ -179,6 +264,62 @@ private struct TriggerBadge: View {
                 Text(labelText)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(.tertiarySystemGroupedBackground))
+        .cornerRadius(.infinity)
+    }
+}
+
+private enum TriggerDisplayItem: Identifiable {
+    case schedule(ScheduleBadgeData)
+    case trigger(ReminderTriggerModel)
+
+    var id: UUID {
+        switch self {
+        case .schedule(let data):
+            return data.id
+        case .trigger(let trigger):
+            return trigger.id
+        }
+    }
+}
+
+private struct ScheduleBadgeData: Identifiable {
+    let id: UUID
+    let primary: String
+    let detail: String?
+}
+
+private struct ScheduleBadge: View {
+    let data: ScheduleBadgeData
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.title3)
+                .foregroundStyle(.primary)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Schedule")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                Text(data.primary)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+
+                if let detail = data.detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
