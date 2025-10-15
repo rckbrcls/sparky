@@ -120,7 +120,7 @@ struct TimelineView: View {
                         }
                         .foregroundColor(.primary)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glass)
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -189,6 +189,7 @@ struct TimelineView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
                 .navigationTitle("Filters")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -200,6 +201,8 @@ struct TimelineView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+            .presentationBackground(.glass)
+            .presentationCornerRadius(32)
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
