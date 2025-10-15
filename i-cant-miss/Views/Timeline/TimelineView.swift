@@ -14,6 +14,7 @@ struct TimelineView: View {
     let onCreateReminder: () -> Void
     let onEditReminder: (ReminderModel) -> Void
     @State private var showTriggers = false
+    @State private var showFilterSheet = false
     private let accentColor = Color("AccentColor")
 
     init(environment: AppEnvironment,
@@ -101,30 +102,8 @@ struct TimelineView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    Menu {
-                        // Time-based filters
-                        Section("Time") {
-                            filterButton(.today)
-                            filterButton(.overdue)
-                            filterButton(.thisWeek)
-                            filterButton(.upcoming)
-                        }
-
-                        // Organization filters
-                        Section("Organization") {
-                            filterButton(.byPriority)
-                            filterButton(.byTriggerType)
-                        }
-
-                        // Special filters
-                        Section("Special") {
-                            filterButton(.recurring)
-                            filterButton(.noTriggers)
-                        }
-
-                        Divider()
-
-                        filterButton(.all)
+                    Button {
+                        showFilterSheet = true
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: viewModel.filter.iconName)
@@ -141,6 +120,7 @@ struct TimelineView: View {
                         }
                         .foregroundColor(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -183,6 +163,43 @@ struct TimelineView: View {
         .sheet(isPresented: $showTriggers) {
             TriggersView(environment: environment,
                          onEditReminder: onEditReminder)
+        }
+        .sheet(isPresented: $showFilterSheet) {
+            NavigationStack {
+                List {
+                    Section("Time") {
+                        filterButton(.today)
+                        filterButton(.overdue)
+                        filterButton(.thisWeek)
+                        filterButton(.upcoming)
+                    }
+
+                    Section("Organization") {
+                        filterButton(.byPriority)
+                        filterButton(.byTriggerType)
+                    }
+
+                    Section("Special") {
+                        filterButton(.recurring)
+                        filterButton(.noTriggers)
+                    }
+
+                    Section {
+                        filterButton(.all)
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .navigationTitle("Filters")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") {
+                            showFilterSheet = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -274,6 +291,7 @@ struct TimelineView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 viewModel.filter = filter
             }
+            showFilterSheet = false
         }) {
             HStack {
                 Label(filter.title, systemImage: filter.iconName)
