@@ -38,7 +38,6 @@ enum ReminderTriggerType: String, CaseIterable, Identifiable {
     case dayOfWeek
     case location
     case person
-    case importantDate
 
     var id: String { rawValue }
 
@@ -48,7 +47,6 @@ enum ReminderTriggerType: String, CaseIterable, Identifiable {
         case .dayOfWeek: return "calendar"
         case .location: return "mappin.and.ellipse"
         case .person: return "person.crop.circle"
-        case .importantDate: return "gift"
         }
     }
 
@@ -58,7 +56,6 @@ enum ReminderTriggerType: String, CaseIterable, Identifiable {
         case .dayOfWeek: return "Weekday"
         case .location: return "Location"
         case .person: return "Person"
-        case .importantDate: return "Important Date"
         }
     }
 }
@@ -132,16 +129,6 @@ struct SpacedRepetitionSchedule: Hashable, Codable {
     }
 }
 
-struct LeadTimeConfiguration: Hashable, Codable, Identifiable {
-    let id: UUID
-    let offset: TimeInterval
-
-    init(id: UUID = UUID(), offset: TimeInterval) {
-        self.id = id
-        self.offset = offset
-    }
-}
-
 struct ReminderTriggerModel: Identifiable, Hashable {
     let id: UUID
     let type: ReminderTriggerType
@@ -182,7 +169,6 @@ struct ReminderModel: Identifiable, Hashable {
     var lastCompletionDate: Date?
     var snoozeCount: Int
     var triggers: [ReminderTriggerModel]
-    var importantDate: ImportantDateModel?
 
     var isArchived: Bool {
         status == .archived
@@ -251,7 +237,6 @@ struct ReminderDraft {
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var triggers: [ReminderTriggerDraft] = []
-    var importantDate: ImportantDateModel?
 }
 
 extension ReminderTriggerDraft {
@@ -300,17 +285,6 @@ struct TagModel: Identifiable, Hashable {
     var colorHex: String?
 }
 
-struct ImportantDateModel: Identifiable, Hashable {
-    let id: UUID
-    var title: String
-    var date: Date
-    var personName: String?
-    var isBirthday: Bool
-    var createdAt: Date
-    var updatedAt: Date
-    var leadTimes: [LeadTimeConfiguration]
-}
-
 // MARK: - Mapping helpers
 
 extension Reminder {
@@ -349,8 +323,7 @@ extension Reminder {
             snoozeCount: Int(snoozeCount),
             triggers: triggerSet
                 .map { $0.toModel() }
-                .sorted(by: { ($0.fireDate ?? .distantFuture) < ($1.fireDate ?? .distantFuture) }),
-            importantDate: importantDate?.toModel()
+                .sorted(by: { ($0.fireDate ?? .distantFuture) < ($1.fireDate ?? .distantFuture) })
         )
     }
 }
@@ -475,29 +448,6 @@ extension Tag {
     }
 }
 
-extension ImportantDate {
-    var leadTimeSet: Set<ImportantDateLeadTime> {
-        (leadTimes as? Set<ImportantDateLeadTime>) ?? []
-    }
-
-    func toModel() -> ImportantDateModel {
-        let leadTimesSet = self.leadTimeSet
-
-        return ImportantDateModel(
-            id: id ?? UUID(),
-            title: title ?? "Important Date",
-            date: date ?? Date(),
-            personName: personName,
-            isBirthday: isBirthday,
-            createdAt: createdAt ?? Date(),
-            updatedAt: updatedAt ?? Date(),
-            leadTimes: leadTimesSet
-                .map { LeadTimeConfiguration(id: $0.id ?? UUID(), offset: TimeInterval($0.offsetSeconds)) }
-                .sorted(by: { $0.offset < $1.offset })
-        )
-    }
-}
-
 // MARK: - ReminderModel Extensions
 
 extension ReminderModel {
@@ -539,8 +489,6 @@ extension ReminderTriggerModel {
             return nextTimeTriggerDate(after: date)
         case .dayOfWeek:
             return nextWeekdayTriggerDate(after: date)
-        case .importantDate:
-            return fireDate
         case .location, .person:
             // Location and person triggers don't have specific fire dates
             return nil

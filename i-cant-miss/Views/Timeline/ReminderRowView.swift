@@ -223,11 +223,6 @@ private struct TriggerBadge: View {
             return trigger.location?.name ?? "Location"
         case .person:
             return trigger.person?.name ?? "Person"
-        case .importantDate:
-            if let date = trigger.fireDate {
-                return date.formatted(date: .abbreviated, time: .omitted)
-            }
-            return "Important date"
         }
     }
 
@@ -241,8 +236,6 @@ private struct TriggerBadge: View {
             return "Location"
         case .person:
             return "Contact"
-        case .importantDate:
-            return "Important Date"
         }
     }
 
@@ -365,19 +358,16 @@ private struct ScheduleBadge: View {
         ignoreCount: 0
     )
 
-
-
-
-    let importantDateTrigger = ReminderTriggerModel(
+    let locationTrigger = ReminderTriggerModel(
         id: UUID(),
-        type: .importantDate,
-        fireDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()),
-        startDate: Date(),
+        type: .location,
+        fireDate: nil,
+        startDate: nil,
         recurrenceRule: nil,
         timeZoneIdentifier: TimeZone.current.identifier,
         weekdayMask: 0,
         isActive: true,
-        location: nil,
+        location: .init(latitude: 37.3349, longitude: -122.0090, radius: 150, name: "Office", event: .onEntry),
         person: nil,
         spacedStage: 0,
         lastReviewDate: nil,
@@ -394,8 +384,7 @@ private struct ScheduleBadge: View {
         updatedAt: Date(),
         lastCompletionDate: nil,
         snoozeCount: 1,
-        triggers: [timeTrigger, weekdayTrigger, importantDateTrigger],
-        importantDate: nil
+        triggers: [timeTrigger, weekdayTrigger, locationTrigger]
     )
     ReminderRowView(reminder: reminder)
         .padding()

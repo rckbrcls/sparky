@@ -15,7 +15,6 @@ final class ReminderEditorViewModel: ObservableObject {
     @Published var priority: ReminderPriority = .medium
     @Published var status: ReminderStatus = .active
     @Published var triggers: [ReminderTriggerDraft] = []
-    @Published var importantDate: ImportantDateModel?
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
 
@@ -35,7 +34,6 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = freshReminder.priority
             self.status = freshReminder.status
             self.triggers = freshReminder.triggers.map(ReminderEditorViewModel.draft(from:))
-            self.importantDate = freshReminder.importantDate
         } else if let reminderId = reminder?.id,
                   let existingReminder = environment.reminderService.reminders.first(where: { $0.id == reminderId }) {
             self.title = existingReminder.title
@@ -43,7 +41,6 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = existingReminder.priority
             self.status = existingReminder.status
             self.triggers = existingReminder.triggers.map(ReminderEditorViewModel.draft(from:))
-            self.importantDate = existingReminder.importantDate
         } else {
             // New reminder or not found in service - use defaults
             self.title = reminder?.title ?? ""
@@ -51,7 +48,6 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = reminder?.priority ?? environment.settings.defaultReminderPriority
             self.status = reminder?.status ?? .active
             self.triggers = reminder?.triggers.map(ReminderEditorViewModel.draft(from:)) ?? []
-            self.importantDate = reminder?.importantDate
         }
     }
     func loadData() {
@@ -63,7 +59,6 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = updatedReminder.priority
             self.status = updatedReminder.status
             self.triggers = updatedReminder.triggers.map(ReminderEditorViewModel.draft(from:))
-            self.importantDate = updatedReminder.importantDate
         }
     }
 
@@ -142,7 +137,6 @@ final class ReminderEditorViewModel: ObservableObject {
                 updated.status = status
                 updated.priority = priority
                 updated.triggers = triggers.map { $0.toModel() }
-                updated.importantDate = importantDate
                 updated.updatedAt = Date()
 
                 _ = try await environment.reminderService.updateReminder(updated)
@@ -154,8 +148,7 @@ final class ReminderEditorViewModel: ObservableObject {
                     priority: priority,
                     createdAt: Date(),
                     updatedAt: Date(),
-                    triggers: triggers,
-                    importantDate: importantDate
+                    triggers: triggers
                 )
                 _ = try await environment.reminderService.createReminder(from: draft)
             }

@@ -62,7 +62,7 @@ final class ReminderService: ObservableObject {
                 NSSortDescriptor(keyPath: \Reminder.createdAt, ascending: false)
             ]
             // Prefetch relationships to avoid faulting issues
-            request.relationshipKeyPathsForPrefetching = ["triggers", "importantDate", "importantDate.leadTimes"]
+            request.relationshipKeyPathsForPrefetching = ["triggers"]
             let results = try context.fetch(request)
             reminderModels = results.map { $0.toModel() }
         } catch {
@@ -233,12 +233,6 @@ final class ReminderService: ObservableObject {
 
                     try self.syncTriggers(of: reminder, with: model.triggers, context: context)
 
-                    if let importantModel = model.importantDate {
-                        try self.syncImportantDate(for: reminder, model: importantModel, context: context)
-                    } else {
-                        reminder.importantDate = nil
-                    }
-
                     try context.save()
 
                     continuation.resume(returning: reminder.objectID)
@@ -336,7 +330,7 @@ final class ReminderService: ObservableObject {
         do {
             let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
             request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-            request.relationshipKeyPathsForPrefetching = ["triggers", "importantDate", "importantDate.leadTimes"]
+            request.relationshipKeyPathsForPrefetching = ["triggers"]
             request.fetchLimit = 1
 
             guard let reminder = try context.fetch(request).first else {
@@ -455,7 +449,7 @@ final class ReminderService: ObservableObject {
                         NSSortDescriptor(keyPath: \Reminder.updatedAt, ascending: false)
                     ]
                     // Prefetch relationships to avoid faulting issues
-                    request.relationshipKeyPathsForPrefetching = ["triggers", "importantDate", "importantDate.leadTimes"]
+                    request.relationshipKeyPathsForPrefetching = ["triggers"]
                     let entities = try context.fetch(request)
                     continuation.resume(returning: entities.map { $0.toModel() })
                 } catch {
@@ -512,10 +506,6 @@ final class ReminderService: ObservableObject {
             }
 
             reminder.addToTriggers(trigger)
-        }
-
-        if let importantDate = draft.importantDate {
-            try syncImportantDate(for: reminder, model: importantDate, context: context)
         }
 
         return reminder
@@ -613,36 +603,6 @@ final class ReminderService: ObservableObject {
         }
     }
 
-    private func syncImportantDate(for reminder: Reminder, model: ImportantDateModel, context: NSManagedObjectContext) throws {
-        let entity = reminder.importantDate ?? ImportantDate(context: context)
-        entity.id = model.id
-        entity.title = model.title
-        entity.personName = model.personName
-        entity.isBirthday = model.isBirthday
-        entity.date = model.date
-        entity.createdAt = model.createdAt
-        entity.updatedAt = model.updatedAt
-        entity.reminder = reminder
-
-        let existingLeadTimes = Dictionary(uniqueKeysWithValues: entity.leadTimeSet.map { ($0.id, $0) })
-
-        for leadModel in model.leadTimes {
-            if let leadEntity = existingLeadTimes[leadModel.id] {
-                leadEntity.offsetSeconds = Int64(leadModel.offset)
-            } else {
-                let lead = ImportantDateLeadTime(context: context)
-                lead.id = leadModel.id
-                lead.offsetSeconds = Int64(leadModel.offset)
-                lead.importantDate = entity
-            }
-        }
-
-        for (id, entity) in existingLeadTimes where !model.leadTimes.contains(where: { $0.id == id }) {
-            context.delete(entity)
-        }
-
-        reminder.importantDate = entity
-    }
 }
 
 // MARK: - ReminderModel helpers
@@ -658,7 +618,7 @@ extension ReminderModel {
 extension ReminderTriggerModel {
     func nextFireDate(from reference: Date = Date()) -> Date? {
         switch type {
-        case .time, .importantDate:
+        case .time:
             return fireDate
         case .dayOfWeek:
             return nextWeekdayOccurrence(from: reference)

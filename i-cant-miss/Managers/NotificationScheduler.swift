@@ -66,26 +66,6 @@ final class NotificationScheduler {
                                                                 repeats: trigger.recurrenceRule != nil)
                 let request = UNNotificationRequest(identifier: identifier, content: content, trigger: triggerDate)
                 requests.append(request)
-            case .importantDate:
-                guard let fireDate = trigger.fireDate ?? reminder.importantDate?.date else { continue }
-                let identifier = notificationIdentifier(reminderID: reminder.id, triggerID: trigger.id)
-                let components = Calendar.current.dateComponents([.month, .day, .hour, .minute], from: fireDate)
-                let request = UNNotificationRequest(identifier: identifier,
-                                                    content: content,
-                                                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))
-                requests.append(request)
-
-                if let leadTimes = reminder.importantDate?.leadTimes {
-                    for lead in leadTimes {
-                        let date = fireDate.addingTimeInterval(-lead.offset)
-                        guard date > Date() else { continue }
-                        let leadIdentifier = identifier + "-lead-\(lead.id.uuidString)"
-                        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-                        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-                        let request = UNNotificationRequest(identifier: leadIdentifier, content: content, trigger: trigger)
-                        requests.append(request)
-                    }
-                }
             case .dayOfWeek:
                 let weekdayMask = trigger.weekdayMask
                 for day in 1...7 {

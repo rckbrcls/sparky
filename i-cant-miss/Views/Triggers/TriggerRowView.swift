@@ -24,11 +24,6 @@ struct TriggerRowView: View {
             return trigger.location?.name ?? "Location-based"
         case .person:
             return trigger.person?.name ?? "Person interaction"
-        case .importantDate:
-            if let date = trigger.fireDate {
-                return "On \(date.formatted(date: .abbreviated, time: .omitted))"
-            }
-            return "Important date"
         }
     }
 
@@ -38,7 +33,6 @@ struct TriggerRowView: View {
         case .dayOfWeek: return .indigo
         case .location: return .green
         case .person: return .orange
-        case .importantDate: return .pink
         }
     }
 
@@ -109,8 +103,7 @@ struct TriggerRowView: View {
         updatedAt: Date(),
         lastCompletionDate: nil,
         snoozeCount: 0,
-        triggers: [trigger],
-        importantDate: nil
+        triggers: [trigger]
     )
     TriggerRowView(display: .init(id: trigger.id, reminder: reminder, trigger: trigger))
         .padding()

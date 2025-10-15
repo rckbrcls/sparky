@@ -221,27 +221,23 @@ private extension PersistenceController {
         birthdayReminder.userOrder = 1
         birthdayReminder.snoozeCount = 0
 
-        let importantDate = ImportantDate(context: context)
-        importantDate.id = UUID()
-        importantDate.title = "Leo's Birthday"
-        importantDate.personName = "Leo"
-        importantDate.isBirthday = true
-        importantDate.date = calendar.nextDate(after: now, matching: DateComponents(month: 11, day: 5), matchingPolicy: .nextTimePreservingSmallerComponents) ?? now
-        importantDate.createdAt = now
-        importantDate.updatedAt = now
-        importantDate.reminder = birthdayReminder
+        let birthdayDate = calendar.nextDate(
+            after: now,
+            matching: DateComponents(month: 11, day: 5, hour: 10, minute: 0),
+            matchingPolicy: .nextTimePreservingSmallerComponents
+        ) ?? now
 
-        let oneWeekLead = ImportantDateLeadTime(context: context)
-        oneWeekLead.id = UUID()
-        oneWeekLead.offsetSeconds = Int64(7 * 24 * 60 * 60)
-        oneWeekLead.importantDate = importantDate
-
-        let oneDayLead = ImportantDateLeadTime(context: context)
-        oneDayLead.id = UUID()
-        oneDayLead.offsetSeconds = Int64(24 * 60 * 60)
-        oneDayLead.importantDate = importantDate
-
-        importantDate.addToLeadTimes(NSSet(array: [oneWeekLead, oneDayLead]))
+        let birthdayTrigger = ReminderTrigger(context: context)
+        birthdayTrigger.id = UUID()
+        birthdayTrigger.setType(.time)
+        birthdayTrigger.fireDate = birthdayDate
+        birthdayTrigger.startDate = birthdayDate
+        birthdayTrigger.setRecurrence(RecurrenceRule(frequency: .yearly))
+        birthdayTrigger.timeZoneIdentifier = TimeZone.current.identifier
+        birthdayTrigger.isActive = true
+        birthdayTrigger.spacedStage = 0
+        birthdayTrigger.ignoreCount = 0
+        birthdayReminder.addToTriggers(birthdayTrigger)
 
         save(context: context)
     }
