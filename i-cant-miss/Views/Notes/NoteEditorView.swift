@@ -140,6 +140,7 @@ struct NoteEditorView: View {
                             }
                         }
                     }
+                    .scrollContentBackground(.hidden)
                     .navigationTitle("Note Details")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
