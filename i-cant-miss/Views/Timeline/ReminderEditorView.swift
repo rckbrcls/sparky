@@ -517,29 +517,32 @@ private struct ScheduleTriggerSheet: View {
 private struct WeekdaySelectionView: View {
     @Binding var selectedDays: Set<Int>
 
-    private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+    private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 12), count: 7)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            LazyVGrid(columns: columns, spacing: 8) {
+            LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(1...7, id: \.self) { day in
                     let isSelected = selectedDays.contains(day)
                     Button {
                         toggle(day)
                     } label: {
-                        Text(symbol(for: day))
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.systemFill))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-                            )
-                            .foregroundStyle(isSelected ? .accent : .primary)
+                        GeometryReader { proxy in
+                            let diameter = proxy.size.width
+                            Circle()
+                                .fill(isSelected ? Color.accentColor : Color(.tertiarySystemFill))
+                                .overlay(
+                                    Text(symbol(for: day))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(isSelected ? Color(.systemBackground) : .primary)
+                                )
+                                .frame(width: diameter, height: diameter)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
                     }
+                    .aspectRatio(1, contentMode: .fit)
                     .buttonStyle(.plain)
+                    .contentShape(Circle())
                     .accessibilityLabel(fullName(for: day))
                     .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                 }

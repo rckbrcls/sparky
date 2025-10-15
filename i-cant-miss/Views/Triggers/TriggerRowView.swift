@@ -27,15 +27,6 @@ struct TriggerRowView: View {
         }
     }
 
-    private var accentColor: Color {
-        switch display.trigger.type {
-        case .time: return .blue
-        case .dayOfWeek: return .indigo
-        case .location: return .green
-        case .person: return .orange
-        }
-    }
-
     private func weekdaysText(from mask: Int16) -> String {
         guard mask != 0 else { return "Weekdays" }
         let formatter = DateFormatter()
@@ -55,7 +46,7 @@ struct TriggerRowView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: display.trigger.type.systemImage)
-                    .foregroundStyle(accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text(display.reminder.title)
                     .font(.headline)
                 Spacer()
