@@ -163,6 +163,12 @@ struct TimelineView: View {
                         filterButton(.upcoming)
                     }
 
+                    Section("Triggers") {
+                        filterButton(.timeTriggers)
+                        filterButton(.locationTriggers)
+                        filterButton(.personTriggers)
+                    }
+
                     Section("Organization") {
                         filterButton(.byPriority)
                         filterButton(.byTriggerType)
@@ -230,6 +236,12 @@ struct TimelineView: View {
             return "No Prioritized Items"
         case .byTriggerType:
             return "No Reminders"
+        case .timeTriggers:
+            return "No Scheduled Reminders"
+        case .locationTriggers:
+            return "No Location Reminders"
+        case .personTriggers:
+            return "No People Reminders"
         case .recurring:
             return "No Recurring Reminders"
         case .noTriggers:
@@ -253,6 +265,12 @@ struct TimelineView: View {
             return "Create reminders with different priorities."
         case .byTriggerType:
             return "Create reminders to see them organized by type."
+        case .timeTriggers:
+            return "Set up reminders based on dates or schedules."
+        case .locationTriggers:
+            return "Add locations to get reminded where it matters."
+        case .personTriggers:
+            return "Link reminders to people to see them here."
         case .recurring:
             return "No reminders are set to repeat."
         case .noTriggers:
@@ -312,6 +330,9 @@ private extension ReminderService.TimelineFilter {
         case .thisWeek: return "This Week"
         case .byPriority: return "Priority"
         case .byTriggerType: return "Type"
+        case .timeTriggers: return "Scheduled"
+        case .locationTriggers: return "Location"
+        case .personTriggers: return "People"
         case .recurring: return "Recurring"
         case .noTriggers: return "No Triggers"
         }
@@ -326,6 +347,9 @@ private extension ReminderService.TimelineFilter {
         case .thisWeek: return "calendar.day.timeline.leading"
         case .byPriority: return "exclamationmark.3"
         case .byTriggerType: return "tag"
+        case .timeTriggers: return "clock.badge"
+        case .locationTriggers: return "mappin.and.ellipse"
+        case .personTriggers: return "person.crop.circle"
         case .recurring: return "arrow.clockwise"
         case .noTriggers: return "bell.slash"
         }

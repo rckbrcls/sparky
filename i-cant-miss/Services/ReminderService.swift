@@ -20,6 +20,9 @@ final class ReminderService: ObservableObject {
         case thisWeek
         case byPriority
         case byTriggerType
+        case timeTriggers
+        case locationTriggers
+        case personTriggers
         case recurring
         case noTriggers
     }
@@ -178,6 +181,33 @@ final class ReminderService: ObservableObject {
                 let lhsDate = lhs.nextFireDate() ?? .distantFuture
                 let rhsDate = rhs.nextFireDate() ?? .distantFuture
                 return lhsDate < rhsDate
+            }
+
+        case .timeTriggers:
+            values = activeReminders
+                .filter { model in
+                    model.triggers.contains { trigger in
+                        trigger.isActive && (trigger.type == .time || trigger.type == .dayOfWeek)
+                    }
+                }
+                .sorted { lhs, rhs in
+                    let lhsDate = lhs.nextFireDate() ?? .distantFuture
+                    let rhsDate = rhs.nextFireDate() ?? .distantFuture
+                    return lhsDate < rhsDate
+                }
+
+        case .locationTriggers:
+            values = activeReminders.filter { model in
+                model.triggers.contains { trigger in
+                    trigger.isActive && trigger.type == .location
+                }
+            }
+
+        case .personTriggers:
+            values = activeReminders.filter { model in
+                model.triggers.contains { trigger in
+                    trigger.isActive && trigger.type == .person
+                }
             }
 
         case .recurring:

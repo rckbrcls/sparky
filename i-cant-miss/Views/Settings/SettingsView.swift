@@ -189,6 +189,9 @@ private extension ReminderService.TimelineFilter {
         case .thisWeek: return "This Week"
         case .byPriority: return "Priority"
         case .byTriggerType: return "Type"
+        case .timeTriggers: return "Scheduled"
+        case .locationTriggers: return "Location"
+        case .personTriggers: return "People"
         case .recurring: return "Recurring"
         case .noTriggers: return "No Triggers"
         }

@@ -150,6 +150,8 @@ struct NoteEditorView: View {
                         }
                     }
                 }
+                .presentationDetents([.medium])
+
             }
             .onAppear {
                 viewModel.loadData()
