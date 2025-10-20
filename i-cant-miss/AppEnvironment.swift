@@ -15,6 +15,7 @@ final class AppEnvironment: ObservableObject {
     let folderService: FolderService
     let reminderService: ReminderService
     let noteService: NoteService
+    let todoService: TodoService
     let notificationScheduler: NotificationScheduler
     let geofenceManager: GeofenceManager
     let settings: SettingsStore
@@ -30,6 +31,7 @@ final class AppEnvironment: ObservableObject {
         self.folderService = FolderService(persistence: persistence)
         self.reminderService = ReminderService(persistence: persistence)
         self.noteService = NoteService(persistence: persistence, folderService: folderService)
+        self.todoService = TodoService(persistence: persistence)
         self.notificationScheduler = NotificationScheduler(settings: settings)
         self.geofenceManager = GeofenceManager()
 
@@ -52,8 +54,9 @@ final class AppEnvironment: ObservableObject {
             async let tagsTask = folderService.refreshTags(force: true)
             async let remindersTask = reminderService.refresh(force: true)
             async let notesTask = noteService.refresh(force: true)
+            async let todosTask = todoService.refresh(force: true)
 
-            _ = await (foldersTask, tagsTask, remindersTask, notesTask)
+            _ = await (foldersTask, tagsTask, remindersTask, notesTask, todosTask)
 
             await notificationScheduler.requestAuthorizationIfNeeded()
 

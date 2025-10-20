@@ -270,6 +270,47 @@ struct NoteModel: Identifiable, Hashable {
     var tags: [TagModel]
 }
 
+struct TodoItemModel: Identifiable, Hashable {
+    let id: UUID
+    var title: String
+    var detail: String?
+    var isCompleted: Bool
+    var sortOrder: Int
+    var createdAt: Date
+    var completedAt: Date?
+}
+
+struct TodoListModel: Identifiable, Hashable {
+    let id: UUID
+    var title: String
+    var notes: String?
+    var dueDate: Date?
+    var isPinned: Bool
+    var isArchived: Bool
+    var createdAt: Date
+    var updatedAt: Date
+    var userOrder: Int
+    var items: [TodoItemModel]
+
+    var completionRate: Double {
+        guard !items.isEmpty else { return 0 }
+        let completedCount = items.filter(\.isCompleted).count
+        return Double(completedCount) / Double(items.count)
+    }
+
+    var isCompleted: Bool {
+        !items.isEmpty && items.allSatisfy(\.isCompleted)
+    }
+
+    var pendingItemCount: Int {
+        items.filter { !$0.isCompleted }.count
+    }
+
+    var hasDueDate: Bool {
+        dueDate != nil
+    }
+}
+
 struct FolderModel: Identifiable, Hashable {
     let id: UUID
     var name: String
@@ -425,6 +466,43 @@ extension Note {
             isPinned: isPinned,
             folder: folder?.toModel(),
             tags: tagSet.map { $0.toModel() }.sorted(by: { $0.name < $1.name })
+        )
+    }
+}
+
+extension TodoList {
+    var itemSet: Set<TodoItem> {
+        (items as? Set<TodoItem>) ?? []
+    }
+
+    func toModel() -> TodoListModel {
+        TodoListModel(
+            id: id ?? UUID(),
+            title: title ?? "Todo",
+            notes: notes,
+            dueDate: dueDate,
+            isPinned: isPinned,
+            isArchived: isArchived,
+            createdAt: createdAt ?? Date(),
+            updatedAt: updatedAt ?? Date(),
+            userOrder: Int(userOrder),
+            items: itemSet
+                .map { $0.toModel() }
+                .sorted(by: { $0.sortOrder < $1.sortOrder })
+        )
+    }
+}
+
+extension TodoItem {
+    func toModel() -> TodoItemModel {
+        TodoItemModel(
+            id: id ?? UUID(),
+            title: title ?? "Item",
+            detail: detail,
+            isCompleted: isCompleted,
+            sortOrder: Int(sortOrder),
+            createdAt: createdAt ?? Date(),
+            completedAt: completedAt
         )
     }
 }

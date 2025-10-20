@@ -84,6 +84,28 @@
         <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
         <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Note" inverseName="tags" inverseEntity="Note" syncable="YES"/>
     </entity>
+    <entity name="TodoItem" representedClassName="TodoItem" syncable="YES" codeGenerationType="class">
+        <attribute name="completedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="detail" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isCompleted" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="sortOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="title" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
+        <relationship name="list" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="TodoList" inverseName="items" inverseEntity="TodoList" syncable="YES"/>
+    </entity>
+    <entity name="TodoList" representedClassName="TodoList" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="dueDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isArchived" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="isPinned" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="notes" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="title" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="userOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <relationship name="items" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TodoItem" inverseName="list" inverseEntity="TodoItem" syncable="YES"/>
+    </entity>
     <elements>
         <element name="Folder" positionX="-63" positionY="-18" width="128" height="148"/>
         <element name="ImportantDate" positionX="174" positionY="-18" width="128" height="180"/>
@@ -93,5 +115,7 @@
         <element name="ReminderSnooze" positionX="405" positionY="154" width="128" height="132"/>
         <element name="ReminderTrigger" positionX="636" positionY="154" width="128" height="324"/>
         <element name="Tag" positionX="405" positionY="12" width="128" height="116"/>
+        <element name="TodoItem" positionX="642" positionY="-18" width="128" height="208"/>
+        <element name="TodoList" positionX="642" positionY="154" width="128" height="220"/>
     </elements>
 </model>

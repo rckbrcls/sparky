@@ -239,6 +239,62 @@ private extension PersistenceController {
         birthdayTrigger.ignoreCount = 0
         birthdayReminder.addToTriggers(birthdayTrigger)
 
+        let errandsList = TodoList(context: context)
+        errandsList.id = UUID()
+        errandsList.title = "Weekend errands"
+        errandsList.notes = "Finish before Sunday afternoon."
+        errandsList.createdAt = now
+        errandsList.updatedAt = now
+        errandsList.dueDate = calendar.date(byAdding: .day, value: 2, to: now)
+        errandsList.isPinned = true
+        errandsList.isArchived = false
+        errandsList.userOrder = 0
+
+        let buyGift = TodoItem(context: context)
+        buyGift.id = UUID()
+        buyGift.title = "Pick up birthday gift"
+        buyGift.detail = "Check the wishlist for ideas."
+        buyGift.isCompleted = false
+        buyGift.sortOrder = 0
+        buyGift.createdAt = now
+        buyGift.list = errandsList
+
+        let washCar = TodoItem(context: context)
+        washCar.id = UUID()
+        washCar.title = "Wash the car"
+        washCar.detail = "Use the quick detailer spray after washing."
+        washCar.isCompleted = true
+        washCar.sortOrder = 1
+        washCar.createdAt = calendar.date(byAdding: .day, value: -1, to: now)
+        washCar.completedAt = now
+        washCar.list = errandsList
+
+        let selfCareList = TodoList(context: context)
+        selfCareList.id = UUID()
+        selfCareList.title = "Self-care checklist"
+        selfCareList.createdAt = now
+        selfCareList.updatedAt = now
+        selfCareList.isPinned = false
+        selfCareList.isArchived = false
+        selfCareList.userOrder = 1
+
+        let stretchItem = TodoItem(context: context)
+        stretchItem.id = UUID()
+        stretchItem.title = "Morning stretch"
+        stretchItem.isCompleted = false
+        stretchItem.sortOrder = 0
+        stretchItem.createdAt = now
+        stretchItem.list = selfCareList
+
+        let journalItem = TodoItem(context: context)
+        journalItem.id = UUID()
+        journalItem.title = "Journal three things you are grateful for"
+        journalItem.detail = "Use the small notebook on the desk."
+        journalItem.isCompleted = false
+        journalItem.sortOrder = 1
+        journalItem.createdAt = now
+        journalItem.list = selfCareList
+
         save(context: context)
     }
 }

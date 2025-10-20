@@ -15,6 +15,8 @@ struct ContentView: View {
     @State private var showNoteForCreate = false
     @State private var selectedReminder: ReminderModel?
     @State private var selectedNote: NoteModel?
+    @State private var showTodoForCreate = false
+    @State private var selectedTodoList: TodoListModel?
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -41,6 +43,16 @@ struct ContentView: View {
                 Label("Notes", systemImage: "square.and.pencil")
             }
             .tag(TabRouter.Selection.notes)
+
+            TodosView(environment: environment,
+                      onCreateList: { showTodoForCreate = true },
+                      onEditList: { list in
+                          selectedTodoList = environment.todoService.fetchListWithItems(id: list.id) ?? list
+                      })
+            .tabItem {
+                Label("To-dos", systemImage: "checklist")
+            }
+            .tag(TabRouter.Selection.todos)
 
             SettingsView(environment: environment)
                 .tabItem {
@@ -72,6 +84,18 @@ struct ContentView: View {
                 existingNote: note
             )
         }
+        .sheet(isPresented: $showTodoForCreate) {
+            TodoEditorView(
+                environment: environment,
+                existingList: nil
+            )
+        }
+        .sheet(item: $selectedTodoList) { list in
+            TodoEditorView(
+                environment: environment,
+                existingList: list
+            )
+        }
     }
 }
 
@@ -79,6 +103,7 @@ final class TabRouter: ObservableObject {
     enum Selection {
         case timeline
         case notes
+        case todos
         case settings
     }
 

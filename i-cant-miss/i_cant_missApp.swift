@@ -28,6 +28,7 @@ struct i_cant_missApp: App {
                             await appEnvironment.reminderService.refresh(force: false)
                             await appEnvironment.folderService.refreshFolders(force: false)
                             await appEnvironment.folderService.refreshTags(force: false)
+                            await appEnvironment.todoService.refresh(force: false)
                         }
                     }
                 }
