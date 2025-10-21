@@ -23,6 +23,10 @@ struct TimelineView: View {
     @State private var newFolderName = ""
     @State private var newFolderIcon = TimelineViewConstants.defaultFolderIconName
     @State private var newFolderColor = TimelineViewConstants.defaultFolderColorHex
+    @State private var editingFolder: FolderModel?
+    @State private var editFolderName = ""
+    @State private var editFolderIcon = TimelineViewConstants.defaultFolderIconName
+    @State private var editFolderColor = TimelineViewConstants.defaultFolderColorHex
     private let folderIcons = [
         "folder.fill",
         "folder.badge.person.crop",
@@ -94,6 +98,33 @@ struct TimelineView: View {
                             iconColor: folderColor(for: folder)
                         )
                     }
+                    .contextMenu {
+                        Button {
+                            prepareFolderEditing(with: folder)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+
+                        Button(role: .destructive) {
+                            viewModel.deleteFolder(folder)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            prepareFolderEditing(with: folder)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .tint(accentColor)
+
+                        Button(role: .destructive) {
+                            viewModel.deleteFolder(folder)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
             }
             .listStyle(.insetGrouped)
@@ -138,6 +169,9 @@ struct TimelineView: View {
             case .createFolder:
                 createFolderSheet
             }
+        }
+        .sheet(item: $editingFolder) { folder in
+            editFolderSheet(for: folder)
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -220,6 +254,83 @@ struct TimelineView: View {
         newFolderName = ""
         newFolderIcon = TimelineViewConstants.defaultFolderIconName
         newFolderColor = TimelineViewConstants.defaultFolderColorHex
+    }
+
+    private func editFolderSheet(for folder: FolderModel) -> some View {
+        NavigationStack {
+            Form {
+                Section("Folder Details") {
+                    TextField("Folder Name", text: $editFolderName)
+                }
+
+                Section("Icon") {
+                    iconSelectionGrid(selection: $editFolderIcon)
+                }
+
+                Section("Color") {
+                    LazyVGrid(columns: gridColumns, spacing: 12) {
+                        ForEach(Color.PresetColors.all) { presetColor in
+                            Button {
+                                editFolderColor = presetColor.hex
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(presetColor.color)
+                                        .frame(width: 50, height: 50)
+
+                                    if editFolderColor == presetColor.hex {
+                                        Circle()
+                                            .strokeBorder(.white, lineWidth: 3)
+                                            .frame(width: 50, height: 50)
+                                            .shadow(radius: 2)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .navigationTitle("Edit Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        resetEditFolderForm()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        let trimmedName = editFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedName.isEmpty else { return }
+                        viewModel.updateFolder(
+                            folder,
+                            name: trimmedName,
+                            colorHex: editFolderColor,
+                            iconName: editFolderIcon
+                        )
+                        resetEditFolderForm()
+                    }
+                    .disabled(editFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func prepareFolderEditing(with folder: FolderModel) {
+        editFolderName = folder.name
+        let icon = folder.iconName ?? TimelineViewConstants.defaultFolderIconName
+        editFolderIcon = folderIcons.contains(icon) ? icon : TimelineViewConstants.defaultFolderIconName
+        editFolderColor = folder.colorHex ?? TimelineViewConstants.defaultFolderColorHex
+        editingFolder = folder
+    }
+
+    private func resetEditFolderForm() {
+        editingFolder = nil
+        editFolderName = ""
+        editFolderIcon = TimelineViewConstants.defaultFolderIconName
+        editFolderColor = TimelineViewConstants.defaultFolderColorHex
     }
 
     @ViewBuilder

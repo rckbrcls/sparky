@@ -130,6 +130,34 @@ final class TimelineViewModel: ObservableObject {
         }
     }
 
+    func updateFolder(
+        _ folder: FolderModel,
+        name: String,
+        colorHex: String?,
+        iconName: String?
+    ) {
+        Task {
+            var updated = folder
+            updated.name = name
+            updated.colorHex = colorHex
+            updated.iconName = iconName
+
+            _ = try? await environment.folderService.updateFolder(updated)
+            async let folders = environment.folderService.refreshFolders(force: true)
+            async let reminders = environment.reminderService.refresh(force: true)
+            _ = await (folders, reminders)
+        }
+    }
+
+    func deleteFolder(_ folder: FolderModel) {
+        Task {
+            _ = try? await environment.folderService.deleteFolder(id: folder.id)
+            async let folders = environment.folderService.refreshFolders(force: true)
+            async let reminders = environment.reminderService.refresh(force: true)
+            _ = await (folders, reminders)
+        }
+    }
+
     func complete(_ reminder: ReminderModel) {
         Task {
             do {
