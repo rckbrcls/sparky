@@ -113,7 +113,7 @@ final class TimelineViewModel: ObservableObject {
         return filteredReminders.count
     }
 
-    func totalCount(for folderID: UUID?) -> Int {
+    func reminderCount(in folderID: UUID?) -> Int {
         var filteredReminders = environment.reminderService.reminders
 
         if let folderID {

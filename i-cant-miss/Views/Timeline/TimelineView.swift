@@ -1,25 +1,16 @@
-//
-//  TimelineView.swift
-//  i-cant-miss
-//
-//  Created by Codex on 13/10/25.
-//
-
 import SwiftUI
+
+private enum TimelineViewConstants {
+    static let defaultFolderIconName = "folder.fill"
+}
 
 struct TimelineView: View {
     @StateObject private var viewModel: TimelineViewModel
-    @ObservedObject private var settings: SettingsStore
     let environment: AppEnvironment
     let onCreateReminder: () -> Void
     let onEditReminder: (ReminderModel) -> Void
     @State private var showTriggers = false
-    @State private var showFilterSheet = false
     private let accentColor = Color("AccentColor")
-    private let timeFilters: [ReminderService.TimelineFilter] = [.today, .overdue, .thisWeek, .upcoming]
-    private let triggerFilters: [ReminderService.TimelineFilter] = [.timeTriggers, .locationTriggers, .personTriggers]
-    private let organizationFilters: [ReminderService.TimelineFilter] = [.byPriority, .byTriggerType]
-    private let specialFilters: [ReminderService.TimelineFilter] = [.recurring, .noTriggers]
 
     init(environment: AppEnvironment,
          onCreateReminder: @escaping () -> Void,
@@ -27,74 +18,49 @@ struct TimelineView: View {
         self.environment = environment
         self.onCreateReminder = onCreateReminder
         self.onEditReminder = onEditReminder
-        _settings = ObservedObject(wrappedValue: environment.settings)
         _viewModel = StateObject(wrappedValue: TimelineViewModel(environment: environment))
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if viewModel.reminders.isEmpty {
-                    EmptyStateView(
-                        systemImage: viewModel.filter.iconName,
-                        title: emptyStateTitle,
-                        message: emptyStateMessage
+            List {
+                NavigationLink {
+                    TimelineListDetailView(
+                        environment: environment,
+                        viewModel: viewModel,
+                        folder: nil,
+                        onCreateReminder: onCreateReminder,
+                        onEditReminder: onEditReminder
                     )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List {
-                        ForEach(viewModel.reminders) { reminder in
-                            ReminderRowView(reminder: reminder)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    onEditReminder(reminder)
-                                }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        viewModel.delete(reminder)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                    Button {
-                                        viewModel.complete(reminder)
-                                    } label: {
-                                        Label("Complete", systemImage: "checkmark.circle")
-                                    }
-                                    .tint(.green)
-                                }
-                                .contextMenu {
-                                    Button("Complete", systemImage: "checkmark.circle") {
-                                        viewModel.complete(reminder)
-                                    }
-                                    Button(snoozeLabel, systemImage: "zzz") {
-                                        viewModel.snooze(reminder, minutes: settings.defaultSnoozeMinutes)
-                                    }
-                                    Button(postponeLabel, systemImage: "clock.arrow.circlepath") {
-                                        viewModel.postpone(reminder, minutes: settings.defaultPostponeMinutes)
-                                    }
-                                    Button("Archive", systemImage: "archivebox") {
-                                        viewModel.archive(reminder)
-                                    }
-                                    Divider()
-                                    Button("Delete", systemImage: "trash", role: .destructive) {
-                                        viewModel.delete(reminder)
-                                    }
-                                }
-                        }
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
+                } label: {
+                    overviewRow(
+                        title: "All Reminders",
+                        subtitle: remindersSubtitle(for: nil),
+                        iconName: "square.grid.2x2.fill",
+                        iconColor: accentColor
+                    )
+                }
+
+                ForEach(viewModel.folders) { folder in
+                    NavigationLink {
+                        TimelineListDetailView(
+                            environment: environment,
+                            viewModel: viewModel,
+                            folder: folder,
+                            onCreateReminder: onCreateReminder,
+                            onEditReminder: onEditReminder
+                        )
+                    } label: {
+                        overviewRow(
+                            title: folder.name,
+                            subtitle: remindersSubtitle(for: folder.id),
+                            iconName: folder.iconName ?? TimelineViewConstants.defaultFolderIconName,
+                            iconColor: folderColor(for: folder)
+                        )
                     }
                 }
             }
             .listStyle(.insetGrouped)
-            .listSectionSpacing(.compact)
-            .scrollDismissesKeyboard(.interactively)
-            .refreshable {
-                viewModel.refresh(force: true)
-            }
             .navigationTitle("Timeline")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -105,36 +71,6 @@ struct TimelineView: View {
                     .accessibilityLabel("Triggers")
                 }
 
-                ToolbarItem(placement: .principal) {
-                    Menu {
-                        folderMenu
-
-                        if !viewModel.availableFilters.isEmpty {
-                            filterMenu
-                        }
-
-                        Section("Options") {
-                            Button {
-                                viewModel.toggleShowCompleted()
-                            } label: {
-                                Label(
-                                    viewModel.showCompleted ? "Hide Completed" : "Show Completed",
-                                    systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
-                                )
-                            }
-
-                            Button {
-                                showFilterSheet = true
-                            } label: {
-                                Label("More Filters…", systemImage: "slider.horizontal.3")
-                            }
-                        }
-                    } label: {
-                        filterMenuLabel
-                    }
-                    .buttonStyle(.glass)
-                }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onCreateReminder) {
                         Image(systemName: "plus")
@@ -143,6 +79,206 @@ struct TimelineView: View {
                     .tint(accentColor)
                     .accessibilityLabel("Create Reminder")
                 }
+            }
+        }
+        .sheet(isPresented: $showTriggers) {
+            TriggersView(environment: environment,
+                         onEditReminder: onEditReminder)
+        }
+        .alert("Something went wrong", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { _ in viewModel.dismissError() }
+        ), actions: {
+            Button("OK", role: .cancel) {}
+        }, message: {
+            Text(viewModel.errorMessage ?? "")
+        })
+        .onAppear {
+            viewModel.refresh(force: false)
+        }
+    }
+
+    private func overviewRow(title: String,
+                             subtitle: String,
+                             iconName: String,
+                             iconColor: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: iconName)
+                .font(.title2)
+                .frame(width: 32)
+                .foregroundStyle(iconColor)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headline)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "folder.fill")
+                .foregroundStyle(.secondary)
+                .font(.title3)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func remindersSubtitle(for folderID: UUID?) -> String {
+        let count = viewModel.reminderCount(in: folderID)
+        return "\(count) reminder\(count == 1 ? "" : "s")"
+    }
+
+    private func folderColor(for folder: FolderModel) -> Color {
+        if let hex = folder.colorHex,
+           let color = Color(hex: hex) {
+            return color
+        }
+        return accentColor
+    }
+}
+
+private struct TimelineListDetailView: View {
+    @ObservedObject private var viewModel: TimelineViewModel
+    @ObservedObject private var settings: SettingsStore
+    let environment: AppEnvironment
+    let folder: FolderModel?
+    let onCreateReminder: () -> Void
+    let onEditReminder: (ReminderModel) -> Void
+
+    @State private var showTriggers = false
+    @State private var showFilterSheet = false
+
+    private let accentColor = Color("AccentColor")
+    private let timeFilters: [ReminderService.TimelineFilter] = [.today, .overdue, .thisWeek, .upcoming]
+    private let triggerFilters: [ReminderService.TimelineFilter] = [.timeTriggers, .locationTriggers, .personTriggers]
+    private let organizationFilters: [ReminderService.TimelineFilter] = [.byPriority, .byTriggerType]
+    private let specialFilters: [ReminderService.TimelineFilter] = [.recurring, .noTriggers]
+
+    init(environment: AppEnvironment,
+         viewModel: TimelineViewModel,
+         folder: FolderModel?,
+         onCreateReminder: @escaping () -> Void,
+         onEditReminder: @escaping (ReminderModel) -> Void) {
+        self.environment = environment
+        self.folder = folder
+        self.onCreateReminder = onCreateReminder
+        self.onEditReminder = onEditReminder
+        _viewModel = ObservedObject(wrappedValue: viewModel)
+        _settings = ObservedObject(wrappedValue: environment.settings)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if viewModel.reminders.isEmpty {
+                EmptyStateView(
+                    systemImage: viewModel.filter.iconName,
+                    title: emptyStateTitle,
+                    message: emptyStateMessage
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List {
+                    ForEach(viewModel.reminders) { reminder in
+                        ReminderRowView(reminder: reminder)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onEditReminder(reminder)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.delete(reminder)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    viewModel.complete(reminder)
+                                } label: {
+                                    Label("Complete", systemImage: "checkmark.circle")
+                                }
+                                .tint(.green)
+                            }
+                            .contextMenu {
+                                Button("Complete", systemImage: "checkmark.circle") {
+                                    viewModel.complete(reminder)
+                                }
+                                Button(snoozeLabel, systemImage: "zzz") {
+                                    viewModel.snooze(reminder, minutes: settings.defaultSnoozeMinutes)
+                                }
+                                Button(postponeLabel, systemImage: "clock.arrow.circlepath") {
+                                    viewModel.postpone(reminder, minutes: settings.defaultPostponeMinutes)
+                                }
+                                Button("Archive", systemImage: "archivebox") {
+                                    viewModel.archive(reminder)
+                                }
+                                Divider()
+                                Button("Delete", systemImage: "trash", role: .destructive) {
+                                    viewModel.delete(reminder)
+                                }
+                            }
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        .scrollDismissesKeyboard(.interactively)
+        .refreshable {
+            viewModel.refresh(force: true)
+        }
+        .navigationTitle("Timeline")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { showTriggers = true }) {
+                    Image(systemName: "bolt.fill")
+                }
+                .tint(accentColor)
+                .accessibilityLabel("Triggers")
+            }
+
+            ToolbarItem(placement: .principal) {
+                Menu {
+                    folderMenu
+
+                    if !viewModel.availableFilters.isEmpty {
+                        filterMenu
+                    }
+
+                    Section("Options") {
+                        Button {
+                            viewModel.toggleShowCompleted()
+                        } label: {
+                            Label(
+                                viewModel.showCompleted ? "Hide Completed" : "Show Completed",
+                                systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
+                            )
+                        }
+
+                        Button {
+                            showFilterSheet = true
+                        } label: {
+                            Label("More Filters…", systemImage: "slider.horizontal.3")
+                        }
+                    }
+                } label: {
+                    filterMenuLabel
+                }
+                .buttonStyle(.glass)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: onCreateReminder) {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(.glassProminent)
+                .tint(accentColor)
+                .accessibilityLabel("Create Reminder")
             }
         }
         .sheet(isPresented: $showTriggers) {
@@ -225,16 +361,8 @@ struct TimelineView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(32)
         }
-        .alert("Something went wrong", isPresented: Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { _ in viewModel.dismissError() }
-        ), actions: {
-            Button("OK", role: .cancel) {}
-        }, message: {
-            Text(viewModel.errorMessage ?? "")
-        })
         .onAppear {
-            viewModel.refresh(force: false)
+            viewModel.selectedFolderID = folder?.id
         }
     }
 
@@ -272,7 +400,7 @@ struct TimelineView: View {
                 folderID: nil,
                 iconName: "square.grid.2x2.fill",
                 iconColor: accentColor,
-                count: viewModel.totalCount(for: nil),
+                count: viewModel.reminderCount(in: nil),
                 isSelected: viewModel.selectedFolderID == nil
             )
 
@@ -280,9 +408,9 @@ struct TimelineView: View {
                 folderMenuButton(
                     title: folder.name,
                     folderID: folder.id,
-                    iconName: folder.iconName ?? "folder",
+                    iconName: folder.iconName ?? TimelineViewConstants.defaultFolderIconName,
                     iconColor: folderColor(for: folder),
-                    count: viewModel.totalCount(for: folder.id),
+                    count: viewModel.reminderCount(in: folder.id),
                     isSelected: viewModel.selectedFolderID == folder.id
                 )
             }
@@ -349,8 +477,11 @@ struct TimelineView: View {
     }
 
     private func folderColor(for folder: FolderModel) -> Color {
-        guard let hex = folder.colorHex else { return accentColor }
-        return Color(hex: hex) ?? accentColor
+        if let hex = folder.colorHex,
+           let color = Color(hex: hex) {
+            return color
+        }
+        return accentColor
     }
 
     private func filters(in group: [ReminderService.TimelineFilter]) -> [ReminderService.TimelineFilter] {
