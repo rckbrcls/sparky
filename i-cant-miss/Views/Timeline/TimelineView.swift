@@ -2,6 +2,14 @@ import SwiftUI
 
 private enum TimelineViewConstants {
     static let defaultFolderIconName = "folder.fill"
+    static let defaultFolderColorHex = "#6366F1"
+}
+
+private enum TimelineSheet: Int, Identifiable {
+    case triggers
+    case createFolder
+
+    var id: Int { rawValue }
 }
 
 struct TimelineView: View {
@@ -9,8 +17,36 @@ struct TimelineView: View {
     let environment: AppEnvironment
     let onCreateReminder: () -> Void
     let onEditReminder: (ReminderModel) -> Void
-    @State private var showTriggers = false
+    @State private var activeSheet: TimelineSheet?
     private let accentColor = Color("AccentColor")
+    private let gridColumns = Array(repeating: GridItem(.flexible()), count: 4)
+    @State private var newFolderName = ""
+    @State private var newFolderIcon = TimelineViewConstants.defaultFolderIconName
+    @State private var newFolderColor = TimelineViewConstants.defaultFolderColorHex
+    private let folderIcons = [
+        "folder.fill",
+        "folder.badge.person.crop",
+        "briefcase.fill",
+        "house.fill",
+        "heart.fill",
+        "star.fill",
+        "flag.fill",
+        "book.fill",
+        "lightbulb.fill",
+        "cart.fill"
+    ]
+    private let iconDisplayNames: [String: String] = [
+        "folder.fill": "Folder",
+        "folder.badge.person.crop": "Shared Folder",
+        "briefcase.fill": "Briefcase",
+        "house.fill": "House",
+        "heart.fill": "Heart",
+        "star.fill": "Star",
+        "flag.fill": "Flag",
+        "book.fill": "Book",
+        "lightbulb.fill": "Idea",
+        "cart.fill": "Shopping"
+    ]
 
     init(environment: AppEnvironment,
          onCreateReminder: @escaping () -> Void,
@@ -64,7 +100,20 @@ struct TimelineView: View {
             .navigationTitle("Timeline")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showTriggers = true }) {
+                    Button {
+                        resetNewFolderInputs()
+                        activeSheet = .createFolder
+                    } label: {
+                        Image(systemName: "folder.badge.plus")
+                    }
+                    .tint(accentColor)
+                    .accessibilityLabel("Create Folder")
+                }
+
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        activeSheet = .triggers
+                    } label: {
                         Image(systemName: "bolt.fill")
                     }
                     .tint(accentColor)
@@ -81,9 +130,14 @@ struct TimelineView: View {
                 }
             }
         }
-        .sheet(isPresented: $showTriggers) {
-            TriggersView(environment: environment,
-                         onEditReminder: onEditReminder)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .triggers:
+                TriggersView(environment: environment,
+                             onEditReminder: onEditReminder)
+            case .createFolder:
+                createFolderSheet
+            }
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -96,6 +150,105 @@ struct TimelineView: View {
         .onAppear {
             viewModel.refresh(force: false)
         }
+    }
+
+    private var createFolderSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Folder Details") {
+                    TextField("Folder Name", text: $newFolderName)
+                }
+
+                Section("Icon") {
+                    iconSelectionGrid(selection: $newFolderIcon)
+                }
+
+                Section("Color") {
+                    LazyVGrid(columns: gridColumns, spacing: 12) {
+                        ForEach(Color.PresetColors.all) { presetColor in
+                            Button {
+                                newFolderColor = presetColor.hex
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(presetColor.color)
+                                        .frame(width: 50, height: 50)
+
+                                    if newFolderColor == presetColor.hex {
+                                        Circle()
+                                            .strokeBorder(.white, lineWidth: 3)
+                                            .frame(width: 50, height: 50)
+                                            .shadow(radius: 2)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .navigationTitle("New Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        resetNewFolderInputs()
+                        activeSheet = nil
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        let trimmedName = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedName.isEmpty else { return }
+                        viewModel.createFolder(
+                            name: trimmedName,
+                            colorHex: newFolderColor,
+                            iconName: newFolderIcon
+                        )
+                        resetNewFolderInputs()
+                        activeSheet = nil
+                    }
+                    .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func resetNewFolderInputs() {
+        newFolderName = ""
+        newFolderIcon = TimelineViewConstants.defaultFolderIconName
+        newFolderColor = TimelineViewConstants.defaultFolderColorHex
+    }
+
+    @ViewBuilder
+    private func iconSelectionGrid(selection: Binding<String>) -> some View {
+        LazyVGrid(columns: gridColumns, spacing: 12) {
+            ForEach(folderIcons, id: \.self) { icon in
+                Button {
+                    selection.wrappedValue = icon
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(selection.wrappedValue == icon ? accentColor.opacity(0.18) : Color(.systemGray6))
+                            .frame(width: 50, height: 50)
+
+                        Image(systemName: icon)
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(selection.wrappedValue == icon ? accentColor : Color.primary)
+                    }
+                    .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(iconAccessibilityLabel(for: icon)))
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func iconAccessibilityLabel(for icon: String) -> String {
+        iconDisplayNames[icon] ?? "Folder Icon"
     }
 
     private func overviewRow(title: String,

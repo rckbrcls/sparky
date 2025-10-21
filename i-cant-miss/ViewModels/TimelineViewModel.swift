@@ -127,6 +127,18 @@ final class TimelineViewModel: ObservableObject {
         return filteredReminders.count
     }
 
+    func createFolder(name: String, colorHex: String, iconName: String) {
+        Task {
+            _ = try? await environment.folderService.createFolder(
+                name: name,
+                colorHex: colorHex,
+                iconName: iconName,
+                isDefault: false
+            )
+            _ = await environment.folderService.refreshFolders(force: true)
+        }
+    }
+
     func complete(_ reminder: ReminderModel) {
         Task {
             do {
