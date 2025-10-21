@@ -13,32 +13,21 @@ final class TimelineViewModel: ObservableObject {
     @Published var selectedFolderID: UUID? = nil {
         didSet {
             guard oldValue != selectedFolderID else { return }
-            if filter != .all && count(for: filter) == 0 {
-                suppressDefaultFilterWrite = true
-                filter = .all
-            } else {
-                updateRemindersSnapshot()
-            }
+            updateRemindersSnapshot()
         }
     }
     @Published var filter: ReminderService.TimelineFilter = .today {
         didSet {
-            if !suppressDefaultFilterWrite && settings.defaultTimelineFilter != filter {
+            if settings.defaultTimelineFilter != filter {
                 settings.defaultTimelineFilter = filter
             }
-            suppressDefaultFilterWrite = false
             updateRemindersSnapshot()
         }
     }
     @Published var showCompleted: Bool = false {
         didSet {
             guard oldValue != showCompleted else { return }
-            if filter != .all && count(for: filter) == 0 {
-                suppressDefaultFilterWrite = true
-                filter = .all
-            } else {
-                updateRemindersSnapshot()
-            }
+            updateRemindersSnapshot()
         }
     }
     @Published private(set) var reminders: [ReminderModel] = []
@@ -56,15 +45,12 @@ final class TimelineViewModel: ObservableObject {
     }
 
     var availableFilters: [ReminderService.TimelineFilter] {
-        ReminderService.TimelineFilter.allCases.filter { filter in
-            filter == .all || count(for: filter) > 0
-        }
+        ReminderService.TimelineFilter.allCases
     }
 
     private let environment: AppEnvironment
     private let settings: SettingsStore
     private var cancellables = Set<AnyCancellable>()
-    private var suppressDefaultFilterWrite = false
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -236,12 +222,6 @@ final class TimelineViewModel: ObservableObject {
 
         if !showCompleted {
             filteredReminders = filteredReminders.filter { $0.status != .completed }
-        }
-
-        if filter != .all && filteredReminders.isEmpty {
-            suppressDefaultFilterWrite = true
-            filter = .all
-            return
         }
 
         reminders = filteredReminders

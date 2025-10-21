@@ -510,11 +510,9 @@ private struct TimelineListDetailView: View {
                     Text(viewModel.filter.title)
                         .font(.subheadline)
                         .lineLimit(1)
-                    if viewModel.reminders.count > 0 {
-                        Text("(\(viewModel.reminders.count))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("(\(viewModel.reminders.count))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
             Spacer(minLength: 0)
@@ -616,11 +614,9 @@ private struct TimelineListDetailView: View {
                 Label(filter.title, systemImage: filter.iconName)
                 Spacer()
                 let count = viewModel.count(for: filter)
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text("\(count)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 if viewModel.filter == filter {
                     Image(systemName: "checkmark")
                         .foregroundColor(accentColor)
