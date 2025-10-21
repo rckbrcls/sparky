@@ -27,6 +27,30 @@ struct TodosView: View {
 
     private let accentColor = Color("AccentColor")
     private let gridColumns = Array(repeating: GridItem(.flexible()), count: 4)
+    private let folderIcons = [
+        "folder.fill",
+        "folder.badge.person.crop",
+        "briefcase.fill",
+        "house.fill",
+        "heart.fill",
+        "star.fill",
+        "flag.fill",
+        "book.fill",
+        "lightbulb.fill",
+        "cart.fill"
+    ]
+    private let iconDisplayNames: [String: String] = [
+        "folder.fill": "Folder",
+        "folder.badge.person.crop": "Shared Folder",
+        "briefcase.fill": "Briefcase",
+        "house.fill": "House",
+        "heart.fill": "Heart",
+        "star.fill": "Star",
+        "flag.fill": "Flag",
+        "book.fill": "Book",
+        "lightbulb.fill": "Idea",
+        "cart.fill": "Shopping"
+    ]
 
     init(environment: AppEnvironment,
          onCreateList: @escaping () -> Void,
@@ -205,20 +229,25 @@ private extension TodosView {
                 }
             }
             .navigationTitle("New Folder")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", role: .cancel) {
+                        resetNewFolderInputs()
                         showingCreateFolder = false
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
+                        let trimmedName = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedName.isEmpty else { return }
                         viewModel.createFolder(
-                            name: newFolderName.trimmingCharacters(in: .whitespacesAndNewlines),
+                            name: trimmedName,
                             colorHex: newFolderColor,
                             iconName: newFolderIcon
                         )
+                        resetNewFolderInputs()
                         showingCreateFolder = false
                     }
                     .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -243,24 +272,27 @@ private extension TodosView {
                 }
             }
             .navigationTitle("Edit Folder")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", role: .cancel) {
-                        editingFolder = nil
+                        resetEditFolderForm()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         if let editingFolder {
+                            let trimmedName = editFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmedName.isEmpty else { return }
                             viewModel.updateFolder(
                                 editingFolder,
-                                name: editFolderName.trimmingCharacters(in: .whitespacesAndNewlines),
+                                name: trimmedName,
                                 colorHex: editFolderColor,
                                 iconName: editFolderIcon
                             )
                         }
-                        editingFolder = nil
+                        resetEditFolderForm()
                     }
                     .disabled(editFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
@@ -269,23 +301,28 @@ private extension TodosView {
     }
 
     func iconSelectionGrid(selection: Binding<String>) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
-            ForEach(iconOptions, id: \.self) { icon in
+        LazyVGrid(columns: gridColumns, spacing: 12) {
+            ForEach(folderIcons, id: \.self) { icon in
                 Button {
                     selection.wrappedValue = icon
                 } label: {
-                    Image(systemName: icon)
-                        .font(.title2)
-                        .frame(width: 44, height: 44)
-                        .foregroundStyle(selection.wrappedValue == icon ? .white : .primary)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(selection.wrappedValue == icon ? accentColor : Color(.secondarySystemBackground))
-                        )
-                        .accessibilityLabel(iconAccessibilityLabel(for: icon))
+                    ZStack {
+                        Circle()
+                            .fill(selection.wrappedValue == icon ? accentColor.opacity(0.18) : Color(.systemGray6))
+                            .frame(width: 50, height: 50)
+
+                        Image(systemName: icon)
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(selection.wrappedValue == icon ? accentColor : Color.primary)
+                    }
+                    .contentShape(Circle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(iconAccessibilityLabel(for: icon)))
             }
         }
+        .padding(.vertical, 8)
     }
 
     func colorSelectionGrid(selectedHex: Binding<String>) -> some View {
@@ -297,25 +334,28 @@ private extension TodosView {
                     ZStack {
                         Circle()
                             .fill(presetColor.color)
-                            .frame(width: 44, height: 44)
+                            .frame(width: 50, height: 50)
 
                         if selectedHex.wrappedValue == presetColor.hex {
                             Circle()
                                 .strokeBorder(.white, lineWidth: 3)
-                                .frame(width: 44, height: 44)
+                                .frame(width: 50, height: 50)
                                 .shadow(radius: 2)
                         }
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
+        .padding(.vertical, 8)
     }
 
     func prepareFolderEditing(with folder: FolderModel) {
-        editingFolder = folder
         editFolderName = folder.name
-        editFolderIcon = folder.iconName ?? Self.defaultFolderIconName
+        let icon = folder.iconName ?? Self.defaultFolderIconName
+        editFolderIcon = folderIcons.contains(icon) ? icon : Self.defaultFolderIconName
         editFolderColor = folder.colorHex ?? Self.defaultFolderColorHex
+        editingFolder = folder
     }
 
     func resetNewFolderInputs() {
@@ -324,34 +364,11 @@ private extension TodosView {
         newFolderColor = Self.defaultFolderColorHex
     }
 
-    var iconOptions: [String] {
-        [
-            "folder.fill",
-            "folder.badge.plus",
-            "checkmark.rectangle.fill",
-            "checkmark.circle.fill",
-            "calendar",
-            "cart.fill",
-            "briefcase.fill",
-            "house.fill",
-            "star.fill",
-            "flag.fill"
-        ]
-    }
-
-    var iconDisplayNames: [String: String] {
-        [
-            "folder.fill": "Folder",
-            "folder.badge.plus": "Folder Plus",
-            "checkmark.rectangle.fill": "Checklist",
-            "checkmark.circle.fill": "Checkmark",
-            "calendar": "Calendar",
-            "cart.fill": "Cart",
-            "briefcase.fill": "Briefcase",
-            "house.fill": "House",
-            "star.fill": "Star",
-            "flag.fill": "Flag"
-        ]
+    func resetEditFolderForm() {
+        editingFolder = nil
+        editFolderName = ""
+        editFolderIcon = Self.defaultFolderIconName
+        editFolderColor = Self.defaultFolderColorHex
     }
 
     func iconAccessibilityLabel(for icon: String) -> String {
