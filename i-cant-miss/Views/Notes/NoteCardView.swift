@@ -124,7 +124,17 @@ private struct FlexibleView<Data: RandomAccessCollection, Content: View>: View w
         createdAt: Date(),
         updatedAt: Date(),
         isPinned: true,
-        folder: FolderModel(id: UUID(), name: "Design", colorHex: "#F472B6", iconName: "paintbrush", isDefault: false, sortOrder: 0),
+        folder: FolderModel(
+            id: UUID(),
+            name: "Design",
+            colorHex: "#F472B6",
+            iconName: "paintbrush",
+            showInReminders: false,
+            showInNotes: true,
+            showInTodos: false,
+            isDefault: false,
+            sortOrder: 0
+        ),
         tags: [
             TagModel(id: UUID(), name: "UI", colorHex: "#60A5FA"),
             TagModel(id: UUID(), name: "Review", colorHex: "#34D399")

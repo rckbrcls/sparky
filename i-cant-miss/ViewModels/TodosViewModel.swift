@@ -100,13 +100,23 @@ final class TodosViewModel: ObservableObject {
         allLists.filter { $0.folder?.id == folder.id }
     }
 
-    func createFolder(name: String, colorHex: String, iconName: String) {
+    func createFolder(
+        name: String,
+        colorHex: String,
+        iconName: String,
+        showInReminders: Bool,
+        showInNotes: Bool,
+        showInTodos: Bool
+    ) {
         Task {
             _ = try? await environment.folderService.createFolder(
                 name: name,
                 colorHex: colorHex,
                 iconName: iconName,
-                isDefault: false
+                isDefault: false,
+                showInReminders: showInReminders,
+                showInNotes: showInNotes,
+                showInTodos: showInTodos
             )
             async let folders = environment.folderService.refreshFolders(force: true)
             async let todos = environment.todoService.refresh(force: true)
@@ -114,12 +124,23 @@ final class TodosViewModel: ObservableObject {
         }
     }
 
-    func updateFolder(_ folder: FolderModel, name: String, colorHex: String?, iconName: String?) {
+    func updateFolder(
+        _ folder: FolderModel,
+        name: String,
+        colorHex: String?,
+        iconName: String?,
+        showInReminders: Bool,
+        showInNotes: Bool,
+        showInTodos: Bool
+    ) {
         Task {
             var updatedFolder = folder
             updatedFolder.name = name
             updatedFolder.colorHex = colorHex
             updatedFolder.iconName = iconName
+            updatedFolder.showInReminders = showInReminders
+            updatedFolder.showInNotes = showInNotes
+            updatedFolder.showInTodos = showInTodos
 
             _ = try? await environment.folderService.updateFolder(updatedFolder)
             async let folders = environment.folderService.refreshFolders(force: true)
@@ -164,11 +185,11 @@ final class TodosViewModel: ObservableObject {
         environment.folderService.$folders
             .receive(on: RunLoop.main)
             .sink { [weak self] folders in
-                self?.folders = folders
+                self?.folders = folders.filter(\.showInTodos)
             }
             .store(in: &cancellables)
 
-        folders = environment.folderService.folders
+        folders = environment.folderService.folders(for: .todos)
     }
 
     private func updateSnapshot() {

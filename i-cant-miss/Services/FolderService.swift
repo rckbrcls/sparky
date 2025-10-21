@@ -18,6 +18,12 @@ final class FolderService: ObservableObject {
         case validationFailed(String)
     }
 
+    enum Audience {
+        case reminders
+        case notes
+        case todos
+    }
+
     @Published private(set) var folders: [FolderModel] = []
     @Published private(set) var tags: [TagModel] = []
 
@@ -130,12 +136,24 @@ final class FolderService: ObservableObject {
         }
     }
 
-    func createFolder(name: String, colorHex: String?, iconName: String?, isDefault: Bool) async throws -> FolderModel {
+    func createFolder(
+        name: String,
+        colorHex: String?,
+        iconName: String?,
+        isDefault: Bool,
+        showInReminders: Bool = true,
+        showInNotes: Bool = true,
+        showInTodos: Bool = true
+    ) async throws -> FolderModel {
         try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                         throw FolderServiceError.validationFailed("Folder name is required")
+                    }
+
+                    guard showInReminders || showInNotes || showInTodos else {
+                        throw FolderServiceError.validationFailed("Select at least one area for this folder.")
                     }
 
                     if isDefault {
@@ -148,6 +166,9 @@ final class FolderService: ObservableObject {
                     folder.colorHex = colorHex
                     folder.iconName = iconName
                     folder.isDefault = isDefault
+                    folder.showInReminders = showInReminders
+                    folder.showInNotes = showInNotes
+                    folder.showInTodos = showInTodos
                     folder.sortOrder = Int16(self.folders.count)
 
                     try context.save()
@@ -173,6 +194,10 @@ final class FolderService: ObservableObject {
                         throw FolderServiceError.validationFailed("Folder name is required")
                     }
 
+                    guard model.showInReminders || model.showInNotes || model.showInTodos else {
+                        throw FolderServiceError.validationFailed("Select at least one area for this folder.")
+                    }
+
                     if model.isDefault {
                         try self.clearDefaultFolder(context: context, excluding: folder)
                     }
@@ -181,6 +206,9 @@ final class FolderService: ObservableObject {
                     folder.colorHex = model.colorHex
                     folder.iconName = model.iconName
                     folder.isDefault = model.isDefault
+                    folder.showInReminders = model.showInReminders
+                    folder.showInNotes = model.showInNotes
+                    folder.showInTodos = model.showInTodos
                     folder.sortOrder = Int16(model.sortOrder)
 
                     try context.save()
@@ -357,6 +385,28 @@ final class FolderService: ObservableObject {
         let defaults = try context.fetch(request)
         for existing in defaults where existing != folder {
             existing.isDefault = false
+        }
+    }
+
+    func folders(for audience: Audience) -> [FolderModel] {
+        switch audience {
+        case .reminders:
+            return folders.filter(\.showInReminders)
+        case .notes:
+            return folders.filter(\.showInNotes)
+        case .todos:
+            return folders.filter(\.showInTodos)
+        }
+    }
+
+    func defaultFolder(for audience: Audience) -> FolderModel? {
+        switch audience {
+        case .reminders:
+            return folders.first(where: { $0.isDefault && $0.showInReminders })
+        case .notes:
+            return folders.first(where: { $0.isDefault && $0.showInNotes })
+        case .todos:
+            return folders.first(where: { $0.isDefault && $0.showInTodos })
         }
     }
 }

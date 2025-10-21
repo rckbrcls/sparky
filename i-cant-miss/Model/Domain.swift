@@ -319,6 +319,9 @@ struct FolderModel: Identifiable, Hashable {
     var name: String
     var colorHex: String?
     var iconName: String?
+    var showInReminders: Bool
+    var showInNotes: Bool
+    var showInTodos: Bool
     var isDefault: Bool
     var sortOrder: Int
 }
@@ -519,6 +522,9 @@ extension Folder {
             name: name ?? "Folder",
             colorHex: colorHex,
             iconName: iconName,
+            showInReminders: showInReminders,
+            showInNotes: showInNotes,
+            showInTodos: showInTodos,
             isDefault: isDefault,
             sortOrder: Int(sortOrder)
         )

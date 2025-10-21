@@ -51,7 +51,7 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = reminder?.priority ?? environment.settings.defaultReminderPriority
             self.status = reminder?.status ?? .active
             self.triggers = reminder?.triggers.map(ReminderEditorViewModel.draft(from:)) ?? []
-            self.selectedFolderID = reminder?.folder?.id ?? environment.folderService.folders.first(where: { $0.isDefault })?.id
+            self.selectedFolderID = reminder?.folder?.id ?? environment.folderService.defaultFolder(for: .reminders)?.id
         }
     }
     func loadData() {
@@ -141,7 +141,7 @@ final class ReminderEditorViewModel: ObservableObject {
                 updated.notes = notes
                 updated.status = status
                 updated.priority = priority
-                updated.folder = environment.folderService.folders.first(where: { $0.id == selectedFolderID })
+                updated.folder = environment.folderService.folders(for: .reminders).first(where: { $0.id == selectedFolderID })
                 updated.triggers = triggers.map { $0.toModel() }
                 updated.updatedAt = Date()
 

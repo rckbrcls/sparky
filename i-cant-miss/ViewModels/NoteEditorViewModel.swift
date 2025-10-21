@@ -94,7 +94,7 @@ final class NoteEditorViewModel: ObservableObject {
                 updated.title = title
                 updated.content = content
                 updated.isPinned = isPinned
-                updated.folder = environment.folderService.folders.first(where: { $0.id == selectedFolderID })
+                updated.folder = environment.folderService.folders(for: .notes).first(where: { $0.id == selectedFolderID })
                 updated.tags = environment.folderService.tags.filter { selectedTagIDs.contains($0.id) }
                 updated.updatedAt = Date()
                 _ = try await environment.noteService.updateNote(updated)

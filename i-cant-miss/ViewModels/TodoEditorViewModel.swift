@@ -130,7 +130,7 @@ final class TodoEditorViewModel: ObservableObject {
                 existing.isPinned = isPinned
                 existing.isArchived = isArchived
                 existing.updatedAt = Date()
-                existing.folder = environment.folderService.folders.first(where: { $0.id == selectedFolderID })
+                existing.folder = environment.folderService.folders(for: .todos).first(where: { $0.id == selectedFolderID })
                 existing.items = preparedItems.enumerated().map { index, item in
                     var updated = item
                     updated.sortOrder = index

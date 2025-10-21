@@ -19,10 +19,16 @@ struct NotesView: View {
     @State private var newFolderName = ""
     @State private var newFolderIcon = Self.defaultFolderIconName
     @State private var newFolderColor = Self.defaultFolderColorHex
+    @State private var newFolderShowsReminders = false
+    @State private var newFolderShowsNotes = true
+    @State private var newFolderShowsTodos = false
     @State private var editingFolder: FolderModel?
     @State private var editFolderName = ""
     @State private var editFolderIcon = Self.defaultFolderIconName
     @State private var editFolderColor = Self.defaultFolderColorHex
+    @State private var editFolderShowsReminders = false
+    @State private var editFolderShowsNotes = true
+    @State private var editFolderShowsTodos = false
     private let accentColor = Color("AccentColor")
     private let gridColumns = Array(repeating: GridItem(.flexible()), count: 4)
 
@@ -206,6 +212,19 @@ struct NotesView: View {
                     }
                     .padding(.vertical, 8)
                 }
+
+                Section {
+                    Toggle("Reminders", isOn: $newFolderShowsReminders)
+                    Toggle("Notes", isOn: $newFolderShowsNotes)
+                    Toggle("To-dos", isOn: $newFolderShowsTodos)
+                } header: {
+                    Text("Show In")
+                } footer: {
+                    if !newFolderAudienceSelectionValid {
+                        Text("Select at least one area for this folder.")
+                            .foregroundStyle(.red)
+                    }
+                }
             }
             .navigationTitle("New Folder")
             .navigationBarTitleDisplayMode(.inline)
@@ -221,12 +240,15 @@ struct NotesView: View {
                         viewModel.createFolder(
                             name: newFolderName,
                             colorHex: newFolderColor,
-                            iconName: newFolderIcon
+                            iconName: newFolderIcon,
+                            showInReminders: newFolderShowsReminders,
+                            showInNotes: newFolderShowsNotes,
+                            showInTodos: newFolderShowsTodos
                         )
                         showingCreateFolder = false
                         resetFolderForm()
                     }
-                    .disabled(newFolderName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(newFolderName.trimmingCharacters(in: .whitespaces).isEmpty || !newFolderAudienceSelectionValid)
                 }
             }
         }
@@ -267,6 +289,19 @@ struct NotesView: View {
                     }
                     .padding(.vertical, 8)
                 }
+
+                Section {
+                    Toggle("Reminders", isOn: $editFolderShowsReminders)
+                    Toggle("Notes", isOn: $editFolderShowsNotes)
+                    Toggle("To-dos", isOn: $editFolderShowsTodos)
+                } header: {
+                    Text("Show In")
+                } footer: {
+                    if !editFolderAudienceSelectionValid {
+                        Text("Select at least one area for this folder.")
+                            .foregroundStyle(.red)
+                    }
+                }
             }
             .navigationTitle("Edit Folder")
             .navigationBarTitleDisplayMode(.inline)
@@ -282,11 +317,14 @@ struct NotesView: View {
                             folder,
                             name: editFolderName,
                             colorHex: editFolderColor,
-                            iconName: editFolderIcon
+                            iconName: editFolderIcon,
+                            showInReminders: editFolderShowsReminders,
+                            showInNotes: editFolderShowsNotes,
+                            showInTodos: editFolderShowsTodos
                         )
                         resetEditFolderForm()
                     }
-                    .disabled(editFolderName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(editFolderName.trimmingCharacters(in: .whitespaces).isEmpty || !editFolderAudienceSelectionValid)
                 }
             }
         }
@@ -296,6 +334,9 @@ struct NotesView: View {
         newFolderName = ""
         newFolderIcon = Self.defaultFolderIconName
         newFolderColor = Self.defaultFolderColorHex
+        newFolderShowsReminders = false
+        newFolderShowsNotes = true
+        newFolderShowsTodos = false
     }
 
     private func prepareFolderEditing(with folder: FolderModel) {
@@ -304,6 +345,9 @@ struct NotesView: View {
         editFolderIcon = folderIcons.contains(icon) ? icon : Self.defaultFolderIconName
         editFolderColor = folder.colorHex ?? Self.defaultFolderColorHex
         editingFolder = folder
+        editFolderShowsReminders = folder.showInReminders
+        editFolderShowsNotes = folder.showInNotes
+        editFolderShowsTodos = folder.showInTodos
     }
 
     private func resetEditFolderForm() {
@@ -311,6 +355,17 @@ struct NotesView: View {
         editFolderName = ""
         editFolderIcon = Self.defaultFolderIconName
         editFolderColor = Self.defaultFolderColorHex
+        editFolderShowsReminders = false
+        editFolderShowsNotes = true
+        editFolderShowsTodos = false
+    }
+
+    private var newFolderAudienceSelectionValid: Bool {
+        newFolderShowsReminders || newFolderShowsNotes || newFolderShowsTodos
+    }
+
+    private var editFolderAudienceSelectionValid: Bool {
+        editFolderShowsReminders || editFolderShowsNotes || editFolderShowsTodos
     }
 
     @ViewBuilder

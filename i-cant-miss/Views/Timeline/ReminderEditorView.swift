@@ -49,7 +49,7 @@ struct ReminderEditorView: View {
 
                     Picker("Folder", selection: $viewModel.selectedFolderID) {
                         Text("No folder").tag(UUID?.none)
-                        ForEach(environment.folderService.folders, id: \.id) { folder in
+                        ForEach(environment.folderService.folders(for: .reminders), id: \.id) { folder in
                             Text(folder.name).tag(Optional(folder.id))
                         }
                     }

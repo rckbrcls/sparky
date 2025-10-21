@@ -20,10 +20,16 @@ struct TodosView: View {
     @State private var newFolderName = ""
     @State private var newFolderIcon = Self.defaultFolderIconName
     @State private var newFolderColor = Self.defaultFolderColorHex
+    @State private var newFolderShowsReminders = false
+    @State private var newFolderShowsNotes = false
+    @State private var newFolderShowsTodos = true
     @State private var editingFolder: FolderModel?
     @State private var editFolderName = ""
     @State private var editFolderIcon = Self.defaultFolderIconName
     @State private var editFolderColor = Self.defaultFolderColorHex
+    @State private var editFolderShowsReminders = false
+    @State private var editFolderShowsNotes = false
+    @State private var editFolderShowsTodos = true
 
     private let accentColor = Color("AccentColor")
     private let gridColumns = Array(repeating: GridItem(.flexible()), count: 4)
@@ -227,6 +233,19 @@ private extension TodosView {
                 Section("Color") {
                     colorSelectionGrid(selectedHex: $newFolderColor)
                 }
+
+                Section {
+                    Toggle("Reminders", isOn: $newFolderShowsReminders)
+                    Toggle("Notes", isOn: $newFolderShowsNotes)
+                    Toggle("To-dos", isOn: $newFolderShowsTodos)
+                } header: {
+                    Text("Show In")
+                } footer: {
+                    if !newFolderAudienceSelectionValid {
+                        Text("Select at least one area for this folder.")
+                            .foregroundStyle(.red)
+                    }
+                }
             }
             .navigationTitle("New Folder")
             .navigationBarTitleDisplayMode(.inline)
@@ -245,12 +264,15 @@ private extension TodosView {
                         viewModel.createFolder(
                             name: trimmedName,
                             colorHex: newFolderColor,
-                            iconName: newFolderIcon
+                            iconName: newFolderIcon,
+                            showInReminders: newFolderShowsReminders,
+                            showInNotes: newFolderShowsNotes,
+                            showInTodos: newFolderShowsTodos
                         )
                         resetNewFolderInputs()
                         showingCreateFolder = false
                     }
-                    .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !newFolderAudienceSelectionValid)
                 }
             }
         }
@@ -269,6 +291,19 @@ private extension TodosView {
 
                 Section("Color") {
                     colorSelectionGrid(selectedHex: $editFolderColor)
+                }
+
+                Section {
+                    Toggle("Reminders", isOn: $editFolderShowsReminders)
+                    Toggle("Notes", isOn: $editFolderShowsNotes)
+                    Toggle("To-dos", isOn: $editFolderShowsTodos)
+                } header: {
+                    Text("Show In")
+                } footer: {
+                    if !editFolderAudienceSelectionValid {
+                        Text("Select at least one area for this folder.")
+                            .foregroundStyle(.red)
+                    }
                 }
             }
             .navigationTitle("Edit Folder")
@@ -289,12 +324,15 @@ private extension TodosView {
                                 editingFolder,
                                 name: trimmedName,
                                 colorHex: editFolderColor,
-                                iconName: editFolderIcon
+                                iconName: editFolderIcon,
+                                showInReminders: editFolderShowsReminders,
+                                showInNotes: editFolderShowsNotes,
+                                showInTodos: editFolderShowsTodos
                             )
                         }
                         resetEditFolderForm()
                     }
-                    .disabled(editFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(editFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !editFolderAudienceSelectionValid)
                 }
             }
         }
@@ -355,6 +393,9 @@ private extension TodosView {
         let icon = folder.iconName ?? Self.defaultFolderIconName
         editFolderIcon = folderIcons.contains(icon) ? icon : Self.defaultFolderIconName
         editFolderColor = folder.colorHex ?? Self.defaultFolderColorHex
+        editFolderShowsReminders = folder.showInReminders
+        editFolderShowsNotes = folder.showInNotes
+        editFolderShowsTodos = folder.showInTodos
         editingFolder = folder
     }
 
@@ -362,6 +403,9 @@ private extension TodosView {
         newFolderName = ""
         newFolderIcon = Self.defaultFolderIconName
         newFolderColor = Self.defaultFolderColorHex
+        newFolderShowsReminders = false
+        newFolderShowsNotes = false
+        newFolderShowsTodos = true
     }
 
     func resetEditFolderForm() {
@@ -369,10 +413,21 @@ private extension TodosView {
         editFolderName = ""
         editFolderIcon = Self.defaultFolderIconName
         editFolderColor = Self.defaultFolderColorHex
+        editFolderShowsReminders = false
+        editFolderShowsNotes = false
+        editFolderShowsTodos = true
     }
 
     func iconAccessibilityLabel(for icon: String) -> String {
         iconDisplayNames[icon] ?? icon.replacingOccurrences(of: ".", with: " ")
+    }
+
+    var newFolderAudienceSelectionValid: Bool {
+        newFolderShowsReminders || newFolderShowsNotes || newFolderShowsTodos
+    }
+
+    var editFolderAudienceSelectionValid: Bool {
+        editFolderShowsReminders || editFolderShowsNotes || editFolderShowsTodos
     }
 }
 
