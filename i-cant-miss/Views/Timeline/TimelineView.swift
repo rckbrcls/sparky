@@ -243,29 +243,8 @@ private struct TimelineListDetailView: View {
             }
 
             ToolbarItem(placement: .principal) {
-                Menu {
-                    folderMenu
-
-                    if !viewModel.availableFilters.isEmpty {
-                        filterMenu
-                    }
-
-                    Section("Options") {
-                        Button {
-                            viewModel.toggleShowCompleted()
-                        } label: {
-                            Label(
-                                viewModel.showCompleted ? "Hide Completed" : "Show Completed",
-                                systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
-                            )
-                        }
-
-                        Button {
-                            showFilterSheet = true
-                        } label: {
-                            Label("More Filters…", systemImage: "slider.horizontal.3")
-                        }
-                    }
+                Button {
+                    showFilterSheet = true
                 } label: {
                     filterMenuLabel
                 }
@@ -393,96 +372,6 @@ private struct TimelineListDetailView: View {
         .foregroundColor(.primary)
     }
 
-    private var folderMenu: some View {
-        Section("Folders") {
-            folderMenuButton(
-                title: "All Reminders",
-                folderID: nil,
-                iconName: "square.grid.2x2.fill",
-                iconColor: accentColor,
-                count: viewModel.reminderCount(in: nil),
-                isSelected: viewModel.selectedFolderID == nil
-            )
-
-            ForEach(viewModel.folders) { folder in
-                folderMenuButton(
-                    title: folder.name,
-                    folderID: folder.id,
-                    iconName: folder.iconName ?? TimelineViewConstants.defaultFolderIconName,
-                    iconColor: folderColor(for: folder),
-                    count: viewModel.reminderCount(in: folder.id),
-                    isSelected: viewModel.selectedFolderID == folder.id
-                )
-            }
-        }
-    }
-
-    private var filterMenu: some View {
-        Section("Filters") {
-            ForEach(viewModel.availableFilters, id: \.self) { filter in
-                Button {
-                    viewModel.filter = filter
-                } label: {
-                    HStack {
-                        Label(filter.title, systemImage: filter.iconName)
-                        Spacer()
-                        let count = viewModel.count(for: filter)
-                        if count > 0 {
-                            Text("\(count)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        if viewModel.filter == filter {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(accentColor)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func folderMenuButton(title: String,
-                                  folderID: UUID?,
-                                  iconName: String,
-                                  iconColor: Color,
-                                  count: Int,
-                                  isSelected: Bool) -> some View {
-        Button {
-            viewModel.selectedFolderID = folderID
-        } label: {
-            HStack {
-                Label {
-                    Text(title)
-                } icon: {
-                    Image(systemName: iconName)
-                        .foregroundStyle(iconColor)
-                }
-
-                Spacer()
-
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .foregroundColor(accentColor)
-                }
-            }
-        }
-    }
-
-    private func folderColor(for folder: FolderModel) -> Color {
-        if let hex = folder.colorHex,
-           let color = Color(hex: hex) {
-            return color
-        }
-        return accentColor
-    }
 
     private func filters(in group: [ReminderService.TimelineFilter]) -> [ReminderService.TimelineFilter] {
         group.filter { viewModel.availableFilters.contains($0) }
