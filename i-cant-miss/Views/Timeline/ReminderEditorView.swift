@@ -46,6 +46,13 @@ struct ReminderEditorView: View {
                             Text(statusLabel(for: status)).tag(status)
                         }
                     }
+
+                    Picker("Folder", selection: $viewModel.selectedFolderID) {
+                        Text("No folder").tag(UUID?.none)
+                        ForEach(environment.folderService.folders, id: \.id) { folder in
+                            Text(folder.name).tag(Optional(folder.id))
+                        }
+                    }
                 }
 
                 // Schedule Trigger Section

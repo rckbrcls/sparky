@@ -90,6 +90,7 @@ struct TriggerRowView: View {
         notes: nil,
         status: .active,
         priority: .medium,
+        folder: nil,
         createdAt: Date(),
         updatedAt: Date(),
         lastCompletionDate: nil,

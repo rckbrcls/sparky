@@ -380,6 +380,7 @@ private struct ScheduleBadge: View {
         notes: "Include database migration plan",
         status: .active,
         priority: .high,
+        folder: nil,
         createdAt: Date(),
         updatedAt: Date(),
         lastCompletionDate: nil,

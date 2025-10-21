@@ -27,6 +27,7 @@ final class TodoEditorViewModel: ObservableObject {
     @Published var items: [EditableItem] = []
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
+    @Published var selectedFolderID: UUID?
 
     private let environment: AppEnvironment
     private let existingListID: UUID?
@@ -48,6 +49,7 @@ final class TodoEditorViewModel: ObservableObject {
                                   isCompleted: false,
                                   createdAt: Date(),
                                   completedAt: nil)]
+            selectedFolderID = list?.folder?.id
         }
     }
 
@@ -128,6 +130,7 @@ final class TodoEditorViewModel: ObservableObject {
                 existing.isPinned = isPinned
                 existing.isArchived = isArchived
                 existing.updatedAt = Date()
+                existing.folder = environment.folderService.folders.first(where: { $0.id == selectedFolderID })
                 existing.items = preparedItems.enumerated().map { index, item in
                     var updated = item
                     updated.sortOrder = index
@@ -146,6 +149,7 @@ final class TodoEditorViewModel: ObservableObject {
                     notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
                     dueDate: dueDate,
                     isPinned: isPinned,
+                    folderID: selectedFolderID,
                     items: orderedItems
                 )
             }
@@ -184,6 +188,7 @@ final class TodoEditorViewModel: ObservableObject {
         dueDate = list.dueDate
         isPinned = list.isPinned
         isArchived = list.isArchived
+        selectedFolderID = list.folder?.id
         items = list.items.sorted(by: { $0.sortOrder < $1.sortOrder }).map {
             EditableItem(id: $0.id,
                          title: $0.title,

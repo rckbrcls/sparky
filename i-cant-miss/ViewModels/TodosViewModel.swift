@@ -13,6 +13,8 @@ final class TodosViewModel: ObservableObject {
     @Published private(set) var pinnedLists: [TodoListModel] = []
     @Published private(set) var regularLists: [TodoListModel] = []
     @Published private(set) var archivedLists: [TodoListModel] = []
+    @Published private(set) var allLists: [TodoListModel] = []
+    @Published private(set) var folders: [FolderModel] = []
     @Published var showArchived: Bool = false {
         didSet {
             updateSnapshot()
@@ -36,7 +38,9 @@ final class TodosViewModel: ObservableObject {
         Task {
             isLoading = true
             defer { isLoading = false }
-            _ = await environment.todoService.refresh(force: force)
+            async let todosRefresh = environment.todoService.refresh(force: force)
+            async let foldersRefresh = environment.folderService.refreshFolders(force: force)
+            _ = await (todosRefresh, foldersRefresh)
         }
     }
 
@@ -92,6 +96,63 @@ final class TodosViewModel: ObservableObject {
         errorMessage = nil
     }
 
+    func lists(in folder: FolderModel) -> [TodoListModel] {
+        allLists.filter { $0.folder?.id == folder.id }
+    }
+
+    func createFolder(name: String, colorHex: String, iconName: String) {
+        Task {
+            _ = try? await environment.folderService.createFolder(
+                name: name,
+                colorHex: colorHex,
+                iconName: iconName,
+                isDefault: false
+            )
+            async let folders = environment.folderService.refreshFolders(force: true)
+            async let todos = environment.todoService.refresh(force: true)
+            _ = await (folders, todos)
+        }
+    }
+
+    func updateFolder(_ folder: FolderModel, name: String, colorHex: String?, iconName: String?) {
+        Task {
+            var updatedFolder = folder
+            updatedFolder.name = name
+            updatedFolder.colorHex = colorHex
+            updatedFolder.iconName = iconName
+
+            _ = try? await environment.folderService.updateFolder(updatedFolder)
+            async let folders = environment.folderService.refreshFolders(force: true)
+            async let todos = environment.todoService.refresh(force: true)
+            _ = await (folders, todos)
+        }
+    }
+
+    func deleteFolder(_ folder: FolderModel) {
+        Task {
+            _ = try? await environment.folderService.deleteFolder(id: folder.id)
+            async let folders = environment.folderService.refreshFolders(force: true)
+            async let todos = environment.todoService.refresh(force: true)
+            _ = await (folders, todos)
+        }
+    }
+
+    func pinnedLists(in folder: FolderModel) -> [TodoListModel] {
+        sortLists(lists(in: folder).filter { !$0.isArchived && $0.isPinned })
+    }
+
+    func regularLists(in folder: FolderModel) -> [TodoListModel] {
+        sortLists(lists(in: folder).filter { !$0.isArchived && !$0.isPinned })
+    }
+
+    func archivedLists(in folder: FolderModel) -> [TodoListModel] {
+        sortLists(lists(in: folder).filter(\.isArchived))
+    }
+
+    func sortedLists(_ lists: [TodoListModel]) -> [TodoListModel] {
+        sortLists(lists)
+    }
+
     private func bind() {
         environment.todoService.$lists
             .receive(on: RunLoop.main)
@@ -99,10 +160,20 @@ final class TodosViewModel: ObservableObject {
                 self?.updateSnapshot()
             }
             .store(in: &cancellables)
+
+        environment.folderService.$folders
+            .receive(on: RunLoop.main)
+            .sink { [weak self] folders in
+                self?.folders = folders
+            }
+            .store(in: &cancellables)
+
+        folders = environment.folderService.folders
     }
 
     private func updateSnapshot() {
         let lists = environment.todoService.lists
+        allLists = lists
         pinnedLists = sortLists(lists.filter { !$0.isArchived && $0.isPinned })
         regularLists = sortLists(lists.filter { !$0.isArchived && !$0.isPinned })
         archivedLists = sortLists(lists.filter(\.isArchived))

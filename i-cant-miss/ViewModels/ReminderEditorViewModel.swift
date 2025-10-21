@@ -14,6 +14,7 @@ final class ReminderEditorViewModel: ObservableObject {
     @Published var notes: String = ""
     @Published var priority: ReminderPriority = .medium
     @Published var status: ReminderStatus = .active
+    @Published var selectedFolderID: UUID?
     @Published var triggers: [ReminderTriggerDraft] = []
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
@@ -34,6 +35,7 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = freshReminder.priority
             self.status = freshReminder.status
             self.triggers = freshReminder.triggers.map(ReminderEditorViewModel.draft(from:))
+            self.selectedFolderID = freshReminder.folder?.id
         } else if let reminderId = reminder?.id,
                   let existingReminder = environment.reminderService.reminders.first(where: { $0.id == reminderId }) {
             self.title = existingReminder.title
@@ -41,6 +43,7 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = existingReminder.priority
             self.status = existingReminder.status
             self.triggers = existingReminder.triggers.map(ReminderEditorViewModel.draft(from:))
+            self.selectedFolderID = existingReminder.folder?.id
         } else {
             // New reminder or not found in service - use defaults
             self.title = reminder?.title ?? ""
@@ -48,6 +51,7 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = reminder?.priority ?? environment.settings.defaultReminderPriority
             self.status = reminder?.status ?? .active
             self.triggers = reminder?.triggers.map(ReminderEditorViewModel.draft(from:)) ?? []
+            self.selectedFolderID = reminder?.folder?.id ?? environment.folderService.folders.first(where: { $0.isDefault })?.id
         }
     }
     func loadData() {
@@ -59,6 +63,7 @@ final class ReminderEditorViewModel: ObservableObject {
             self.priority = updatedReminder.priority
             self.status = updatedReminder.status
             self.triggers = updatedReminder.triggers.map(ReminderEditorViewModel.draft(from:))
+            self.selectedFolderID = updatedReminder.folder?.id
         }
     }
 
@@ -136,6 +141,7 @@ final class ReminderEditorViewModel: ObservableObject {
                 updated.notes = notes
                 updated.status = status
                 updated.priority = priority
+                updated.folder = environment.folderService.folders.first(where: { $0.id == selectedFolderID })
                 updated.triggers = triggers.map { $0.toModel() }
                 updated.updatedAt = Date()
 
@@ -146,6 +152,7 @@ final class ReminderEditorViewModel: ObservableObject {
                     notes: notes,
                     status: status,
                     priority: priority,
+                    folderID: selectedFolderID,
                     createdAt: Date(),
                     updatedAt: Date(),
                     triggers: triggers

@@ -37,6 +37,7 @@ final class ReminderService: ObservableObject {
     @Published private(set) var lastRefreshed: Date?
 
     private let persistence: PersistenceController
+    private let folderService: FolderService
     private var refreshTimer: AnyCancellable?
     private let logger = Logger(subsystem: "i-cant-miss", category: "ReminderService")
     private var cache: [TimelineFilter: [ReminderModel]] = [:]
@@ -47,8 +48,9 @@ final class ReminderService: ObservableObject {
     var notificationScheduler: NotificationScheduler?
     var geofenceManager: GeofenceManager?
 
-    init(persistence: PersistenceController) {
+    init(persistence: PersistenceController, folderService: FolderService) {
         self.persistence = persistence
+        self.folderService = folderService
 
         // Load initial data synchronously to ensure data is available immediately
         loadInitialData()
@@ -65,7 +67,7 @@ final class ReminderService: ObservableObject {
                 NSSortDescriptor(keyPath: \Reminder.createdAt, ascending: false)
             ]
             // Prefetch relationships to avoid faulting issues
-            request.relationshipKeyPathsForPrefetching = ["triggers"]
+            request.relationshipKeyPathsForPrefetching = ["triggers", "folder"]
             let results = try context.fetch(request)
             reminderModels = results.map { $0.toModel() }
         } catch {
@@ -261,6 +263,13 @@ final class ReminderService: ObservableObject {
                     reminder.setPriority(model.priority)
                     reminder.updatedAt = Date()
 
+                    if let folderID = model.folder?.id,
+                       let folder = try self.folderService.fetchFolder(by: folderID, context: context) {
+                        reminder.folder = folder
+                    } else {
+                        reminder.folder = nil
+                    }
+
                     try self.syncTriggers(of: reminder, with: model.triggers, context: context)
 
                     try context.save()
@@ -360,7 +369,7 @@ final class ReminderService: ObservableObject {
         do {
             let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
             request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-            request.relationshipKeyPathsForPrefetching = ["triggers"]
+            request.relationshipKeyPathsForPrefetching = ["triggers", "folder"]
             request.fetchLimit = 1
 
             guard let reminder = try context.fetch(request).first else {
@@ -372,7 +381,9 @@ final class ReminderService: ObservableObject {
             logger.error("Failed to fetch reminder with relationships: \(error.localizedDescription)")
             return nil
         }
-    }    // MARK: - Private
+    }
+
+    // MARK: - Private
 
     private func fetchReminderFromViewContext(objectID: NSManagedObjectID) async throws -> ReminderModel {
         return try await withCheckedThrowingContinuation { continuation in
@@ -442,6 +453,7 @@ final class ReminderService: ObservableObject {
         let request = Reminder.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
         request.fetchLimit = 1
+        request.relationshipKeyPathsForPrefetching = ["triggers", "folder"]
         return try context.fetch(request).first
     }
 
@@ -479,7 +491,7 @@ final class ReminderService: ObservableObject {
                         NSSortDescriptor(keyPath: \Reminder.updatedAt, ascending: false)
                     ]
                     // Prefetch relationships to avoid faulting issues
-                    request.relationshipKeyPathsForPrefetching = ["triggers"]
+                    request.relationshipKeyPathsForPrefetching = ["triggers", "folder"]
                     let entities = try context.fetch(request)
                     continuation.resume(returning: entities.map { $0.toModel() })
                 } catch {
@@ -507,6 +519,13 @@ final class ReminderService: ObservableObject {
         reminder.updatedAt = draft.updatedAt
         reminder.userOrder = 0
         reminder.snoozeCount = 0
+
+        if let folderID = draft.folderID,
+           let folder = try folderService.fetchFolder(by: folderID, context: context) {
+            reminder.folder = folder
+        } else {
+            reminder.folder = nil
+        }
 
         for triggerDraft in draft.triggers {
             let trigger = ReminderTrigger(context: context)

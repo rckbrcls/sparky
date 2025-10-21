@@ -29,9 +29,9 @@ final class AppEnvironment: ObservableObject {
 
         // Initialize services - they will load data synchronously in their init
         self.folderService = FolderService(persistence: persistence)
-        self.reminderService = ReminderService(persistence: persistence)
+        self.reminderService = ReminderService(persistence: persistence, folderService: folderService)
         self.noteService = NoteService(persistence: persistence, folderService: folderService)
-        self.todoService = TodoService(persistence: persistence)
+        self.todoService = TodoService(persistence: persistence, folderService: folderService)
         self.notificationScheduler = NotificationScheduler(settings: settings)
         self.geofenceManager = GeofenceManager()
 

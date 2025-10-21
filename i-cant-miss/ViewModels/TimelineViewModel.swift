@@ -10,31 +10,67 @@ import Combine
 
 @MainActor
 final class TimelineViewModel: ObservableObject {
+    @Published var selectedFolderID: UUID? = nil {
+        didSet {
+            guard oldValue != selectedFolderID else { return }
+            if filter != .all && count(for: filter) == 0 {
+                suppressDefaultFilterWrite = true
+                filter = .all
+            } else {
+                updateRemindersSnapshot()
+            }
+        }
+    }
     @Published var filter: ReminderService.TimelineFilter = .today {
         didSet {
-            if settings.defaultTimelineFilter != filter {
+            if !suppressDefaultFilterWrite && settings.defaultTimelineFilter != filter {
                 settings.defaultTimelineFilter = filter
             }
+            suppressDefaultFilterWrite = false
             updateRemindersSnapshot()
         }
     }
     @Published var showCompleted: Bool = false {
         didSet {
-            updateRemindersSnapshot()
+            guard oldValue != showCompleted else { return }
+            if filter != .all && count(for: filter) == 0 {
+                suppressDefaultFilterWrite = true
+                filter = .all
+            } else {
+                updateRemindersSnapshot()
+            }
         }
     }
     @Published private(set) var reminders: [ReminderModel] = []
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var folders: [FolderModel] = []
+
+    var selectedFolder: FolderModel? {
+        guard let selectedFolderID else { return nil }
+        return folders.first(where: { $0.id == selectedFolderID })
+    }
+
+    var selectedFolderName: String {
+        selectedFolder?.name ?? "All Reminders"
+    }
+
+    var availableFilters: [ReminderService.TimelineFilter] {
+        ReminderService.TimelineFilter.allCases.filter { filter in
+            filter == .all || count(for: filter) > 0
+        }
+    }
 
     private let environment: AppEnvironment
     private let settings: SettingsStore
     private var cancellables = Set<AnyCancellable>()
+    private var suppressDefaultFilterWrite = false
 
     init(environment: AppEnvironment) {
         self.environment = environment
         self.settings = environment.settings
         self.filter = settings.defaultTimelineFilter
+        self.folders = environment.folderService.folders
 
         // Don't initialize data here - let bind() handle it
         bind()
@@ -65,6 +101,24 @@ final class TimelineViewModel: ObservableObject {
 
     func count(for filter: ReminderService.TimelineFilter) -> Int {
         var filteredReminders = environment.reminderService.reminders(for: filter)
+
+        if let folderID = selectedFolderID {
+            filteredReminders = filteredReminders.filter { $0.folder?.id == folderID }
+        }
+
+        if !showCompleted {
+            filteredReminders = filteredReminders.filter { $0.status != .completed }
+        }
+
+        return filteredReminders.count
+    }
+
+    func totalCount(for folderID: UUID?) -> Int {
+        var filteredReminders = environment.reminderService.reminders
+
+        if let folderID {
+            filteredReminders = filteredReminders.filter { $0.folder?.id == folderID }
+        }
 
         if !showCompleted {
             filteredReminders = filteredReminders.filter { $0.status != .completed }
@@ -140,6 +194,13 @@ final class TimelineViewModel: ObservableObject {
                 self?.updateRemindersSnapshot()
             }
             .store(in: &cancellables)
+
+        environment.folderService.$folders
+            .receive(on: RunLoop.main)
+            .sink { [weak self] folders in
+                self?.handleFolderUpdate(folders)
+            }
+            .store(in: &cancellables)
     }
 
     private func observeSettings() {
@@ -157,10 +218,32 @@ final class TimelineViewModel: ObservableObject {
     private func updateRemindersSnapshot() {
         var filteredReminders = environment.reminderService.reminders(for: filter)
 
+        if let folderID = selectedFolderID {
+            filteredReminders = filteredReminders.filter { $0.folder?.id == folderID }
+        }
+
         if !showCompleted {
             filteredReminders = filteredReminders.filter { $0.status != .completed }
         }
 
+        if filter != .all && filteredReminders.isEmpty {
+            suppressDefaultFilterWrite = true
+            filter = .all
+            return
+        }
+
         reminders = filteredReminders
+    }
+
+    private func handleFolderUpdate(_ newFolders: [FolderModel]) {
+        folders = newFolders
+
+        if let selectedFolderID,
+           !newFolders.contains(where: { $0.id == selectedFolderID }) {
+            self.selectedFolderID = nil
+            return
+        }
+
+        updateRemindersSnapshot()
     }
 }

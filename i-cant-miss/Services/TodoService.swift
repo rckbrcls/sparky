@@ -22,12 +22,14 @@ final class TodoService: ObservableObject {
     @Published private(set) var lastRefreshed: Date?
 
     private let persistence: PersistenceController
+    private let folderService: FolderService
     private var refreshTimer: AnyCancellable?
     private let cacheTTL: TimeInterval = 30
     private let logger = Logger(subsystem: "i-cant-miss", category: "TodoService")
 
-    init(persistence: PersistenceController) {
+    init(persistence: PersistenceController, folderService: FolderService) {
         self.persistence = persistence
+        self.folderService = folderService
         loadInitialData()
         configureAutoRefresh()
     }
@@ -45,7 +47,7 @@ final class TodoService: ObservableObject {
             NSSortDescriptor(keyPath: \TodoList.userOrder, ascending: true),
             NSSortDescriptor(keyPath: \TodoList.updatedAt, ascending: false)
         ]
-        request.relationshipKeyPathsForPrefetching = ["items"]
+        request.relationshipKeyPathsForPrefetching = ["items", "folder"]
 
         do {
             let results = try context.fetch(request)
@@ -93,6 +95,7 @@ final class TodoService: ObservableObject {
                     notes: String?,
                     dueDate: Date?,
                     isPinned: Bool,
+                    folderID: UUID?,
                     items: [TodoItemModel]) async throws -> TodoListModel {
         let sanitizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {
@@ -119,6 +122,11 @@ final class TodoService: ObservableObject {
                     list.createdAt = Date()
                     list.updatedAt = Date()
                     list.userOrder = currentOrder
+
+                    if let folderID,
+                       let folder = try self.folderService.fetchFolder(by: folderID, context: context) {
+                        list.folder = folder
+                    }
 
                     for (index, itemModel) in filteredItems.enumerated() {
                         let item = TodoItem(context: context)
@@ -158,6 +166,13 @@ final class TodoService: ObservableObject {
                     list.isArchived = model.isArchived
                     list.updatedAt = Date()
                     list.userOrder = Int16(model.userOrder)
+
+                    if let folderID = model.folder?.id,
+                       let folder = try self.folderService.fetchFolder(by: folderID, context: context) {
+                        list.folder = folder
+                    } else {
+                        list.folder = nil
+                    }
 
                     let existingItems = (list.items as? Set<TodoItem>) ?? []
                     var itemsByID: [UUID: TodoItem] = [:]
@@ -370,7 +385,7 @@ final class TodoService: ObservableObject {
         do {
             let request: NSFetchRequest<TodoList> = TodoList.fetchRequest()
             request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-            request.relationshipKeyPathsForPrefetching = ["items"]
+            request.relationshipKeyPathsForPrefetching = ["items", "folder"]
             request.fetchLimit = 1
 
             guard let list = try context.fetch(request).first else {
@@ -446,7 +461,7 @@ final class TodoService: ObservableObject {
                         NSSortDescriptor(keyPath: \TodoList.userOrder, ascending: true),
                         NSSortDescriptor(keyPath: \TodoList.updatedAt, ascending: false)
                     ]
-                    request.relationshipKeyPathsForPrefetching = ["items"]
+                    request.relationshipKeyPathsForPrefetching = ["items", "folder"]
                     let results = try context.fetch(request)
                     continuation.resume(returning: results.map { $0.toModel() })
                 } catch {

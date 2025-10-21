@@ -144,6 +144,20 @@ struct TodoListDetailView: View {
                     }
                 }
 
+                if let folder = list.folder {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Folder")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Image(systemName: folder.iconName ?? "folder.fill")
+                                .foregroundStyle(Color(hex: folder.colorHex ?? "#6366F1") ?? .accentColor)
+                            Text(folder.name)
+                                .font(.body)
+                        }
+                    }
+                }
+
                 HStack(spacing: 12) {
                     if list.isPinned {
                         Label("Pinned", systemImage: "pin.fill")

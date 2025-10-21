@@ -249,6 +249,7 @@ private extension PersistenceController {
         errandsList.isPinned = true
         errandsList.isArchived = false
         errandsList.userOrder = 0
+        errandsList.folder = defaultFolder
 
         let buyGift = TodoItem(context: context)
         buyGift.id = UUID()
@@ -277,6 +278,7 @@ private extension PersistenceController {
         selfCareList.isPinned = false
         selfCareList.isArchived = false
         selfCareList.userOrder = 1
+        selfCareList.folder = workFolder
 
         let stretchItem = TodoItem(context: context)
         stretchItem.id = UUID()

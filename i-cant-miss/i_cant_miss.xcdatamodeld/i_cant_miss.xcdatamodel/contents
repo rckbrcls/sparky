@@ -8,6 +8,8 @@
         <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
         <attribute name="sortOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
         <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Note" inverseName="folder" inverseEntity="Note" syncable="YES"/>
+        <relationship name="todoLists" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoList" inverseName="folder" inverseEntity="TodoList" syncable="YES"/>
+        <relationship name="reminders" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Reminder" inverseName="folder" inverseEntity="Reminder" syncable="YES"/>
     </entity>
     <entity name="ImportantDate" representedClassName="ImportantDate" syncable="YES" codeGenerationType="class">
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
@@ -46,6 +48,7 @@
         <attribute name="title" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="userOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <relationship name="folder" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="reminders" inverseEntity="Folder" syncable="YES"/>
         <relationship name="importantDate" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="ImportantDate" inverseName="reminder" inverseEntity="ImportantDate" syncable="YES"/>
         <relationship name="snoozes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReminderSnooze" inverseName="reminder" inverseEntity="ReminderSnooze" syncable="YES"/>
         <relationship name="triggers" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ReminderTrigger" inverseName="reminder" inverseEntity="ReminderTrigger" syncable="YES"/>
@@ -105,6 +108,7 @@
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="userOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
         <relationship name="items" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TodoItem" inverseName="list" inverseEntity="TodoItem" syncable="YES"/>
+        <relationship name="folder" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="todoLists" inverseEntity="Folder" syncable="YES"/>
     </entity>
     <elements>
         <element name="Folder" positionX="-63" positionY="-18" width="128" height="148"/>

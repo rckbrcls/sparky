@@ -164,6 +164,7 @@ struct ReminderModel: Identifiable, Hashable {
     var notes: String?
     var status: ReminderStatus
     var priority: ReminderPriority
+    var folder: FolderModel?
     var createdAt: Date
     var updatedAt: Date
     var lastCompletionDate: Date?
@@ -234,6 +235,7 @@ struct ReminderDraft {
     var notes: String?
     var status: ReminderStatus = .active
     var priority: ReminderPriority = .medium
+    var folderID: UUID?
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var triggers: [ReminderTriggerDraft] = []
@@ -290,6 +292,7 @@ struct TodoListModel: Identifiable, Hashable {
     var createdAt: Date
     var updatedAt: Date
     var userOrder: Int
+    var folder: FolderModel?
     var items: [TodoItemModel]
 
     var completionRate: Double {
@@ -358,6 +361,7 @@ extension Reminder {
             notes: notes,
             status: status,
             priority: priorityLevel,
+            folder: folder?.toModel(),
             createdAt: createdAt ?? Date(),
             updatedAt: updatedAt ?? Date(),
             lastCompletionDate: lastCompletionDate,
@@ -486,6 +490,7 @@ extension TodoList {
             createdAt: createdAt ?? Date(),
             updatedAt: updatedAt ?? Date(),
             userOrder: Int(userOrder),
+            folder: folder?.toModel(),
             items: itemSet
                 .map { $0.toModel() }
                 .sorted(by: { $0.sortOrder < $1.sortOrder })

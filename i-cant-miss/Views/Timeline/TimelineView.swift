@@ -16,6 +16,10 @@ struct TimelineView: View {
     @State private var showTriggers = false
     @State private var showFilterSheet = false
     private let accentColor = Color("AccentColor")
+    private let timeFilters: [ReminderService.TimelineFilter] = [.today, .overdue, .thisWeek, .upcoming]
+    private let triggerFilters: [ReminderService.TimelineFilter] = [.timeTriggers, .locationTriggers, .personTriggers]
+    private let organizationFilters: [ReminderService.TimelineFilter] = [.byPriority, .byTriggerType]
+    private let specialFilters: [ReminderService.TimelineFilter] = [.recurring, .noTriggers]
 
     init(environment: AppEnvironment,
          onCreateReminder: @escaping () -> Void,
@@ -102,23 +106,31 @@ struct TimelineView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    Button {
-                        showFilterSheet = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: viewModel.filter.iconName)
-                                .font(.subheadline)
-                            Text(viewModel.filter.title)
-                                .font(.headline)
-                            if viewModel.reminders.count > 0 {
-                                Text("(\(viewModel.reminders.count))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            Image(systemName: "chevron.down")
-                                .font(.caption2)
+                    Menu {
+                        folderMenu
+
+                        if !viewModel.availableFilters.isEmpty {
+                            filterMenu
                         }
-                        .foregroundColor(.primary)
+
+                        Section("Options") {
+                            Button {
+                                viewModel.toggleShowCompleted()
+                            } label: {
+                                Label(
+                                    viewModel.showCompleted ? "Hide Completed" : "Show Completed",
+                                    systemImage: viewModel.showCompleted ? "eye.slash" : "eye"
+                                )
+                            }
+
+                            Button {
+                                showFilterSheet = true
+                            } label: {
+                                Label("More Filters…", systemImage: "slider.horizontal.3")
+                            }
+                        }
+                    } label: {
+                        filterMenuLabel
                     }
                     .buttonStyle(.glass)
                 }
@@ -156,31 +168,46 @@ struct TimelineView: View {
                         .tint(accentColor)
                     }
 
-                    Section("Time") {
-                        filterButton(.today)
-                        filterButton(.overdue)
-                        filterButton(.thisWeek)
-                        filterButton(.upcoming)
+                    let time = filters(in: timeFilters)
+                    if !time.isEmpty {
+                        Section("Time") {
+                            ForEach(time, id: \.self) { filter in
+                                filterButton(filter)
+                            }
+                        }
                     }
 
-                    Section("Triggers") {
-                        filterButton(.timeTriggers)
-                        filterButton(.locationTriggers)
-                        filterButton(.personTriggers)
+                    let trigger = filters(in: triggerFilters)
+                    if !trigger.isEmpty {
+                        Section("Triggers") {
+                            ForEach(trigger, id: \.self) { filter in
+                                filterButton(filter)
+                            }
+                        }
                     }
 
-                    Section("Organization") {
-                        filterButton(.byPriority)
-                        filterButton(.byTriggerType)
+                    let organization = filters(in: organizationFilters)
+                    if !organization.isEmpty {
+                        Section("Organization") {
+                            ForEach(organization, id: \.self) { filter in
+                                filterButton(filter)
+                            }
+                        }
                     }
 
-                    Section("Special") {
-                        filterButton(.recurring)
-                        filterButton(.noTriggers)
+                    let special = filters(in: specialFilters)
+                    if !special.isEmpty {
+                        Section("Special") {
+                            ForEach(special, id: \.self) { filter in
+                                filterButton(filter)
+                            }
+                        }
                     }
 
-                    Section {
-                        filterButton(.all)
+                    if viewModel.availableFilters.contains(.all) {
+                        Section {
+                            filterButton(.all)
+                        }
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -211,13 +238,123 @@ struct TimelineView: View {
         }
     }
 
-    private var filterPicker: some View {
-        Picker("Filter", selection: $viewModel.filter) {
-            ForEach(ReminderService.TimelineFilter.allCases, id: \.self) { filter in
-                Text(filter.title)
-                    .tag(filter)
+    private var filterMenuLabel: some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(viewModel.selectedFolderName)
+                    .font(.headline)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Image(systemName: viewModel.filter.iconName)
+                        .font(.caption)
+                    Text(viewModel.filter.title)
+                        .font(.subheadline)
+                        .lineLimit(1)
+                    if viewModel.reminders.count > 0 {
+                        Text("(\(viewModel.reminders.count))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.down")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .foregroundColor(.primary)
+    }
+
+    private var folderMenu: some View {
+        Section("Folders") {
+            folderMenuButton(
+                title: "All Reminders",
+                folderID: nil,
+                iconName: "square.grid.2x2.fill",
+                iconColor: accentColor,
+                count: viewModel.totalCount(for: nil),
+                isSelected: viewModel.selectedFolderID == nil
+            )
+
+            ForEach(viewModel.folders) { folder in
+                folderMenuButton(
+                    title: folder.name,
+                    folderID: folder.id,
+                    iconName: folder.iconName ?? "folder",
+                    iconColor: folderColor(for: folder),
+                    count: viewModel.totalCount(for: folder.id),
+                    isSelected: viewModel.selectedFolderID == folder.id
+                )
             }
         }
+    }
+
+    private var filterMenu: some View {
+        Section("Filters") {
+            ForEach(viewModel.availableFilters, id: \.self) { filter in
+                Button {
+                    viewModel.filter = filter
+                } label: {
+                    HStack {
+                        Label(filter.title, systemImage: filter.iconName)
+                        Spacer()
+                        let count = viewModel.count(for: filter)
+                        if count > 0 {
+                            Text("\(count)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        if viewModel.filter == filter {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(accentColor)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func folderMenuButton(title: String,
+                                  folderID: UUID?,
+                                  iconName: String,
+                                  iconColor: Color,
+                                  count: Int,
+                                  isSelected: Bool) -> some View {
+        Button {
+            viewModel.selectedFolderID = folderID
+        } label: {
+            HStack {
+                Label {
+                    Text(title)
+                } icon: {
+                    Image(systemName: iconName)
+                        .foregroundStyle(iconColor)
+                }
+
+                Spacer()
+
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(accentColor)
+                }
+            }
+        }
+    }
+
+    private func folderColor(for folder: FolderModel) -> Color {
+        guard let hex = folder.colorHex else { return accentColor }
+        return Color(hex: hex) ?? accentColor
+    }
+
+    private func filters(in group: [ReminderService.TimelineFilter]) -> [ReminderService.TimelineFilter] {
+        group.filter { viewModel.availableFilters.contains($0) }
     }
 
     private var emptyStateTitle: String {
