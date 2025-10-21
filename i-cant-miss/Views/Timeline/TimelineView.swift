@@ -23,9 +23,6 @@ struct TimelineView: View {
     @State private var newFolderName = ""
     @State private var newFolderIcon = TimelineViewConstants.defaultFolderIconName
     @State private var newFolderColor = TimelineViewConstants.defaultFolderColorHex
-    @State private var newFolderShowsReminders = true
-    @State private var newFolderShowsNotes = false
-    @State private var newFolderShowsTodos = false
     private let folderIcons = [
         "folder.fill",
         "folder.badge.person.crop",
@@ -191,18 +188,6 @@ struct TimelineView: View {
                     .padding(.vertical, 8)
                 }
 
-                Section {
-                    Toggle("Reminders", isOn: $newFolderShowsReminders)
-                    Toggle("Notes", isOn: $newFolderShowsNotes)
-                    Toggle("To-dos", isOn: $newFolderShowsTodos)
-                } header: {
-                    Text("Show In")
-                } footer: {
-                    if !newFolderAudienceSelectionValid {
-                        Text("Select at least one area for this folder.")
-                            .foregroundStyle(.red)
-                    }
-                }
             }
             .navigationTitle("New Folder")
             .navigationBarTitleDisplayMode(.inline)
@@ -220,15 +205,12 @@ struct TimelineView: View {
                         viewModel.createFolder(
                             name: trimmedName,
                             colorHex: newFolderColor,
-                            iconName: newFolderIcon,
-                            showInReminders: newFolderShowsReminders,
-                            showInNotes: newFolderShowsNotes,
-                            showInTodos: newFolderShowsTodos
+                            iconName: newFolderIcon
                         )
                         resetNewFolderInputs()
                         activeSheet = nil
                     }
-                    .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !newFolderAudienceSelectionValid)
+                    .disabled(newFolderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -238,13 +220,6 @@ struct TimelineView: View {
         newFolderName = ""
         newFolderIcon = TimelineViewConstants.defaultFolderIconName
         newFolderColor = TimelineViewConstants.defaultFolderColorHex
-        newFolderShowsReminders = true
-        newFolderShowsNotes = false
-        newFolderShowsTodos = false
-    }
-
-    private var newFolderAudienceSelectionValid: Bool {
-        newFolderShowsReminders || newFolderShowsNotes || newFolderShowsTodos
     }
 
     @ViewBuilder

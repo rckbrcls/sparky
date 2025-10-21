@@ -6,9 +6,7 @@
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="isDefault" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
         <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
-        <attribute name="showInReminders" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="1" syncable="YES"/>
-        <attribute name="showInNotes" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="1" syncable="YES"/>
-        <attribute name="showInTodos" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="1" syncable="YES"/>
+        <attribute name="audienceRaw" optional="NO" attributeType="String" defaultValueString="reminders" syncable="YES"/>
         <attribute name="sortOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
         <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Note" inverseName="folder" inverseEntity="Note" syncable="YES"/>
         <relationship name="todoLists" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoList" inverseName="folder" inverseEntity="TodoList" syncable="YES"/>

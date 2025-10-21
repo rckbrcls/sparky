@@ -116,7 +116,7 @@ struct NoteEditorView: View {
 
                             Picker("Folder", selection: $viewModel.selectedFolderID) {
                                 Text("No folder").tag(UUID?.none)
-                                ForEach(environment.folderService.folders(for: .notes), id: \.id) { folder in
+                                ForEach(noteFolders, id: \.id) { folder in
                                     Text(folder.name).tag(Optional(folder.id))
                                 }
                             }
@@ -234,8 +234,21 @@ struct NoteEditorView: View {
         .foregroundStyle(.secondary)
     }
 
+    private var noteFolders: [FolderModel] {
+        var folders = environment.folderService.folders(for: .notes)
+
+        if let selectedID = viewModel.selectedFolderID,
+           let selected = environment.folderService.folders.first(where: { $0.id == selectedID }),
+           !folders.contains(where: { $0.id == selected.id }) {
+            folders.append(selected)
+            folders.sort { $0.sortOrder < $1.sortOrder }
+        }
+
+        return folders
+    }
+
     private var selectedFolderName: String? {
-        environment.folderService.folders(for: .notes).first(where: { $0.id == viewModel.selectedFolderID })?.name
+        environment.folderService.folders.first(where: { $0.id == viewModel.selectedFolderID })?.name
     }
 
     private var selectedTagNames: [String] {

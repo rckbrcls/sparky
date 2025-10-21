@@ -78,7 +78,7 @@ struct TodoEditorView: View {
 
                     Picker("Folder", selection: $viewModel.selectedFolderID) {
                         Text("No folder").tag(UUID?.none)
-                        ForEach(environment.folderService.folders(for: .todos), id: \.id) { folder in
+                        ForEach(todoFolders, id: \.id) { folder in
                             Text(folder.name).tag(Optional(folder.id))
                         }
                     }
@@ -175,6 +175,19 @@ struct TodoEditorView: View {
             hasDueDate = viewModel.dueDate != nil
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    private var todoFolders: [FolderModel] {
+        var folders = environment.folderService.folders(for: .todos)
+
+        if let selectedID = viewModel.selectedFolderID,
+           let selected = environment.folderService.folders.first(where: { $0.id == selectedID }),
+           !folders.contains(where: { $0.id == selected.id }) {
+            folders.append(selected)
+            folders.sort { $0.sortOrder < $1.sortOrder }
+        }
+
+        return folders
     }
 }
 

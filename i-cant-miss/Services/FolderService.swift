@@ -18,12 +18,6 @@ final class FolderService: ObservableObject {
         case validationFailed(String)
     }
 
-    enum Audience {
-        case reminders
-        case notes
-        case todos
-    }
-
     @Published private(set) var folders: [FolderModel] = []
     @Published private(set) var tags: [TagModel] = []
 
@@ -141,9 +135,7 @@ final class FolderService: ObservableObject {
         colorHex: String?,
         iconName: String?,
         isDefault: Bool,
-        showInReminders: Bool = true,
-        showInNotes: Bool = true,
-        showInTodos: Bool = true
+        audience: FolderAudience
     ) async throws -> FolderModel {
         try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
@@ -152,12 +144,8 @@ final class FolderService: ObservableObject {
                         throw FolderServiceError.validationFailed("Folder name is required")
                     }
 
-                    guard showInReminders || showInNotes || showInTodos else {
-                        throw FolderServiceError.validationFailed("Select at least one area for this folder.")
-                    }
-
                     if isDefault {
-                        try self.clearDefaultFolder(context: context)
+                        try self.clearDefaultFolder(context: context, audience: audience)
                     }
 
                     let folder = Folder(context: context)
@@ -166,9 +154,7 @@ final class FolderService: ObservableObject {
                     folder.colorHex = colorHex
                     folder.iconName = iconName
                     folder.isDefault = isDefault
-                    folder.showInReminders = showInReminders
-                    folder.showInNotes = showInNotes
-                    folder.showInTodos = showInTodos
+                    folder.setAudience(audience)
                     folder.sortOrder = Int16(self.folders.count)
 
                     try context.save()
@@ -194,21 +180,15 @@ final class FolderService: ObservableObject {
                         throw FolderServiceError.validationFailed("Folder name is required")
                     }
 
-                    guard model.showInReminders || model.showInNotes || model.showInTodos else {
-                        throw FolderServiceError.validationFailed("Select at least one area for this folder.")
-                    }
-
                     if model.isDefault {
-                        try self.clearDefaultFolder(context: context, excluding: folder)
+                        try self.clearDefaultFolder(context: context, audience: model.audience, excluding: folder)
                     }
 
                     folder.name = model.name
                     folder.colorHex = model.colorHex
                     folder.iconName = model.iconName
                     folder.isDefault = model.isDefault
-                    folder.showInReminders = model.showInReminders
-                    folder.showInNotes = model.showInNotes
-                    folder.showInTodos = model.showInTodos
+                    folder.setAudience(model.audience)
                     folder.sortOrder = Int16(model.sortOrder)
 
                     try context.save()
@@ -354,6 +334,33 @@ final class FolderService: ObservableObject {
                         NSSortDescriptor(keyPath: \Folder.name, ascending: true)
                     ]
                     let results = try context.fetch(request)
+                    var needsSave = false
+
+                    for folder in results {
+                        let reminderCount = Int(folder.reminders?.count ?? 0)
+                        let noteCount = Int(folder.notes?.count ?? 0)
+                        let todoCount = Int(folder.todoLists?.count ?? 0)
+                        let currentAudience = folder.audienceValue
+
+                        let needsReassignment =
+                            !folder.hasAssignedAudience ||
+                            (currentAudience == .reminders && reminderCount == 0 && (noteCount > 0 || todoCount > 0)) ||
+                            (currentAudience == .notes && noteCount == 0 && (reminderCount > 0 || todoCount > 0)) ||
+                            (currentAudience == .todos && todoCount == 0 && (reminderCount > 0 || noteCount > 0))
+
+                        if needsReassignment {
+                            let inferredAudience = self.inferAudience(for: folder)
+                            if inferredAudience != currentAudience {
+                                folder.setAudience(inferredAudience)
+                                needsSave = true
+                            }
+                        }
+                    }
+
+                    if needsSave {
+                        try context.save()
+                    }
+
                     continuation.resume(returning: results.map { $0.toModel() })
                 } catch {
                     continuation.resume(throwing: error)
@@ -379,34 +386,38 @@ final class FolderService: ObservableObject {
         }
     }
 
-    private func clearDefaultFolder(context: NSManagedObjectContext, excluding folder: Folder? = nil) throws {
+    private func clearDefaultFolder(context: NSManagedObjectContext, audience: FolderAudience, excluding folder: Folder? = nil) throws {
         let request = Folder.fetchRequest()
-        request.predicate = NSPredicate(format: "isDefault == YES")
+        request.predicate = NSPredicate(format: "isDefault == YES AND audienceRaw == %@", audience.rawValue)
         let defaults = try context.fetch(request)
         for existing in defaults where existing != folder {
             existing.isDefault = false
         }
     }
 
-    func folders(for audience: Audience) -> [FolderModel] {
-        switch audience {
-        case .reminders:
-            return folders.filter(\.showInReminders)
-        case .notes:
-            return folders.filter(\.showInNotes)
-        case .todos:
-            return folders.filter(\.showInTodos)
+    private func inferAudience(for folder: Folder) -> FolderAudience {
+        let reminderCount = Int(folder.reminders?.count ?? 0)
+        let noteCount = Int(folder.notes?.count ?? 0)
+        let todoCount = Int(folder.todoLists?.count ?? 0)
+
+        let counts: [(FolderAudience, Int)] = [
+            (.reminders, reminderCount),
+            (.notes, noteCount),
+            (.todos, todoCount)
+        ]
+
+        if let max = counts.max(by: { $0.1 < $1.1 }), max.1 > 0 {
+            return max.0
         }
+
+        return .reminders
     }
 
-    func defaultFolder(for audience: Audience) -> FolderModel? {
-        switch audience {
-        case .reminders:
-            return folders.first(where: { $0.isDefault && $0.showInReminders })
-        case .notes:
-            return folders.first(where: { $0.isDefault && $0.showInNotes })
-        case .todos:
-            return folders.first(where: { $0.isDefault && $0.showInTodos })
-        }
+    func folders(for audience: FolderAudience) -> [FolderModel] {
+        folders.filter { $0.audience == audience }
+    }
+
+    func defaultFolder(for audience: FolderAudience) -> FolderModel? {
+        folders.first(where: { $0.isDefault && $0.audience == audience })
     }
 }

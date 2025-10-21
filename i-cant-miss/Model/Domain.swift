@@ -314,14 +314,20 @@ struct TodoListModel: Identifiable, Hashable {
     }
 }
 
+enum FolderAudience: String, CaseIterable, Identifiable {
+    case reminders
+    case notes
+    case todos
+
+    var id: String { rawValue }
+}
+
 struct FolderModel: Identifiable, Hashable {
     let id: UUID
     var name: String
     var colorHex: String?
     var iconName: String?
-    var showInReminders: Bool
-    var showInNotes: Bool
-    var showInTodos: Bool
+    var audience: FolderAudience
     var isDefault: Bool
     var sortOrder: Int
 }
@@ -516,18 +522,37 @@ extension TodoItem {
 }
 
 extension Folder {
+    private enum FolderManagedKeys {
+        static let audienceRaw = "audienceRaw"
+    }
+
+    var audienceRawValue: String? {
+        get { value(forKey: FolderManagedKeys.audienceRaw) as? String }
+        set { setValue(newValue, forKey: FolderManagedKeys.audienceRaw) }
+    }
+
+    var hasAssignedAudience: Bool {
+        !(audienceRawValue?.isEmpty ?? true)
+    }
+
+    var audienceValue: FolderAudience {
+        FolderAudience(rawValue: audienceRawValue ?? FolderAudience.reminders.rawValue) ?? .reminders
+    }
+
     func toModel() -> FolderModel {
         FolderModel(
             id: id ?? UUID(),
             name: name ?? "Folder",
             colorHex: colorHex,
             iconName: iconName,
-            showInReminders: showInReminders,
-            showInNotes: showInNotes,
-            showInTodos: showInTodos,
+            audience: audienceValue,
             isDefault: isDefault,
             sortOrder: Int(sortOrder)
         )
+    }
+
+    func setAudience(_ audience: FolderAudience) {
+        audienceRawValue = audience.rawValue
     }
 }
 

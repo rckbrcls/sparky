@@ -129,9 +129,7 @@ private struct FlexibleView<Data: RandomAccessCollection, Content: View>: View w
             name: "Design",
             colorHex: "#F472B6",
             iconName: "paintbrush",
-            showInReminders: false,
-            showInNotes: true,
-            showInTodos: false,
+            audience: .notes,
             isDefault: false,
             sortOrder: 0
         ),

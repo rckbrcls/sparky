@@ -116,10 +116,7 @@ final class TimelineViewModel: ObservableObject {
     func createFolder(
         name: String,
         colorHex: String,
-        iconName: String,
-        showInReminders: Bool,
-        showInNotes: Bool,
-        showInTodos: Bool
+        iconName: String
     ) {
         Task {
             _ = try? await environment.folderService.createFolder(
@@ -127,9 +124,7 @@ final class TimelineViewModel: ObservableObject {
                 colorHex: colorHex,
                 iconName: iconName,
                 isDefault: false,
-                showInReminders: showInReminders,
-                showInNotes: showInNotes,
-                showInTodos: showInTodos
+                audience: .reminders
             )
             _ = await environment.folderService.refreshFolders(force: true)
         }
@@ -238,7 +233,7 @@ final class TimelineViewModel: ObservableObject {
     }
 
     private func handleFolderUpdate(_ newFolders: [FolderModel]) {
-        let filteredFolders = newFolders.filter(\.showInReminders)
+        let filteredFolders = newFolders.filter { $0.audience == .reminders }
         folders = filteredFolders
 
         if let selectedFolderID,

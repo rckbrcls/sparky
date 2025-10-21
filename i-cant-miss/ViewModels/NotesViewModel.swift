@@ -62,10 +62,7 @@ final class NotesViewModel: ObservableObject {
     func createFolder(
         name: String,
         colorHex: String,
-        iconName: String,
-        showInReminders: Bool,
-        showInNotes: Bool,
-        showInTodos: Bool
+        iconName: String
     ) {
         Task {
             _ = try? await environment.folderService.createFolder(
@@ -73,9 +70,7 @@ final class NotesViewModel: ObservableObject {
                 colorHex: colorHex,
                 iconName: iconName,
                 isDefault: false,
-                showInReminders: showInReminders,
-                showInNotes: showInNotes,
-                showInTodos: showInTodos
+                audience: .notes
             )
             // Force immediate refresh to update UI
             _ = await environment.folderService.refreshFolders(force: true)
@@ -86,19 +81,13 @@ final class NotesViewModel: ObservableObject {
         _ folder: FolderModel,
         name: String,
         colorHex: String?,
-        iconName: String?,
-        showInReminders: Bool,
-        showInNotes: Bool,
-        showInTodos: Bool
+        iconName: String?
     ) {
         Task {
             var updatedFolder = folder
             updatedFolder.name = name
             updatedFolder.colorHex = colorHex
             updatedFolder.iconName = iconName
-            updatedFolder.showInReminders = showInReminders
-            updatedFolder.showInNotes = showInNotes
-            updatedFolder.showInTodos = showInTodos
 
             _ = try? await environment.folderService.updateFolder(updatedFolder)
             async let folders = environment.folderService.refreshFolders(force: true)
@@ -128,7 +117,7 @@ final class NotesViewModel: ObservableObject {
         environment.folderService.$folders
             .receive(on: RunLoop.main)
             .sink { [weak self] folders in
-                self?.folders = folders.filter(\.showInNotes)
+                self?.folders = folders.filter { $0.audience == .notes }
             }
             .store(in: &cancellables)
 

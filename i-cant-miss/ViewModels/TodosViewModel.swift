@@ -103,10 +103,7 @@ final class TodosViewModel: ObservableObject {
     func createFolder(
         name: String,
         colorHex: String,
-        iconName: String,
-        showInReminders: Bool,
-        showInNotes: Bool,
-        showInTodos: Bool
+        iconName: String
     ) {
         Task {
             _ = try? await environment.folderService.createFolder(
@@ -114,9 +111,7 @@ final class TodosViewModel: ObservableObject {
                 colorHex: colorHex,
                 iconName: iconName,
                 isDefault: false,
-                showInReminders: showInReminders,
-                showInNotes: showInNotes,
-                showInTodos: showInTodos
+                audience: .todos
             )
             async let folders = environment.folderService.refreshFolders(force: true)
             async let todos = environment.todoService.refresh(force: true)
@@ -128,19 +123,13 @@ final class TodosViewModel: ObservableObject {
         _ folder: FolderModel,
         name: String,
         colorHex: String?,
-        iconName: String?,
-        showInReminders: Bool,
-        showInNotes: Bool,
-        showInTodos: Bool
+        iconName: String?
     ) {
         Task {
             var updatedFolder = folder
             updatedFolder.name = name
             updatedFolder.colorHex = colorHex
             updatedFolder.iconName = iconName
-            updatedFolder.showInReminders = showInReminders
-            updatedFolder.showInNotes = showInNotes
-            updatedFolder.showInTodos = showInTodos
 
             _ = try? await environment.folderService.updateFolder(updatedFolder)
             async let folders = environment.folderService.refreshFolders(force: true)
@@ -185,7 +174,7 @@ final class TodosViewModel: ObservableObject {
         environment.folderService.$folders
             .receive(on: RunLoop.main)
             .sink { [weak self] folders in
-                self?.folders = folders.filter(\.showInTodos)
+                self?.folders = folders.filter { $0.audience == .todos }
             }
             .store(in: &cancellables)
 
