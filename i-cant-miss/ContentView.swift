@@ -11,12 +11,9 @@ import Combine
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @StateObject private var tabRouter = TabRouter()
-    @State private var showReminderForCreate = false
-    @State private var showNoteForCreate = false
-    @State private var selectedReminder: ReminderModel?
-    @State private var selectedNote: NoteModel?
-    @State private var showTodoForCreate = false
-    @State private var selectedTodoList: TodoListModel?
+    @State private var targetSpaceForCreation: SpaceModel?
+    @State private var showCreationDialog = false
+    @State private var editorRoute: MemoryEditorRoute?
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -24,35 +21,28 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $tabRouter.selection) {
-            TimelineView(environment: environment,
-                         onCreateReminder: { showReminderForCreate = true },
-                         onEditReminder: { reminder in
-                             selectedReminder = reminder
-                         })
+            MemoryTimelineView(
+                memoryService: environment.memoryService,
+                onCreateMemory: { prepareMemoryCreation(for: nil) },
+                onSelectMemory: handleMemorySelection
+            )
             .tabItem {
                 Label("Timeline", systemImage: "list.bullet.rectangle")
             }
             .tag(TabRouter.Selection.timeline)
 
-            NotesView(environment: environment,
-                      onCreateNote: { showNoteForCreate = true },
-                      onEditNote: { note in
-                          selectedNote = note
-                      })
+            SpacesRootView(
+                spaceService: environment.spaceService,
+                memoryService: environment.memoryService,
+                onCreateMemory: { space in
+                    prepareMemoryCreation(for: space)
+                },
+                onSelectMemory: handleMemorySelection
+            )
             .tabItem {
-                Label("Notes", systemImage: "square.and.pencil")
+                Label("Spaces", systemImage: "square.grid.2x2")
             }
-            .tag(TabRouter.Selection.notes)
-
-            TodosView(environment: environment,
-                      onCreateList: { showTodoForCreate = true },
-                      onEditList: { list in
-                          selectedTodoList = environment.todoService.fetchListWithItems(id: list.id) ?? list
-                      })
-            .tabItem {
-                Label("To-dos", systemImage: "checklist")
-            }
-            .tag(TabRouter.Selection.todos)
+            .tag(TabRouter.Selection.spaces)
 
             SettingsView(environment: environment)
                 .tabItem {
@@ -60,54 +50,73 @@ struct ContentView: View {
                 }
                 .tag(TabRouter.Selection.settings)
         }
-        .sheet(isPresented: $showReminderForCreate) {
-            ReminderEditorView(
-                environment: environment,
-                existingReminder: nil
-            )
+        .sheet(item: $editorRoute) { route in
+            switch route.mode {
+            case let .create(space, template):
+                MemoryEditorView(
+                    environment: environment,
+                    defaultSpace: space,
+                    template: template
+                )
+            case let .edit(memory):
+                MemoryEditorView(
+                    environment: environment,
+                    memory: memory,
+                    defaultSpace: memory.space,
+                    template: .blank
+                )
+            }
         }
-        .sheet(item: $selectedReminder) { reminder in
-            ReminderEditorView(
-                environment: environment,
-                existingReminder: reminder
-            )
+        .confirmationDialog("Create Memory", isPresented: $showCreationDialog, titleVisibility: .visible) {
+            Button("Reminder with Trigger") {
+                editorRoute = MemoryEditorRoute(mode: .create(space: targetSpaceForCreation, template: .quickReminder))
+                showCreationDialog = false
+                targetSpaceForCreation = nil
+            }
+            Button("Note") {
+                editorRoute = MemoryEditorRoute(mode: .create(space: targetSpaceForCreation, template: .blank))
+                showCreationDialog = false
+                targetSpaceForCreation = nil
+            }
+            Button("Checklist") {
+                editorRoute = MemoryEditorRoute(mode: .create(space: targetSpaceForCreation, template: .checklist))
+                showCreationDialog = false
+                targetSpaceForCreation = nil
+            }
+            Button("Cancel", role: .cancel) {
+                targetSpaceForCreation = nil
+            }
         }
-        .sheet(isPresented: $showNoteForCreate) {
-            NoteEditorView(
-                environment: environment,
-                existingNote: nil
-            )
-        }
-        .sheet(item: $selectedNote) { note in
-            NoteEditorView(
-                environment: environment,
-                existingNote: note
-            )
-        }
-        .sheet(isPresented: $showTodoForCreate) {
-            TodoEditorView(
-                environment: environment,
-                existingList: nil
-            )
-        }
-        .sheet(item: $selectedTodoList) { list in
-            TodoEditorView(
-                environment: environment,
-                existingList: list
-            )
-        }
+    }
+
+    private func prepareMemoryCreation(for space: SpaceModel?) {
+        targetSpaceForCreation = space
+        showCreationDialog = true
+    }
+
+    private func handleMemorySelection(_ memory: MemoryModel) {
+        editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 }
 
 final class TabRouter: ObservableObject {
     enum Selection {
         case timeline
-        case notes
-        case todos
+        case spaces
         case settings
     }
 
     @Published var selection: Selection = .timeline
+}
+
+private struct MemoryEditorRoute: Identifiable {
+    enum Mode {
+        case create(space: SpaceModel?, template: MemoryEditorTemplate)
+        case edit(memory: MemoryModel)
+    }
+
+    let id = UUID()
+    let mode: Mode
 }
 
 #Preview {
