@@ -91,7 +91,7 @@ final class FolderService: ObservableObject {
         }
 
         do {
-            let fetched = try await fetchFolders(in: persistence.container.viewContext)
+            let fetched = try fetchFolders(in: persistence.container.viewContext)
 
             // Always update on main thread to ensure UI updates
             await MainActor.run {
@@ -324,49 +324,42 @@ final class FolderService: ObservableObject {
 
     // MARK: - Core Data fetch helpers
 
-    private func fetchFolders(in context: NSManagedObjectContext) async throws -> [FolderModel] {
-        return try await withCheckedThrowingContinuation { continuation in
-            context.perform {
-                do {
-                    let request: NSFetchRequest<Folder> = Folder.fetchRequest()
-                    request.sortDescriptors = [
-                        NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true),
-                        NSSortDescriptor(keyPath: \Folder.name, ascending: true)
-                    ]
-                    let results = try context.fetch(request)
-                    var needsSave = false
+    private func fetchFolders(in context: NSManagedObjectContext) throws -> [FolderModel] {
+        let request: NSFetchRequest<Folder> = Folder.fetchRequest()
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true),
+            NSSortDescriptor(keyPath: \Folder.name, ascending: true)
+        ]
 
-                    for folder in results {
-                        let reminderCount = Int(folder.reminders?.count ?? 0)
-                        let noteCount = Int(folder.notes?.count ?? 0)
-                        let todoCount = Int(folder.todoLists?.count ?? 0)
-                        let currentAudience = folder.audienceValue
+        let results = try context.fetch(request)
+        var needsSave = false
 
-                        let needsReassignment =
-                            !folder.hasAssignedAudience ||
-                            (currentAudience == .reminders && reminderCount == 0 && (noteCount > 0 || todoCount > 0)) ||
-                            (currentAudience == .notes && noteCount == 0 && (reminderCount > 0 || todoCount > 0)) ||
-                            (currentAudience == .todos && todoCount == 0 && (reminderCount > 0 || noteCount > 0))
+        for folder in results {
+            let reminderCount = Int(folder.reminders?.count ?? 0)
+            let noteCount = Int(folder.notes?.count ?? 0)
+            let todoCount = Int(folder.todoLists?.count ?? 0)
+            let currentAudience = folder.audienceValue
 
-                        if needsReassignment {
-                            let inferredAudience = self.inferAudience(for: folder)
-                            if inferredAudience != currentAudience {
-                                folder.setAudience(inferredAudience)
-                                needsSave = true
-                            }
-                        }
-                    }
+            let needsReassignment =
+                !folder.hasAssignedAudience ||
+                (currentAudience == .reminders && reminderCount == 0 && (noteCount > 0 || todoCount > 0)) ||
+                (currentAudience == .notes && noteCount == 0 && (reminderCount > 0 || todoCount > 0)) ||
+                (currentAudience == .todos && todoCount == 0 && (reminderCount > 0 || noteCount > 0))
 
-                    if needsSave {
-                        try context.save()
-                    }
-
-                    continuation.resume(returning: results.map { $0.toModel() })
-                } catch {
-                    continuation.resume(throwing: error)
+            if needsReassignment {
+                let inferredAudience = inferAudience(for: folder)
+                if inferredAudience != currentAudience {
+                    folder.setAudience(inferredAudience)
+                    needsSave = true
                 }
             }
         }
+
+        if needsSave {
+            try context.save()
+        }
+
+        return results.map { $0.toModel() }
     }
 
     private func fetchTags(in context: NSManagedObjectContext) async throws -> [TagModel] {
