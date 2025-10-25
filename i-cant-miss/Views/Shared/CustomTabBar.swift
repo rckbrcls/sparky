@@ -12,35 +12,31 @@ struct CustomTabBar: View {
         let title: String
         let icon: String
         let selection: TabRouter.Selection
-
+        
         var id: TabRouter.Selection { selection }
     }
-
+    
     let items: [Item]
     @Binding var selection: TabRouter.Selection
     var isTerminalActive: Bool
     var onTerminalTap: () -> Void
-
+    
     var body: some View {
         HStack(spacing: 12) {
             ForEach(items) { item in
                 tabButton(for: item)
             }
-
+            
             terminalButton
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.08), radius: 20, x: 0, y: 10)
-        )
+        .glassEffect()
     }
-
+    
     private func tabButton(for item: Item) -> some View {
         let isSelected = selection == item.selection
-
+        
         return Button {
             guard selection != item.selection else { return }
             selection = item.selection
@@ -63,7 +59,7 @@ struct CustomTabBar: View {
         .contentShape(Rectangle())
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
     }
-
+    
     private var terminalButton: some View {
         Button {
             onTerminalTap()
@@ -93,7 +89,7 @@ struct CustomTabBar: View {
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.2), value: isTerminalActive)
     }
-
+    
     private var terminalGradient: LinearGradient {
         LinearGradient(
             colors: [
@@ -110,7 +106,7 @@ struct CustomTabBar: View {
     struct PreviewWrapper: View {
         @State private var selection: TabRouter.Selection = .timeline
         @State private var isTerminalPresented = false
-
+        
         var body: some View {
             VStack {
                 Spacer()
@@ -129,6 +125,6 @@ struct CustomTabBar: View {
             .background(Color.gray.opacity(0.1))
         }
     }
-
+    
     return PreviewWrapper()
 }

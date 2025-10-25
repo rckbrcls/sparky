@@ -12,6 +12,7 @@ struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @StateObject private var tabRouter = TabRouter()
     @State private var editorRoute: MemoryEditorRoute?
+    @State private var viewerRoute: MemoryViewerRoute?
     @State private var showSpaceComposer = false
     @State private var showTerminalSheet = false
     @State private var terminalInput: String = ""
@@ -33,6 +34,13 @@ struct ContentView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
+        .sheet(item: $viewerRoute) { route in
+            MemoryDetailView(
+                memory: route.memory,
+                onClose: { viewerRoute = nil },
+                onEdit: handleMemoryEditRequest
+            )
+        }
         .sheet(item: $editorRoute) { route in
             switch route.mode {
             case let .create(space, template):
@@ -68,7 +76,7 @@ struct ContentView: View {
     }
 
     private func handleMemorySelection(_ memory: MemoryModel) {
-        editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+        viewerRoute = MemoryViewerRoute(memory: memory)
     }
 
     private func presentSpaceCreation() {
@@ -115,6 +123,13 @@ struct ContentView: View {
     private func dismissTerminalSheet() {
         showTerminalSheet = false
     }
+
+    private func handleMemoryEditRequest(_ memory: MemoryModel) {
+        viewerRoute = nil
+        DispatchQueue.main.async {
+            editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+        }
+    }
 }
 
 final class TabRouter: ObservableObject {
@@ -135,6 +150,11 @@ private struct MemoryEditorRoute: Identifiable {
 
     let id = UUID()
     let mode: Mode
+}
+
+private struct MemoryViewerRoute: Identifiable {
+    let id = UUID()
+    let memory: MemoryModel
 }
 
 #Preview {
