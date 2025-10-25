@@ -314,7 +314,7 @@ struct MemoryDetailView: View {
     }
 
     @ViewBuilder
-    private func detailSectiondetailSection(
+    private func detailSection(
         title: String,
         systemImage: String,
         @ViewBuilder content: () -> some View
