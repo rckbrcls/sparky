@@ -15,6 +15,7 @@ struct SpaceDetailView: View {
 
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
+    let onCreateSpace: () -> Void
 
     @State private var statusFilter: StatusFilter = .active
 
@@ -61,7 +62,7 @@ struct SpaceDetailView: View {
                         Button {
                             onSelectMemory(memory)
                         } label: {
-                            MemoryRowView(memory: memory)
+                            MemoryCardView(memory: memory)
                         }
                         .buttonStyle(.plain)
                     }
@@ -70,6 +71,14 @@ struct SpaceDetailView: View {
         }
         .navigationTitle(space.name)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    onCreateSpace()
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                }
+                .accessibilityLabel("Create Space")
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     onCreateMemory(space)

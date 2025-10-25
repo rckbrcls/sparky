@@ -13,6 +13,7 @@ struct SpacesRootView: View {
 
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
+    let onCreateSpace: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -32,6 +33,14 @@ struct SpacesRootView: View {
             }
             .navigationTitle("Spaces")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        onCreateSpace()
+                    } label: {
+                        Image(systemName: "folder.badge.plus")
+                    }
+                    .accessibilityLabel("Create Space")
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         onCreateMemory(nil)
@@ -50,7 +59,8 @@ struct SpacesRootView: View {
                     spaceService: spaceService,
                     memoryService: memoryService,
                     onCreateMemory: onCreateMemory,
-                    onSelectMemory: onSelectMemory
+                    onSelectMemory: onSelectMemory,
+                    onCreateSpace: onCreateSpace
                 )
             }
         }
@@ -85,6 +95,7 @@ struct SpacesRootView: View {
         spaceService: environment.spaceService,
         memoryService: environment.memoryService,
         onCreateMemory: { _ in },
-        onSelectMemory: { _ in }
+        onSelectMemory: { _ in },
+        onCreateSpace: {}
     )
 }

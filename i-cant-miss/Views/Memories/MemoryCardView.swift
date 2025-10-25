@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct MemoryRowView: View {
+struct MemoryCardView: View {
     let memory: MemoryModel
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
@@ -137,7 +137,9 @@ struct MemoryRowView: View {
                     .lineLimit(1)
             }
         }
-        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .glassEffect(in: .rect(cornerRadius: 16.0))
     }
 
     private func priorityColor(for priority: MemoryPriority) -> Color {
@@ -147,4 +149,10 @@ struct MemoryRowView: View {
         case .high: return .red
         }
     }
+}
+
+#Preview {
+    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    environment.bootstrap()
+    return ContentView(environment: environment)
 }

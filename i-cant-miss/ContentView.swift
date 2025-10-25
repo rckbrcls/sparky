@@ -11,9 +11,8 @@ import Combine
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @StateObject private var tabRouter = TabRouter()
-    @State private var targetSpaceForCreation: SpaceModel?
-    @State private var showCreationDialog = false
     @State private var editorRoute: MemoryEditorRoute?
+    @State private var showSpaceComposer = false
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -37,7 +36,8 @@ struct ContentView: View {
                 onCreateMemory: { space in
                     prepareMemoryCreation(for: space)
                 },
-                onSelectMemory: handleMemorySelection
+                onSelectMemory: handleMemorySelection,
+                onCreateSpace: presentSpaceCreation
             )
             .tabItem {
                 Label("Spaces", systemImage: "square.grid.2x2")
@@ -67,35 +67,21 @@ struct ContentView: View {
                 )
             }
         }
-        .confirmationDialog("Create Memory", isPresented: $showCreationDialog, titleVisibility: .visible) {
-            Button("Reminder with Trigger") {
-                editorRoute = MemoryEditorRoute(mode: .create(space: targetSpaceForCreation, template: .quickReminder))
-                showCreationDialog = false
-                targetSpaceForCreation = nil
-            }
-            Button("Note") {
-                editorRoute = MemoryEditorRoute(mode: .create(space: targetSpaceForCreation, template: .blank))
-                showCreationDialog = false
-                targetSpaceForCreation = nil
-            }
-            Button("Checklist") {
-                editorRoute = MemoryEditorRoute(mode: .create(space: targetSpaceForCreation, template: .checklist))
-                showCreationDialog = false
-                targetSpaceForCreation = nil
-            }
-            Button("Cancel", role: .cancel) {
-                targetSpaceForCreation = nil
-            }
+        .sheet(isPresented: $showSpaceComposer) {
+            SpaceComposerView(environment: environment)
         }
     }
 
     private func prepareMemoryCreation(for space: SpaceModel?) {
-        targetSpaceForCreation = space
-        showCreationDialog = true
+        editorRoute = MemoryEditorRoute(mode: .create(space: space, template: .blank))
     }
 
     private func handleMemorySelection(_ memory: MemoryModel) {
         editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+    }
+
+    private func presentSpaceCreation() {
+        showSpaceComposer = true
     }
 }
 

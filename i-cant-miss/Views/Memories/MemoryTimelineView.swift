@@ -11,14 +11,16 @@ struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onCreateMemory: () -> Void
     let onSelectMemory: (MemoryModel) -> Void
-
+    
     var body: some View {
         NavigationStack {
-            List {
-                timelineSections
-                inboxSection
+            ScrollView{
+                VStack(alignment: .leading, spacing: 16) {
+                    timelineSections
+                    inboxSection
+                }
+                .padding(.horizontal, 20)
             }
-            .listStyle(.insetGrouped)
             .navigationTitle("Timeline")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -33,10 +35,10 @@ struct MemoryTimelineView: View {
             }
         }
     }
-
+    
     private var timelineSections: some View {
         let sections = memoryService.timelineSections()
-
+        
         return Group {
             if sections.isEmpty {
                 Section("Upcoming") {
@@ -50,34 +52,42 @@ struct MemoryTimelineView: View {
                             Button {
                                 onSelectMemory(memory)
                             } label: {
-                                MemoryRowView(memory: memory)
+                                MemoryCardView(memory: memory)
                             }
                             .buttonStyle(.plain)
                         }
                     } header: {
                         Label(section.kind.title, systemImage: section.kind.systemImage)
+                            .padding(.top, 16)
+                        Divider()
                     }
+                   
                 }
             }
         }
     }
-
+    
     private var inboxSection: some View {
-        Section("Inbox") {
+        Section  {
             let memories = memoryService.inboxMemories()
             if memories.isEmpty {
                 Label("All caught up", systemImage: "checkmark.seal")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(memories) { memory in
+                ForEach(memories, id: \.self) { memory in
                     Button {
                         onSelectMemory(memory)
                     } label: {
-                        MemoryRowView(memory: memory)
+                        MemoryCardView(memory: memory)
                     }
                     .buttonStyle(.plain)
                 }
             }
+        }
+        header: {
+            Label("Inbox", systemImage: "tray.fill")
+                .padding(.top, 16)
+            Divider()
         }
     }
 }
