@@ -16,13 +16,7 @@ struct TerminalSheetView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Use o terminal para anotar rapidamente qualquer memory. Comandos e parsing inteligente chegam em breve.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
                 editor
-
-                helperFooter
             }
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -31,11 +25,11 @@ struct TerminalSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fechar", role: .cancel) { onClose() }
+                    Button("Close", role: .cancel) { onClose() }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Limpar") {
+                    Button("Clear") {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             text.removeAll()
                         }
@@ -68,30 +62,18 @@ struct TerminalSheetView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .topLeading) {
             if text.isEmpty {
-                Text("Digite aqui... (ex: \"/today cancelar reuniao\" ou \"comprar cafe\")")
+                Text("Type here... (e.g. \"/today cancel meeting\" or \"buy coffee\")")
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .padding(20)
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            Text("\(text.count) caracteres")
+            Text("\(text.count) characters")
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .padding(10)
         }
-    }
-
-    private var helperFooter: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(Color.accentColor)
-
-            Text("Em breve: comandos com \"/\" e parsing automatico.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.top, 4)
     }
 }
 
