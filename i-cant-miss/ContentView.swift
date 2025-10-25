@@ -13,43 +13,26 @@ struct ContentView: View {
     @StateObject private var tabRouter = TabRouter()
     @State private var editorRoute: MemoryEditorRoute?
     @State private var showSpaceComposer = false
+    @State private var showTerminalSheet = false
+    @State private var terminalInput: String = ""
+    @State private var terminalSheetDetent: PresentationDetent = .fraction(0.4)
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
     }
 
     var body: some View {
-        TabView(selection: $tabRouter.selection) {
-            MemoryTimelineView(
-                memoryService: environment.memoryService,
-                onCreateMemory: { prepareMemoryCreation(for: nil) },
-                onSelectMemory: handleMemorySelection
-            )
-            .tabItem {
-                Label("Timeline", systemImage: "list.bullet.rectangle")
+        currentTab
+            .safeAreaInset(edge: .bottom) {
+                CustomTabBar(
+                    items: tabItems,
+                    selection: $tabRouter.selection,
+                    isTerminalActive: showTerminalSheet,
+                    onTerminalTap: presentTerminalSheet
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
-            .tag(TabRouter.Selection.timeline)
-
-            SpacesRootView(
-                spaceService: environment.spaceService,
-                memoryService: environment.memoryService,
-                onCreateMemory: { space in
-                    prepareMemoryCreation(for: space)
-                },
-                onSelectMemory: handleMemorySelection,
-                onCreateSpace: presentSpaceCreation
-            )
-            .tabItem {
-                Label("Spaces", systemImage: "square.grid.2x2")
-            }
-            .tag(TabRouter.Selection.spaces)
-
-            SettingsView(environment: environment)
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape")
-                }
-                .tag(TabRouter.Selection.settings)
-        }
         .sheet(item: $editorRoute) { route in
             switch route.mode {
             case let .create(space, template):
@@ -70,6 +53,14 @@ struct ContentView: View {
         .sheet(isPresented: $showSpaceComposer) {
             SpaceComposerView(environment: environment)
         }
+        .sheet(isPresented: $showTerminalSheet) {
+            TerminalSheetView(
+                text: $terminalInput,
+                onClose: dismissTerminalSheet
+            )
+            .presentationDetents([.fraction(0.35), .medium, .large], selection: $terminalSheetDetent)
+            .presentationDragIndicator(.visible)
+        }
     }
 
     private func prepareMemoryCreation(for space: SpaceModel?) {
@@ -83,10 +74,51 @@ struct ContentView: View {
     private func presentSpaceCreation() {
         showSpaceComposer = true
     }
+
+    private var currentTab: some View {
+        Group {
+            switch tabRouter.selection {
+            case .timeline:
+                MemoryTimelineView(
+                    memoryService: environment.memoryService,
+                    onCreateMemory: { prepareMemoryCreation(for: nil) },
+                    onSelectMemory: handleMemorySelection
+                )
+            case .spaces:
+                SpacesRootView(
+                    spaceService: environment.spaceService,
+                    memoryService: environment.memoryService,
+                    onCreateMemory: { space in
+                        prepareMemoryCreation(for: space)
+                    },
+                    onSelectMemory: handleMemorySelection,
+                    onCreateSpace: presentSpaceCreation
+                )
+            case .settings:
+                SettingsView(environment: environment)
+            }
+        }
+    }
+
+    private var tabItems: [CustomTabBar.Item] {
+        [
+            .init(title: "Timeline", icon: "list.bullet.rectangle", selection: .timeline),
+            .init(title: "Spaces", icon: "square.grid.2x2", selection: .spaces),
+            .init(title: "Settings", icon: "gearshape", selection: .settings)
+        ]
+    }
+
+    private func presentTerminalSheet() {
+        showTerminalSheet = true
+    }
+
+    private func dismissTerminalSheet() {
+        showTerminalSheet = false
+    }
 }
 
 final class TabRouter: ObservableObject {
-    enum Selection {
+    enum Selection: CaseIterable {
         case timeline
         case spaces
         case settings
