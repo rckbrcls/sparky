@@ -8,32 +8,89 @@
 import SwiftUI
 import Combine
 
+enum CustomTab: String, CaseIterable {
+    case home = "Timeline"
+    case spaces = "Spaces"
+    case settings = "Settings"
+    
+    var symbol :String {
+        switch self {
+        case .home:
+            return "list.bullet.rectangle"
+        case .spaces:
+            return "square.grid.2x2"
+        case .settings:
+            return "gearshape"
+        }
+    }
+    
+    var actionSymbol :String {
+        switch self {
+        case .home:
+            return "apple.terminal.fill"
+        case .spaces:
+            return "trash"
+        case .settings:
+            return "tray.full.fill"
+        }
+    }
+    
+    var index: Int {
+        Self.allCases.firstIndex(of: self) ?? 0
+    }
+}
+
+
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
-    @StateObject private var tabRouter = TabRouter()
     @State private var editorRoute: MemoryEditorRoute?
     @State private var viewerRoute: MemoryViewerRoute?
     @State private var showSpaceComposer = false
     @State private var showTerminalSheet = false
     @State private var terminalInput: String = ""
     @State private var terminalSheetDetent: PresentationDetent = .fraction(0.4)
-
+    @State private var activeTab: CustomTab = .home
+    
+    
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
     }
-
+    
     var body: some View {
-        currentTab
-            .safeAreaInset(edge: .bottom) {
-                CustomTabBar(
-                    items: tabItems,
-                    selection: $tabRouter.selection,
-                    isTerminalActive: showTerminalSheet,
-                    onTerminalTap: presentTerminalSheet
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+        VStack{
+            TabView(selection: $activeTab){
+                Tab.init(value: .home){
+                    MemoryTimelineView(
+                        memoryService: environment.memoryService,
+                        onCreateMemory: { prepareMemoryCreation(for: nil) },
+                        onSelectMemory: handleMemorySelection
+                    )
+                    .toolbarVisibility(.hidden, for: .tabBar)
+                }
+                
+                Tab.init(value: .spaces){
+                    SpacesRootView(
+                        spaceService: environment.spaceService,
+                        memoryService: environment.memoryService,
+                        onCreateMemory: { space in
+                            prepareMemoryCreation(for: space)
+                        },
+                        onSelectMemory: handleMemorySelection,
+                        onCreateSpace: presentSpaceCreation
+                    )
+                    .toolbarVisibility(.hidden, for: .tabBar)
+                }
+                
+                Tab.init(value: .settings){
+                    SettingsView(environment: environment)
+                        .toolbarVisibility(.hidden, for: .tabBar)
+                }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0){
+                CustomTabBarView()
+                    .padding(.horizontal, 20)
+            }
+        }
         .sheet(item: $viewerRoute) { route in
             MemoryDetailView(
                 memory: route.memory,
@@ -70,60 +127,66 @@ struct ContentView: View {
             .presentationDragIndicator(.visible)
         }
     }
-
+    
+    @ViewBuilder
+    func CustomTabBarView () -> some View {
+        GlassEffectContainer(spacing: 10){
+            HStack(spacing: 10){
+                GeometryReader{
+                    CustomTabBar(size: $0.size, activeTab: $activeTab){ tab in
+                        VStack(spacing: 3){
+                            Image(systemName: tab.symbol)
+                                .font(.title3)
+                            
+                            Text(tab.rawValue)
+                                .font(.system(size: 10))
+                                .fontWeight(.medium)
+                        }
+                        .symbolVariant(.fill)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .glassEffect(.regular.interactive(), in: .capsule)
+                }
+                
+                Button(action: { presentTerminalSheet() }) {
+                    ZStack{
+                        ForEach(CustomTab.allCases, id: \.rawValue){ tab in
+                            Image(systemName: tab.actionSymbol)
+                                .font(.system(size: 22, weight: .medium))
+                                .blurFade(activeTab == tab)
+                        }
+                    }
+                    .frame(width: 55, height: 55)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .capsule)
+                .animation(.smooth(duration: 0.55 , extraBounce: 0), value: activeTab)
+                .accessibilityLabel("Abrir terminal")
+            }
+        }
+        .frame(height: 50)
+    }
+    
     private func prepareMemoryCreation(for space: SpaceModel?) {
         editorRoute = MemoryEditorRoute(mode: .create(space: space, template: .blank))
     }
-
+    
     private func handleMemorySelection(_ memory: MemoryModel) {
         viewerRoute = MemoryViewerRoute(memory: memory)
     }
-
+    
     private func presentSpaceCreation() {
         showSpaceComposer = true
     }
-
-    private var currentTab: some View {
-        Group {
-            switch tabRouter.selection {
-            case .timeline:
-                MemoryTimelineView(
-                    memoryService: environment.memoryService,
-                    onCreateMemory: { prepareMemoryCreation(for: nil) },
-                    onSelectMemory: handleMemorySelection
-                )
-            case .spaces:
-                SpacesRootView(
-                    spaceService: environment.spaceService,
-                    memoryService: environment.memoryService,
-                    onCreateMemory: { space in
-                        prepareMemoryCreation(for: space)
-                    },
-                    onSelectMemory: handleMemorySelection,
-                    onCreateSpace: presentSpaceCreation
-                )
-            case .settings:
-                SettingsView(environment: environment)
-            }
-        }
-    }
-
-    private var tabItems: [CustomTabBar.Item] {
-        [
-            .init(title: "Timeline", icon: "list.bullet.rectangle", selection: .timeline),
-            .init(title: "Spaces", icon: "square.grid.2x2", selection: .spaces),
-            .init(title: "Settings", icon: "gearshape", selection: .settings)
-        ]
-    }
-
+    
     private func presentTerminalSheet() {
         showTerminalSheet = true
     }
-
+    
     private func dismissTerminalSheet() {
         showTerminalSheet = false
     }
-
+    
     private func handleMemoryEditRequest(_ memory: MemoryModel) {
         viewerRoute = nil
         DispatchQueue.main.async {
@@ -132,22 +195,12 @@ struct ContentView: View {
     }
 }
 
-final class TabRouter: ObservableObject {
-    enum Selection: CaseIterable {
-        case timeline
-        case spaces
-        case settings
-    }
-
-    @Published var selection: Selection = .timeline
-}
-
 private struct MemoryEditorRoute: Identifiable {
     enum Mode {
         case create(space: SpaceModel?, template: MemoryEditorTemplate)
         case edit(memory: MemoryModel)
     }
-
+    
     let id = UUID()
     let mode: Mode
 }
@@ -157,8 +210,19 @@ private struct MemoryViewerRoute: Identifiable {
     let memory: MemoryModel
 }
 
+extension View{
+    @ViewBuilder
+    func blurFade(_ status: Bool ) -> some View {
+        self
+            .compositingGroup()
+            .blur(radius: status ? 0 : 10)
+            .opacity(status ? 1 : 0)
+    }
+}
+
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
     return ContentView(environment: environment)
 }
+
