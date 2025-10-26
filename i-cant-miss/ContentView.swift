@@ -159,7 +159,7 @@ struct ContentView: View {
                                 .blurFade(activeTab == tab)
                         }
                     }
-                    .frame(width: 55, height: 55)
+                    .frame(width: 60, height: 60)
                 }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive(), in: .capsule)
