@@ -14,9 +14,8 @@ struct SpaceDetailView: View {
     @ObservedObject var memoryService: MemoryService
 
     let onCreateMemory: (SpaceModel?) -> Void
-    let onSelectMemory: (MemoryModel, AnyHashable) -> Void
+    let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: () -> Void
-    let transition: Namespace.ID?
 
     @State private var statusFilter: StatusFilter = .active
 
@@ -60,18 +59,10 @@ struct SpaceDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(filteredMemories) { memory in
-                        let transitionID = MemoryTransitionIdentifier(
-                            context: .space(space.id),
-                            memoryID: memory.id
-                        )
                         Button {
-                            onSelectMemory(memory, transitionID)
+                            onSelectMemory(memory)
                         } label: {
-                            MemoryCardView(
-                                memory: memory,
-                                transition: transition,
-                                transitionSourceID: transitionID
-                            )
+                            MemoryCardView(memory: memory)
                         }
                         .buttonStyle(.plain)
                     }

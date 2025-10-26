@@ -10,8 +10,7 @@ import SwiftUI
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onCreateMemory: () -> Void
-    let onSelectMemory: (MemoryModel, AnyHashable) -> Void
-    let transition: Namespace.ID?
+    let onSelectMemory: (MemoryModel) -> Void
 
     var body: some View {
         NavigationStack {
@@ -50,18 +49,10 @@ struct MemoryTimelineView: View {
                 ForEach(sections) { section in
                     Section {
                         ForEach(section.memories) { memory in
-                            let transitionID = MemoryTransitionIdentifier(
-                                context: .timeline(section: section.kind),
-                                memoryID: memory.id
-                            )
                             Button {
-                                onSelectMemory(memory, transitionID)
+                                onSelectMemory(memory)
                             } label: {
-                                MemoryCardView(
-                                    memory: memory,
-                                    transition: transition,
-                                    transitionSourceID: transitionID
-                                )
+                                MemoryCardView(memory: memory)
                             }
                             .buttonStyle(.plain)
                         }
@@ -84,18 +75,10 @@ struct MemoryTimelineView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(memories, id: \.self) { memory in
-                    let transitionID = MemoryTransitionIdentifier(
-                        context: .timelineInbox,
-                        memoryID: memory.id
-                    )
                     Button {
-                        onSelectMemory(memory, transitionID)
+                        onSelectMemory(memory)
                     } label: {
-                        MemoryCardView(
-                            memory: memory,
-                            transition: transition,
-                            transitionSourceID: transitionID
-                        )
+                        MemoryCardView(memory: memory)
                     }
                     .buttonStyle(.plain)
                 }
@@ -115,7 +98,6 @@ struct MemoryTimelineView: View {
     return MemoryTimelineView(
         memoryService: environment.memoryService,
         onCreateMemory: {},
-        onSelectMemory: { _, _ in },
-        transition: nil
+        onSelectMemory: { _ in }
     )
 }
