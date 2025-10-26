@@ -85,6 +85,7 @@ struct TerminalSheetView: View {
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .padding(20)
+                    .allowsHitTesting(false)
             }
         }
         .overlay(alignment: .bottomTrailing) {
@@ -92,6 +93,7 @@ struct TerminalSheetView: View {
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .padding(10)
+                .allowsHitTesting(false)
         }
     }
 }

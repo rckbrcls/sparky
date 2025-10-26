@@ -48,7 +48,7 @@ struct ContentView: View {
     @State private var showSpaceComposer = false
     @State private var showTerminalSheet = false
     @State private var terminalInput: String = ""
-    @State private var terminalSheetDetent: PresentationDetent = .fraction(0.4)
+    @State private var terminalSheetDetent: PresentationDetent = .fraction(0.35)
     @State private var activeTab: CustomTab = .home
 
     init(environment: AppEnvironment) {
