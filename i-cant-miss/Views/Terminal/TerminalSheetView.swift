@@ -23,24 +23,44 @@ struct TerminalSheetView: View {
             .navigationTitle("Terminal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close", role: .cancel) { onClose() }
+                // Botão de fechar (fica na extrema esquerda)
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark") // ícone de fechar
+                    }
                 }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Clear") {
+                // Outro botão à esquerda, mas separado do anterior
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             text.removeAll()
                         }
+                    } label: {
+                        Image(systemName: "trash.fill") // ícone de limpar
+                    }
+                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+
+                // Botão de concluir no lado direito
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            text.removeAll()
+                        }
+                    } label: {
+                        Image(systemName: "checkmark") // ícone de confirmar
                     }
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    isEditorFocused = true
-                }
-            }
+//            .onAppear {
+//                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+//                    isEditorFocused = true
+//                }
+//            }
         }
         .interactiveDismissDisabled(false)
     }

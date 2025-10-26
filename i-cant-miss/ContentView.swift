@@ -167,7 +167,7 @@ struct ContentView: View {
                 .accessibilityLabel("Abrir terminal")
             }
         }
-        .frame(height: 50)
+        .frame(height: 55)
     }
 
     private func prepareMemoryCreation(for space: SpaceModel?) {
