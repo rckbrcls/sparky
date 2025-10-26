@@ -33,21 +33,13 @@ struct SpacesRootView: View {
             }
             .navigationTitle("Spaces")
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         onCreateSpace()
                     } label: {
                         Image(systemName: "folder.badge.plus")
                     }
                     .accessibilityLabel("Create Space")
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        onCreateMemory(nil)
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Create Memory")
                 }
             }
             .refreshable {

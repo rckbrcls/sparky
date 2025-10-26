@@ -27,11 +27,11 @@ enum CustomTab: String, CaseIterable {
     var actionSymbol :String {
         switch self {
         case .home:
-            return "apple.terminal.fill"
+            return "plus"
         case .spaces:
-            return "trash"
+            return "plus"
         case .settings:
-            return "tray.full.fill"
+            return "plus"
         }
     }
 
@@ -46,9 +46,6 @@ struct ContentView: View {
     @State private var editorRoute: MemoryEditorRoute?
     @State private var viewerRoute: MemoryViewerRoute?
     @State private var showSpaceComposer = false
-    @State private var showTerminalSheet = false
-    @State private var terminalInput: String = ""
-    @State private var terminalSheetDetent: PresentationDetent = .fraction(0.35)
     @State private var activeTab: CustomTab = .home
 
     init(environment: AppEnvironment) {
@@ -61,7 +58,6 @@ struct ContentView: View {
                 Tab.init(value: .home){
                     MemoryTimelineView(
                         memoryService: environment.memoryService,
-                        onCreateMemory: { prepareMemoryCreation(for: nil) },
                         onSelectMemory: handleMemorySelection
                     )
                     .toolbarVisibility(.hidden, for: .tabBar)
@@ -105,6 +101,7 @@ struct ContentView: View {
                     defaultSpace: space,
                     template: template
                 )
+                .presentationDetents([.medium, .large])
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,
@@ -116,14 +113,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSpaceComposer) {
             SpaceComposerView(environment: environment)
-        }
-        .sheet(isPresented: $showTerminalSheet) {
-            TerminalSheetView(
-                text: $terminalInput,
-                onClose: dismissTerminalSheet
-            )
-            .presentationDetents([.fraction(0.35), .medium, .large], selection: $terminalSheetDetent)
-            .presentationDragIndicator(.visible)
         }
     }
 
@@ -154,7 +143,7 @@ struct ContentView: View {
                     .onTapGesture {
                     }
 
-                Button(action: { presentTerminalSheet() }) {
+                Button(action: { prepareMemoryCreation(for: nil) }) {
                     ZStack{
                         ForEach(CustomTab.allCases, id: \.rawValue){ tab in
                             Image(systemName: tab.actionSymbol)
@@ -165,7 +154,7 @@ struct ContentView: View {
                     .frame(width: 60, height: 60)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .capsule)
+                .glassEffect(.regular.interactive().tint(Color.accent), in: .capsule)
                 .animation(.smooth(duration: 0.55 , extraBounce: 0), value: activeTab)
                 .contentShape(Rectangle())
             }
@@ -183,14 +172,6 @@ struct ContentView: View {
 
     private func presentSpaceCreation() {
         showSpaceComposer = true
-    }
-
-    private func presentTerminalSheet() {
-        showTerminalSheet = true
-    }
-
-    private func dismissTerminalSheet() {
-        showTerminalSheet = false
     }
 
     private func handleMemoryEditRequest(_ memory: MemoryModel) {

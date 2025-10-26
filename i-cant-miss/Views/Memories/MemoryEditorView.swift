@@ -42,6 +42,7 @@ struct MemoryEditorView: View {
                 dueDateSection
                 extrasSection
             }
+            .scrollContentBackground(.hidden)
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
             }

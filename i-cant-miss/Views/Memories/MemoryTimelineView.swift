@@ -9,7 +9,6 @@ import SwiftUI
 
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
-    let onCreateMemory: () -> Void
     let onSelectMemory: (MemoryModel) -> Void
 
     var body: some View {
@@ -22,14 +21,6 @@ struct MemoryTimelineView: View {
                 .padding(.horizontal, 20)
             }
             .navigationTitle("Timeline")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: onCreateMemory) {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Create Memory")
-                }
-            }
             .refreshable {
                 await memoryService.refresh(force: true)
             }
@@ -97,7 +88,6 @@ struct MemoryTimelineView: View {
     environment.bootstrap()
     return MemoryTimelineView(
         memoryService: environment.memoryService,
-        onCreateMemory: {},
         onSelectMemory: { _ in }
     )
 }

@@ -9,76 +9,72 @@ import SwiftUI
 
 struct SpaceDetailView: View {
     let space: SpaceModel
-
+    
     @ObservedObject var spaceService: SpaceService
     @ObservedObject var memoryService: MemoryService
-
+    
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: () -> Void
-
+    
     @State private var statusFilter: StatusFilter = .active
-
+    
     private enum StatusFilter: String, CaseIterable, Identifiable {
         case active = "Active"
         case completed = "Completed"
         case archived = "Archived"
         case all = "All"
-
+        
         var id: String { rawValue }
     }
-
+    
     var body: some View {
-        List {
-            if !childSpaces.isEmpty {
-                Section("Subspaces") {
-                    ForEach(childSpaces) { child in
-                        NavigationLink(value: child) {
-                            SpaceRowView(
-                                space: child,
-                                count: memoryCount(for: child),
-                                parentLookup: spaceService.space(id:)
-                            )
+        ScrollView{
+            VStack(alignment: .leading, spacing: 16) {
+                if !childSpaces.isEmpty {
+                    Section("Subspaces") {
+                        ForEach(childSpaces) { child in
+                            NavigationLink(value: child) {
+                                SpaceRowView(
+                                    space: child,
+                                    count: memoryCount(for: child),
+                                    parentLookup: spaceService.space(id:)
+                                )
+                            }
                         }
                     }
                 }
-            }
-
-            Section {
-                Picker("Status Filter", selection: $statusFilter) {
-                    ForEach(StatusFilter.allCases) { filter in
-                        Text(filter.rawValue).tag(filter)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-
-            Section("Memories") {
-                if filteredMemories.isEmpty {
-                    Label("No memories in this space", systemImage: "tray")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(filteredMemories) { memory in
-                        Button {
-                            onSelectMemory(memory)
-                        } label: {
-                            MemoryCardView(memory: memory)
+                
+                Section {
+                    Picker("Status Filter", selection: $statusFilter) {
+                        ForEach(StatusFilter.allCases) { filter in
+                            Text(filter.rawValue).tag(filter)
                         }
-                        .buttonStyle(.plain)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
+                Section {
+                    if filteredMemories.isEmpty {
+                        Label("No memories in this space", systemImage: "tray")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(filteredMemories) { memory in
+                            Button {
+                                onSelectMemory(memory)
+                            } label: {
+                                MemoryCardView(memory: memory)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
+                
             }
+            .padding(.horizontal, 20)
         }
         .navigationTitle(space.name)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    onCreateSpace()
-                } label: {
-                    Image(systemName: "folder.badge.plus")
-                }
-                .accessibilityLabel("Create Space")
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     onCreateMemory(space)
@@ -92,15 +88,15 @@ struct SpaceDetailView: View {
             await refresh()
         }
     }
-
+    
     private var childSpaces: [SpaceModel] {
         spaceService.children(of: space)
     }
-
+    
     private var filteredMemories: [MemoryModel] {
         let statuses: Set<MemoryStatus>
         let includeArchived: Bool
-
+        
         switch statusFilter {
         case .active:
             statuses = [.active]
@@ -115,7 +111,7 @@ struct SpaceDetailView: View {
             statuses = []
             includeArchived = true
         }
-
+        
         return memoryService.memories(
             in: space,
             includeDescendants: false,
@@ -125,15 +121,27 @@ struct SpaceDetailView: View {
             sort: .updatedAtDescending
         )
     }
-
+    
     private func memoryCount(for space: SpaceModel) -> Int {
         let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { ids.contains($0.space.id) }.count
     }
-
+    
     private func refresh() async {
         async let spaces = spaceService.refresh(force: true)
         async let memories = memoryService.refresh(force: true)
         _ = await (spaces, memories)
     }
+}
+
+#Preview {
+    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    environment.bootstrap()
+    return SpacesRootView(
+        spaceService: environment.spaceService,
+        memoryService: environment.memoryService,
+        onCreateMemory: { _ in },
+        onSelectMemory: { _ in },
+        onCreateSpace: {}
+    )
 }
