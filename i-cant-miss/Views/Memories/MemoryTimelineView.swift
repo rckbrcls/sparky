@@ -10,8 +10,9 @@ import SwiftUI
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onCreateMemory: () -> Void
-    let onSelectMemory: (MemoryModel) -> Void
-    
+    let onSelectMemory: (MemoryModel, AnyHashable) -> Void
+    let transition: Namespace.ID?
+
     var body: some View {
         NavigationStack {
             ScrollView{
@@ -35,10 +36,10 @@ struct MemoryTimelineView: View {
             }
         }
     }
-    
+
     private var timelineSections: some View {
         let sections = memoryService.timelineSections()
-        
+
         return Group {
             if sections.isEmpty {
                 Section("Upcoming") {
@@ -49,10 +50,18 @@ struct MemoryTimelineView: View {
                 ForEach(sections) { section in
                     Section {
                         ForEach(section.memories) { memory in
+                            let transitionID = MemoryTransitionIdentifier(
+                                context: .timeline(section: section.kind),
+                                memoryID: memory.id
+                            )
                             Button {
-                                onSelectMemory(memory)
+                                onSelectMemory(memory, transitionID)
                             } label: {
-                                MemoryCardView(memory: memory)
+                                MemoryCardView(
+                                    memory: memory,
+                                    transition: transition,
+                                    transitionSourceID: transitionID
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -61,12 +70,12 @@ struct MemoryTimelineView: View {
                             .padding(.top, 16)
                         Divider()
                     }
-                   
+
                 }
             }
         }
     }
-    
+
     private var inboxSection: some View {
         Section  {
             let memories = memoryService.inboxMemories()
@@ -75,10 +84,18 @@ struct MemoryTimelineView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(memories, id: \.self) { memory in
+                    let transitionID = MemoryTransitionIdentifier(
+                        context: .timelineInbox,
+                        memoryID: memory.id
+                    )
                     Button {
-                        onSelectMemory(memory)
+                        onSelectMemory(memory, transitionID)
                     } label: {
-                        MemoryCardView(memory: memory)
+                        MemoryCardView(
+                            memory: memory,
+                            transition: transition,
+                            transitionSourceID: transitionID
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -98,6 +115,7 @@ struct MemoryTimelineView: View {
     return MemoryTimelineView(
         memoryService: environment.memoryService,
         onCreateMemory: {},
-        onSelectMemory: { _ in }
+        onSelectMemory: { _, _ in },
+        transition: nil
     )
 }

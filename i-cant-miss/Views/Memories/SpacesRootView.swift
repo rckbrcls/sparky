@@ -12,8 +12,9 @@ struct SpacesRootView: View {
     @ObservedObject var memoryService: MemoryService
 
     let onCreateMemory: (SpaceModel?) -> Void
-    let onSelectMemory: (MemoryModel) -> Void
+    let onSelectMemory: (MemoryModel, AnyHashable) -> Void
     let onCreateSpace: () -> Void
+    let transition: Namespace.ID?
 
     var body: some View {
         NavigationStack {
@@ -60,7 +61,8 @@ struct SpacesRootView: View {
                     memoryService: memoryService,
                     onCreateMemory: onCreateMemory,
                     onSelectMemory: onSelectMemory,
-                    onCreateSpace: onCreateSpace
+                    onCreateSpace: onCreateSpace,
+                    transition: transition
                 )
             }
         }
@@ -95,7 +97,8 @@ struct SpacesRootView: View {
         spaceService: environment.spaceService,
         memoryService: environment.memoryService,
         onCreateMemory: { _ in },
-        onSelectMemory: { _ in },
-        onCreateSpace: {}
+        onSelectMemory: { _, _ in },
+        onCreateSpace: {},
+        transition: nil
     )
 }

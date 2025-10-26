@@ -9,6 +9,18 @@ import SwiftUI
 
 struct MemoryCardView: View {
     let memory: MemoryModel
+    let transition: Namespace.ID?
+    private let transitionSourceID: AnyHashable?
+
+    init(
+        memory: MemoryModel,
+        transition: Namespace.ID?,
+        transitionSourceID: AnyHashable? = nil
+    ) {
+        self.memory = memory
+        self.transition = transition
+        self.transitionSourceID = transitionSourceID
+    }
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
@@ -140,6 +152,10 @@ struct MemoryCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .glassEffect(in: .rect(cornerRadius: 16.0))
+        .optionalMatchedTransitionSource(
+            id: transitionSourceID ?? AnyHashable(memory.id),
+            in: transition
+        )
     }
 
     private func priorityColor(for priority: MemoryPriority) -> Color {
@@ -155,4 +171,23 @@ struct MemoryCardView: View {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
     return ContentView(environment: environment)
+}
+
+private struct OptionalMatchedTransitionSource<ID: Hashable>: ViewModifier {
+    let id: ID
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedTransitionSource(id: id, in: namespace)
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    func optionalMatchedTransitionSource<ID: Hashable>(id: ID, in namespace: Namespace.ID?) -> some View {
+        modifier(OptionalMatchedTransitionSource(id: id, namespace: namespace))
+    }
 }
