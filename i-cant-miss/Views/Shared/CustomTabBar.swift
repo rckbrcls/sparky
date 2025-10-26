@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
     var size: CGSize
-    var activeTint: Color = Color.accentColor
+    var activeTint: Color = Color.accent
     var barTint: Color = .gray.opacity(0.15)
     @Binding var activeTab: CustomTab
     @ViewBuilder var tabItemView: (CustomTab) -> TabItemView
