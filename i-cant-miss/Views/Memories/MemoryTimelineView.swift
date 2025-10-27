@@ -13,6 +13,9 @@ struct MemoryTimelineView: View {
 
     @State private var showingFilterSheet = false
     @State private var searchText = ""
+    @State private var selectedMemoryType: MemoryType?
+    @State private var selectedSection: MemoryService.TimelineSection.Kind?
+    @State private var showInbox = true
 
     private var isSearching: Bool {
         !searchText.isEmpty
@@ -20,6 +23,38 @@ struct MemoryTimelineView: View {
 
     private var filteredMemories: [MemoryModel] {
         isSearching ? memoryService.searchMemories(query: searchText) : []
+    }
+
+    private var activeFilterCount: Int {
+        var count = 0
+        if selectedMemoryType != nil {
+            count += 1
+        }
+        if selectedSection != nil {
+            count += 1
+        }
+        if !showInbox {
+            count += 1
+        }
+        return count
+    }
+
+    private var filterDescription: String {
+        var parts: [String] = []
+
+        if let type = selectedMemoryType {
+            parts.append(type.label)
+        }
+
+        if let section = selectedSection {
+            parts.append(section.title)
+        }
+
+        if !showInbox {
+            parts.append("No Inbox")
+        }
+
+        return parts.isEmpty ? "All" : parts.joined(separator: " • ")
     }
 
     var body: some View {
@@ -30,7 +65,9 @@ struct MemoryTimelineView: View {
                         searchResultsSection
                     } else {
                         timelineSections
-                        inboxSection
+                        if showInbox {
+                            inboxSection
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -39,16 +76,29 @@ struct MemoryTimelineView: View {
             .navigationTitle("Timeline")
             .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .principal) {
                     Button {
                         showingFilterSheet = true
                     } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
+                        HStack(spacing: 6) {
+                            Image(systemName: activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                            Text(filterDescription)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
                     }
                 }
             }
             .sheet(isPresented: $showingFilterSheet) {
-                FilterSheetView()
+                FilterSheetView(
+                    selectedMemoryType: $selectedMemoryType,
+                    selectedSection: $selectedSection,
+                    showInbox: $showInbox
+                )
             }
             .refreshable {
                 await memoryService.refresh(force: true)
@@ -79,6 +129,21 @@ struct MemoryTimelineView: View {
 
     private var timelineSections: some View {
         let sections = memoryService.timelineSections()
+            .filter { section in
+                if let selected = selectedSection {
+                    return section.kind == selected
+                }
+                return true
+            }
+            .map { section in
+                MemoryService.TimelineSection(
+                    kind: section.kind,
+                    memories: section.memories.filter { memory in
+                        isMemoryTypeSelected(memory)
+                    }
+                )
+            }
+            .filter { !$0.memories.isEmpty }
 
         return Group {
             if sections.isEmpty {
@@ -111,6 +176,7 @@ struct MemoryTimelineView: View {
     private var inboxSection: some View {
         Section  {
             let memories = memoryService.inboxMemories()
+                .filter { isMemoryTypeSelected($0) }
             if memories.isEmpty {
                 Label("All caught up", systemImage: "checkmark.seal")
                     .foregroundStyle(.secondary)
@@ -131,36 +197,160 @@ struct MemoryTimelineView: View {
             Divider()
         }
     }
+
+    private func isMemoryTypeSelected(_ memory: MemoryModel) -> Bool {
+        guard let selectedType = selectedMemoryType else { return true }
+        guard let origin = memory.metadata.origin else { return true }
+
+        switch origin {
+        case .reminder:
+            return selectedType == .reminder
+        case .note:
+            return selectedType == .note
+        case .todoList:
+            return selectedType == .todo
+        }
+    }
+}
+
+enum MemoryType: String, CaseIterable, Identifiable {
+    case reminder
+    case note
+    case todo
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .reminder: return "Reminders"
+        case .note: return "Notes"
+        case .todo: return "Todos"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .reminder: return "bell.fill"
+        case .note: return "note.text"
+        case .todo: return "checklist"
+        }
+    }
 }
 
 struct FilterSheetView: View {
     @Environment(\.dismiss) var dismiss
 
+    @Binding var selectedMemoryType: MemoryType?
+    @Binding var selectedSection: MemoryService.TimelineSection.Kind?
+    @Binding var showInbox: Bool
+
     var body: some View {
         NavigationStack {
             List {
-                Section("Tipos de Trigger") {
-                    Toggle("Localização", isOn: .constant(true))
-                    Toggle("Tempo", isOn: .constant(true))
-                    Toggle("Contato", isOn: .constant(true))
+                Section {
+                    Button {
+                        selectedMemoryType = nil
+                    } label: {
+                        HStack {
+                            Label("All Types", systemImage: "square.stack.3d.up.fill")
+                                .foregroundStyle(Color.accent)
+                            Spacer()
+                            if selectedMemoryType == nil {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accent)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+
+                    ForEach(MemoryType.allCases) { type in
+                        Button {
+                            selectedMemoryType = type
+                        } label: {
+                            HStack {
+                                Label(type.label, systemImage: type.systemImage)
+                                    .foregroundStyle(Color.accent)
+                                Spacer()
+                                if selectedMemoryType == type {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.accent)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Memory Type")
                 }
 
-                Section("Status") {
-                    Toggle("Ativos", isOn: .constant(true))
-                    Toggle("Inativos", isOn: .constant(true))
+                Section {
+                    Button {
+                        selectedSection = nil
+                    } label: {
+                        HStack {
+                            Label("All Sections", systemImage: "calendar")
+                                .foregroundStyle(Color.accent)
+                            Spacer()
+                            if selectedSection == nil {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accent)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+
+                    ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
+                        Button {
+                            selectedSection = kind
+                        } label: {
+                            HStack {
+                                Label(kind.title, systemImage: kind.systemImage)
+                                    .foregroundStyle(Color.accent)
+                                Spacer()
+                                if selectedSection == kind {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.accent)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Timeline Section")
+                }
+
+                Section {
+                    Button {
+                        showInbox.toggle()
+                    } label: {
+                        HStack {
+                            Label("Show Inbox", systemImage: "tray.fill")
+                                .foregroundStyle(Color.accent)
+                            Spacer()
+                            if showInbox {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accent)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Inbox")
                 }
             }
-            .navigationTitle("Filtros")
+            .navigationTitle("Filter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Limpar") {
-                        // Ação para limpar filtros
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Reset") {
+                        selectedMemoryType = nil
+                        selectedSection = nil
+                        showInbox = true
                     }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Aplicar") {
+                    Button("Done") {
                         dismiss()
                     }
                     .fontWeight(.semibold)
