@@ -17,6 +17,8 @@ struct MemoryTimelineView: View {
     @State private var selectedSection: MemoryService.TimelineSection.Kind?
     @State private var showInbox = true
 
+    @Namespace private var animation
+
     private var isSearching: Bool {
         !searchText.isEmpty
     }
@@ -78,18 +80,27 @@ struct MemoryTimelineView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Button {
-                        showingFilterSheet = true
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showingFilterSheet = true
+                        }
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 10) {
                             Image(systemName: activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                                .symbolEffect(.bounce, value: activeFilterCount)
                             Text(filterDescription)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
+                                .animation(.easeInOut(duration: 0.2), value: filterDescription)
                             Image(systemName: "chevron.down")
                                 .font(.caption)
                                 .fontWeight(.semibold)
+                                .rotationEffect(.degrees(showingFilterSheet ? 180 : 0))
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showingFilterSheet)
                         }
                         .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
+                        .animation(.easeInOut(duration: 0.2), value: activeFilterCount)
+                        .padding(12)
+                        .glassEffect()
                     }
                 }
             }
@@ -244,12 +255,16 @@ struct FilterSheetView: View {
     @Binding var selectedSection: MemoryService.TimelineSection.Kind?
     @Binding var showInbox: Bool
 
+    @Namespace private var selectionAnimation
+
     var body: some View {
         NavigationStack {
             List {
                 Section {
                     Button {
-                        selectedMemoryType = nil
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedMemoryType = nil
+                        }
                     } label: {
                         HStack {
                             Label("All Types", systemImage: "square.stack.3d.up.fill")
@@ -259,13 +274,17 @@ struct FilterSheetView: View {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accent)
                                     .fontWeight(.semibold)
+                                    .matchedGeometryEffect(id: "typeCheck", in: selectionAnimation)
+                                    .transition(.scale.combined(with: .opacity))
                             }
                         }
                     }
 
                     ForEach(MemoryType.allCases) { type in
                         Button {
-                            selectedMemoryType = type
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedMemoryType = type
+                            }
                         } label: {
                             HStack {
                                 Label(type.label, systemImage: type.systemImage)
@@ -275,6 +294,8 @@ struct FilterSheetView: View {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(Color.accent)
                                         .fontWeight(.semibold)
+                                        .matchedGeometryEffect(id: "typeCheck", in: selectionAnimation)
+                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
                         }
@@ -285,7 +306,9 @@ struct FilterSheetView: View {
 
                 Section {
                     Button {
-                        selectedSection = nil
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedSection = nil
+                        }
                     } label: {
                         HStack {
                             Label("All Sections", systemImage: "calendar")
@@ -295,13 +318,17 @@ struct FilterSheetView: View {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accent)
                                     .fontWeight(.semibold)
+                                    .matchedGeometryEffect(id: "sectionCheck", in: selectionAnimation)
+                                    .transition(.scale.combined(with: .opacity))
                             }
                         }
                     }
 
                     ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
                         Button {
-                            selectedSection = kind
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedSection = kind
+                            }
                         } label: {
                             HStack {
                                 Label(kind.title, systemImage: kind.systemImage)
@@ -311,6 +338,8 @@ struct FilterSheetView: View {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(Color.accent)
                                         .fontWeight(.semibold)
+                                        .matchedGeometryEffect(id: "sectionCheck", in: selectionAnimation)
+                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
                         }
@@ -321,7 +350,9 @@ struct FilterSheetView: View {
 
                 Section {
                     Button {
-                        showInbox.toggle()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showInbox.toggle()
+                        }
                     } label: {
                         HStack {
                             Label("Show Inbox", systemImage: "tray.fill")
@@ -331,6 +362,7 @@ struct FilterSheetView: View {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accent)
                                     .fontWeight(.semibold)
+                                    .transition(.scale.combined(with: .opacity))
                             }
                         }
                     }
@@ -338,22 +370,29 @@ struct FilterSheetView: View {
                     Text("Inbox")
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Filter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Reset") {
-                        selectedMemoryType = nil
-                        selectedSection = nil
-                        showInbox = true
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedMemoryType = nil
+                            selectedSection = nil
+                            showInbox = true
+                        }
+                    } label: {
+                        Label("Reset", systemImage: "arrow.counterclockwise")
                     }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                            .fontWeight(.semibold)
                     }
-                    .fontWeight(.semibold)
                 }
             }
         }
