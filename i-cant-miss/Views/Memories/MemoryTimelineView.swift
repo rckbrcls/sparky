@@ -13,11 +13,11 @@ struct MemoryTimelineView: View {
 
     @State private var showingFilterSheet = false
     @State private var searchText = ""
-    
+
     private var isSearching: Bool {
         !searchText.isEmpty
     }
-    
+
     private var filteredMemories: [MemoryModel] {
         isSearching ? memoryService.searchMemories(query: searchText) : []
     }
@@ -55,7 +55,7 @@ struct MemoryTimelineView: View {
             }
         }
     }
-    
+
     private var searchResultsSection: some View {
         Section {
             if filteredMemories.isEmpty {
