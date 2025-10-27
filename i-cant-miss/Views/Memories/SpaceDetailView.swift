@@ -330,4 +330,5 @@ struct SpaceDetailView: View {
         onSelectMemory: { _ in },
         onCreateSpace: {}
     )
+    .environmentObject(environment)
 }

@@ -257,11 +257,18 @@ struct MemoryDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close", action: onClose)
+                    Button(role: .close) {
+                        onClose()
+                    }
+                    label: {
+                        Label("Close", systemImage: "xmark")
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit") {
+                    Button {
                         onEdit(memory)
+                    }label: {
+                        Label("Edit", systemImage: "pencil")
                     }
                     .accessibilityLabel("Edit memory")
                 }

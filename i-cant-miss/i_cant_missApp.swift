@@ -17,6 +17,7 @@ struct i_cant_missApp: App {
         WindowGroup {
             ContentView(environment: appEnvironment)
                 .environment(\.managedObjectContext, appEnvironment.persistence.container.viewContext)
+                .environmentObject(appEnvironment)
                 .task {
                     appEnvironment.bootstrap()
                 }

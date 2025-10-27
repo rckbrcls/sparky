@@ -222,4 +222,5 @@ extension View{
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
     return ContentView(environment: environment)
+        .environmentObject(environment)
 }

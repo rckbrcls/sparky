@@ -423,4 +423,5 @@ struct FilterSheetView: View {
         memoryService: environment.memoryService,
         onSelectMemory: { _ in }
     )
+    .environmentObject(environment)
 }
