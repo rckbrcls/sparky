@@ -80,7 +80,7 @@ struct SpaceDetailView: View {
 
     var body: some View {
         ScrollView{
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 22) {
                 if !childSpaces.isEmpty {
                     Section("Subspaces") {
                         ForEach(childSpaces) { child in
@@ -183,7 +183,7 @@ struct SpaceDetailView: View {
             }
         } header: {
             Divider()
-                .padding(.top, 16)
+                .padding(.top, 8)
         }
     }
 
@@ -218,6 +218,9 @@ struct SpaceDetailView: View {
                     .buttonStyle(.plain)
                 }
             }
+        } header: {
+            Divider()
+                .padding(.top, 8)
         }
     }
 
