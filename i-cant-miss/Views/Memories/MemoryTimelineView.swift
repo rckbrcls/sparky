@@ -114,7 +114,7 @@ struct MemoryTimelineView: View {
                     detentSelection: $filterSheetDetent
                 )
                 .onAppear { filterSheetDetent = .medium }
-                .presentationDetents([.medium, .large], selection: $filterSheetDetent)
+                .presentationDetents([.large], selection: $filterSheetDetent)
             }
         }
     }
