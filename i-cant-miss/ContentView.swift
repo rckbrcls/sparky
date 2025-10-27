@@ -12,7 +12,7 @@ enum CustomTab: String, CaseIterable {
     case home = "Timeline"
     case spaces = "Spaces"
     case settings = "Settings"
-    
+
     var symbol :String {
         switch self {
         case .home:
@@ -23,7 +23,7 @@ enum CustomTab: String, CaseIterable {
             return "gearshape"
         }
     }
-    
+
     var actionSymbol :String {
         switch self {
         case .home:
@@ -34,7 +34,7 @@ enum CustomTab: String, CaseIterable {
             return "plus"
         }
     }
-    
+
     var index: Int {
         Self.allCases.firstIndex(of: self) ?? 0
     }
@@ -47,11 +47,11 @@ struct ContentView: View {
     @State private var viewerRoute: MemoryViewerRoute?
     @State private var showSpaceComposer = false
     @State private var activeTab: CustomTab = .home
-    
+
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
     }
-    
+
     var body: some View {
         VStack{
             TabView(selection: $activeTab){
@@ -67,7 +67,7 @@ struct ContentView: View {
                     })
                     .toolbarVisibility(.hidden, for: .tabBar)
                 }
-                
+
                 Tab.init(value: .spaces){
                     SpacesRootView(
                         spaceService: environment.spaceService,
@@ -85,7 +85,7 @@ struct ContentView: View {
                     })
                     .toolbarVisibility(.hidden, for: .tabBar)
                 }
-                
+
                 Tab.init(value: .settings){
                     SettingsView(environment: environment)
                         .safeAreaBar(edge: .bottom, spacing: 0, content: {
@@ -130,7 +130,7 @@ struct ContentView: View {
             SpaceComposerView(environment: environment)
         }
     }
-    
+
     @ViewBuilder
     func CustomTabBarView () -> some View {
         GlassEffectContainer(spacing: 10){
@@ -140,7 +140,7 @@ struct ContentView: View {
                         VStack(spacing: 3){
                             Image(systemName: tab.symbol)
                                 .font(.title3)
-                            
+
                             Text(tab.rawValue)
                                 .font(.system(size: 10))
                                 .fontWeight(.medium)
@@ -151,13 +151,13 @@ struct ContentView: View {
                     .glassEffect(.regular.interactive(), in: .capsule)
                     .contentShape(Rectangle())
                 }
-                
+
                 Color.clear
                     .frame(width: 10) // corresponde ao espaçamento visual que você quer manter
                     .contentShape(Rectangle())
                     .onTapGesture {
                     }
-                
+
                 Button(action: { prepareMemoryCreation(for: nil) }) {
                     ZStack{
                         ForEach(CustomTab.allCases, id: \.rawValue){ tab in
@@ -176,19 +176,19 @@ struct ContentView: View {
         }
         .frame(height: 55)
     }
-    
+
     private func prepareMemoryCreation(for space: SpaceModel?) {
         editorRoute = MemoryEditorRoute(mode: .create(space: space, template: .blank))
     }
-    
+
     private func handleMemorySelection(_ memory: MemoryModel) {
         viewerRoute = MemoryViewerRoute(memory: memory)
     }
-    
+
     private func presentSpaceCreation() {
         showSpaceComposer = true
     }
-    
+
     private func handleMemoryEditRequest(_ memory: MemoryModel) {
         viewerRoute = nil
         DispatchQueue.main.async {
@@ -202,7 +202,7 @@ private struct MemoryEditorRoute: Identifiable {
         case create(space: SpaceModel?, template: MemoryEditorTemplate)
         case edit(memory: MemoryModel)
     }
-    
+
     let id = UUID()
     let mode: Mode
 }

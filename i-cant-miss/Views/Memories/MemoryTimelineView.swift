@@ -11,19 +11,66 @@ struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onSelectMemory: (MemoryModel) -> Void
 
+    @State private var showingFilterSheet = false
+    @State private var searchText = ""
+    
+    private var isSearching: Bool {
+        !searchText.isEmpty
+    }
+    
+    private var filteredMemories: [MemoryModel] {
+        isSearching ? memoryService.searchMemories(query: searchText) : []
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView{
                 VStack(alignment: .leading, spacing: 16) {
-                    timelineSections
-                    inboxSection
+                    if isSearching {
+                        searchResultsSection
+                    } else {
+                        timelineSections
+                        inboxSection
+                    }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 70) 
+                .padding(.bottom, 70)
             }
             .navigationTitle("Timeline")
+            .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showingFilterSheet = true
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingFilterSheet) {
+                FilterSheetView()
+            }
             .refreshable {
                 await memoryService.refresh(force: true)
+            }
+        }
+    }
+    
+    private var searchResultsSection: some View {
+        Section {
+            if filteredMemories.isEmpty {
+                Label("No results found", systemImage: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 20)
+            } else {
+                ForEach(filteredMemories) { memory in
+                    Button {
+                        onSelectMemory(memory)
+                    } label: {
+                        MemoryCardView(memory: memory)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }
@@ -81,6 +128,44 @@ struct MemoryTimelineView: View {
                 .padding(.top, 16)
             Divider()
         }
+    }
+}
+
+struct FilterSheetView: View {
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Tipos de Trigger") {
+                    Toggle("Localização", isOn: .constant(true))
+                    Toggle("Tempo", isOn: .constant(true))
+                    Toggle("Contato", isOn: .constant(true))
+                }
+
+                Section("Status") {
+                    Toggle("Ativos", isOn: .constant(true))
+                    Toggle("Inativos", isOn: .constant(true))
+                }
+            }
+            .navigationTitle("Filtros")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Limpar") {
+                        // Ação para limpar filtros
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Aplicar") {
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 
