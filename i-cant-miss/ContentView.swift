@@ -154,20 +154,15 @@ struct ContentView: View {
                 }
 
                 Color.clear
-                    .frame(width: 10) // corresponde ao espaçamento visual que você quer manter
+                    .frame(width: 10)
                     .contentShape(Rectangle())
                     .onTapGesture {
                     }
 
                 Button(action: { prepareMemoryCreation(for: nil) }) {
-                    ZStack{
-                        ForEach(CustomTab.allCases, id: \.rawValue){ tab in
-                            Image(systemName: tab.actionSymbol)
-                                .font(.system(size: 22, weight: .medium))
-                                .blurFade(activeTab == tab)
-                        }
-                    }
-                    .frame(width: 60, height: 60)
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .medium))
+                        .frame(width: 60, height: 60)
                 }
                 .buttonStyle(.plain)
                 .glassEffect(.regular.interactive().tint(Color.accent), in: .capsule)

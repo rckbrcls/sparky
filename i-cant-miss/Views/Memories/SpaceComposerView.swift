@@ -20,7 +20,7 @@ struct SpaceComposerView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Details") {
+                Section {
                     TextField("Space name", text: $name)
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)

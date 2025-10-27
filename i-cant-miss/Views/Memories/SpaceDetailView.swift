@@ -39,7 +39,15 @@ struct SpaceDetailView: View {
     }
 
     private var isFiltering: Bool {
-        activeFilterCount > 0
+        activeFilterCount > 0 || isSearching
+    }
+
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSearching: Bool {
+        !trimmedSearchText.isEmpty
     }
 
     private var filterDescription: String {
@@ -87,36 +95,10 @@ struct SpaceDetailView: View {
                     }
                 }
 
-                Section {
-                    if filteredMemories.isEmpty {
-                        VStack(spacing: 12) {
-                            Image(systemName: "tray")
-                                .font(.system(size: 40, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                            Text(emptyStateTitle)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            Text(emptyStateMessage)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 12)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 36)
-                        .padding(.top, 8)
-                        .glassEffect(in: .rect(cornerRadius: 16.0))
-
-                    } else {
-                        ForEach(filteredMemories) { memory in
-                            Button {
-                                onSelectMemory(memory)
-                            } label: {
-                                MemoryCardView(memory: memory)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
+                if isSearching {
+                    searchResultsSection
+                } else {
+                    memoriesSection
                 }
 
             }
@@ -183,6 +165,62 @@ struct SpaceDetailView: View {
         spaceService.children(of: space)
     }
 
+    @ViewBuilder
+    private var searchResultsSection: some View {
+        Section {
+            if filteredMemories.isEmpty {
+                Label("No results found", systemImage: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(filteredMemories) { memory in
+                    Button {
+                        onSelectMemory(memory)
+                    } label: {
+                        MemoryCardView(memory: memory)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        } header: {
+            Divider()
+                .padding(.top, 16)
+        }
+    }
+
+    @ViewBuilder
+    private var memoriesSection: some View {
+        Section {
+            if filteredMemories.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 40, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                    Text(emptyStateTitle)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text(emptyStateMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 36)
+                .padding(.top, 8)
+                .glassEffect(in: .rect(cornerRadius: 16.0))
+            } else {
+                ForEach(filteredMemories) { memory in
+                    Button {
+                        onSelectMemory(memory)
+                    } label: {
+                        MemoryCardView(memory: memory)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
     private var filteredMemories: [MemoryModel] {
         let base = memoryService.memories(
             in: space,
@@ -194,11 +232,13 @@ struct SpaceDetailView: View {
         )
 
         let referenceDate = Date()
+        let query = trimmedSearchText
 
         return base.filter { memory in
             matchesSelectedType(memory) &&
             matchesSelectedSection(memory, referenceDate: referenceDate) &&
-            (showInbox || !isInboxMemory(memory))
+            (showInbox || !isInboxMemory(memory)) &&
+            matchesSearch(memory, query: query)
         }
     }
 
@@ -256,6 +296,24 @@ struct SpaceDetailView: View {
     private func memoryCount(for space: SpaceModel) -> Int {
         let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { ids.contains($0.space.id) }.count
+    }
+
+    private func matchesSearch(_ memory: MemoryModel, query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+
+        if let title = memory.title, title.localizedCaseInsensitiveContains(query) {
+            return true
+        }
+
+        if let body = memory.body, body.localizedCaseInsensitiveContains(query) {
+            return true
+        }
+
+        if memory.tags.contains(where: { $0.name.localizedCaseInsensitiveContains(query) }) {
+            return true
+        }
+
+        return false
     }
 }
 
