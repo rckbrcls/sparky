@@ -380,7 +380,20 @@ struct FilterSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button {
+                    Button(role: .cancel) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedMemoryType = nil
+                            selectedSection = nil
+                            showInbox = true
+                        }
+                        dismiss()
+                    } label: {
+                        Label("Close", systemImage: "xmark")
+                    }
+                }
+                
+                ToolbarItem(placement: .destructiveAction) {
+                    Button(role: .destructive) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedMemoryType = nil
                             selectedSection = nil
@@ -391,8 +404,8 @@ struct FilterSheetView: View {
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(role: .confirm){
                         dismiss()
                     } label: {
                         Label("Done", systemImage: "checkmark")

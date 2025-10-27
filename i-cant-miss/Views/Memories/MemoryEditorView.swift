@@ -57,7 +57,7 @@ struct MemoryEditorView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+                    Button(role: .confirm) {
                         Task {
                             let success = await viewModel.save()
                             if success { dismiss() }
