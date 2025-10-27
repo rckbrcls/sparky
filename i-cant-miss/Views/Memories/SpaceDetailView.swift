@@ -21,7 +21,8 @@ struct SpaceDetailView: View {
     @State private var selectedMemoryType: MemoryType?
     @State private var selectedSection: MemoryService.TimelineSection.Kind?
     @State private var showInbox = true
-    @State private var filterSheetDetent: PresentationDetent = .medium
+    @State private var filterSheetDetent: PresentationDetent = .large
+    @State private var searchText = ""
 
     private var activeFilterCount: Int {
         var count = 0
@@ -72,8 +73,6 @@ struct SpaceDetailView: View {
     var body: some View {
         ScrollView{
             VStack(alignment: .leading, spacing: 16) {
-                headerSection
-
                 if !childSpaces.isEmpty {
                     Section("Subspaces") {
                         ForEach(childSpaces) { child in
@@ -125,8 +124,12 @@ struct SpaceDetailView: View {
             .padding(.bottom, 70)
         }
         .navigationTitle(space.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                filterSummaryButton
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     onCreateMemory(space)
@@ -143,14 +146,14 @@ struct SpaceDetailView: View {
                 showInbox: $showInbox,
                 detentSelection: $filterSheetDetent
             )
-            .onAppear { filterSheetDetent = .medium }
-            .presentationDetents([.medium, .large], selection: $filterSheetDetent)
+            .onAppear { filterSheetDetent = .large }
+            .presentationDetents([.large], selection: $filterSheetDetent)
         }
     }
 
     private var filterSummaryButton: some View {
         Button {
-            filterSheetDetent = .medium
+            filterSheetDetent = .large
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 showingFilterSheet = true
             }
@@ -171,22 +174,9 @@ struct SpaceDetailView: View {
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showingFilterSheet)
             }
             .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
-            .padding(12)
+            .padding(10)
             .glassEffect(.regular.interactive())
         }
-    }
-
-    private var headerSection: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text(space.name)
-                .font(.title2)
-                .fontWeight(.bold)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-            Spacer(minLength: 12)
-            filterSummaryButton
-        }
-        .padding(.top, 8)
     }
 
     private var childSpaces: [SpaceModel] {

@@ -18,7 +18,7 @@ struct SpacesRootView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Spaces") {
+                Section {
                     ForEach(rootSpaces) { space in
                         NavigationLink(value: space) {
                             SpaceRowView(

@@ -16,7 +16,7 @@ struct MemoryTimelineView: View {
     @State private var selectedMemoryType: MemoryType?
     @State private var selectedSection: MemoryService.TimelineSection.Kind?
     @State private var showInbox = true
-    @State private var filterSheetDetent: PresentationDetent = .medium
+    @State private var filterSheetDetent: PresentationDetent = .large
 
     @Namespace private var animation
 
@@ -81,7 +81,7 @@ struct MemoryTimelineView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Button {
-                        filterSheetDetent = .medium
+                        filterSheetDetent = .large
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             showingFilterSheet = true
                         }
@@ -101,7 +101,7 @@ struct MemoryTimelineView: View {
                         }
                         .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
                         .animation(.easeInOut(duration: 0.2), value: activeFilterCount)
-                        .padding(12)
+                        .padding(10)
                         .glassEffect(.regular.interactive())
                     }
                 }
@@ -113,7 +113,7 @@ struct MemoryTimelineView: View {
                     showInbox: $showInbox,
                     detentSelection: $filterSheetDetent
                 )
-                .onAppear { filterSheetDetent = .medium }
+                .onAppear { filterSheetDetent = .large }
                 .presentationDetents([.large], selection: $filterSheetDetent)
             }
         }
