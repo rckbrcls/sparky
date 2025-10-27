@@ -409,7 +409,6 @@ struct FilterSheetView: View {
                         dismiss()
                     } label: {
                         Label("Done", systemImage: "checkmark")
-                            .fontWeight(.semibold)
                     }
                 }
             }

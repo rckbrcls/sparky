@@ -51,15 +51,19 @@ struct SpaceComposerView: View {
             .navigationTitle("New Space")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(role: .cancel) {
                         dismiss()
+                    } label: {
+                        Label("Cancel", systemImage: "xmark")
                     }
                     .disabled(isSaving)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
+                    Button(role: .confirm){
                         saveSpace()
+                    } label: {
+                        Label("Create", systemImage: "checkmark")
                     }
                     .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
