@@ -37,6 +37,10 @@ struct SpaceDetailView: View {
         return count
     }
 
+    private var isFiltering: Bool {
+        activeFilterCount > 0
+    }
+
     private var filterDescription: String {
         var parts: [String] = []
 
@@ -55,9 +59,21 @@ struct SpaceDetailView: View {
         return parts.isEmpty ? "All" : parts.joined(separator: " • ")
     }
 
+    private var emptyStateTitle: String {
+        isFiltering ? "No memories match these filters" : "No memories yet"
+    }
+
+    private var emptyStateMessage: String {
+        isFiltering
+            ? "Try adjusting the filters or reset them to see more memories."
+            : "Create a memory to get started in this space."
+    }
+
     var body: some View {
         ScrollView{
             VStack(alignment: .leading, spacing: 16) {
+                headerSection
+
                 if !childSpaces.isEmpty {
                     Section("Subspaces") {
                         ForEach(childSpaces) { child in
@@ -74,8 +90,24 @@ struct SpaceDetailView: View {
 
                 Section {
                     if filteredMemories.isEmpty {
-                        Label("No memories in this space", systemImage: "tray")
-                            .foregroundStyle(.secondary)
+                        VStack(spacing: 12) {
+                            Image(systemName: "tray")
+                                .font(.system(size: 40, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                            Text(emptyStateTitle)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Text(emptyStateMessage)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 12)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 36)
+                        .padding(.top, 8)
+                        .glassEffect(in: .rect(cornerRadius: 16.0))
+
                     } else {
                         ForEach(filteredMemories) { memory in
                             Button {
@@ -93,34 +125,8 @@ struct SpaceDetailView: View {
             .padding(.bottom, 70)
         }
         .navigationTitle(space.name)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Button {
-                    filterSheetDetent = .medium
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        showingFilterSheet = true
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                            .symbolEffect(.bounce, value: activeFilterCount)
-                        Text(filterDescription)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .animation(.easeInOut(duration: 0.2), value: filterDescription)
-                        Image(systemName: "chevron.down")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .rotationEffect(.degrees(showingFilterSheet ? 180 : 0))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showingFilterSheet)
-                    }
-                    .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
-                    .animation(.easeInOut(duration: 0.2), value: activeFilterCount)
-                    .padding(12)
-                    .glassEffect(.regular.interactive())
-                }
-            }
-
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     onCreateMemory(space)
@@ -140,6 +146,47 @@ struct SpaceDetailView: View {
             .onAppear { filterSheetDetent = .medium }
             .presentationDetents([.medium, .large], selection: $filterSheetDetent)
         }
+    }
+
+    private var filterSummaryButton: some View {
+        Button {
+            filterSheetDetent = .medium
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                showingFilterSheet = true
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    .symbolEffect(.bounce, value: activeFilterCount)
+                Text(filterDescription)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .contentTransition(.opacity)
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .rotationEffect(.degrees(showingFilterSheet ? 180 : 0))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showingFilterSheet)
+            }
+            .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
+            .padding(12)
+            .glassEffect(.regular.interactive())
+        }
+    }
+
+    private var headerSection: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(space.name)
+                .font(.title2)
+                .fontWeight(.bold)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 12)
+            filterSummaryButton
+        }
+        .padding(.top, 8)
     }
 
     private var childSpaces: [SpaceModel] {

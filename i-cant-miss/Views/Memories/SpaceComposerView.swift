@@ -82,14 +82,13 @@ struct SpaceComposerView: View {
                         .font(.title2)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(iconBackground(for: icon))
-                        )
                         .foregroundStyle(iconForeground(for: icon))
+                        .glassEffect(iconGlass(for: icon))
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
                 .accessibilityLabel("Select \(icon) icon")
+                .accessibilityAddTraits(icon == selectedIcon ? .isSelected : [])
             }
         }
         .padding(.vertical, 4)
@@ -103,21 +102,21 @@ struct SpaceComposerView: View {
                         selectedColorHex = preset.hex
                     } label: {
                         Circle()
-                            .fill(preset.color)
-                            .frame(width: 36, height: 36)
+                            .frame(width: 60, height: 60)
                             .overlay(
                                 Circle()
                                     .strokeBorder(selectedColorHex == preset.hex ? Color.primary : Color.clear, lineWidth: 2)
                             )
+                            .tint(preset.color)
+                            .glassEffect()
                             .overlay {
                                 if selectedColorHex == preset.hex {
                                     Image(systemName: "checkmark")
-                                        .font(.caption2.bold())
-                                        .foregroundStyle(.primary)
+                                        .font(.title2.bold())
+                                        .foregroundStyle(.white)
                                 }
                             }
                     }
-                    .buttonStyle(.plain)
                     .accessibilityLabel("Select \(preset.name) color")
                 }
             }
@@ -133,7 +132,11 @@ struct SpaceComposerView: View {
     }
 
     private func iconForeground(for icon: String) -> Color {
-        icon == selectedIcon ? .accentColor : .primary
+        icon == selectedIcon ? .primary : .accentColor
+    }
+    
+    private func iconGlass(for icon: String) -> Glass {
+        icon == selectedIcon ? .regular.tint(.accentColor).interactive() : .regular.interactive()
     }
 
     private func saveSpace() {
