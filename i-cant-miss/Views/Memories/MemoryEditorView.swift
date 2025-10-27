@@ -69,7 +69,6 @@ struct MemoryEditorView: View {
                             Label("Save", systemImage: "checkmark")
                         }
                     }
-                    .glassEffect(.regular.tint(Color.accent))
                     .disabled(viewModel.isSaving)
                 }
             }

@@ -116,9 +116,6 @@ struct MemoryTimelineView: View {
                 .onAppear { filterSheetDetent = .medium }
                 .presentationDetents([.medium, .large], selection: $filterSheetDetent)
             }
-            .refreshable {
-                await memoryService.refresh(force: true)
-            }
         }
     }
 

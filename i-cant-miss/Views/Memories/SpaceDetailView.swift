@@ -140,9 +140,6 @@ struct SpaceDetailView: View {
             .onAppear { filterSheetDetent = .medium }
             .presentationDetents([.medium, .large], selection: $filterSheetDetent)
         }
-        .refreshable {
-            await refresh()
-        }
     }
 
     private var childSpaces: [SpaceModel] {
@@ -222,12 +219,6 @@ struct SpaceDetailView: View {
     private func memoryCount(for space: SpaceModel) -> Int {
         let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { ids.contains($0.space.id) }.count
-    }
-
-    private func refresh() async {
-        async let spaces = spaceService.refresh(force: true)
-        async let memories = memoryService.refresh(force: true)
-        _ = await (spaces, memories)
     }
 }
 
