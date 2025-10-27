@@ -61,7 +61,6 @@ struct MemoryTimelineView: View {
             if filteredMemories.isEmpty {
                 Label("No results found", systemImage: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                    .padding(.vertical, 20)
             } else {
                 ForEach(filteredMemories) { memory in
                     Button {
@@ -72,6 +71,9 @@ struct MemoryTimelineView: View {
                     .buttonStyle(.plain)
                 }
             }
+        } header: {
+            Divider()
+                .padding(.top, 16)
         }
     }
 

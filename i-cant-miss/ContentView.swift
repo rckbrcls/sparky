@@ -100,6 +100,7 @@ struct ContentView: View {
                 CustomTabBarView()
                     .padding(.horizontal, 20)
             }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .sheet(item: $viewerRoute) { route in
             MemoryDetailView(
