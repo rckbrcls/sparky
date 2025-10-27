@@ -31,6 +31,9 @@ struct SpacesRootView: View {
                     }
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height:  70)
+            }
             .navigationTitle("Spaces")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

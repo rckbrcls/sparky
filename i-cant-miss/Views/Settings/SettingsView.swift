@@ -32,6 +32,9 @@ struct SettingsView: View {
                 notificationSection
                 locationSection
             }
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height:  70)
+            }
             .navigationTitle("Settings")
         }
         .task {

@@ -72,6 +72,7 @@ struct SpaceDetailView: View {
                 
             }
             .padding(.horizontal, 20)
+            .padding(.bottom, 70) 
         }
         .navigationTitle(space.name)
         .toolbar {

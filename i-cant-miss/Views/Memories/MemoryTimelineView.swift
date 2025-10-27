@@ -19,6 +19,7 @@ struct MemoryTimelineView: View {
                     inboxSection
                 }
                 .padding(.horizontal, 20)
+                .padding(.bottom, 70) 
             }
             .navigationTitle("Timeline")
             .refreshable {
