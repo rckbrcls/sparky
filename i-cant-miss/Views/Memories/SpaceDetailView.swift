@@ -18,30 +18,41 @@ struct SpaceDetailView: View {
     let onCreateSpace: () -> Void
 
     @State private var showingFilterSheet = false
-    @State private var statusFilter: StatusFilter = .active
-
-    @Namespace private var animation
-
-    enum StatusFilter: String, CaseIterable, Identifiable {
-        case active = "Active"
-        case completed = "Completed"
-        case archived = "Archived"
-        case all = "All"
-
-        var id: String { rawValue }
-    }
+    @State private var selectedMemoryType: MemoryType?
+    @State private var selectedSection: MemoryService.TimelineSection.Kind?
+    @State private var showInbox = true
+    @State private var filterSheetDetent: PresentationDetent = .medium
 
     private var activeFilterCount: Int {
-        switch statusFilter {
-        case .all:
-            return 0
-        default:
-            return 1
+        var count = 0
+        if selectedMemoryType != nil {
+            count += 1
         }
+        if selectedSection != nil {
+            count += 1
+        }
+        if !showInbox {
+            count += 1
+        }
+        return count
     }
 
     private var filterDescription: String {
-        statusFilter.rawValue
+        var parts: [String] = []
+
+        if let type = selectedMemoryType {
+            parts.append(type.label)
+        }
+
+        if let section = selectedSection {
+            parts.append(section.title)
+        }
+
+        if !showInbox {
+            parts.append("No Inbox")
+        }
+
+        return parts.isEmpty ? "All" : parts.joined(separator: " • ")
     }
 
     var body: some View {
@@ -85,6 +96,7 @@ struct SpaceDetailView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Button {
+                    filterSheetDetent = .medium
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         showingFilterSheet = true
                     }
@@ -119,7 +131,14 @@ struct SpaceDetailView: View {
             }
         }
         .sheet(isPresented: $showingFilterSheet) {
-            SpaceFilterSheetView(selectedStatusFilter: $statusFilter)
+            FilterSheetView(
+                selectedMemoryType: $selectedMemoryType,
+                selectedSection: $selectedSection,
+                showInbox: $showInbox,
+                detentSelection: $filterSheetDetent
+            )
+            .onAppear { filterSheetDetent = .medium }
+            .presentationDetents([.medium, .large], selection: $filterSheetDetent)
         }
         .refreshable {
             await refresh()
@@ -131,32 +150,73 @@ struct SpaceDetailView: View {
     }
 
     private var filteredMemories: [MemoryModel] {
-        let statuses: Set<MemoryStatus>
-        let includeArchived: Bool
-
-        switch statusFilter {
-        case .active:
-            statuses = [.active]
-            includeArchived = false
-        case .completed:
-            statuses = [.completed]
-            includeArchived = false
-        case .archived:
-            statuses = [.archived]
-            includeArchived = true
-        case .all:
-            statuses = []
-            includeArchived = true
-        }
-
-        return memoryService.memories(
+        let base = memoryService.memories(
             in: space,
             includeDescendants: false,
-            statuses: statuses,
-            includeCompleted: statusFilter != .active,
-            includeArchived: includeArchived,
+            statuses: [],
+            includeCompleted: true,
+            includeArchived: true,
             sort: .updatedAtDescending
         )
+
+        let referenceDate = Date()
+
+        return base.filter { memory in
+            matchesSelectedType(memory) &&
+            matchesSelectedSection(memory, referenceDate: referenceDate) &&
+            (showInbox || !isInboxMemory(memory))
+        }
+    }
+
+    private func matchesSelectedType(_ memory: MemoryModel) -> Bool {
+        guard let selectedType = selectedMemoryType else { return true }
+        guard let origin = memory.metadata.origin else { return true }
+
+        switch origin {
+        case .reminder:
+            return selectedType == .reminder
+        case .note:
+            return selectedType == .note
+        case .todoList:
+            return selectedType == .todo
+        }
+    }
+
+    private func matchesSelectedSection(_ memory: MemoryModel, referenceDate: Date = Date()) -> Bool {
+        guard let selected = selectedSection else { return true }
+
+        switch selected {
+        case .recurring:
+            return memory.hasRecurringTriggers
+        case .today, .nextSevenDays, .later:
+            guard memory.status == .active,
+                  memory.hasTriggers,
+                  let kind = sectionKind(for: memory, referenceDate: referenceDate) else {
+                return false
+            }
+            return kind == selected
+        }
+    }
+
+    private func sectionKind(for memory: MemoryModel, referenceDate: Date = Date()) -> MemoryService.TimelineSection.Kind? {
+        guard let fireDate = memory.nextFireDate(referenceDate: referenceDate) else { return nil }
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: referenceDate)
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
+        let sevenDaysOut = calendar.date(byAdding: .day, value: 7, to: startOfTomorrow) ?? referenceDate
+
+        if calendar.isDate(fireDate, inSameDayAs: referenceDate) {
+            return .today
+        } else if fireDate < sevenDaysOut {
+            return .nextSevenDays
+        } else {
+            return .later
+        }
+    }
+
+    private func isInboxMemory(_ memory: MemoryModel) -> Bool {
+        memory.status == .active && !memory.hasTriggers
     }
 
     private func memoryCount(for space: SpaceModel) -> Int {
@@ -168,84 +228,6 @@ struct SpaceDetailView: View {
         async let spaces = spaceService.refresh(force: true)
         async let memories = memoryService.refresh(force: true)
         _ = await (spaces, memories)
-    }
-}
-
-struct SpaceFilterSheetView: View {
-    @Environment(\.dismiss) var dismiss
-
-    @Binding var selectedStatusFilter: SpaceDetailView.StatusFilter
-
-    @Namespace private var selectionAnimation
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach(SpaceDetailView.StatusFilter.allCases) { filter in
-                        Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedStatusFilter = filter
-                            }
-                        } label: {
-                            HStack {
-                                Label(filter.rawValue, systemImage: filter.systemImage)
-                                    .foregroundStyle(Color.accent)
-                                Spacer()
-                                if selectedStatusFilter == filter {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accent)
-                                        .fontWeight(.semibold)
-                                        .matchedGeometryEffect(id: "statusCheck", in: selectionAnimation)
-                                        .transition(.scale.combined(with: .opacity))
-                                }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Status Filter")
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .navigationTitle("Filter")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedStatusFilter = .active
-                        }
-                    } label: {
-                        Label("Reset", systemImage: "arrow.counterclockwise")
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Label("Done", systemImage: "checkmark")
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-}
-
-extension SpaceDetailView.StatusFilter {
-    var systemImage: String {
-        switch self {
-        case .active:
-            return "checkmark.circle.fill"
-        case .completed:
-            return "checkmark.seal.fill"
-        case .archived:
-            return "archivebox.fill"
-        case .all:
-            return "square.stack.3d.up.fill"
-        }
     }
 }
 

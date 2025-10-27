@@ -50,7 +50,11 @@ struct MemoryEditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    Button( role: .cancel) {
+                        dismiss()
+                    } label: {
+                        Label("Cancel", systemImage: "xmark")
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -62,9 +66,10 @@ struct MemoryEditorView: View {
                         if viewModel.isSaving {
                             ProgressView()
                         } else {
-                            Text("Save")
+                            Label("Save", systemImage: "checkmark")
                         }
                     }
+                    .glassEffect(.regular.tint(Color.accent))
                     .disabled(viewModel.isSaving)
                 }
             }

@@ -16,6 +16,7 @@ struct MemoryTimelineView: View {
     @State private var selectedMemoryType: MemoryType?
     @State private var selectedSection: MemoryService.TimelineSection.Kind?
     @State private var showInbox = true
+    @State private var filterSheetDetent: PresentationDetent = .medium
 
     @Namespace private var animation
 
@@ -80,6 +81,7 @@ struct MemoryTimelineView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Button {
+                        filterSheetDetent = .medium
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             showingFilterSheet = true
                         }
@@ -108,8 +110,11 @@ struct MemoryTimelineView: View {
                 FilterSheetView(
                     selectedMemoryType: $selectedMemoryType,
                     selectedSection: $selectedSection,
-                    showInbox: $showInbox
+                    showInbox: $showInbox,
+                    detentSelection: $filterSheetDetent
                 )
+                .onAppear { filterSheetDetent = .medium }
+                .presentationDetents([.medium, .large], selection: $filterSheetDetent)
             }
             .refreshable {
                 await memoryService.refresh(force: true)
@@ -254,6 +259,7 @@ struct FilterSheetView: View {
     @Binding var selectedMemoryType: MemoryType?
     @Binding var selectedSection: MemoryService.TimelineSection.Kind?
     @Binding var showInbox: Bool
+    @Binding var detentSelection: PresentationDetent
 
     @Namespace private var selectionAnimation
 
@@ -371,6 +377,8 @@ struct FilterSheetView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .scrollIndicators(.hidden)
+            .scrollDisabled(detentSelection == .medium)
             .navigationTitle("Filter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -396,7 +404,6 @@ struct FilterSheetView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
     }
 }
 
