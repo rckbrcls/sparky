@@ -100,7 +100,7 @@ struct MemoryTimelineView: View {
                         .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
                         .animation(.easeInOut(duration: 0.2), value: activeFilterCount)
                         .padding(12)
-                        .glassEffect()
+                        .glassEffect(.regular.interactive())
                     }
                 }
             }
