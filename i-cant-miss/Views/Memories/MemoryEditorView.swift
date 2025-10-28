@@ -20,7 +20,7 @@ struct MemoryEditorView: View {
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
     @FocusState private var focusedDraftID: UUID?
     private let isEditing: Bool
-    
+
     init(environment: AppEnvironment,
          memory: MemoryModel? = nil,
          defaultSpace: SpaceModel? = nil,
@@ -33,7 +33,7 @@ struct MemoryEditorView: View {
         ))
         self.isEditing = memory != nil
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -55,30 +55,30 @@ struct MemoryEditorView: View {
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-//                ToolbarItem(placement: .principal){
-//                    Button {
-//                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-//                            showTrigger = true
-//                        }
-//                    } label: {
-//                        HStack(spacing: 10) {
-//                            Image(systemName: "bolt.fill")
-//                                .symbolEffect(.bounce)
-//                            Text("Triggers")
-//                                .font(.subheadline)
-//                                .fontWeight(.medium)
-//                                .animation(.easeInOut(duration: 0.2))
-//                            Image(systemName: "chevron.down")
-//                                .font(.caption)
-//                                .fontWeight(.semibold)
-//                                .rotationEffect(.degrees(showTrigger ? 180 : 0))
-//                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showTrigger)
-//                        }
-//                        .padding(10)
-//                        .glassEffect(.regular.interactive())
-//                    }
-//                }
-                
+                //                ToolbarItem(placement: .principal){
+                //                    Button {
+                //                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                //                            showTrigger = true
+                //                        }
+                //                    } label: {
+                //                        HStack(spacing: 10) {
+                //                            Image(systemName: "bolt.fill")
+                //                                .symbolEffect(.bounce)
+                //                            Text("Triggers")
+                //                                .font(.subheadline)
+                //                                .fontWeight(.medium)
+                //                                .animation(.easeInOut(duration: 0.2))
+                //                            Image(systemName: "chevron.down")
+                //                                .font(.caption)
+                //                                .fontWeight(.semibold)
+                //                                .rotationEffect(.degrees(showTrigger ? 180 : 0))
+                //                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showTrigger)
+                //                        }
+                //                        .padding(10)
+                //                        .glassEffect(.regular.interactive())
+                //                    }
+                //                }
+
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button( role: .cancel) {
                         dismiss()
@@ -99,7 +99,7 @@ struct MemoryEditorView: View {
                             Label("Save", systemImage: "checkmark")
                         }
                     }
-                    .disabled(viewModel.isSaving)
+                    .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty && viewModel.checklistItems.isEmpty))
                 }
             }
             .alert("Unable to save", isPresented: Binding(
@@ -113,7 +113,7 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showTrigger){
                 NavigationStack {
                     Form{
-                       
+
                     }
                     .navigationTitle("Triggers")
                     .navigationBarTitleDisplayMode(.inline)
@@ -175,24 +175,24 @@ struct MemoryEditorView: View {
             }
         }
     }
-    
+
     private var navigationTitle: String { isEditing ? "Edit Memory" : "New Memory" }
-    
+
     private var detailsSection: some View {
         Section("Details") {
             SpacePicker(selection: Binding(
                 get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
                 set: { viewModel.selectedSpaceID = $0 }
             ), spaces: spacesForPicker)
-            
+
             Toggle("Pinned", isOn: $viewModel.isPinned)
-            
+
             Picker("Status", selection: $viewModel.status) {
                 ForEach(MemoryStatus.allCases) { status in
                     Text(status.rawValue.capitalized).tag(status)
                 }
             }
-            
+
             Picker("Priority", selection: $viewModel.priority) {
                 ForEach(MemoryPriority.allCases) { priority in
                     Label(priorityLabel(for: priority), systemImage: priority.iconName)
@@ -210,7 +210,7 @@ struct MemoryEditorView: View {
             Label("Body", systemImage: "text.rectangle")
         }
     }
-    
+
     private var checklistSection: some View {
         Section {
             ForEach(viewModel.checklistItems) { item in
@@ -232,16 +232,16 @@ struct MemoryEditorView: View {
             Label("Checklist", systemImage: "checklist")
         }
     }
-    
+
     private var triggersSection: some View {
         Section {
             MemoryScheduleTriggerInlineForm(viewModel: viewModel, showSheet: $showScheduleSheet)
-            
+
             MemoryLocationTriggerInlineForm(
                 viewModel: viewModel,
                 showLocationPicker: $showLocationPicker
             )
-            
+
             MemoryPersonTriggerInlineForm(
                 viewModel: viewModel,
                 showSheet: $showPersonSheet
@@ -250,7 +250,7 @@ struct MemoryEditorView: View {
             Label("Triggers", systemImage: "bolt.fill")
         }
     }
-    
+
     private var dueDateSection: some View {
         Section("Due Date") {
             Toggle("Add due date", isOn: $viewModel.dueDateEnabled.animation())
@@ -260,7 +260,7 @@ struct MemoryEditorView: View {
             }
         }
     }
-    
+
     private var extrasSection: some View {
         Section("Preferences") {
             Toggle("Auto-complete when checklist is done", isOn: $viewModel.autoCompleteChecklist)
@@ -268,7 +268,7 @@ struct MemoryEditorView: View {
                 .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
         }
     }
-    
+
     private func binding(for item: CheckItemDraft) -> Binding<CheckItemDraft> {
         guard let index = viewModel.checklistItems.firstIndex(where: { $0.id == item.id }) else {
             return .constant(item)
@@ -349,7 +349,7 @@ struct MemoryEditorView: View {
             checklistDraftRows = [ChecklistDraftRow()]
         }
     }
-    
+
     private func removeChecklist(_ item: CheckItemDraft) {
         if let index = viewModel.checklistItems.firstIndex(where: { $0.id == item.id }) {
             viewModel.checklistItems.remove(at: index)
@@ -358,7 +358,7 @@ struct MemoryEditorView: View {
             }
         }
     }
-    
+
     private func priorityLabel(for priority: MemoryPriority) -> String {
         switch priority {
         case .low: return "Low"
@@ -366,7 +366,7 @@ struct MemoryEditorView: View {
         case .high: return "High"
         }
     }
-    
+
     private var spacesForPicker: [SpaceModel] {
         let spaces = viewModel.availableSpaces
         return spaces.isEmpty ? [SpaceModel.inbox] : spaces
@@ -376,7 +376,7 @@ struct MemoryEditorView: View {
 private struct SpacePicker: View {
     @Binding var selection: UUID
     let spaces: [SpaceModel]
-    
+
     var body: some View {
         Picker("Space", selection: $selection) {
             ForEach(spaces) { space in
@@ -390,7 +390,7 @@ private struct ChecklistItemEditor: View {
     @Binding var item: CheckItemDraft
     let onToggle: () -> Void
     let onDelete: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -504,38 +504,43 @@ private struct ChecklistDraftRow: Identifiable, Equatable {
 private struct MemoryScheduleTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
-    
+
     private var timeTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .time })
     }
-    
+
     private var weekdayTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .dayOfWeek })
     }
-    
+
     private var hasSchedule: Bool {
         timeTrigger != nil || weekdayTrigger != nil
     }
-    
+
     var body: some View {
         if hasSchedule {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(schedulePrimaryText)
-                        .font(.body)
-                    if let detail = scheduleDetailText {
-                        Text(detail)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            Button {
+                showSheet = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(schedulePrimaryText)
+                            .font(.body)
+                        if let detail = scheduleDetailText {
+                            Text(detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .onTapGesture { showSheet = true }
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.clearScheduleTriggers()
@@ -544,13 +549,18 @@ private struct MemoryScheduleTriggerInlineForm: View {
                 }
             }
         } else {
-            Label("Add schedule", systemImage: "plus.circle.fill")
-                .foregroundStyle(.accent)
-                .contentShape(Rectangle())
-                .onTapGesture { showSheet = true }
+            Button {
+                showSheet = true
+            } label: {
+                Label("Add schedule", systemImage: "plus.circle.fill")
+                    .foregroundStyle(.accent)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
     }
-    
+
     private var schedulePrimaryText: String {
         if let date = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate {
             return date.formatted(date: .abbreviated, time: .shortened)
@@ -560,7 +570,7 @@ private struct MemoryScheduleTriggerInlineForm: View {
         }
         return "Custom schedule"
     }
-    
+
     private var scheduleDetailText: String? {
         var parts: [String] = []
         if let recurrence = timeTrigger?.recurrenceRule {
@@ -582,28 +592,33 @@ private struct MemoryScheduleTriggerInlineForm: View {
 private struct MemoryLocationTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showLocationPicker: Bool
-    
+
     private var trigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .location })
     }
-    
+
     var body: some View {
         if let trigger, let location = trigger.location {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(location.name ?? "Location")
-                        .font(.body)
-                    Text("\(Int(location.radius))m • \(location.event.label)")
+            Button {
+                showLocationPicker = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(location.name ?? "Location")
+                            .font(.body)
+                        Text("\(Int(location.radius))m • \(location.event.label)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .onTapGesture { showLocationPicker = true }
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.removeTrigger(id: trigger.id)
@@ -612,10 +627,15 @@ private struct MemoryLocationTriggerInlineForm: View {
                 }
             }
         } else {
-            Label("Add location trigger", systemImage: "plus.circle.fill")
-                .foregroundStyle(.accent)
-                .contentShape(Rectangle())
-                .onTapGesture { showLocationPicker = true }
+            Button {
+                showLocationPicker = true
+            } label: {
+                Label("Add location trigger", systemImage: "plus.circle.fill")
+                    .foregroundStyle(.accent)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
     }
 }
@@ -623,30 +643,35 @@ private struct MemoryLocationTriggerInlineForm: View {
 private struct MemoryPersonTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
-    
+
     private var trigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .person })
     }
-    
+
     var body: some View {
         if let trigger, let person = trigger.person {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(person.name)
-                        .font(.body)
-                    if person.contactIdentifier != nil {
-                        Text("Linked contact")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            Button {
+                showSheet = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(person.name)
+                            .font(.body)
+                        if person.contactIdentifier != nil {
+                            Text("Linked contact")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .onTapGesture { showSheet = true }
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.removeTrigger(id: trigger.id)
@@ -655,10 +680,15 @@ private struct MemoryPersonTriggerInlineForm: View {
                 }
             }
         } else {
-            Label("Add person trigger", systemImage: "plus.circle.fill")
-                .foregroundStyle(.accent)
-                .contentShape(Rectangle())
-                .onTapGesture { showSheet = true }
+            Button {
+                showSheet = true
+            } label: {
+                Label("Add person trigger", systemImage: "plus.circle.fill")
+                    .foregroundStyle(.accent)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
     }
 }
@@ -673,30 +703,30 @@ private struct MemoryScheduleTriggerSheet: View {
     @State private var repeatInterval: Int
     @State private var selectedWeekdays: Set<Int>
     @State private var includeTimeTrigger: Bool
-    
+
     private var timeTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .time })
     }
-    
+
     private var weekdayTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .dayOfWeek })
     }
-    
+
     private var hasExistingSchedule: Bool {
         timeTrigger != nil || weekdayTrigger != nil
     }
-    
+
     init(viewModel: MemoryEditorViewModel) {
         self.viewModel = viewModel
         let time = viewModel.triggers.first(where: { $0.type == .time })
         let weekday = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
-        
+
         let defaultDate = time?.fireDate ?? weekday?.fireDate ?? Date().addingTimeInterval(3600)
         _date = State(initialValue: defaultDate)
         _selectedFrequency = State(initialValue: time?.recurrenceRule?.frequency)
         _repeatInterval = State(initialValue: time?.recurrenceRule?.interval ?? 1)
         _includeTimeTrigger = State(initialValue: time != nil)
-        
+
         var initialDays = Set<Int>()
         if let mask = weekday?.weekdayMask {
             for day in 1...7 {
@@ -708,7 +738,7 @@ private struct MemoryScheduleTriggerSheet: View {
         }
         _selectedWeekdays = State(initialValue: initialDays)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -721,7 +751,7 @@ private struct MemoryScheduleTriggerSheet: View {
                                selection: $date,
                                displayedComponents: [.hourAndMinute])
                 }
-                
+
                 if includeTimeTrigger {
                     Section("Repeat") {
                         Picker("Frequency", selection: $selectedFrequency) {
@@ -730,7 +760,7 @@ private struct MemoryScheduleTriggerSheet: View {
                                 Text(frequency.title).tag(Optional(frequency))
                             }
                         }
-                        
+
                         if selectedFrequency != nil {
                             Stepper(value: $repeatInterval, in: 1...30) {
                                 Text("Every \(repeatInterval) interval\(repeatInterval == 1 ? "" : "s")")
@@ -738,11 +768,11 @@ private struct MemoryScheduleTriggerSheet: View {
                         }
                     }
                 }
-                
+
                 Section("Weekdays") {
                     MemoryWeekdaySelectionView(selectedDays: $selectedWeekdays)
                 }
-                
+
                 if hasExistingSchedule {
                     Section {
                         Button("Remove schedule", role: .destructive) {
@@ -767,7 +797,7 @@ private struct MemoryScheduleTriggerSheet: View {
             }
         }
     }
-    
+
     private func saveChanges() {
         let recurrence = includeTimeTrigger ? selectedFrequency.map { RecurrenceRule(frequency: $0, interval: repeatInterval) } : nil
         viewModel.updateSchedule(
@@ -787,23 +817,23 @@ private struct MemoryPersonTriggerSheet: View {
     @Binding var showAccessDeniedAlert: Bool
     @State private var name: String
     @State private var contactIdentifier: String
-    
+
     private var existingTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .person })
     }
-    
+
     init(viewModel: MemoryEditorViewModel,
          showContactPicker: Binding<Bool>,
          showAccessDeniedAlert: Binding<Bool>) {
         self.viewModel = viewModel
         _showContactPicker = showContactPicker
         _showAccessDeniedAlert = showAccessDeniedAlert
-        
+
         let trigger = viewModel.triggers.first(where: { $0.type == .person })
         _name = State(initialValue: trigger?.person?.name ?? "")
         _contactIdentifier = State(initialValue: trigger?.person?.contactIdentifier ?? "")
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -817,14 +847,14 @@ private struct MemoryPersonTriggerSheet: View {
                         }
                         .buttonStyle(.borderless)
                     }
-                    
+
                     if !contactIdentifier.isEmpty {
                         Label("Contact linked", systemImage: "checkmark.circle.fill")
                             .font(.caption)
                             .foregroundStyle(.green)
                     }
                 }
-                
+
                 Section {
                     Text("Enter a name or choose from contacts.")
                         .font(.caption)
@@ -860,7 +890,7 @@ private struct MemoryPersonTriggerSheet: View {
             }
         }
     }
-    
+
     private func requestContactsAndShow() async {
         let status = ContactAccessHelper.checkAuthorizationStatus()
         switch status {
@@ -884,7 +914,7 @@ private struct MemoryPersonTriggerSheet: View {
 private struct MemoryWeekdaySelectionView: View {
     @Binding var selectedDays: Set<Int>
     private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 12), count: 7)
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             LazyVGrid(columns: columns, spacing: 12) {
@@ -913,14 +943,14 @@ private struct MemoryWeekdaySelectionView: View {
                     .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                 }
             }
-            
+
             Text(summaryText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
     }
-    
+
     private var summaryText: String {
         if selectedDays.isEmpty {
             return "No weekdays selected."
@@ -930,7 +960,7 @@ private struct MemoryWeekdaySelectionView: View {
         }
         return weekdayMaskSummary(mask: mask)
     }
-    
+
     private func toggle(_ day: Int) {
         if selectedDays.contains(day) {
             selectedDays.remove(day)
@@ -938,14 +968,14 @@ private struct MemoryWeekdaySelectionView: View {
             selectedDays.insert(day)
         }
     }
-    
+
     private func symbol(for day: Int) -> String {
         let formatter = DateFormatter()
         let symbols = formatter.veryShortWeekdaySymbols ?? []
         guard !symbols.isEmpty else { return "" }
         return symbols[(day - 1) % symbols.count]
     }
-    
+
     private func fullName(for day: Int) -> String {
         let formatter = DateFormatter()
         let symbols = formatter.weekdaySymbols ?? []
