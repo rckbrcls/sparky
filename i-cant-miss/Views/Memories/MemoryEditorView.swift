@@ -45,6 +45,7 @@ struct MemoryEditorView: View {
                 extrasSection
             }
             .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
             }
@@ -278,23 +279,34 @@ struct MemoryEditorView: View {
 
     private func handleDraftSubmit(_ draftID: UUID) {
         guard let index = checklistDraftRows.firstIndex(where: { $0.id == draftID }) else { return }
-        let trimmed = checklistDraftRows[index].title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        let trimmedTitle = checklistDraftRows[index].title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else {
+            DispatchQueue.main.async {
+                focusedDraftID = draftID
+            }
+            return
+        }
 
-        let detail = checklistDraftRows[index].detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        viewModel.addChecklistItem(title: trimmed, detail: detail)
+        let trimmedDetail = checklistDraftRows[index].detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.addChecklistItem(title: trimmedTitle, detail: trimmedDetail)
 
         checklistDraftRows[index].title = ""
         checklistDraftRows[index].detail = ""
+
+        let currentID = checklistDraftRows[index].id
         if checklistDraftRows.count > 1 {
-            checklistDraftRows.remove(at: index)
+            checklistDraftRows.removeAll { row in
+                row.id != currentID && row.isEffectivelyEmpty
+            }
         }
 
         if checklistDraftRows.isEmpty {
             checklistDraftRows = [ChecklistDraftRow()]
         }
 
-        cleanupTrailingPlaceholders()
+        DispatchQueue.main.async {
+            focusedDraftID = currentID
+        }
     }
 
     private func handleDraftTitleChange(_ draftID: UUID, _ text: String) {
@@ -326,9 +338,6 @@ struct MemoryEditorView: View {
 
         if checklistDraftRows.isEmpty {
             checklistDraftRows = [ChecklistDraftRow()]
-        }
-        DispatchQueue.main.async {
-            focusedDraftID = checklistDraftRows.last?.id
         }
     }
     
