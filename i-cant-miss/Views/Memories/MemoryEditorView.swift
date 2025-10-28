@@ -99,7 +99,7 @@ struct MemoryEditorView: View {
                             Label("Save", systemImage: "checkmark")
                         }
                     }
-                    .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty && viewModel.checklistItems.isEmpty))
+                    .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty))
                 }
             }
             .alert("Unable to save", isPresented: Binding(
