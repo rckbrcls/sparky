@@ -79,35 +79,30 @@ struct MemoryCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                if let icon = memory.space.iconName {
-                    Image(systemName: icon)
-                        .font(.caption)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                
+                HStack(spacing: 8) {
+                    if let icon = memory.space.iconName {
+                        Image(systemName: icon)
+                            .font(.caption)
+                            .foregroundStyle(spaceAccent)
+                    }
+                    Text(memory.space.name)
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(spaceAccent)
                 }
-                Text(memory.space.name)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(spaceAccent)
-            }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 12)
-            .glassEffect(in: .rect(cornerRadius: 8.0))
-            .glassEffect(.regular.tint(spaceAccent.opacity(0.15)))
-            
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(title)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .glassEffect(in: .rect(cornerRadius: 8.0))
+                .glassEffect(.regular.tint(spaceAccent.opacity(0.15)))
+                
+                Spacer()
+                
                 if let priority = memory.priority {
                     Image(systemName: priority.iconName)
                         .font(.subheadline)
                         .foregroundStyle(priorityColor(for: priority))
                 }
-
-                Spacer()
                 
                 if memory.isPinned {
                     Image(systemName: "pin.fill")
@@ -116,7 +111,7 @@ struct MemoryCardView: View {
                         .rotationEffect(.degrees(45))
                         .accessibilityLabel("Pinned")
                 }
-
+                
                 if let statusBadge {
                     Label {
                         Text(statusBadge.text)
@@ -129,15 +124,27 @@ struct MemoryCardView: View {
                     .padding(.leading, 4)
                 }
             }
-
-            if let bodyPreview {
-                Text(bodyPreview)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+            
+            VStack (alignment: .leading, spacing: 6){
+                Text(title)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                
+                
+                if let bodyPreview {
+                    Text(bodyPreview)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                
             }
-
-            Divider()
+            
+            if nextTriggerText != nil || dueDateText != nil || checklistProgressText != nil {
+                Divider()
+            }
             
             HStack(spacing: 12) {
                 if let nextTriggerText {
