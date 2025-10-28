@@ -16,6 +16,7 @@ struct MemoryEditorView: View {
     @State private var showPersonSheet = false
     @State private var showContactPicker = false
     @State private var showAccessDeniedAlert = false
+    @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
     private let isEditing: Bool
     
     init(environment: AppEnvironment,
@@ -204,29 +205,19 @@ struct MemoryEditorView: View {
     
     private var checklistSection: some View {
         Section {
-            Toggle("Checklist", isOn: $viewModel.showChecklist.animation())
-                .onChange(of: viewModel.showChecklist) { old, isOn in
-                    if isOn && viewModel.checklistItems.isEmpty {
-                        viewModel.addChecklistItem()
-                    } else if !isOn {
-                        viewModel.checklistItems.removeAll()
-                    }
-                }
-            
-            if viewModel.showChecklist {
-                ForEach(viewModel.checklistItems) { item in
-                    ChecklistItemEditor(
-                        item: binding(for: item),
-                        onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
-                        onDelete: { removeChecklist(item) }
-                    )
-                }
-                Button {
-                    viewModel.addChecklistItem()
-                } label: {
-                    Label("Add item", systemImage: "plus.circle.fill")
-                        .foregroundStyle(.accent)
-                }
+            ForEach(viewModel.checklistItems) { item in
+                ChecklistItemEditor(
+                    item: binding(for: item),
+                    onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
+                    onDelete: { removeChecklist(item) }
+                )
+            }
+            ForEach(checklistDraftRows) { draft in
+                ChecklistNewItemRow(
+                    draft: draftBinding(for: draft),
+                    onSubmit: handleDraftSubmit,
+                    onTextChange: handleDraftChange
+                )
             }
         } header: {
             Label("Checklist", systemImage: "checklist")
@@ -275,6 +266,66 @@ struct MemoryEditorView: View {
         }
         return $viewModel.checklistItems[index]
     }
+
+    private func draftBinding(for draft: ChecklistDraftRow) -> Binding<ChecklistDraftRow> {
+        guard let index = checklistDraftRows.firstIndex(where: { $0.id == draft.id }) else {
+            return .constant(draft)
+        }
+        return $checklistDraftRows[index]
+    }
+
+    private func handleDraftSubmit(_ draftID: UUID) {
+        guard let index = checklistDraftRows.firstIndex(where: { $0.id == draftID }) else { return }
+        let trimmed = checklistDraftRows[index].title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        viewModel.addChecklistItem(title: trimmed)
+
+        checklistDraftRows[index].title = ""
+        if checklistDraftRows.count > 1 {
+            checklistDraftRows.remove(at: index)
+        }
+
+        if checklistDraftRows.isEmpty {
+            checklistDraftRows = [ChecklistDraftRow()]
+        }
+
+        cleanupTrailingPlaceholders()
+    }
+
+    private func handleDraftChange(_ draftID: UUID, _ text: String) {
+        guard let index = checklistDraftRows.firstIndex(where: { $0.id == draftID }) else { return }
+        guard !checklistDraftRows.isEmpty else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lastIndex = checklistDraftRows.count - 1
+
+        if trimmed.isEmpty {
+            if checklistDraftRows.count > 1 && index != lastIndex {
+                checklistDraftRows.remove(at: index)
+            }
+            cleanupTrailingPlaceholders()
+        } else if index == lastIndex {
+            checklistDraftRows.append(ChecklistDraftRow())
+        }
+    }
+
+    private func cleanupTrailingPlaceholders() {
+        while checklistDraftRows.count > 1 {
+            guard let last = checklistDraftRows.last else { break }
+            let lastTrimmed = last.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let beforeLast = checklistDraftRows[checklistDraftRows.count - 2]
+            let beforeTrimmed = beforeLast.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if lastTrimmed.isEmpty && beforeTrimmed.isEmpty {
+                checklistDraftRows.removeLast()
+            } else {
+                break
+            }
+        }
+
+        if checklistDraftRows.isEmpty {
+            checklistDraftRows = [ChecklistDraftRow()]
+        }
+    }
     
     private func removeChecklist(_ item: CheckItemDraft) {
         if let index = viewModel.checklistItems.firstIndex(where: { $0.id == item.id }) {
@@ -319,27 +370,81 @@ private struct ChecklistItemEditor: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 8) {
                 Button(action: onToggle) {
                     Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(item.isCompleted ? .green : .secondary)
                 }
                 .buttonStyle(.plain)
-                
+
                 TextField("Item title", text: $item.title)
+
+                if shouldShowDelete {
+                    Button(action: onDelete) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
+                }
             }
+
             TextField("Details", text: $item.detail)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            
-            Button(role: .destructive, action: onDelete) {
-                Label("Remove", systemImage: "trash")
-                    .font(.caption)
-            }
-            .buttonStyle(.borderless)
-            .tint(.red)
         }
         .padding(.vertical, 4)
+    }
+
+    private var shouldShowDelete: Bool {
+        let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let detail = item.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !title.isEmpty || !detail.isEmpty
+    }
+}
+
+private struct ChecklistNewItemRow: View {
+    @Binding var draft: ChecklistDraftRow
+    let onSubmit: (UUID) -> Void
+    let onTextChange: (UUID, String) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "circle")
+                .foregroundStyle(.secondary)
+            TextField("New item", text: $draft.title)
+                .onSubmit { onSubmit(draft.id) }
+                .onChange(of: draft.title) { _, newValue in
+                    onTextChange(draft.id, newValue)
+                }
+
+            if shouldShowClear {
+                Button {
+                    draft.title = ""
+                    onTextChange(draft.id, "")
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var shouldShowClear: Bool {
+        !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
+private struct ChecklistDraftRow: Identifiable, Equatable {
+    let id: UUID
+    var title: String
+
+    init(id: UUID = UUID(), title: String = "") {
+        self.id = id
+        self.title = title
     }
 }
 

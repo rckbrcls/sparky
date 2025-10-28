@@ -105,6 +105,14 @@ final class MemoryEditorViewModel: ObservableObject {
         checklistItems.append(CheckItemDraft(sortOrder: nextOrder))
     }
 
+    func addChecklistItem(title: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        showChecklist = true
+        let nextOrder = (checklistItems.map(\.sortOrder).max() ?? -1) + 1
+        checklistItems.append(CheckItemDraft(title: trimmed, sortOrder: nextOrder))
+    }
+
     func removeChecklistItems(at offsets: IndexSet) {
         let sorted = offsets.sorted(by: >)
         for index in sorted where checklistItems.indices.contains(index) {
@@ -313,8 +321,9 @@ private extension MemoryEditorViewModel {
         case .blank:
             break
         case .checklist:
+            // Start with an empty checklist and show the inline new-item row.
             showChecklist = true
-            checklistItems = [CheckItemDraft(sortOrder: 0)]
+            checklistItems = []
         case .quickReminder:
             let fireDate = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date()) ?? Date().addingTimeInterval(3600)
             let trigger = MemoryTriggerDraft(
