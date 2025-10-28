@@ -62,30 +62,6 @@ struct MemoryEditorView: View {
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                //                ToolbarItem(placement: .principal){
-                //                    Button {
-                //                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                //                            showTrigger = true
-                //                        }
-                //                    } label: {
-                //                        HStack(spacing: 10) {
-                //                            Image(systemName: "bolt.fill")
-                //                                .symbolEffect(.bounce)
-                //                            Text("Triggers")
-                //                                .font(.subheadline)
-                //                                .fontWeight(.medium)
-                //                                .animation(.easeInOut(duration: 0.2))
-                //                            Image(systemName: "chevron.down")
-                //                                .font(.caption)
-                //                                .fontWeight(.semibold)
-                //                                .rotationEffect(.degrees(showTrigger ? 180 : 0))
-                //                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showTrigger)
-                //                        }
-                //                        .padding(10)
-                //                        .glassEffect(.regular.interactive())
-                //                    }
-                //                }
-
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button( role: .cancel) {
                         dismiss()
@@ -325,7 +301,7 @@ struct MemoryEditorView: View {
 
     private var checklistSection: some View {
         Section {
-            
+
         } header: {
             Label("Checklist", systemImage: "checklist")
         }
