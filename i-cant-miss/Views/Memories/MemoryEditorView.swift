@@ -47,9 +47,6 @@ struct MemoryEditorView: View {
             .scrollContentBackground(.hidden)
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
-                DispatchQueue.main.async {
-                    focusedDraftID = checklistDraftRows.first?.id
-                }
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -447,7 +444,7 @@ private struct ChecklistNewItemRow: View {
             }
 
             if shouldShowDetailField {
-                TextField("Description", text: $draft.detail)
+                TextField("Details", text: $draft.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .submitLabel(.next)
