@@ -21,6 +21,7 @@ final class AppEnvironment: ObservableObject {
     let notificationScheduler: NotificationScheduler
     let geofenceManager: GeofenceManager
     let settings: SettingsStore
+    let attachmentStore: MemoryAttachmentStore
 
     @Published var isBootstrapping = true
     @Published var hasBootstrapped = false
@@ -28,6 +29,7 @@ final class AppEnvironment: ObservableObject {
     init(persistence: PersistenceController) {
         self.persistence = persistence
         self.settings = SettingsStore()
+        self.attachmentStore = MemoryAttachmentStore()
 
         // Initialize services - they will load data synchronously in their init
         self.folderService = FolderService(persistence: persistence)
@@ -35,7 +37,9 @@ final class AppEnvironment: ObservableObject {
         self.reminderService = ReminderService(persistence: persistence, folderService: folderService)
         self.noteService = NoteService(persistence: persistence, folderService: folderService)
         self.todoService = TodoService(persistence: persistence, folderService: folderService)
-        self.memoryService = MemoryService(persistence: persistence, spaceService: spaceService)
+        self.memoryService = MemoryService(persistence: persistence,
+                                           spaceService: spaceService,
+                                           attachmentStore: attachmentStore)
         self.notificationScheduler = NotificationScheduler(settings: settings)
         self.geofenceManager = GeofenceManager()
 

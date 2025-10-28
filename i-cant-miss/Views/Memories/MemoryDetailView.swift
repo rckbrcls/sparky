@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct MemoryDetailView: View {
     let memory: MemoryModel
@@ -138,6 +139,37 @@ struct MemoryDetailView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     heroSection
+                    if memory.hasAttachments {
+                        detailSection(title: "Photos", systemImage: "photo.stack") {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: 12) {
+                                    ForEach(memory.attachments) { attachment in
+                                        if let image = UIImage(data: attachment.data) {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 160, height: 160)
+                                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 16)
+                                                        .stroke(.thinMaterial, lineWidth: 1)
+                                                )
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .fill(.secondary.opacity(0.1))
+                                                .frame(width: 160, height: 160)
+                                                .overlay(
+                                                    Image(systemName: "photo.fill")
+                                                        .font(.system(size: 28))
+                                                        .foregroundStyle(.secondary)
+                                                )
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
                     if memory.hasChecklist {
                         detailSection(title: "Checklist", systemImage: "checklist") {
                             VStack(spacing: 12) {
@@ -603,7 +635,8 @@ private func weekdayMaskSummary(mask: Int16) -> String {
         checkItems: checkItems,
         snoozeCount: 3,
         lastCompletionDate: calendar.date(byAdding: .day, value: -2, to: now),
-        metadata: metadata
+        metadata: metadata,
+        attachments: []
     )
     return MemoryDetailView(memory: memory, onClose: {}, onEdit: { _ in })
 }

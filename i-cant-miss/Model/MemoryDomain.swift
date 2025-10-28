@@ -37,6 +37,41 @@ enum MemoryPriority: Int16, CaseIterable, Identifiable, Codable {
 }
 
 struct MemoryModel: Identifiable, Hashable {
+    struct AttachmentKind: RawRepresentable, Hashable, Codable {
+        let rawValue: String
+
+        init(rawValue: String) {
+            self.rawValue = rawValue
+        }
+
+        static let photo = AttachmentKind(rawValue: "photo")
+    }
+
+    struct Attachment: Identifiable, Hashable {
+        let id: UUID
+        var kind: AttachmentKind
+        var data: Data
+        var createdAt: Date
+
+        init(id: UUID = UUID(),
+             kind: AttachmentKind = .photo,
+             data: Data,
+             createdAt: Date = Date()) {
+            self.id = id
+            self.kind = kind
+            self.data = data
+            self.createdAt = createdAt
+        }
+
+        static func == (lhs: Attachment, rhs: Attachment) -> Bool {
+            lhs.id == rhs.id
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+        }
+    }
+
     struct Metadata: Hashable {
         enum Origin: Hashable {
             case reminder(UUID)
@@ -75,6 +110,7 @@ struct MemoryModel: Identifiable, Hashable {
     var snoozeCount: Int
     var lastCompletionDate: Date?
     var metadata: Metadata
+    var attachments: [Attachment]
 
     var hasChecklist: Bool {
         !checkItems.isEmpty
@@ -86,6 +122,10 @@ struct MemoryModel: Identifiable, Hashable {
 
     var hasRecurringTriggers: Bool {
         triggers.contains { $0.recurrenceRule != nil }
+    }
+
+    var hasAttachments: Bool {
+        !attachments.isEmpty
     }
 
     var isCompleted: Bool {
@@ -288,7 +328,8 @@ extension ReminderModel {
                 legacyStatus: status,
                 legacyAudience: folder?.audience,
                 autoCompleteOnChecklistCompletion: false
-            )
+            ),
+            attachments: []
         )
     }
 }
@@ -315,7 +356,8 @@ extension NoteModel {
                 origin: .note(id),
                 legacyAudience: folder?.audience,
                 autoCompleteOnChecklistCompletion: false
-            )
+            ),
+            attachments: []
         )
     }
 }
@@ -342,7 +384,8 @@ extension TodoListModel {
                 origin: .todoList(id),
                 legacyAudience: folder?.audience,
                 autoCompleteOnChecklistCompletion: true
-            )
+            ),
+            attachments: []
         )
     }
 }

@@ -7,6 +7,8 @@
 
 import SwiftUI
 import Contacts
+import PhotosUI
+import UIKit
 
 struct MemoryEditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -19,14 +21,19 @@ struct MemoryEditorView: View {
     @State private var showAccessDeniedAlert = false
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
     @FocusState private var focusedDraftID: UUID?
+    @State private var photoSelections: [PhotosPickerItem] = []
+    @State private var isProcessingPhotos = false
+    @State private var showCameraPicker = false
+    @State private var mediaErrorMessage: String?
     private let isEditing: Bool
 
     init(environment: AppEnvironment,
          memory: MemoryModel? = nil,
          defaultSpace: SpaceModel? = nil,
-         template: MemoryEditorTemplate = .blank) {
+        template: MemoryEditorTemplate = .blank) {
         _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
             environment: environment,
+            attachmentStore: environment.attachmentStore,
             memory: memory,
             defaultSpace: defaultSpace,
             template: template
@@ -38,6 +45,7 @@ struct MemoryEditorView: View {
         NavigationStack {
             Form {
                 bodySection
+                photosSection
                 triggersSection
                 detailsSection
                 dueDateSection
@@ -47,6 +55,9 @@ struct MemoryEditorView: View {
             .scrollDismissesKeyboard(.interactively)
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
+            }
+            .onChange(of: photoSelections) { newValue in
+                handlePhotoSelections(newValue)
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -160,6 +171,15 @@ struct MemoryEditorView: View {
                     showContactPicker = false
                 }
             }
+            .fullScreenCover(isPresented: $showCameraPicker) {
+                CameraCaptureView {
+                    addAttachment($0)
+                    showCameraPicker = false
+                } onCancel: {
+                    showCameraPicker = false
+                }
+                .ignoresSafeArea()
+            }
             .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Settings") {
@@ -169,6 +189,14 @@ struct MemoryEditorView: View {
                 }
             } message: {
                 Text("Allow contact access in Settings to pick a person trigger.")
+            }
+            .alert("Unable to add photo", isPresented: Binding(
+                get: { mediaErrorMessage != nil },
+                set: { _ in mediaErrorMessage = nil }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(mediaErrorMessage ?? "")
             }
         }
     }
@@ -220,6 +248,78 @@ struct MemoryEditorView: View {
                     onTitleChange: handleDraftTitleChange
                 )
             }
+        }
+    }
+
+    private var photosSection: some View {
+        Section {
+            if viewModel.attachments.isEmpty {
+                Text("Attach photos to give this memory more context.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.attachments) { attachment in
+                            if let image = UIImage(data: attachment.data) {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 120, height: 120)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(.thinMaterial, lineWidth: 1)
+                                        )
+                                    Button {
+                                        removeAttachment(attachment.id)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .symbolRenderingMode(.hierarchical)
+                                            .foregroundStyle(.white, .black.opacity(0.6))
+                                            .padding(6)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            } else {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(.secondary.opacity(0.1))
+                                    .frame(width: 120, height: 120)
+                                    .overlay(
+                                        Image(systemName: "photo.fill")
+                                            .font(.system(size: 24))
+                                            .foregroundStyle(.secondary)
+                                    )
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            PhotosPicker(selection: $photoSelections,
+                         maxSelectionCount: 5,
+                         matching: .images) {
+                HStack {
+                    if isProcessingPhotos {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                    Label("Add from Library", systemImage: "photo.on.rectangle")
+                }
+            }
+            .disabled(isProcessingPhotos)
+
+            Button {
+                handleCameraButtonTapped()
+            } label: {
+                Label("Open Camera", systemImage: "camera")
+            }
+            .disabled(isProcessingPhotos)
+        } header: {
+            Label("Photos", systemImage: "photo.stack")
         }
     }
 
@@ -395,6 +495,66 @@ struct MemoryEditorView: View {
         let spaces = viewModel.availableSpaces
         return spaces.isEmpty ? [SpaceModel.inbox] : spaces
     }
+
+    private func handlePhotoSelections(_ items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
+        Task {
+            await loadPhotos(from: items)
+        }
+    }
+
+    private func handleCameraButtonTapped() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            mediaErrorMessage = "Camera is not available on this device."
+            return
+        }
+        showCameraPicker = true
+    }
+
+    @MainActor
+    private func addAttachment(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.85) else {
+            mediaErrorMessage = "The selected photo could not be processed."
+            return
+        }
+        viewModel.addAttachment(data: data)
+    }
+
+    @MainActor
+    private func removeAttachment(_ id: UUID) {
+        viewModel.removeAttachment(id: id)
+    }
+
+    private func loadPhotos(from items: [PhotosPickerItem]) async {
+        await MainActor.run {
+            isProcessingPhotos = true
+        }
+
+        for item in items {
+            do {
+                if let data = try await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data),
+                   let jpegData = image.jpegData(compressionQuality: 0.85) {
+                    await MainActor.run {
+                        viewModel.addAttachment(data: jpegData)
+                    }
+                } else {
+                    await MainActor.run {
+                        mediaErrorMessage = "One of the selected photos could not be loaded."
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    mediaErrorMessage = "One of the selected photos could not be loaded."
+                }
+            }
+        }
+
+        await MainActor.run {
+            isProcessingPhotos = false
+            photoSelections = []
+        }
+    }
 }
 
 private struct SpacePicker: View {
@@ -520,6 +680,59 @@ private struct ChecklistDraftRow: Identifiable, Equatable {
     var isEffectivelyEmpty: Bool {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
+private struct CameraCaptureView: UIViewControllerRepresentable {
+    let onCapture: (UIImage) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCapture: onCapture, onCancel: onCancel)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        picker.cameraCaptureMode = .photo
+        picker.allowsEditing = false
+        picker.modalPresentationStyle = .fullScreen
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        private let onCapture: (UIImage) -> Void
+        private let onCancel: () -> Void
+
+        init(onCapture: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void) {
+            self.onCapture = onCapture
+            self.onCancel = onCancel
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                let onCapture = self.onCapture
+                picker.dismiss(animated: true) {
+                    onCapture(image)
+                }
+            } else {
+                let onCancel = self.onCancel
+                picker.dismiss(animated: true) {
+                    onCancel()
+                }
+            }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            let onCancel = self.onCancel
+            picker.dismiss(animated: true) {
+                onCancel()
+            }
+        }
     }
 }
 

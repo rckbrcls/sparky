@@ -83,6 +83,7 @@ final class MemoryService: ObservableObject {
 
     private let persistence: PersistenceController
     private let spaceService: SpaceService
+    private let attachmentStore: MemoryAttachmentStore
     private let cacheTTL: TimeInterval
     private var refreshTimer: AnyCancellable?
     private var cache: [SpaceFilterKey: [MemoryModel]] = [:]
@@ -94,9 +95,11 @@ final class MemoryService: ObservableObject {
 
     init(persistence: PersistenceController,
          spaceService: SpaceService,
+         attachmentStore: MemoryAttachmentStore,
          cacheTTL: TimeInterval = 30) {
         self.persistence = persistence
         self.spaceService = spaceService
+        self.attachmentStore = attachmentStore
         self.cacheTTL = cacheTTL
 
         configureAutoRefresh()
@@ -133,7 +136,7 @@ final class MemoryService: ObservableObject {
             let noteModels = try fetchNotes(in: context)
             let todoModels = try fetchTodoLists(in: context)
 
-            let combined = buildUnifiedMemories(
+            let combined = await buildUnifiedMemories(
                 reminders: reminderModels,
                 notes: noteModels,
                 todos: todoModels
@@ -367,26 +370,29 @@ private extension MemoryService {
 
     func buildUnifiedMemories(reminders: [ReminderModel],
                               notes: [NoteModel],
-                              todos: [TodoListModel]) -> [MemoryModel] {
+                              todos: [TodoListModel]) async -> [MemoryModel] {
         let defaultSpace = spaceService.defaultSpace()
         var unified: [MemoryModel] = []
         unified.reserveCapacity(reminders.count + notes.count + todos.count)
 
         for reminder in reminders {
             let space = reminder.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            let memory = reminder.toMemory(space: space)
+            var memory = reminder.toMemory(space: space)
+            memory.attachments = await attachmentStore.attachments(for: memory.id)
             unified.append(memory)
         }
 
         for note in notes {
             let space = note.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            let memory = note.toMemory(space: space)
+            var memory = note.toMemory(space: space)
+            memory.attachments = await attachmentStore.attachments(for: memory.id)
             unified.append(memory)
         }
 
         for todo in todos {
             let space = todo.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            let memory = todo.toMemory(space: space)
+            var memory = todo.toMemory(space: space)
+            memory.attachments = await attachmentStore.attachments(for: memory.id)
             unified.append(memory)
         }
 
