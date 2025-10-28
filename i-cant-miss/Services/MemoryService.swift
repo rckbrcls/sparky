@@ -310,9 +310,6 @@ final class MemoryService: ObservableObject {
             if let body = memory.body, body.localizedCaseInsensitiveContains(trimmed) {
                 return true
             }
-            if memory.tags.contains(where: { $0.name.localizedCaseInsensitiveContains(trimmed) }) {
-                return true
-            }
             return false
         }
     }
@@ -377,19 +374,19 @@ private extension MemoryService {
 
         for reminder in reminders {
             let space = reminder.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            let memory = reminder.toMemory(space: space, tags: [])
+            let memory = reminder.toMemory(space: space)
             unified.append(memory)
         }
 
         for note in notes {
             let space = note.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            let memory = note.toMemory(space: space, tags: note.tags)
+            let memory = note.toMemory(space: space)
             unified.append(memory)
         }
 
         for todo in todos {
             let space = todo.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            let memory = todo.toMemory(space: space, tags: [])
+            let memory = todo.toMemory(space: space)
             unified.append(memory)
         }
 

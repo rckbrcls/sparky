@@ -64,11 +64,6 @@ struct MemoryDetailView: View {
         return "\(completed) of \(total) completed"
     }
 
-    private var tagsText: String? {
-        guard !memory.tags.isEmpty else { return nil }
-        return memory.tags.map(\.name).joined(separator: " • ")
-    }
-
     private var activeTriggers: [MemoryTriggerModel] {
         memory.triggers.filter(\.isActive)
     }
@@ -143,16 +138,6 @@ struct MemoryDetailView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     heroSection
-
-                    if let tagsText {
-                        detailSection(title: "Tags", systemImage: "tag.fill") {
-                            Text(tagsText)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-
                     detailSection(title: "Details", systemImage: "info.circle.fill") {
                         VStack(spacing: 12) {
                             detailRow(icon: "tray.fill", title: "Space", value: memory.space.name)
@@ -494,7 +479,6 @@ private func weekdayMaskSummary(mask: Int16) -> String {
             childIDs: [],
             isDefault: false
         ),
-        tags: [],
         triggers: [],
         checkItems: [],
         snoozeCount: 3,

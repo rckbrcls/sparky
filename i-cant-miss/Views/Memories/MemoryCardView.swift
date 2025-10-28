@@ -130,13 +130,6 @@ struct MemoryCardView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            if !memory.tags.isEmpty {
-                Text(memory.tags.map(\.name).joined(separator: " • "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)

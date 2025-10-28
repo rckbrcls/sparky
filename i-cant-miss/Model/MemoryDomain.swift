@@ -70,7 +70,6 @@ struct MemoryModel: Identifiable, Hashable {
     var priority: MemoryPriority?
     var dueDate: Date?
     var space: SpaceModel
-    var tags: [TagModel]
     var triggers: [MemoryTriggerModel]
     var checkItems: [CheckItemModel]
     var snoozeCount: Int
@@ -267,7 +266,7 @@ private extension Sequence where Element == TodoItemModel {
 }
 
 extension ReminderModel {
-    func toMemory(space: SpaceModel?, tags: [TagModel]) -> MemoryModel {
+    func toMemory(space: SpaceModel?) -> MemoryModel {
         let space = space ?? folder?.toSpace() ?? SpaceModel.inbox
         return MemoryModel(
             id: id,
@@ -280,7 +279,6 @@ extension ReminderModel {
             priority: MemoryPriority(rawValue: priority.rawValue),
             dueDate: nil,
             space: space,
-            tags: tags,
             triggers: triggers,
             checkItems: [],
             snoozeCount: snoozeCount,
@@ -296,7 +294,7 @@ extension ReminderModel {
 }
 
 extension NoteModel {
-    func toMemory(space: SpaceModel?, tags: [TagModel]) -> MemoryModel {
+    func toMemory(space: SpaceModel?) -> MemoryModel {
         let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.inbox
         return MemoryModel(
             id: id,
@@ -309,7 +307,6 @@ extension NoteModel {
             priority: nil,
             dueDate: nil,
             space: resolvedSpace,
-            tags: tags.isEmpty ? self.tags : tags,
             triggers: [],
             checkItems: [],
             snoozeCount: 0,
@@ -324,7 +321,7 @@ extension NoteModel {
 }
 
 extension TodoListModel {
-    func toMemory(space: SpaceModel?, tags: [TagModel]) -> MemoryModel {
+    func toMemory(space: SpaceModel?) -> MemoryModel {
         let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.inbox
         return MemoryModel(
             id: id,
@@ -337,7 +334,6 @@ extension TodoListModel {
             priority: nil,
             dueDate: dueDate,
             space: resolvedSpace,
-            tags: tags,
             triggers: [],
             checkItems: items.toCheckItems(),
             snoozeCount: 0,

@@ -19,7 +19,6 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var title: String = ""
     @Published var body: String = ""
     @Published var selectedSpaceID: UUID?
-    @Published var selectedTagIDs: Set<UUID> = []
     @Published var status: MemoryStatus = .active
     @Published var priority: MemoryPriority = .medium
     @Published var isPinned: Bool = false
@@ -53,18 +52,9 @@ final class MemoryEditorViewModel: ObservableObject {
         environment.spaceService.spaces
     }
 
-    var availableTags: [TagModel] {
-        environment.folderService.tags
-    }
-
     var selectedSpace: SpaceModel? {
         guard let id = selectedSpaceID else { return nil }
         return environment.spaceService.space(id: id)
-    }
-
-    var selectedTags: [TagModel] {
-        availableTags.filter { selectedTagIDs.contains($0.id) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     var canToggleAutoComplete: Bool {
@@ -88,14 +78,6 @@ final class MemoryEditorViewModel: ObservableObject {
             }
         case .none:
             break
-        }
-    }
-
-    func toggleTag(id: UUID) {
-        if selectedTagIDs.contains(id) {
-            selectedTagIDs.remove(id)
-        } else {
-            selectedTagIDs.insert(id)
         }
     }
 
@@ -244,7 +226,6 @@ private extension MemoryEditorViewModel {
         title = memory.title ?? ""
         body = memory.body ?? ""
         selectedSpaceID = memory.space.id
-        selectedTagIDs = Set(memory.tags.map(\.id))
         status = memory.status
         priority = memory.priority ?? .medium
         isPinned = memory.isPinned
@@ -285,7 +266,6 @@ private extension MemoryEditorViewModel {
         title = note.title ?? ""
         body = note.content
         isPinned = note.isPinned
-        selectedTagIDs = Set(note.tags.map(\.id))
         if let folder = note.folder {
             selectedSpaceID = environment.spaceService.resolveSpace(for: folder).id
         }
@@ -419,8 +399,6 @@ private extension MemoryEditorViewModel {
         note.isPinned = isPinned
         note.updatedAt = Date()
         note.folder = folderForAudience(.notes)
-        note.tags = selectedTags
-
         _ = try await environment.noteService.updateNote(note)
         await environment.noteService.refresh(force: true)
     }
@@ -467,7 +445,7 @@ private extension MemoryEditorViewModel {
             title: trimmedTitle.nilIfEmpty,
             content: content,
             folderID: folderForAudience(.notes)?.id,
-            tagIDs: Array(selectedTagIDs),
+            tagIDs: [],
             isPinned: isPinned
         )
         await environment.noteService.refresh(force: true)

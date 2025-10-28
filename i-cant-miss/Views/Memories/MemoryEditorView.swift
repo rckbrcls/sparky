@@ -14,6 +14,7 @@ struct MemoryEditorView: View {
     @State private var showScheduleSheet = false
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
+    @State private var showTrigger = false
     @State private var showContactPicker = false
     @State private var showAccessDeniedAlert = false
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
@@ -36,11 +37,13 @@ struct MemoryEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                detailsSection
-                tagsSection
+                Section{
+                    TextField("Title", text: $viewModel.title)
+                }
+                triggersSection
                 bodySection
                 checklistSection
-                triggersSection
+                detailsSection
                 dueDateSection
                 extrasSection
             }
@@ -52,6 +55,30 @@ struct MemoryEditorView: View {
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+//                ToolbarItem(placement: .principal){
+//                    Button {
+//                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+//                            showTrigger = true
+//                        }
+//                    } label: {
+//                        HStack(spacing: 10) {
+//                            Image(systemName: "bolt.fill")
+//                                .symbolEffect(.bounce)
+//                            Text("Triggers")
+//                                .font(.subheadline)
+//                                .fontWeight(.medium)
+//                                .animation(.easeInOut(duration: 0.2))
+//                            Image(systemName: "chevron.down")
+//                                .font(.caption)
+//                                .fontWeight(.semibold)
+//                                .rotationEffect(.degrees(showTrigger ? 180 : 0))
+//                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showTrigger)
+//                        }
+//                        .padding(10)
+//                        .glassEffect(.regular.interactive())
+//                    }
+//                }
+                
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button( role: .cancel) {
                         dismiss()
@@ -82,6 +109,26 @@ struct MemoryEditorView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .sheet(isPresented: $showTrigger){
+                NavigationStack {
+                    Form{
+                       
+                    }
+                    .navigationTitle("Triggers")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button( role: .cancel) {
+                                dismiss()
+                            } label: {
+                                Label("Cancel", systemImage: "xmark")
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+                .scrollContentBackground(.hidden)
             }
             .sheet(isPresented: $showScheduleSheet) {
                 MemoryScheduleTriggerSheet(viewModel: viewModel)
@@ -133,8 +180,6 @@ struct MemoryEditorView: View {
     
     private var detailsSection: some View {
         Section("Details") {
-            TextField("Title", text: $viewModel.title)
-            
             SpacePicker(selection: Binding(
                 get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
                 set: { viewModel.selectedSpaceID = $0 }
@@ -156,52 +201,13 @@ struct MemoryEditorView: View {
             }
         }
     }
-    
-    private var tagsSection: some View {
-        Section("Tags") {
-            if viewModel.availableTags.isEmpty {
-                Text("No tags available.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Menu {
-                    ForEach(viewModel.availableTags) { tag in
-                        let isSelected = viewModel.selectedTagIDs.contains(tag.id)
-                        Button {
-                            viewModel.toggleTag(id: tag.id)
-                        } label: {
-                            Label(tag.name, systemImage: isSelected ? "checkmark.circle.fill" : "circle")
-                        }
-                    }
-                } label: {
-                    Label("Select Tags", systemImage: "tag")
-                }
-                
-                if viewModel.selectedTags.isEmpty {
-                    Text("No tags selected.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(viewModel.selectedTags) { tag in
-                                Text(tag.name)
-                                    .padding(.vertical, 4)
-                                    .padding(.horizontal, 8)
-                                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-            }
-        }
-    }
-    
     private var bodySection: some View {
-        Section("Body") {
+        Section {
             TextEditor(text: $viewModel.body)
                 .frame(minHeight: 150)
+        }
+        header: {
+            Label("Body", systemImage: "text.rectangle")
         }
     }
     
@@ -290,23 +296,26 @@ struct MemoryEditorView: View {
         let trimmedDetail = checklistDraftRows[index].detail.trimmingCharacters(in: .whitespacesAndNewlines)
         viewModel.addChecklistItem(title: trimmedTitle, detail: trimmedDetail)
 
-        checklistDraftRows[index].title = ""
-        checklistDraftRows[index].detail = ""
-
-        let currentID = checklistDraftRows[index].id
-        if checklistDraftRows.count > 1 {
-            checklistDraftRows.removeAll { row in
-                row.id != currentID && row.isEffectivelyEmpty
-            }
+        let nextID: UUID
+        if index + 1 < checklistDraftRows.count {
+            nextID = checklistDraftRows[index + 1].id
+        } else {
+            let placeholder = ChecklistDraftRow()
+            checklistDraftRows.append(placeholder)
+            nextID = placeholder.id
         }
+
+        focusedDraftID = nextID
+        checklistDraftRows.remove(at: index)
 
         if checklistDraftRows.isEmpty {
-            checklistDraftRows = [ChecklistDraftRow()]
+            let placeholder = ChecklistDraftRow()
+            checklistDraftRows = [placeholder]
+            focusedDraftID = placeholder.id
+            return
         }
 
-        DispatchQueue.main.async {
-            focusedDraftID = currentID
-        }
+        cleanupTrailingPlaceholders()
     }
 
     private func handleDraftTitleChange(_ draftID: UUID, _ text: String) {

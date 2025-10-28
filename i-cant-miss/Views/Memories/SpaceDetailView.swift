@@ -312,10 +312,6 @@ struct SpaceDetailView: View {
             return true
         }
 
-        if memory.tags.contains(where: { $0.name.localizedCaseInsensitiveContains(query) }) {
-            return true
-        }
-
         return false
     }
 }
