@@ -21,7 +21,7 @@ actor MemoryAttachmentStore {
         try? Self.ensureDirectoryExists(fileManager: fileManager, at: rootDirectory)
     }
 
-    func attachments(for memoryID: UUID) -> [MemoryModel.Attachment] {
+    func attachments(for memoryID: UUID) async -> [MemoryModel.Attachment] {
         let directory = directoryURL(for: memoryID)
         guard fileManager.fileExists(atPath: directory.path) else { return [] }
 
@@ -35,34 +35,43 @@ actor MemoryAttachmentStore {
             return []
         }
 
-        var attachments: [MemoryModel.Attachment] = []
-        attachments.reserveCapacity(contents.count)
+        struct AttachmentResource: Sendable {
+            let id: UUID
+            let data: Data
+            let createdAt: Date
+        }
 
-        for url in contents {
+        let resources: [AttachmentResource] = contents.compactMap { url in
             guard url.pathExtension.lowercased() == "jpg" || url.pathExtension.lowercased() == "jpeg" else {
-                continue
+                return nil
             }
 
-            guard let data = try? Data(contentsOf: url) else { continue }
+            guard let data = try? Data(contentsOf: url) else { return nil }
             let metadata = try? url.resourceValues(forKeys: resourceKeys)
             let createdAt = metadata?.creationDate ?? Date()
             let identifier = UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID()
 
-            attachments.append(
-                MemoryModel.Attachment(
-                    id: identifier,
-                    kind: MemoryModel.AttachmentKind(rawValue: "photo"),
-                    data: data,
-                    createdAt: createdAt
-                )
-            )
+            return AttachmentResource(id: identifier, data: data, createdAt: createdAt)
         }
 
-        return attachments.sorted { lhs, rhs in
+        guard !resources.isEmpty else { return [] }
+
+        let sortedResources = resources.sorted { lhs, rhs in
             if lhs.createdAt != rhs.createdAt {
                 return lhs.createdAt < rhs.createdAt
             }
             return lhs.id.uuidString < rhs.id.uuidString
+        }
+
+        return await MainActor.run {
+            sortedResources.map { resource in
+                MemoryModel.Attachment(
+                    id: resource.id,
+                    kind: .photo,
+                    data: resource.data,
+                    createdAt: resource.createdAt
+                )
+            }
         }
     }
 
