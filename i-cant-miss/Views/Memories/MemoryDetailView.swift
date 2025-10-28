@@ -70,15 +70,15 @@ struct MemoryDetailView: View {
 
     private var heroChips: [HeroChip] {
         var chips: [HeroChip] = []
-        if let dueDateText {
-            chips.append(HeroChip(icon: "calendar.badge.clock", label: dueDateText))
-        }
-        if let nextTriggerText {
-            chips.append(HeroChip(icon: "alarm", label: "Next \(nextTriggerText)"))
-        }
-        if let checklistProgressText {
-            chips.append(HeroChip(icon: "checklist", label: checklistProgressText))
-        }
+//        if let dueDateText {
+//            chips.append(HeroChip(icon: "calendar.badge.clock", label: dueDateText))
+//        }
+//        if let nextTriggerText {
+//            chips.append(HeroChip(icon: "alarm", label: "Next \(nextTriggerText)"))
+//        }
+//        if let checklistProgressText {
+//            chips.append(HeroChip(icon: "checklist", label: checklistProgressText))
+//        }
         if let priority = memory.priority {
             chips.append(
                 HeroChip(
@@ -138,26 +138,6 @@ struct MemoryDetailView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     heroSection
-                    detailSection(title: "Details", systemImage: "info.circle.fill") {
-                        VStack(spacing: 12) {
-                            detailRow(icon: "tray.fill", title: "Space", value: memory.space.name)
-                            detailRow(icon: "flag.fill", title: "Status", value: statusText(for: memory.status))
-                            if let priority = memory.priority {
-                                detailRow(
-                                    icon: priority.iconName,
-                                    title: "Priority",
-                                    value: priorityLabel(for: priority)
-                                )
-                            }
-                            if let dueDateText {
-                                detailRow(icon: "calendar.badge.clock", title: "Due date", value: dueDateText)
-                            }
-                            if let nextTriggerText {
-                                detailRow(icon: "alarm", title: "Next trigger", value: nextTriggerText)
-                            }
-                        }
-                    }
-
                     if memory.hasChecklist {
                         detailSection(title: "Checklist", systemImage: "checklist") {
                             VStack(spacing: 12) {
@@ -182,7 +162,6 @@ struct MemoryDetailView: View {
                             }
                         }
                     }
-
                     if !activeTriggers.isEmpty {
                         detailSection(title: "Triggers", systemImage: "alarm.fill") {
                             VStack(spacing: 12) {
@@ -201,6 +180,26 @@ struct MemoryDetailView: View {
                                     }
                                     .padding(.vertical, 4)
                                 }
+                            }
+                        }
+                    }
+                    
+                    detailSection(title: "Details", systemImage: "info.circle.fill") {
+                        VStack(spacing: 12) {
+                            detailRow(icon: "tray.fill", title: "Space", value: memory.space.name)
+                            detailRow(icon: "flag.fill", title: "Status", value: statusText(for: memory.status))
+                            if let priority = memory.priority {
+                                detailRow(
+                                    icon: priority.iconName,
+                                    title: "Priority",
+                                    value: priorityLabel(for: priority)
+                                )
+                            }
+                            if let dueDateText {
+                                detailRow(icon: "calendar.badge.clock", title: "Due date", value: dueDateText)
+                            }
+                            if let nextTriggerText {
+                                detailRow(icon: "alarm", title: "Next trigger", value: nextTriggerText)
                             }
                         }
                     }
@@ -457,33 +456,154 @@ private func weekdayMaskSummary(mask: Int16) -> String {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
-    environment.bootstrap()
-    let memory = environment.memoryService.memories.first ?? MemoryModel(
+    let calendar = Calendar.current
+    let now = Date()
+
+    let dueDate = calendar.date(byAdding: .day, value: 2, to: now)
+    let dailyFireDate = calendar.date(bySettingHour: 7, minute: 30, second: 0, of: now)
+    let weekdayFireDate = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: now)
+    let weekdayStartDate = calendar.startOfDay(for: now)
+
+    let weekdayMask: Int16 = [2, 4, 6].reduce(0) { partialResult, weekday in
+        partialResult | Int16(1 << (weekday - 1))
+    }
+
+    let timeTrigger = MemoryTriggerModel(
+        id: UUID(),
+        type: .time,
+        fireDate: dailyFireDate,
+        startDate: now,
+        recurrenceRule: RecurrenceRule(frequency: .daily, interval: 1),
+        timeZoneIdentifier: TimeZone.current.identifier,
+        weekdayMask: 0,
+        isActive: true,
+        location: nil,
+        person: nil,
+        spacedStage: 1,
+        lastReviewDate: calendar.date(byAdding: .day, value: -3, to: now),
+        ignoreCount: 0
+    )
+
+    let weekdayTrigger = MemoryTriggerModel(
+        id: UUID(),
+        type: .dayOfWeek,
+        fireDate: weekdayFireDate,
+        startDate: weekdayStartDate,
+        recurrenceRule: RecurrenceRule(frequency: .weekly, interval: 1),
+        timeZoneIdentifier: TimeZone.current.identifier,
+        weekdayMask: weekdayMask,
+        isActive: true,
+        location: nil,
+        person: nil,
+        spacedStage: 2,
+        lastReviewDate: calendar.date(byAdding: .day, value: -10, to: now),
+        ignoreCount: 1
+    )
+
+    let locationTrigger = MemoryTriggerModel(
+        id: UUID(),
+        type: .location,
+        fireDate: nil,
+        startDate: nil,
+        recurrenceRule: nil,
+        timeZoneIdentifier: nil,
+        weekdayMask: 0,
+        isActive: true,
+        location: .init(
+            latitude: -23.561707,
+            longitude: -46.655981,
+            radius: 150,
+            name: "Academia do Parque",
+            event: .onEntry
+        ),
+        person: nil,
+        spacedStage: 0,
+        lastReviewDate: nil,
+        ignoreCount: 0
+    )
+
+    let personTrigger = MemoryTriggerModel(
+        id: UUID(),
+        type: .person,
+        fireDate: nil,
+        startDate: nil,
+        recurrenceRule: nil,
+        timeZoneIdentifier: nil,
+        weekdayMask: 0,
+        isActive: true,
+        location: nil,
+        person: .init(name: "Coach Taylor", contactIdentifier: "contact-coach"),
+        spacedStage: 0,
+        lastReviewDate: calendar.date(byAdding: .day, value: -14, to: now),
+        ignoreCount: 2
+    )
+
+    let checkItems = [
+        CheckItemModel(
+            id: UUID(),
+            title: "Separar garrafa de água",
+            detail: "Checar se está cheia antes de sair",
+            isCompleted: true,
+            sortOrder: 0,
+            createdAt: calendar.date(byAdding: .day, value: -5, to: now) ?? now,
+            updatedAt: calendar.date(byAdding: .day, value: -1, to: now) ?? now,
+            completedAt: calendar.date(byAdding: .day, value: -1, to: now)
+        ),
+        CheckItemModel(
+            id: UUID(),
+            title: "Preparar playlist motivacional",
+            detail: "Adicionar faixas novas na sexta",
+            isCompleted: false,
+            sortOrder: 1,
+            createdAt: calendar.date(byAdding: .day, value: -4, to: now) ?? now,
+            updatedAt: now,
+            completedAt: nil
+        )
+    ]
+
+    let space = SpaceModel(
+        id: UUID(),
+        name: "Bem-estar",
+        colorHex: "#34D399",
+        iconName: "heart.fill",
+        sortOrder: 1,
+        parentID: nil,
+        childIDs: [],
+        isDefault: false,
+        legacyFolder: FolderModel(
+            id: UUID(),
+            name: "Saúde",
+            colorHex: "#059669",
+            iconName: "cross.case.fill",
+            audience: .reminders,
+            isDefault: false,
+            sortOrder: 0
+        )
+    )
+
+    let metadata = MemoryModel.Metadata(
+        origin: .reminder(UUID()),
+        legacyStatus: .completed,
+        legacyAudience: .reminders,
+        autoCompleteOnChecklistCompletion: true
+    )
+
+    let memory = MemoryModel(
         id: UUID(),
         title: "Morning workout",
         body: "Short run + stretching routine.\nDon't forget water.",
-        createdAt: Date(),
-        updatedAt: Date(),
+        createdAt: calendar.date(byAdding: .day, value: -7, to: now) ?? now,
+        updatedAt: calendar.date(byAdding: .day, value: -1, to: now) ?? now,
         status: .active,
         isPinned: true,
         priority: .high,
-        dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()),
-        space: SpaceModel(
-            id: UUID(),
-            name: "Wellness",
-            colorHex: "#34D399",
-            iconName: "heart.fill",
-            sortOrder: 0,
-            parentID: nil,
-            childIDs: [],
-            isDefault: false
-        ),
-        triggers: [],
-        checkItems: [],
+        dueDate: dueDate,
+        space: space,
+        triggers: [timeTrigger, weekdayTrigger, locationTrigger, personTrigger],
+        checkItems: checkItems,
         snoozeCount: 3,
-        lastCompletionDate: nil,
-        metadata: .init()
+        lastCompletionDate: calendar.date(byAdding: .day, value: -2, to: now),
+        metadata: metadata
     )
     return MemoryDetailView(memory: memory, onClose: {}, onEdit: { _ in })
 }
