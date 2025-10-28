@@ -68,12 +68,36 @@ struct MemoryCardView: View {
             return ("Archived", "archivebox.fill", .gray)
         }
     }
+    
+    private var spaceAccent: Color {
+        if let hex = memory.space.colorHex,
+           let color = Color(hex: hex) {
+            return color
+        }
+        return .accentColor
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                if let icon = memory.space.iconName {
+                    Image(systemName: icon)
+                        .font(.caption)
+                        .foregroundStyle(spaceAccent)
+                }
+                Text(memory.space.name)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(spaceAccent)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .glassEffect(in: .rect(cornerRadius: 8.0))
+            .glassEffect(.regular.tint(spaceAccent.opacity(0.15)))
+            
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title)
-                    .font(.headline)
+                    .font(.title2)
+                    .fontWeight(.bold)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
@@ -83,6 +107,8 @@ struct MemoryCardView: View {
                         .foregroundStyle(priorityColor(for: priority))
                 }
 
+                Spacer()
+                
                 if memory.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.subheadline)
@@ -111,23 +137,31 @@ struct MemoryCardView: View {
                     .lineLimit(2)
             }
 
+            Divider()
+            
             HStack(spacing: 12) {
                 if let nextTriggerText {
                     Label(nextTriggerText, systemImage: "alarm")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .glassEffect()
                 }
 
                 if let dueDateText {
                     Label(dueDateText, systemImage: "calendar")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .glassEffect()
                 }
 
                 if let checklistProgressText {
                     Label(checklistProgressText, systemImage: "checklist")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .glassEffect()
                 }
             }
         }

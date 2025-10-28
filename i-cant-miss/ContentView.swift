@@ -117,7 +117,7 @@ struct ContentView: View {
                     defaultSpace: space,
                     template: template
                 )
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,

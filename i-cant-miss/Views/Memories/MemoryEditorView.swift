@@ -201,6 +201,8 @@ struct MemoryEditorView: View {
     private var bodySection: some View {
         Section {
             TextField("Title", text: $viewModel.title)
+                .font(.title)
+                .fontWeight(.bold)
             TextEditor(text: $viewModel.body)
                 .frame(minHeight: 100)
             ForEach(viewModel.checklistItems) { item in

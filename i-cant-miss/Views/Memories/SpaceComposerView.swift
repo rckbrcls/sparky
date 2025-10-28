@@ -48,7 +48,8 @@ struct SpaceComposerView: View {
                     }
                 }
             }
-            .navigationTitle("New Space")
+            .navigationTitle("Space")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .cancel) {
