@@ -37,12 +37,8 @@ struct MemoryEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section{
-                    TextField("Title", text: $viewModel.title)
-                }
-                triggersSection
                 bodySection
-                checklistSection
+                triggersSection
                 detailsSection
                 dueDateSection
                 extrasSection
@@ -203,16 +199,9 @@ struct MemoryEditorView: View {
     }
     private var bodySection: some View {
         Section {
+            TextField("Title", text: $viewModel.title)
             TextEditor(text: $viewModel.body)
-                .frame(minHeight: 150)
-        }
-        header: {
-            Label("Body", systemImage: "text.rectangle")
-        }
-    }
-
-    private var checklistSection: some View {
-        Section {
+                .frame(minHeight: 100)
             ForEach(viewModel.checklistItems) { item in
                 ChecklistItemEditor(
                     item: binding(for: item),
@@ -228,6 +217,12 @@ struct MemoryEditorView: View {
                     onTitleChange: handleDraftTitleChange
                 )
             }
+        }
+    }
+
+    private var checklistSection: some View {
+        Section {
+            
         } header: {
             Label("Checklist", systemImage: "checklist")
         }
@@ -537,10 +532,11 @@ private struct MemoryScheduleTriggerInlineForm: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.clearScheduleTriggers()
@@ -552,12 +548,16 @@ private struct MemoryScheduleTriggerInlineForm: View {
             Button {
                 showSheet = true
             } label: {
-                Label("Add schedule", systemImage: "plus.circle.fill")
-                    .foregroundStyle(.accent)
+                HStack {
+                    Label("Add schedule", systemImage: "plus.circle.fill")
+                        .foregroundStyle(.accent)
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
         }
     }
 
@@ -615,10 +615,11 @@ private struct MemoryLocationTriggerInlineForm: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.removeTrigger(id: trigger.id)
@@ -630,12 +631,16 @@ private struct MemoryLocationTriggerInlineForm: View {
             Button {
                 showLocationPicker = true
             } label: {
-                Label("Add location trigger", systemImage: "plus.circle.fill")
-                    .foregroundStyle(.accent)
+                HStack {
+                    Label("Add location trigger", systemImage: "plus.circle.fill")
+                        .foregroundStyle(.accent)
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
         }
     }
 }
@@ -668,10 +673,11 @@ private struct MemoryPersonTriggerInlineForm: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.removeTrigger(id: trigger.id)
@@ -683,12 +689,16 @@ private struct MemoryPersonTriggerInlineForm: View {
             Button {
                 showSheet = true
             } label: {
-                Label("Add person trigger", systemImage: "plus.circle.fill")
-                    .foregroundStyle(.accent)
+                HStack {
+                    Label("Add person trigger", systemImage: "plus.circle.fill")
+                        .foregroundStyle(.accent)
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
         }
     }
 }
