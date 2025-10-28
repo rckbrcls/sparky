@@ -129,7 +129,12 @@ final class MemoryEditorViewModel: ObservableObject {
     }
     
     func addAttachment(data: Data) {
-        attachments.append(MemoryModel.Attachment(data: data))
+        attachments.append(MemoryModel.Attachment(
+            id: UUID(),
+            kind: .photo,
+            data: data,
+            createdAt: Date()
+        ))
     }
 
     func removeAttachment(id: UUID) {

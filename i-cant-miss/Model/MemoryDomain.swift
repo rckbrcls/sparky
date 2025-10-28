@@ -54,9 +54,9 @@ struct MemoryModel: Identifiable, Hashable {
         var createdAt: Date
 
         init(id: UUID = UUID(),
-             kind: AttachmentKind = .photo,
+             kind: AttachmentKind,
              data: Data,
-             createdAt: Date = Date()) {
+             createdAt: Date) {
             self.id = id
             self.kind = kind
             self.data = data

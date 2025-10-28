@@ -18,7 +18,7 @@ actor MemoryAttachmentStore {
         }
 
         self.rootDirectory = supportDirectory.appendingPathComponent("MemoryAttachments", isDirectory: true)
-        try? ensureDirectoryExists(at: rootDirectory)
+        try? Self.ensureDirectoryExists(fileManager: fileManager, at: rootDirectory)
     }
 
     func attachments(for memoryID: UUID) -> [MemoryModel.Attachment] {
@@ -48,14 +48,14 @@ actor MemoryAttachmentStore {
             let createdAt = metadata?.creationDate ?? Date()
             let identifier = UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID()
 
-            let attachment = MemoryModel.Attachment(
-                id: identifier,
-                kind: .photo,
-                data: data,
-                createdAt: createdAt
+            attachments.append(
+                MemoryModel.Attachment(
+                    id: identifier,
+                    kind: MemoryModel.AttachmentKind(rawValue: "photo"),
+                    data: data,
+                    createdAt: createdAt
+                )
             )
-
-            attachments.append(attachment)
         }
 
         return attachments.sorted { lhs, rhs in
@@ -76,7 +76,7 @@ actor MemoryAttachmentStore {
 
         guard !attachments.isEmpty else { return }
 
-        try ensureDirectoryExists(at: directory)
+        try Self.ensureDirectoryExists(fileManager: fileManager, at: directory)
 
         for attachment in attachments {
             let filename = "\(attachment.id.uuidString).jpg"
@@ -97,7 +97,7 @@ actor MemoryAttachmentStore {
         rootDirectory.appendingPathComponent(memoryID.uuidString, isDirectory: true)
     }
 
-    private func ensureDirectoryExists(at url: URL) throws {
+    private static func ensureDirectoryExists(fileManager: FileManager, at url: URL) throws {
         if !fileManager.fileExists(atPath: url.path) {
             try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
         }

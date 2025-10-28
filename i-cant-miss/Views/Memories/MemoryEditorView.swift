@@ -45,8 +45,8 @@ struct MemoryEditorView: View {
         NavigationStack {
             Form {
                 bodySection
-                photosSection
                 triggersSection
+                photosSection
                 detailsSection
                 dueDateSection
                 extrasSection
@@ -56,7 +56,7 @@ struct MemoryEditorView: View {
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
             }
-            .onChange(of: photoSelections) { newValue in
+            .onChange(of: photoSelections) { _, newValue in
                 handlePhotoSelections(newValue)
             }
             .navigationTitle(navigationTitle)
