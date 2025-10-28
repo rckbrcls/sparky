@@ -99,6 +99,7 @@ struct MemoryEditorView: View {
                     showContactPicker: $showContactPicker,
                     showAccessDeniedAlert: $showAccessDeniedAlert
                 )
+                .presentationDetents([.medium])
             }
             .sheet(isPresented: $showContactPicker) {
                 ContactPickerView { contactName, contactId in
@@ -674,6 +675,7 @@ private struct MemoryPersonTriggerSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle(existingTrigger == nil ? "Add Person Trigger" : "Edit Person Trigger")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
