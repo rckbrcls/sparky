@@ -25,7 +25,10 @@ struct MemoryEditorView: View {
     @State private var isProcessingPhotos = false
     @State private var showCameraPicker = false
     @State private var mediaErrorMessage: String?
+    @State private var scrollOffset: CGFloat = 0
     private let isEditing: Bool
+    private let defaultHeaderHeight: CGFloat = 120
+    private let minHeaderHeight: CGFloat = 60
 
     init(environment: AppEnvironment,
          memory: MemoryModel? = nil,
@@ -43,16 +46,66 @@ struct MemoryEditorView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                bodySection
-                triggersSection
-                photosSection
-                detailsSection
-                dueDateSection
-                extrasSection
+            ZStack(alignment: .top) {
+                let showMinimizedHeader = defaultHeaderHeight - scrollOffset <= minHeaderHeight
+
+                // Expanded Header
+                if !showMinimizedHeader {
+                    ZStack(alignment: .top) {
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .ignoresSafeArea()
+                            .frame(height: max(minHeaderHeight, defaultHeaderHeight - scrollOffset))
+
+                        let minOffset = defaultHeaderHeight - minHeaderHeight
+                        let offset = scrollOffset <= 0 ? -scrollOffset : scrollOffset <= minOffset ? -scrollOffset : -minOffset
+
+                        titleHeaderView()
+                            .padding()
+                            .frame(height: defaultHeaderHeight)
+                            .frame(maxWidth: .infinity)
+                            .offset(y: offset)
+                    }
+                }
+
+                // List with Form content
+                List {
+                    Color.clear
+                        .frame(height: defaultHeaderHeight)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
+
+                    bodySection
+                    triggersSection
+                    photosSection
+                    detailsSection
+                    dueDateSection
+                    extrasSection
+                }
+                .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                    return geometry.contentOffset.y + geometry.contentInsets.top
+                } action: { _, new in
+                    self.scrollOffset = new
+                }
+
+                // Minimized Header
+                if showMinimizedHeader {
+                    titleHeaderView()
+                        .font(.headline)
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                        .frame(height: minHeaderHeight)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            Rectangle()
+                                .fill(.ultraThinMaterial)
+                                .ignoresSafeArea()
+                        )
+                }
             }
-            .scrollContentBackground(.hidden)
-            .scrollDismissesKeyboard(.interactively)
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
             }
@@ -177,6 +230,16 @@ struct MemoryEditorView: View {
 
     private var navigationTitle: String { isEditing ? "Edit Memory" : "New Memory" }
 
+    private func titleHeaderView() -> some View {
+        VStack(spacing: 8) {
+            TextField("Title", text: $viewModel.title)
+                .font(.title)
+                .fontWeight(.bold)
+                .multilineTextAlignment(.center)
+                .submitLabel(.done)
+        }
+    }
+
     private var detailsSection: some View {
         Section("Details") {
             SpacePicker(selection: Binding(
@@ -201,12 +264,10 @@ struct MemoryEditorView: View {
         }
     }
     private var bodySection: some View {
-        Section {
-            TextField("Title", text: $viewModel.title)
-                .font(.title)
-                .fontWeight(.bold)
+        Section("Content") {
             TextEditor(text: $viewModel.body)
                 .frame(minHeight: 100)
+
             ForEach(viewModel.checklistItems) { item in
                 ChecklistItemEditor(
                     item: binding(for: item),
@@ -294,14 +355,6 @@ struct MemoryEditorView: View {
             .disabled(isProcessingPhotos)
         } header: {
             Label("Photos", systemImage: "photo.stack")
-        }
-    }
-
-    private var checklistSection: some View {
-        Section {
-
-        } header: {
-            Label("Checklist", systemImage: "checklist")
         }
     }
 
