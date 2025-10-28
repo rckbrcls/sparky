@@ -84,6 +84,7 @@ struct MemoryEditorView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(role: .confirm) {
+                        commitChecklistDrafts()
                         Task {
                             let success = await viewModel.save()
                             if success { dismiss() }
@@ -342,6 +343,32 @@ struct MemoryEditorView: View {
 
         if checklistDraftRows.isEmpty {
             checklistDraftRows = [ChecklistDraftRow()]
+        }
+    }
+
+    private func commitChecklistDrafts() {
+        let draftsToCommit = checklistDraftRows.filter {
+            !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        guard !draftsToCommit.isEmpty else { return }
+
+        for draft in draftsToCommit {
+            let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedTitle.isEmpty else { continue }
+            let trimmedDetail = draft.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            viewModel.addChecklistItem(title: trimmedTitle, detail: trimmedDetail)
+        }
+
+        let committedIDs = Set(draftsToCommit.map(\.id))
+        checklistDraftRows.removeAll { committedIDs.contains($0.id) }
+        focusedDraftID = nil
+
+        if checklistDraftRows.isEmpty {
+            let placeholder = ChecklistDraftRow()
+            checklistDraftRows = [placeholder]
+            focusedDraftID = placeholder.id
+        } else {
+            cleanupTrailingPlaceholders()
         }
     }
 
