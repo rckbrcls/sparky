@@ -105,12 +105,15 @@ final class MemoryEditorViewModel: ObservableObject {
         checklistItems.append(CheckItemDraft(sortOrder: nextOrder))
     }
 
-    func addChecklistItem(title: String) {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+    func addChecklistItem(title: String, detail: String = "") {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        let trimmedDetail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
         showChecklist = true
         let nextOrder = (checklistItems.map(\.sortOrder).max() ?? -1) + 1
-        checklistItems.append(CheckItemDraft(title: trimmed, sortOrder: nextOrder))
+        checklistItems.append(CheckItemDraft(title: trimmedTitle,
+                                             detail: trimmedDetail,
+                                             sortOrder: nextOrder))
     }
 
     func removeChecklistItems(at offsets: IndexSet) {

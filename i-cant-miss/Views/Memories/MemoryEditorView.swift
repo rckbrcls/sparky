@@ -17,6 +17,7 @@ struct MemoryEditorView: View {
     @State private var showContactPicker = false
     @State private var showAccessDeniedAlert = false
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
+    @FocusState private var focusedDraftID: UUID?
     private let isEditing: Bool
     
     init(environment: AppEnvironment,
@@ -46,6 +47,9 @@ struct MemoryEditorView: View {
             .scrollContentBackground(.hidden)
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
+                DispatchQueue.main.async {
+                    focusedDraftID = checklistDraftRows.first?.id
+                }
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -215,8 +219,9 @@ struct MemoryEditorView: View {
             ForEach(checklistDraftRows) { draft in
                 ChecklistNewItemRow(
                     draft: draftBinding(for: draft),
+                    focus: $focusedDraftID,
                     onSubmit: handleDraftSubmit,
-                    onTextChange: handleDraftChange
+                    onTitleChange: handleDraftTitleChange
                 )
             }
         } header: {
@@ -279,9 +284,11 @@ struct MemoryEditorView: View {
         let trimmed = checklistDraftRows[index].title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        viewModel.addChecklistItem(title: trimmed)
+        let detail = checklistDraftRows[index].detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.addChecklistItem(title: trimmed, detail: detail)
 
         checklistDraftRows[index].title = ""
+        checklistDraftRows[index].detail = ""
         if checklistDraftRows.count > 1 {
             checklistDraftRows.remove(at: index)
         }
@@ -293,7 +300,7 @@ struct MemoryEditorView: View {
         cleanupTrailingPlaceholders()
     }
 
-    private func handleDraftChange(_ draftID: UUID, _ text: String) {
+    private func handleDraftTitleChange(_ draftID: UUID, _ text: String) {
         guard let index = checklistDraftRows.firstIndex(where: { $0.id == draftID }) else { return }
         guard !checklistDraftRows.isEmpty else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -312,10 +319,8 @@ struct MemoryEditorView: View {
     private func cleanupTrailingPlaceholders() {
         while checklistDraftRows.count > 1 {
             guard let last = checklistDraftRows.last else { break }
-            let lastTrimmed = last.title.trimmingCharacters(in: .whitespacesAndNewlines)
             let beforeLast = checklistDraftRows[checklistDraftRows.count - 2]
-            let beforeTrimmed = beforeLast.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            if lastTrimmed.isEmpty && beforeTrimmed.isEmpty {
+            if last.isEffectivelyEmpty && beforeLast.isEffectivelyEmpty {
                 checklistDraftRows.removeLast()
             } else {
                 break
@@ -324,6 +329,9 @@ struct MemoryEditorView: View {
 
         if checklistDraftRows.isEmpty {
             checklistDraftRows = [ChecklistDraftRow()]
+        }
+        DispatchQueue.main.async {
+            focusedDraftID = checklistDraftRows.last?.id
         }
     }
     
@@ -378,6 +386,7 @@ private struct ChecklistItemEditor: View {
                 .buttonStyle(.plain)
 
                 TextField("Item title", text: $item.title)
+                    .submitLabel(.next)
 
                 if shouldShowDelete {
                     Button(action: onDelete) {
@@ -392,6 +401,7 @@ private struct ChecklistItemEditor: View {
             TextField("Details", text: $item.detail)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .submitLabel(.next)
         }
         .padding(.vertical, 4)
     }
@@ -405,46 +415,72 @@ private struct ChecklistItemEditor: View {
 
 private struct ChecklistNewItemRow: View {
     @Binding var draft: ChecklistDraftRow
+    let focus: FocusState<UUID?>.Binding
     let onSubmit: (UUID) -> Void
-    let onTextChange: (UUID, String) -> Void
+    let onTitleChange: (UUID, String) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "circle")
-                .foregroundStyle(.secondary)
-            TextField("New item", text: $draft.title)
-                .onSubmit { onSubmit(draft.id) }
-                .onChange(of: draft.title) { _, newValue in
-                    onTextChange(draft.id, newValue)
-                }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "circle")
+                    .foregroundStyle(.secondary)
+                TextField("New item", text: $draft.title)
+                    .submitLabel(.next)
+                    .focused(focus, equals: draft.id)
+                    .onSubmit { onSubmit(draft.id) }
+                    .onChange(of: draft.title) { _, newValue in
+                        onTitleChange(draft.id, newValue)
+                    }
 
-            if shouldShowClear {
-                Button {
-                    draft.title = ""
-                    onTextChange(draft.id, "")
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                if shouldShowClear {
+                    Button {
+                        draft.title = ""
+                        draft.detail = ""
+                        onTitleChange(draft.id, "")
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .contentShape(Rectangle())
+            }
+
+            if shouldShowDetailField {
+                TextField("Description", text: $draft.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .submitLabel(.next)
+                    .onSubmit { onSubmit(draft.id) }
             }
         }
         .padding(.vertical, 4)
     }
 
     private var shouldShowClear: Bool {
-        !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        !draft.detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var shouldShowDetailField: Bool {
+        shouldShowClear
     }
 }
 
 private struct ChecklistDraftRow: Identifiable, Equatable {
     let id: UUID
     var title: String
+    var detail: String
 
-    init(id: UUID = UUID(), title: String = "") {
+    init(id: UUID = UUID(), title: String = "", detail: String = "") {
         self.id = id
         self.title = title
+        self.detail = detail
+    }
+
+    var isEffectivelyEmpty: Bool {
+        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 
