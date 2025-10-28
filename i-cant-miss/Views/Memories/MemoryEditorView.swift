@@ -59,8 +59,6 @@ struct MemoryEditorView: View {
             .onChange(of: photoSelections) { _, newValue in
                 handlePhotoSelections(newValue)
             }
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button( role: .cancel) {
