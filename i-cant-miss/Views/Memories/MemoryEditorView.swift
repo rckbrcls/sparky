@@ -48,35 +48,35 @@ struct MemoryEditorView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                let showMinimizedHeader = scrollOffset >= transitionThreshold
-                
+                // Calcula quando o header expandido está totalmente comprimido
+                let headerTransitionRange = defaultHeaderHeight - minHeaderHeight
+                let showMinimizedHeader = scrollOffset >= headerTransitionRange
+
                 // Calcula a opacidade baseada no scroll
-                let expandedOpacity = max(0, min(1, 1 - (scrollOffset / transitionThreshold)))
-                let minimizedOpacity = max(0, min(1, (scrollOffset - transitionThreshold / 2) / transitionThreshold))
+                // O expanded some apenas nos últimos pixels da transição
+                let expandedOpacity = max(0, min(1, 1 - ((scrollOffset - (headerTransitionRange - 20)) / 20)))
+                // O minimized aparece quando o expanded está quase sumindo
+                let minimizedOpacity = max(0, min(1, (scrollOffset - (headerTransitionRange - 20)) / 20))
 
-                // Expanded Header
-                if !showMinimizedHeader {
-                    ZStack(alignment: .top) {
-                        Rectangle()
-                            .fill(.ultraThinMaterial)
-                            .ignoresSafeArea()
-                            .frame(height: max(minHeaderHeight, defaultHeaderHeight - scrollOffset))
-                            .allowsHitTesting(true)
+                // Expanded Header - sempre visível até ser completamente comprimido
+                ZStack(alignment: .top) {
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .ignoresSafeArea()
+                        .frame(height: max(minHeaderHeight, defaultHeaderHeight - scrollOffset))
+                        .allowsHitTesting(true)
 
-                        let minOffset = defaultHeaderHeight - minHeaderHeight
-                        let offset = scrollOffset <= 0 ? -scrollOffset : scrollOffset <= minOffset ? -scrollOffset : -minOffset
+                    let minOffset = defaultHeaderHeight - minHeaderHeight
+                    let offset = scrollOffset <= 0 ? -scrollOffset : scrollOffset <= minOffset ? -scrollOffset : -minOffset
 
-                        titleHeaderView()
-                            .padding()
-                            .frame(height: defaultHeaderHeight)
-                            .frame(maxWidth: .infinity)
-                            .offset(y: offset)
-                            .opacity(expandedOpacity)
-                    }
-                    .zIndex(10)
+                    titleHeaderView()
+                        .padding()
+                        .frame(height: defaultHeaderHeight)
+                        .frame(maxWidth: .infinity)
+                        .offset(y: offset)
+                        .opacity(expandedOpacity)
                 }
-
-                // List with Form content
+                .zIndex(10)                // List with Form content
                 List {
                     Color.clear
                         .frame(height: defaultHeaderHeight - 36)
@@ -99,32 +99,21 @@ struct MemoryEditorView: View {
                     self.scrollOffset = new
                 }
 
-                // Minimized Header
-                if showMinimizedHeader {
-                    VStack(spacing: 0) {
-                        // Spacer para a safe area do topo
-                        Color.clear
-                            .frame(height: 0)
-
-                        TextField("Title", text: $viewModel.title, axis: .vertical)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(1)
-                            .padding(.horizontal, 76)
-                            .padding(.vertical, 20)
-                            .frame(height: minHeaderHeight)
-                            .opacity(minimizedOpacity)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        Rectangle()
-                            .fill(.ultraThinMaterial)
-                            .ignoresSafeArea()
-                    )
-                    .allowsHitTesting(true)
-                    .zIndex(10)
+                // Minimized Header - aparece apenas quando o expanded está sumindo
+                VStack(spacing: 0) {
+                    TextField("Title", text: $viewModel.title, axis: .vertical)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(1)
+                        .padding(.horizontal, 76)
+                        .padding(.vertical, 20)
+                        .frame(height: minHeaderHeight)
+                        .opacity(minimizedOpacity)
                 }
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(minimizedOpacity > 0.5)
+                .zIndex(showMinimizedHeader ? 11 : 9)
 
                 // Toolbar buttons overlay
                 VStack {
