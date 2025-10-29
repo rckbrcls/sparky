@@ -27,7 +27,7 @@ struct MemoryEditorView: View {
     @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
     private let isEditing: Bool
-    private let defaultHeaderHeight: CGFloat = 130
+    private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
 
     init(environment: AppEnvironment,
@@ -105,7 +105,7 @@ struct MemoryEditorView: View {
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
                             .lineLimit(1)
-                            .padding(.horizontal, 76) 
+                            .padding(.horizontal, 76)
                             .padding(.vertical, 20)
                             .frame(height: minHeaderHeight)
                     }
@@ -245,16 +245,17 @@ struct MemoryEditorView: View {
     private func titleHeaderView() -> some View {
         VStack(spacing: 0) {
             Spacer()
-                .frame(height: 50)
+                .frame(height: 70)
 
             TextField("Title", text: $viewModel.title, axis: .vertical)
                 .font(.title)
                 .fontWeight(.bold)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
                 .submitLabel(.done)
                 .lineLimit(1...2)
-                .padding(.horizontal, 60)
+            Divider()
         }
+        .padding(.horizontal, 10)
         .contentShape(Rectangle())
         .allowsHitTesting(true)
     }
