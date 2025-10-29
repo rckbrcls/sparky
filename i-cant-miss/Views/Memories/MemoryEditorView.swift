@@ -164,6 +164,7 @@ struct MemoryEditorView: View {
                                 } else {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.primary)
                                 }
                             }
                             .frame(width: 44, height: 44)
