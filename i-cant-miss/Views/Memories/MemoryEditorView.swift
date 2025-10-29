@@ -164,31 +164,6 @@ struct MemoryEditorView: View {
             .onChange(of: photoSelections) { _, newValue in
                 handlePhotoSelections(newValue)
             }
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarLeading) {
-//                    Button( role: .cancel) {
-//                        dismiss()
-//                    } label: {
-//                        Label("Cancel", systemImage: "xmark")
-//                    }
-//                }
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    Button(role: .confirm) {
-//                        commitChecklistDrafts()
-//                        Task {
-//                            let success = await viewModel.save()
-//                            if success { dismiss() }
-//                        }
-//                    } label: {
-//                        if viewModel.isSaving {
-//                            ProgressView()
-//                        } else {
-//                            Label("Save", systemImage: "checkmark")
-//                        }
-//                    }
-//                    .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty))
-//                }
-//            }
             .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { _ in viewModel.errorMessage = nil }
