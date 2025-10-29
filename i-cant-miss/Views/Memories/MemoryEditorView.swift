@@ -28,7 +28,7 @@ struct MemoryEditorView: View {
     @State private var scrollOffset: CGFloat = 20
     private let isEditing: Bool
     private let defaultHeaderHeight: CGFloat = 100
-    private let minHeaderHeight: CGFloat = 60
+    private let minHeaderHeight: CGFloat = 80
 
     init(environment: AppEnvironment,
          memory: MemoryModel? = nil,
@@ -113,6 +113,49 @@ struct MemoryEditorView: View {
                             .fill(.ultraThinMaterial)
                             .ignoresSafeArea()
                     )
+                }
+
+                // Toolbar buttons overlay
+                VStack {
+                    HStack {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 46, height: 46)
+                                .tint(.white)
+                                .glassEffect(.regular.interactive())
+                        }
+
+                        Spacer()
+
+                        Button {
+                            commitChecklistDrafts()
+                            Task {
+                                let success = await viewModel.save()
+                                if success { dismiss() }
+                            }
+                        } label: {
+                            Group {
+                                if viewModel.isSaving {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                            }
+                            .frame(width: 46, height: 46)
+                            .glassEffect(.regular.interactive().tint(.accent))
+                        }
+                        .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty))
+                        .opacity(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty) ? 0.5 : 1)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+
+                    Spacer()
                 }
             }
             .onAppear {
