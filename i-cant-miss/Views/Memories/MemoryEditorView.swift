@@ -25,9 +25,9 @@ struct MemoryEditorView: View {
     @State private var isProcessingPhotos = false
     @State private var showCameraPicker = false
     @State private var mediaErrorMessage: String?
-    @State private var scrollOffset: CGFloat = 0
+    @State private var scrollOffset: CGFloat = 20
     private let isEditing: Bool
-    private let defaultHeaderHeight: CGFloat = 120
+    private let defaultHeaderHeight: CGFloat = 100
     private let minHeaderHeight: CGFloat = 60
 
     init(environment: AppEnvironment,
@@ -71,7 +71,7 @@ struct MemoryEditorView: View {
                 // List with Form content
                 List {
                     Color.clear
-                        .frame(height: defaultHeaderHeight)
+                        .frame(height: defaultHeaderHeight - 36)
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets())
 
@@ -93,17 +93,26 @@ struct MemoryEditorView: View {
 
                 // Minimized Header
                 if showMinimizedHeader {
-                    titleHeaderView()
-                        .font(.headline)
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
-                        .frame(height: minHeaderHeight)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            Rectangle()
-                                .fill(.ultraThinMaterial)
-                                .ignoresSafeArea()
-                        )
+                    VStack(spacing: 0) {
+                        // Spacer para a safe area do topo
+                        Color.clear
+                            .frame(height: 0)
+
+                        TextField("Title", text: $viewModel.title, axis: .vertical)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                            .padding(.horizontal, 60) // Espaço para os botões da toolbar
+                            .padding(.vertical, 12)
+                            .frame(height: minHeaderHeight)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .ignoresSafeArea()
+                    )
                 }
             }
             .onAppear {
@@ -112,31 +121,31 @@ struct MemoryEditorView: View {
             .onChange(of: photoSelections) { _, newValue in
                 handlePhotoSelections(newValue)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button( role: .cancel) {
-                        dismiss()
-                    } label: {
-                        Label("Cancel", systemImage: "xmark")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(role: .confirm) {
-                        commitChecklistDrafts()
-                        Task {
-                            let success = await viewModel.save()
-                            if success { dismiss() }
-                        }
-                    } label: {
-                        if viewModel.isSaving {
-                            ProgressView()
-                        } else {
-                            Label("Save", systemImage: "checkmark")
-                        }
-                    }
-                    .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty))
-                }
-            }
+//            .toolbar {
+//                ToolbarItem(placement: .navigationBarLeading) {
+//                    Button( role: .cancel) {
+//                        dismiss()
+//                    } label: {
+//                        Label("Cancel", systemImage: "xmark")
+//                    }
+//                }
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    Button(role: .confirm) {
+//                        commitChecklistDrafts()
+//                        Task {
+//                            let success = await viewModel.save()
+//                            if success { dismiss() }
+//                        }
+//                    } label: {
+//                        if viewModel.isSaving {
+//                            ProgressView()
+//                        } else {
+//                            Label("Save", systemImage: "checkmark")
+//                        }
+//                    }
+//                    .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty))
+//                }
+//            }
             .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { _ in viewModel.errorMessage = nil }
@@ -232,11 +241,12 @@ struct MemoryEditorView: View {
 
     private func titleHeaderView() -> some View {
         VStack(spacing: 8) {
-            TextField("Title", text: $viewModel.title)
-                .font(.title)
+            TextField("Title", text: $viewModel.title, axis: .vertical)
+                .font(.largeTitle)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
                 .submitLabel(.done)
+                .lineLimit(1...3)
         }
     }
 
