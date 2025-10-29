@@ -121,7 +121,6 @@ struct SpaceComposerView: View {
                     .accessibilityLabel("Select \(preset.name) color")
                 }
             }
-            .padding(.vertical, 4)
         }
     }
 

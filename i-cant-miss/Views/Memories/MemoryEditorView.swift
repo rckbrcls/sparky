@@ -21,11 +21,13 @@ struct MemoryEditorView: View {
     @State private var showAccessDeniedAlert = false
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
     @FocusState private var focusedDraftID: UUID?
+    @FocusState private var isTitleFocused: Bool
     @State private var photoSelections: [PhotosPickerItem] = []
     @State private var isProcessingPhotos = false
     @State private var showCameraPicker = false
     @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
+    @State private var scrollViewProxy: ScrollViewProxy?
     private let isEditing: Bool
     private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
@@ -81,42 +83,60 @@ struct MemoryEditorView: View {
                         .opacity(expandedOpacity)
                 }
                 .zIndex(10)                // List with Form content
-                List {
-                    Color.clear
-                        .frame(height: defaultHeaderHeight - 36)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets())
+                ScrollViewReader { proxy in
+                    List {
+                        Color.clear
+                            .frame(height: 0)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                            .id("scrollTop")
 
-                    bodySection
-                    triggersSection
-                    photosSection
-                    detailsSection
-                    dueDateSection
-                    extrasSection
-                }
-                .listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.interactively)
-                .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                    return geometry.contentOffset.y + geometry.contentInsets.top
-                } action: { _, new in
-                    self.scrollOffset = new
+                        Color.clear
+                            .frame(height: defaultHeaderHeight - 90)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets())
+
+                        bodySection
+                        triggersSection
+                        photosSection
+                        detailsSection
+                        dueDateSection
+                        extrasSection
+                    }
+                    .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
+                    .scrollDismissesKeyboard(.interactively)
+                    .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                        return geometry.contentOffset.y + geometry.contentInsets.top
+                    } action: { _, new in
+                        self.scrollOffset = new
+                    }
+                    .onAppear {
+                        scrollViewProxy = proxy
+                    }
                 }
 
                 // Minimized Header - aparece apenas quando o expanded está sumindo
                 VStack(spacing: 0) {
-                    TextField("Title", text: $viewModel.title, axis: .vertical)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(1)
-                        .padding(.horizontal, 76)
-                        .padding(.vertical, 20)
-                        .frame(height: minHeaderHeight)
-                        .opacity(minimizedOpacity)
+                    Button {
+                        scrollToTopAndFocus()
+                    } label: {
+                        Text(viewModel.title.isEmpty ? "Title" : viewModel.title)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(viewModel.title.isEmpty ? .secondary : .primary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 76)
+                            .padding(.vertical, 20)
+                            .frame(height: minHeaderHeight)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(minimizedOpacity)
                 }
                 .frame(maxWidth: .infinity)
-                .allowsHitTesting(minimizedOpacity > 0.5)
+                .allowsHitTesting(minimizedOpacity > 0.3)
                 .zIndex(showMinimizedHeader ? 11 : 9)
 
                 // Toolbar buttons overlay
@@ -253,11 +273,28 @@ struct MemoryEditorView: View {
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
                 .lineLimit(1...2)
+                .focused($isTitleFocused)
             Divider()
         }
         .padding(.horizontal, 10)
         .contentShape(Rectangle())
         .allowsHitTesting(true)
+    }
+
+    private func scrollToTopAndFocus() {
+        guard let proxy = scrollViewProxy else { return }
+
+        // Esconde o teclado primeiro para garantir scroll suave
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+
+        withAnimation(.easeOut(duration: 0.3)) {
+            proxy.scrollTo("scrollTop", anchor: .top)
+        }
+
+        // Aguarda a animação completar e depois foca
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            isTitleFocused = true
+        }
     }
 
     private var detailsSection: some View {
