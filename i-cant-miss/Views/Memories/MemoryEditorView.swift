@@ -29,6 +29,7 @@ struct MemoryEditorView: View {
     private let isEditing: Bool
     private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
+    private let transitionThreshold: CGFloat = 36
 
     init(environment: AppEnvironment,
          memory: MemoryModel? = nil,
@@ -47,7 +48,11 @@ struct MemoryEditorView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                let showMinimizedHeader = defaultHeaderHeight - scrollOffset <= minHeaderHeight
+                let showMinimizedHeader = scrollOffset >= transitionThreshold
+                
+                // Calcula a opacidade baseada no scroll
+                let expandedOpacity = max(0, min(1, 1 - (scrollOffset / transitionThreshold)))
+                let minimizedOpacity = max(0, min(1, (scrollOffset - transitionThreshold / 2) / transitionThreshold))
 
                 // Expanded Header
                 if !showMinimizedHeader {
@@ -66,6 +71,7 @@ struct MemoryEditorView: View {
                             .frame(height: defaultHeaderHeight)
                             .frame(maxWidth: .infinity)
                             .offset(y: offset)
+                            .opacity(expandedOpacity)
                     }
                     .zIndex(10)
                 }
@@ -108,6 +114,7 @@ struct MemoryEditorView: View {
                             .padding(.horizontal, 76)
                             .padding(.vertical, 20)
                             .frame(height: minHeaderHeight)
+                            .opacity(minimizedOpacity)
                     }
                     .frame(maxWidth: .infinity)
                     .background(
