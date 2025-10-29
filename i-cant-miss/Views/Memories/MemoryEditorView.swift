@@ -86,16 +86,11 @@ struct MemoryEditorView: View {
                 ScrollViewReader { proxy in
                     List {
                         Color.clear
-                            .frame(height: 0)
+                            .frame(height: defaultHeaderHeight - 36)
                             .listRowBackground(Color.clear)
                             .listRowInsets(EdgeInsets())
                             .listRowSeparator(.hidden)
                             .id("scrollTop")
-
-                        Color.clear
-                            .frame(height: defaultHeaderHeight - 90)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets())
 
                         bodySection
                         triggersSection
@@ -287,12 +282,13 @@ struct MemoryEditorView: View {
         // Esconde o teclado primeiro para garantir scroll suave
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 
-        withAnimation(.easeOut(duration: 0.3)) {
-            proxy.scrollTo("scrollTop", anchor: .top)
+        // Usa spring animation para um efeito mais natural
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            proxy.scrollTo("scrollTop", anchor: .bottom)
         }
 
         // Aguarda a animação completar e depois foca
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
             isTitleFocused = true
         }
     }
