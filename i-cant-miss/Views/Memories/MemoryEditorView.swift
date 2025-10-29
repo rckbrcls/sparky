@@ -28,6 +28,8 @@ struct MemoryEditorView: View {
     @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
     @State private var scrollViewProxy: ScrollViewProxy?
+    @State private var isPhotosExpanded = true
+    @State private var isDetailsExpanded = true
     private let isEditing: Bool
     private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
@@ -294,25 +296,29 @@ struct MemoryEditorView: View {
     }
 
     private var detailsSection: some View {
-        Section("Details") {
-            SpacePicker(selection: Binding(
-                get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
-                set: { viewModel.selectedSpaceID = $0 }
-            ), spaces: spacesForPicker)
+        Section {
+            DisclosureGroup(isExpanded: $isDetailsExpanded) {
+                SpacePicker(selection: Binding(
+                    get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
+                    set: { viewModel.selectedSpaceID = $0 }
+                ), spaces: spacesForPicker)
 
-            Toggle("Pinned", isOn: $viewModel.isPinned)
+                Toggle("Pinned", isOn: $viewModel.isPinned)
 
-            Picker("Status", selection: $viewModel.status) {
-                ForEach(MemoryStatus.allCases) { status in
-                    Text(status.rawValue.capitalized).tag(status)
+                Picker("Status", selection: $viewModel.status) {
+                    ForEach(MemoryStatus.allCases) { status in
+                        Text(status.rawValue.capitalized).tag(status)
+                    }
                 }
-            }
 
-            Picker("Priority", selection: $viewModel.priority) {
-                ForEach(MemoryPriority.allCases) { priority in
-                    Label(priorityLabel(for: priority), systemImage: priority.iconName)
-                        .tag(priority)
+                Picker("Priority", selection: $viewModel.priority) {
+                    ForEach(MemoryPriority.allCases) { priority in
+                        Label(priorityLabel(for: priority), systemImage: priority.iconName)
+                            .tag(priority)
+                    }
                 }
+            } label: {
+                Text("Details")
             }
         }
     }
@@ -341,73 +347,75 @@ struct MemoryEditorView: View {
 
     private var photosSection: some View {
         Section {
-            if viewModel.attachments.isEmpty {
-                Text("Attach photos to give this memory more context.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.attachments) { attachment in
-                            if let image = UIImage(data: attachment.data) {
-                                ZStack(alignment: .topTrailing) {
-                                    Image(uiImage: image)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 120, height: 120)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(.thinMaterial, lineWidth: 1)
-                                        )
-                                    Button {
-                                        removeAttachment(attachment.id)
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .symbolRenderingMode(.hierarchical)
-                                            .foregroundStyle(.white, .black.opacity(0.6))
-                                            .padding(6)
+            DisclosureGroup(isExpanded: $isPhotosExpanded) {
+                if viewModel.attachments.isEmpty {
+                    Text("Attach photos to give this memory more context.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(viewModel.attachments) { attachment in
+                                if let image = UIImage(data: attachment.data) {
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 120, height: 120)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .stroke(.thinMaterial, lineWidth: 1)
+                                            )
+                                        Button {
+                                            removeAttachment(attachment.id)
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .symbolRenderingMode(.hierarchical)
+                                                .foregroundStyle(.white, .black.opacity(0.6))
+                                                .padding(6)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(.secondary.opacity(0.1))
+                                        .frame(width: 120, height: 120)
+                                        .overlay(
+                                            Image(systemName: "photo.fill")
+                                                .font(.system(size: 24))
+                                                .foregroundStyle(.secondary)
+                                        )
                                 }
-                            } else {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(.secondary.opacity(0.1))
-                                    .frame(width: 120, height: 120)
-                                    .overlay(
-                                        Image(systemName: "photo.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundStyle(.secondary)
-                                    )
                             }
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
-            }
 
-            PhotosPicker(selection: $photoSelections,
-                         maxSelectionCount: 5,
-                         matching: .images) {
-                HStack {
-                    if isProcessingPhotos {
-                        ProgressView()
-                            .controlSize(.small)
+                PhotosPicker(selection: $photoSelections,
+                             maxSelectionCount: 5,
+                             matching: .images) {
+                    HStack {
+                        if isProcessingPhotos {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Label("Add from Library", systemImage: "photo.on.rectangle")
                     }
-                    Label("Add from Library", systemImage: "photo.on.rectangle")
                 }
-            }
-            .disabled(isProcessingPhotos)
+                .disabled(isProcessingPhotos)
 
-            Button {
-                handleCameraButtonTapped()
+                Button {
+                    handleCameraButtonTapped()
+                } label: {
+                    Label("Open Camera", systemImage: "camera")
+                }
+                .disabled(isProcessingPhotos)
             } label: {
-                Label("Open Camera", systemImage: "camera")
+                Label("Photos", systemImage: "photo.stack")
             }
-            .disabled(isProcessingPhotos)
-        } header: {
-            Label("Photos", systemImage: "photo.stack")
         }
     }
 
