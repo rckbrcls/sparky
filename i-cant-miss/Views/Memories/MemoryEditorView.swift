@@ -51,12 +51,16 @@ struct MemoryEditorView: View {
                 // Calcula quando o header expandido está totalmente comprimido
                 let headerTransitionRange = defaultHeaderHeight - minHeaderHeight
                 let showMinimizedHeader = scrollOffset >= headerTransitionRange
+                
+                // Define a zona de transição (últimos 30 pontos da compressão)
+                let fadeZoneStart = headerTransitionRange - 30
+                let fadeZoneRange: CGFloat = 30
 
                 // Calcula a opacidade baseada no scroll
-                // O expanded some apenas nos últimos pixels da transição
-                let expandedOpacity = max(0, min(1, 1 - ((scrollOffset - (headerTransitionRange - 20)) / 20)))
-                // O minimized aparece quando o expanded está quase sumindo
-                let minimizedOpacity = max(0, min(1, (scrollOffset - (headerTransitionRange - 20)) / 20))
+                // O expanded some gradualmente nos últimos 30 pontos
+                let expandedOpacity = scrollOffset < fadeZoneStart ? 1.0 : max(0, min(1, 1 - ((scrollOffset - fadeZoneStart) / fadeZoneRange)))
+                // O minimized aparece gradualmente quando o expanded está sumindo
+                let minimizedOpacity = scrollOffset < fadeZoneStart ? 0.0 : max(0, min(1, (scrollOffset - fadeZoneStart) / fadeZoneRange))
 
                 // Expanded Header - sempre visível até ser completamente comprimido
                 ZStack(alignment: .top) {
