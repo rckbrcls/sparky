@@ -101,12 +101,12 @@ struct MemoryEditorView: View {
                             .frame(height: 0)
 
                         TextField("Title", text: $viewModel.title, axis: .vertical)
-                            .font(.title)
+                            .font(.title2)
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
                             .lineLimit(1)
-                            .padding(.horizontal, 60) // Espaço para os botões da toolbar
-                            .padding(.vertical, 12)
+                            .padding(.horizontal, 76) 
+                            .padding(.vertical, 20)
                             .frame(height: minHeaderHeight)
                     }
                     .frame(maxWidth: .infinity)
@@ -177,26 +177,6 @@ struct MemoryEditorView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
-            .sheet(isPresented: $showTrigger){
-                NavigationStack {
-                    Form{
-
-                    }
-                    .navigationTitle("Triggers")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button( role: .cancel) {
-                                dismiss()
-                            } label: {
-                                Label("Cancel", systemImage: "xmark")
-                            }
-                        }
-                    }
-                }
-                .presentationDetents([.medium])
-                .scrollContentBackground(.hidden)
-            }
             .sheet(isPresented: $showScheduleSheet) {
                 MemoryScheduleTriggerSheet(viewModel: viewModel)
             }
@@ -263,13 +243,17 @@ struct MemoryEditorView: View {
     private var navigationTitle: String { isEditing ? "Edit Memory" : "New Memory" }
 
     private func titleHeaderView() -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
+            Spacer()
+                .frame(height: 50)
+
             TextField("Title", text: $viewModel.title, axis: .vertical)
-                .font(.largeTitle)
+                .font(.title)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
                 .submitLabel(.done)
-                .lineLimit(1...3)
+                .lineLimit(1...2)
+                .padding(.horizontal, 60)
         }
         .contentShape(Rectangle())
         .allowsHitTesting(true)
