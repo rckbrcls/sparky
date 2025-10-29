@@ -174,7 +174,7 @@ struct MemoryCardView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .glassEffect(in: .rect(cornerRadius: 16.0))
+        .glassEffect(in: .rect(cornerRadius: 24))
         .contentShape(Rectangle())
         .contextMenu {
             buildContextMenu()
