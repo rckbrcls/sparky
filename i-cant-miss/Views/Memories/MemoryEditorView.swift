@@ -28,8 +28,8 @@ struct MemoryEditorView: View {
     @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
     @State private var scrollViewProxy: ScrollViewProxy?
-    @State private var isPhotosExpanded = true
-    @State private var isDetailsExpanded = true
+    @State private var isPhotosExpanded = false
+    @State private var isDetailsExpanded = false
     private let isEditing: Bool
     private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
@@ -98,7 +98,6 @@ struct MemoryEditorView: View {
                         triggersSection
                         photosSection
                         detailsSection
-                        dueDateSection
                         extrasSection
                     }
                     .listStyle(.insetGrouped)
@@ -433,7 +432,7 @@ struct MemoryEditorView: View {
                 showSheet: $showPersonSheet
             )
         } header: {
-            Label("Triggers", systemImage: "bolt.fill")
+            Label("Triggers & Due Date", systemImage: "bolt.fill")
         }
     }
 
@@ -839,7 +838,7 @@ private struct MemoryScheduleTriggerInlineForm: View {
     }
 
     private var hasSchedule: Bool {
-        timeTrigger != nil || weekdayTrigger != nil
+        timeTrigger != nil || weekdayTrigger != nil || viewModel.dueDateEnabled
     }
 
     var body: some View {
@@ -879,7 +878,7 @@ private struct MemoryScheduleTriggerInlineForm: View {
                 showSheet = true
             } label: {
                 HStack {
-                    Label("Add schedule", systemImage: "plus.circle.fill")
+                    Label("Add schedule or due date", systemImage: "plus.circle.fill")
                         .foregroundStyle(.accent)
                     Spacer()
                 }
@@ -892,6 +891,9 @@ private struct MemoryScheduleTriggerInlineForm: View {
     }
 
     private var schedulePrimaryText: String {
+        if viewModel.dueDateEnabled {
+            return "Due: " + viewModel.dueDate.formatted(date: .abbreviated, time: .shortened)
+        }
         if let date = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate {
             return date.formatted(date: .abbreviated, time: .shortened)
         }
@@ -903,6 +905,11 @@ private struct MemoryScheduleTriggerInlineForm: View {
 
     private var scheduleDetailText: String? {
         var parts: [String] = []
+
+        if let date = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate {
+            parts.append("Reminder: " + date.formatted(date: .abbreviated, time: .shortened))
+        }
+
         if let recurrence = timeTrigger?.recurrenceRule {
             var text = "Repeats \(recurrence.frequency.title.lowercased())"
             if recurrence.interval > 1 {
@@ -1082,6 +1089,14 @@ private struct MemoryScheduleTriggerSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Due Date") {
+                    Toggle("Add due date", isOn: $viewModel.dueDateEnabled.animation())
+                    if viewModel.dueDateEnabled {
+                        DatePicker("Date", selection: $viewModel.dueDate, displayedComponents: [.date])
+                        DatePicker("Time", selection: $viewModel.dueDate, displayedComponents: [.hourAndMinute])
+                    }
+                }
+
                 Section("Time") {
                     Toggle("Specific date & time", isOn: $includeTimeTrigger.animation())
                     if includeTimeTrigger {
