@@ -119,7 +119,7 @@ struct MemoryEditorView: View {
                     Button {
                         scrollToTopAndFocus()
                     } label: {
-                        Text(viewModel.title.isEmpty ? "Title" : viewModel.title)
+                        Text(viewModel.title.isEmpty ? "Memory" : viewModel.title)
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(viewModel.title.isEmpty ? .secondary : .primary)
@@ -265,7 +265,7 @@ struct MemoryEditorView: View {
             Spacer()
                 .frame(height: 70)
 
-            TextField("Title", text: $viewModel.title, axis: .vertical)
+            TextField("Memory", text: $viewModel.title, axis: .vertical)
                 .font(.title)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
