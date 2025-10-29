@@ -121,7 +121,9 @@ struct SpaceComposerView: View {
                     .accessibilityLabel("Select \(preset.name) color")
                 }
             }
+            .padding()
         }
+        .listRowInsets(EdgeInsets())
     }
 
     private func iconBackground(for icon: String) -> Color {
@@ -134,7 +136,7 @@ struct SpaceComposerView: View {
     private func iconForeground(for icon: String) -> Color {
         icon == selectedIcon ? .primary : .accentColor
     }
-    
+
     private func iconGlass(for icon: String) -> Glass {
         icon == selectedIcon ? .regular.tint(.accentColor).interactive() : .regular.interactive()
     }

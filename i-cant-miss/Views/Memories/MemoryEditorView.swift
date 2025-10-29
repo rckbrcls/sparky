@@ -267,7 +267,7 @@ struct MemoryEditorView: View {
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
-                .lineLimit(1...2)
+                .lineLimit(1)
                 .focused($isTitleFocused)
             Divider()
         }
