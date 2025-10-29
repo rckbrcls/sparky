@@ -123,7 +123,7 @@ struct MemoryEditorView: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 16, weight: .semibold))
-                                .frame(width: 46, height: 46)
+                                .frame(width: 44, height: 44)
                                 .tint(.white)
                                 .glassEffect(.regular.interactive())
                         }
@@ -146,14 +146,14 @@ struct MemoryEditorView: View {
                                         .font(.system(size: 16, weight: .semibold))
                                 }
                             }
-                            .frame(width: 46, height: 46)
+                            .frame(width: 44, height: 44)
                             .glassEffect(.regular.interactive().tint(.accent))
                         }
                         .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty))
                         .opacity(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty) ? 0.5 : 1)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
 
                     Spacer()
                 }
