@@ -56,6 +56,7 @@ struct MemoryEditorView: View {
                             .fill(.ultraThinMaterial)
                             .ignoresSafeArea()
                             .frame(height: max(minHeaderHeight, defaultHeaderHeight - scrollOffset))
+                            .allowsHitTesting(true)
 
                         let minOffset = defaultHeaderHeight - minHeaderHeight
                         let offset = scrollOffset <= 0 ? -scrollOffset : scrollOffset <= minOffset ? -scrollOffset : -minOffset
@@ -66,6 +67,7 @@ struct MemoryEditorView: View {
                             .frame(maxWidth: .infinity)
                             .offset(y: offset)
                     }
+                    .zIndex(10)
                 }
 
                 // List with Form content
@@ -113,6 +115,8 @@ struct MemoryEditorView: View {
                             .fill(.ultraThinMaterial)
                             .ignoresSafeArea()
                     )
+                    .allowsHitTesting(true)
+                    .zIndex(10)
                 }
 
                 // Toolbar buttons overlay
@@ -157,6 +161,7 @@ struct MemoryEditorView: View {
 
                     Spacer()
                 }
+                .zIndex(100)
             }
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
@@ -266,6 +271,8 @@ struct MemoryEditorView: View {
                 .submitLabel(.done)
                 .lineLimit(1...3)
         }
+        .contentShape(Rectangle())
+        .allowsHitTesting(true)
     }
 
     private var detailsSection: some View {
