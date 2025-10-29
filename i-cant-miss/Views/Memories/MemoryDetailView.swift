@@ -35,11 +35,8 @@ struct MemoryDetailView: View {
     }()
 
     private var title: String {
-        if let trimmed = memory.title?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !trimmed.isEmpty {
-            return trimmed
-        }
-        return "Untitled"
+        let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Untitled" : trimmed
     }
 
     private var bodyText: String? {

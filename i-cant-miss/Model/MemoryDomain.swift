@@ -96,7 +96,7 @@ struct MemoryModel: Identifiable, Hashable {
     }
 
     let id: UUID
-    var title: String?
+    var title: String
     var body: String?
     var createdAt: Date
     var updatedAt: Date
@@ -308,10 +308,14 @@ private extension Sequence where Element == TodoItemModel {
 extension ReminderModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
         let space = space ?? folder?.toSpace() ?? SpaceModel.inbox
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
+        let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasNotes = !(trimmedNotes?.isEmpty ?? true)
         return MemoryModel(
             id: id,
-            title: title,
-            body: notes,
+            title: resolvedTitle,
+            body: hasNotes ? notes : nil,
             createdAt: createdAt,
             updatedAt: updatedAt,
             status: status == .archived ? .archived : (status == .completed ? .completed : .active),
@@ -337,10 +341,14 @@ extension ReminderModel {
 extension NoteModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
         let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.inbox
+        let trimmedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTitle = trimmedTitle ?? (trimmedContent.isEmpty ? "Untitled" : trimmedContent)
+        let hasContent = !trimmedContent.isEmpty
         return MemoryModel(
             id: id,
-            title: title ?? content.trimmingCharacters(in: .whitespacesAndNewlines),
-            body: content,
+            title: resolvedTitle,
+            body: hasContent ? content : nil,
             createdAt: createdAt,
             updatedAt: updatedAt,
             status: .active,
@@ -365,10 +373,14 @@ extension NoteModel {
 extension TodoListModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
         let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.inbox
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
+        let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasNotes = !(trimmedNotes?.isEmpty ?? true)
         return MemoryModel(
             id: id,
-            title: title,
-            body: notes,
+            title: resolvedTitle,
+            body: hasNotes ? notes : nil,
             createdAt: createdAt,
             updatedAt: updatedAt,
             status: isArchived ? .archived : (isCompleted ? .completed : .active),

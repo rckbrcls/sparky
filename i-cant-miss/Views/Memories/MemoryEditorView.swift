@@ -119,10 +119,11 @@ struct MemoryEditorView: View {
                     Button {
                         scrollToTopAndFocus()
                     } label: {
-                        Text(viewModel.title.isEmpty ? "Memory" : viewModel.title)
+                        let displayTitle = viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        Text(displayTitle.isEmpty ? "Memory" : displayTitle)
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(viewModel.title.isEmpty ? .secondary : .primary)
+                            .foregroundColor(displayTitle.isEmpty ? .secondary : .primary)
                             .lineLimit(1)
                             .padding(.horizontal, 76)
                             .padding(.vertical, 20)
@@ -171,8 +172,8 @@ struct MemoryEditorView: View {
                             .frame(width: 44, height: 44)
                             .glassEffect(.regular.interactive().tint(.accent))
                         }
-                        .disabled(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty))
-                        .opacity(viewModel.isSaving || (viewModel.title.isEmpty && viewModel.body.isEmpty) ? 0.5 : 1)
+                        .disabled(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .opacity(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)

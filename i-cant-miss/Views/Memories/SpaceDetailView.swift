@@ -304,7 +304,7 @@ struct SpaceDetailView: View {
     private func matchesSearch(_ memory: MemoryModel, query: String) -> Bool {
         guard !query.isEmpty else { return true }
 
-        if let title = memory.title, title.localizedCaseInsensitiveContains(query) {
+        if memory.title.localizedCaseInsensitiveContains(query) {
             return true
         }
 

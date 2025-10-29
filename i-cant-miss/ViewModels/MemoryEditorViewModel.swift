@@ -195,12 +195,11 @@ final class MemoryEditorViewModel: ObservableObject {
 
     func save() async -> Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty || !trimmedBody.isEmpty else {
-            errorMessage = "Provide a title or body for the memory."
+        guard !trimmedTitle.isEmpty else {
+            errorMessage = "Provide a title for the memory."
             return false
         }
-
+        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
         let sanitizedChecklist = sanitizedChecklistItems()
         if showChecklist && sanitizedChecklist.isEmpty {
             showChecklist = false
@@ -243,7 +242,7 @@ private extension MemoryEditorViewModel {
     }
 
     func apply(memory: MemoryModel) {
-        title = memory.title ?? ""
+        title = memory.title
         body = memory.body ?? ""
         selectedSpaceID = memory.space.id
         status = memory.status
@@ -272,7 +271,10 @@ private extension MemoryEditorViewModel {
     }
 
     func apply(reminder: ReminderModel) {
-        title = reminder.title
+        let trimmedTitle = reminder.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTitle.isEmpty {
+            title = trimmedTitle
+        }
         body = reminder.notes ?? ""
         priority = MemoryPriority(rawValue: reminder.priority.rawValue) ?? .medium
         status = reminder.status == .archived ? .archived : (reminder.status == .completed ? .completed : .active)
@@ -284,7 +286,9 @@ private extension MemoryEditorViewModel {
     }
 
     func apply(note: NoteModel) {
-        title = note.title ?? ""
+        if let trimmedTitle = note.title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty {
+            title = trimmedTitle
+        }
         body = note.content
         isPinned = note.isPinned
         if let folder = note.folder {
@@ -293,7 +297,10 @@ private extension MemoryEditorViewModel {
     }
 
     func apply(todoList: TodoListModel) {
-        title = todoList.title
+        let trimmedTitle = todoList.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTitle.isEmpty {
+            title = trimmedTitle
+        }
         body = todoList.notes ?? ""
         isPinned = todoList.isPinned
         status = todoList.isArchived ? .archived : (todoList.isCompleted ? .completed : .active)
@@ -415,11 +422,11 @@ private extension MemoryEditorViewModel {
             throw NoteService.NoteServiceError.noteNotFound
         }
 
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedContent = body.trimmingCharacters(in: .whitespacesAndNewlines)
-        let content = trimmedContent.isEmpty ? title.trimmingCharacters(in: .whitespacesAndNewlines) : trimmedContent
 
-        note.title = title.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        note.content = content
+        note.title = trimmedTitle
+        note.content = trimmedContent
         note.isPinned = isPinned
         note.updatedAt = Date()
         note.folder = folderForAudience(.notes)
@@ -467,10 +474,9 @@ private extension MemoryEditorViewModel {
     }
 
     func createNote(trimmedTitle: String, trimmedBody: String) async throws -> UUID {
-        let content = trimmedBody.isEmpty ? trimmedTitle : trimmedBody
         let note = try await environment.noteService.createNote(
-            title: trimmedTitle.nilIfEmpty,
-            content: content,
+            title: trimmedTitle,
+            content: trimmedBody,
             folderID: folderForAudience(.notes)?.id,
             tagIDs: [],
             isPinned: isPinned

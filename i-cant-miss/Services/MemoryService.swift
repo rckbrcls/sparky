@@ -307,7 +307,7 @@ final class MemoryService: ObservableObject {
         guard !trimmed.isEmpty else { return [] }
 
         return memories.filter { memory in
-            if let title = memory.title, title.localizedCaseInsensitiveContains(trimmed) {
+            if memory.title.localizedCaseInsensitiveContains(trimmed) {
                 return true
             }
             if let body = memory.body, body.localizedCaseInsensitiveContains(trimmed) {

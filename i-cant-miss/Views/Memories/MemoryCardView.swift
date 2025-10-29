@@ -26,11 +26,8 @@ struct MemoryCardView: View {
     }()
 
     private var title: String {
-        if let title = memory.title?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !title.isEmpty {
-            return title
-        }
-        return "Untitled"
+        let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Untitled" : trimmed
     }
 
     private var bodyPreview: String? {

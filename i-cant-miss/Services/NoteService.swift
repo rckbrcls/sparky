@@ -115,10 +115,6 @@ final class NoteService: ObservableObject {
         let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
-                    guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        throw NoteServiceError.validationFailed("Note content is required")
-                    }
-
                     let note = Note(context: context)
                     note.id = UUID()
                     note.title = title
@@ -155,10 +151,6 @@ final class NoteService: ObservableObject {
                 do {
                     guard let note = try self.fetchNote(by: model.id, context: context) else {
                         throw NoteServiceError.noteNotFound
-                    }
-
-                    guard !model.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        throw NoteServiceError.validationFailed("Note content is required")
                     }
 
                     note.title = model.title
