@@ -30,6 +30,7 @@ struct MemoryEditorView: View {
     @State private var scrollViewProxy: ScrollViewProxy?
     @State private var isPhotosExpanded = false
     @State private var isDetailsExpanded = false
+    @State private var isPreferencesExpanded = false
     private let isEditing: Bool
     private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
@@ -303,22 +304,28 @@ struct MemoryEditorView: View {
                     set: { viewModel.selectedSpaceID = $0 }
                 ), spaces: spacesForPicker)
 
-                Toggle("Pinned", isOn: $viewModel.isPinned)
+                Toggle(isOn: $viewModel.isPinned) {
+                    Label("Pinned", systemImage: "pin.fill")
+                }
 
-                Picker("Status", selection: $viewModel.status) {
+                Picker(selection: $viewModel.status) {
                     ForEach(MemoryStatus.allCases) { status in
                         Text(status.rawValue.capitalized).tag(status)
                     }
+                } label: {
+                    Label("Status", systemImage: "circle.circle")
                 }
 
-                Picker("Priority", selection: $viewModel.priority) {
+                Picker(selection: $viewModel.priority) {
                     ForEach(MemoryPriority.allCases) { priority in
                         Label(priorityLabel(for: priority), systemImage: priority.iconName)
                             .tag(priority)
                     }
+                } label: {
+                    Label("Priority", systemImage: "flag.fill")
                 }
             } label: {
-                Text("Details")
+                Label("Details", systemImage: "info.circle")
             }
         }
     }
@@ -448,10 +455,27 @@ struct MemoryEditorView: View {
     }
 
     private var extrasSection: some View {
-        Section("Preferences") {
-            Toggle("Auto-complete when checklist is done", isOn: $viewModel.autoCompleteChecklist)
-                .disabled(!viewModel.canToggleAutoComplete)
-                .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
+        Section {
+            DisclosureGroup(isExpanded: $isPreferencesExpanded) {
+                Toggle("Auto-complete when checklist is done", isOn: $viewModel.autoCompleteChecklist)
+                    .disabled(!viewModel.canToggleAutoComplete)
+                    .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
+
+                Toggle("Show in Today view", isOn: $viewModel.isPinned)
+
+                Toggle("Enable notifications", isOn: Binding(
+                    get: { !viewModel.triggers.isEmpty },
+                    set: { _ in }
+                ))
+                .disabled(true)
+                .foregroundStyle(.secondary)
+
+                Toggle("Archive when completed", isOn: .constant(false))
+                    .disabled(true)
+                    .foregroundStyle(.secondary)
+            } label: {
+                Label("Preferences", systemImage: "gearshape")
+            }
         }
     }
 
@@ -650,10 +674,12 @@ private struct SpacePicker: View {
     let spaces: [SpaceModel]
 
     var body: some View {
-        Picker("Space", selection: $selection) {
+        Picker(selection: $selection) {
             ForEach(spaces) { space in
                 Text(space.name).tag(space.id)
             }
+        } label: {
+            Label("Space", systemImage: "folder")
         }
     }
 }
