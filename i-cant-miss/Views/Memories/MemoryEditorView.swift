@@ -27,7 +27,7 @@ struct MemoryEditorView: View {
     @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
     private let isEditing: Bool
-    private let defaultHeaderHeight: CGFloat = 100
+    private let defaultHeaderHeight: CGFloat = 130
     private let minHeaderHeight: CGFloat = 80
 
     init(environment: AppEnvironment,
