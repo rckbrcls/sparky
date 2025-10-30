@@ -32,9 +32,9 @@ struct MemoryEditorView: View {
     @State private var isDetailsExpanded = false
     @State private var isPreferencesExpanded = false
     @State private var showMenu = false
-    
+    @State private var expandedHeaderHeight: CGFloat = 210
+
     private let isEditing: Bool
-    private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
     private let transitionThreshold: CGFloat = 36
 
@@ -56,7 +56,7 @@ struct MemoryEditorView: View {
         NavigationStack {
             ZStack(alignment: .top) {
                 // Calcula quando o header expandido está totalmente comprimido
-                let headerTransitionRange = defaultHeaderHeight - minHeaderHeight
+                let headerTransitionRange = expandedHeaderHeight - minHeaderHeight
                 let showMinimizedHeader = scrollOffset >= headerTransitionRange
 
                 // Define a zona de transição - começa mais cedo (últimos 50 pontos da compressão)
@@ -74,35 +74,51 @@ struct MemoryEditorView: View {
                     Rectangle()
                         .fill(.ultraThinMaterial)
                         .ignoresSafeArea()
-                        .frame(height: max(minHeaderHeight, defaultHeaderHeight - scrollOffset))
+                        .frame(height: max(minHeaderHeight, expandedHeaderHeight - scrollOffset))
                         .allowsHitTesting(true)
 
-                    let minOffset = defaultHeaderHeight - minHeaderHeight
+                    let minOffset = expandedHeaderHeight - minHeaderHeight
                     let offset = scrollOffset <= 0 ? -scrollOffset : scrollOffset <= minOffset ? -scrollOffset : -minOffset
 
-                    titleHeaderView()
-                        .padding()
-                        .frame(height: defaultHeaderHeight)
-                        .frame(maxWidth: .infinity)
-                        .offset(y: offset)
-                        .opacity(expandedOpacity)
-                }
-                .zIndex(10)                // List with Form content
-                ScrollViewReader { proxy in
-                    List {
-                        Color.clear
-                            .frame(height: defaultHeaderHeight - 36)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets())
-                            .listRowSeparator(.hidden)
-                            .id("scrollTop")
 
+                    VStack(spacing: 12) {
+                        titleHeaderView()
                         MemoryEditorTriggerButtonsBar(
                             viewModel: viewModel,
                             showScheduleSheet: $showScheduleSheet,
                             showLocationPicker: $showLocationPicker,
                             showPersonSheet: $showPersonSheet
                         )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 80)
+                    .padding(.bottom, 20)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear
+                                .preference(key: HeaderHeightPreferenceKey.self, value: proxy.size.height)
+                        }
+                    )
+                    .frame(maxWidth: .infinity)
+                    .offset(y: offset)
+                    .opacity(expandedOpacity)
+                }
+                .onPreferenceChange(HeaderHeightPreferenceKey.self) { newHeight in
+                    guard newHeight > 0 else { return }
+                    let clampedHeight = max(newHeight, minHeaderHeight + 20)
+                    if abs(expandedHeaderHeight - clampedHeight) > 0.5 {
+                        expandedHeaderHeight = clampedHeight
+                    }
+                }
+                .zIndex(10)
+                ScrollViewReader { proxy in
+                    List {
+                        Color.clear
+                            .frame(height: expandedHeaderHeight - 36)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                            .id("scrollTop")
 
                         bodySection
                         photosSection
@@ -156,20 +172,20 @@ struct MemoryEditorView: View {
                         }
 
                         Spacer()
-                        
+
                         Menu {
                             HStack{
                                 Toggle(isOn: $viewModel.isPinned) {
                                     Label("Pinned", systemImage: "pin.fill")
                                 }
                             }
-                            
+
                             Section ("Details"){
                                 SpacePicker(selection: Binding(
                                     get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
                                     set: { viewModel.selectedSpaceID = $0 }
                                 ), spaces: spacesForPicker)
-                                
+
                                 Picker(selection: $viewModel.status) {
                                     ForEach(MemoryStatus.allCases) { status in
                                         Text(status.rawValue.capitalized).tag(status)
@@ -178,7 +194,7 @@ struct MemoryEditorView: View {
                                     Label("Status", systemImage: "circle.circle")
                                 }
                                 .pickerStyle(.menu)
-                                
+
                                 Picker(selection: $viewModel.priority) {
                                     ForEach(MemoryPriority.allCases) { priority in
                                         Label(priorityLabel(for: priority), systemImage: priority.iconName)
@@ -189,7 +205,7 @@ struct MemoryEditorView: View {
                                 }
                                 .pickerStyle(.menu)
                             }
-                            
+
                             Menu("Preferences") {
                                 Toggle(isOn: $viewModel.autoCompleteChecklist) {
                                     Label("Auto-complete when checklist is done", systemImage: "checkmark.circle")
@@ -216,7 +232,7 @@ struct MemoryEditorView: View {
                                 .disabled(true)
                                 .foregroundStyle(.secondary)
                             }
-                            
+
                         } label: {
                             Image(systemName: "ellipsis")
                                 .font(.system(size: 16, weight: .semibold))
@@ -224,9 +240,9 @@ struct MemoryEditorView: View {
                         }
                         .tint(.white)
                         .glassEffect(.regular.interactive())
-                       
-                       
-                        
+
+
+
 //                        Button {
 //                            commitChecklistDrafts()
 //                            Task {
@@ -337,10 +353,7 @@ struct MemoryEditorView: View {
     private var navigationTitle: String { isEditing ? "Edit Memory" : "New Memory" }
 
     private func titleHeaderView() -> some View {
-        VStack(spacing: 0) {
-            Spacer()
-                .frame(height: 70)
-
+        VStack(spacing: 12) {
             TextField("Memory", text: $viewModel.title, axis: .vertical)
                 .font(.title)
                 .fontWeight(.bold)
@@ -350,7 +363,6 @@ struct MemoryEditorView: View {
                 .focused($isTitleFocused)
             Divider()
         }
-        .padding(.horizontal, 10)
         .contentShape(Rectangle())
         .allowsHitTesting(true)
     }
@@ -376,7 +388,7 @@ struct MemoryEditorView: View {
         Section("Content") {
             TextEditor(text: $viewModel.body)
                 .frame(minHeight: 100)
-            
+
             ForEach(viewModel.checklistItems) { item in
                 ChecklistItemEditor(
                     item: binding(for: item),
@@ -851,6 +863,14 @@ private struct CameraCaptureView: UIViewControllerRepresentable {
     }
 }
 
+private struct HeaderHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 // MARK: - Trigger Inline Forms
 
 private struct MemoryEditorTriggerButtonsBar: View {
@@ -875,10 +895,6 @@ private struct MemoryEditorTriggerButtonsBar: View {
             )
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 20)
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
     }
 }
 
