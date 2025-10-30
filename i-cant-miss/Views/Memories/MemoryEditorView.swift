@@ -41,7 +41,7 @@ struct MemoryEditorView: View {
     init(environment: AppEnvironment,
          memory: MemoryModel? = nil,
          defaultSpace: SpaceModel? = nil,
-        template: MemoryEditorTemplate = .blank) {
+         template: MemoryEditorTemplate = .blank) {
         _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
             environment: environment,
             attachmentStore: environment.attachmentStore,
@@ -217,7 +217,7 @@ struct MemoryEditorView: View {
                                         Label("Add Photo from Library", systemImage: "photo.on.rectangle")
                                     }
                                 }
-                                .disabled(isProcessingPhotos)
+                                             .disabled(isProcessingPhotos)
 
                                 Button {
                                     handleCameraButtonTapped()
@@ -261,31 +261,6 @@ struct MemoryEditorView: View {
                         }
                         .tint(.white)
                         .glassEffect(.regular.interactive())
-
-
-
-//                        Button {
-//                            commitChecklistDrafts()
-//                            Task {
-//                                let success = await viewModel.save()
-//                                if success { dismiss() }
-//                            }
-//                        } label: {
-//                            Group {
-//                                if viewModel.isSaving {
-//                                    ProgressView()
-//                                        .tint(.white)
-//                                } else {
-//                                    Image(systemName: "checkmark")
-//                                        .font(.system(size: 16, weight: .semibold))
-//                                        .foregroundStyle(.primary)
-//                                }
-//                            }
-//                            .frame(width: 44, height: 44)
-//                            .glassEffect(.regular.interactive().tint(.accent))
-//                        }
-//                        .disabled(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-//                        .opacity(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -307,6 +282,9 @@ struct MemoryEditorView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                saveActionBar
             }
             .sheet(isPresented: $showScheduleSheet) {
                 MemoryScheduleTriggerSheet(viewModel: viewModel)
@@ -373,17 +351,58 @@ struct MemoryEditorView: View {
 
     private var navigationTitle: String { isEditing ? "Edit Memory" : "New Memory" }
 
+    private var saveButtonTitle: String { isEditing ? "Save" : "Create" }
+
+    private var isSaveDisabled: Bool {
+        viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var saveActionBar: some View {
+        VStack(spacing: 12) {
+            Button(role: .confirm) {
+                commitChecklistDrafts()
+                Task {
+                    let success = await viewModel.save()
+                    if success { dismiss() }
+                }
+            } label: {
+                Group {
+                    if viewModel.isSaving {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Label(saveButtonTitle, systemImage: "checkmark")
+                            .font(.title3.bold())
+                    }
+                }
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glassProminent)
+            .disabled(isSaveDisabled)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
+    }
+
     private func titleHeaderView() -> some View {
         VStack(spacing: 12) {
-            TextField("Memory", text: $viewModel.title, axis: .vertical)
+            TextField("Memory", text: $viewModel.title)
                 .font(.title)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
                 .lineLimit(1)
                 .focused($isTitleFocused)
-            Divider()
+                .onSubmit {
+                    isTitleFocused = false
+                }
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .glassEffect(.regular.interactive())
         .contentShape(Rectangle())
         .allowsHitTesting(true)
     }
@@ -922,7 +941,7 @@ private struct MemoryScheduleTriggerInlineForm: View {
             } label: {
                 HStack {
                     Label(schedulePrimaryText, systemImage: "calendar.badge.clock")
-                        .font(.caption2)
+                        .font(.caption)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer()
@@ -948,12 +967,12 @@ private struct MemoryScheduleTriggerInlineForm: View {
             } label: {
                 Label("Schedule", systemImage: "calendar.badge.plus")
                     .foregroundStyle(.accent)
-                    .font(.caption2)
+                    .font(.caption)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.glass)
         }
@@ -989,7 +1008,7 @@ private struct MemoryLocationTriggerInlineForm: View {
             } label: {
                 HStack {
                     Label(location.name ?? "Location", systemImage: "mappin.circle.fill")
-                        .font(.caption2)
+                        .font(.caption)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer()
@@ -1015,12 +1034,12 @@ private struct MemoryLocationTriggerInlineForm: View {
             } label: {
                 Label("Location", systemImage: "mappin.circle.fill")
                     .foregroundStyle(.accent)
-                    .font(.caption2)
+                    .font(.caption)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.glass)
         }
@@ -1042,7 +1061,7 @@ private struct MemoryPersonTriggerInlineForm: View {
             } label: {
                 HStack {
                     Label(person.name, systemImage: "person.crop.circle.fill")
-                        .font(.caption2)
+                        .font(.caption)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer()
@@ -1068,12 +1087,12 @@ private struct MemoryPersonTriggerInlineForm: View {
             } label: {
                 Label("Person", systemImage: "person.crop.circle.badge.plus")
                     .foregroundStyle(.accent)
-                    .font(.caption2)
+                    .font(.caption)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.glass)
         }
