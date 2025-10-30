@@ -11,6 +11,7 @@ struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onSelectMemory: (MemoryModel) -> Void
 
+    @EnvironmentObject private var environment: AppEnvironment
     @State private var showingFilterSheet = false
     @State private var searchText = ""
     @State private var selectedMemoryType: MemoryType?
@@ -19,6 +20,10 @@ struct MemoryTimelineView: View {
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
+    @State private var isMultiSelecting = false
+    @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
+    @State private var isPerformingBulkAction = false
+    @State private var showingDeleteConfirmation = false
 
     @Namespace private var animation
 
@@ -62,9 +67,27 @@ struct MemoryTimelineView: View {
         return parts.isEmpty ? "All" : parts.joined(separator: " • ")
     }
 
+    private var navigationTitleText: String {
+        if isMultiSelecting {
+            if selectedMemoryIDs.isEmpty {
+                return "Select Memories"
+            }
+            return "\(selectedMemoryIDs.count) Selected"
+        }
+        return "Timeline"
+    }
+
+    private var deleteConfirmationMessage: String {
+        let count = selectedMemoryIDs.count
+        if count == 1 {
+            return "This will permanently remove 1 memory."
+        }
+        return "This will permanently remove \(count) memories."
+    }
+
     var body: some View {
         NavigationStack {
-            ScrollView{
+            ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if isSearching {
                         searchResultsSection
@@ -78,9 +101,33 @@ struct MemoryTimelineView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 70)
             }
-            .navigationTitle("Timeline")
+            .navigationTitle(navigationTitleText)
             .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
             .toolbar {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    if isMultiSelecting {
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .disabled(selectedMemoryIDs.isEmpty || isPerformingBulkAction)
+                        .accessibilityLabel("Delete selected memories")
+                    }
+
+                    Button {
+                        toggleMultiSelection()
+                    } label: {
+                        if isMultiSelecting {
+                            Text("Done")
+                                .fontWeight(.semibold)
+                        } else {
+                            Label("Select", systemImage: "checkmark.circle")
+                        }
+                    }
+                    .disabled(isPerformingBulkAction)
+                }
+
                 ToolbarItem(placement: .principal) {
                     Button {
                         filterSheetDetent = .large
@@ -107,6 +154,7 @@ struct MemoryTimelineView: View {
                         .padding(.vertical, 8)
                         .glassEffect(.regular.interactive())
                     }
+                    .disabled(isMultiSelecting || isPerformingBulkAction)
                 }
             }
             .sheet(isPresented: $showingFilterSheet) {
@@ -119,6 +167,16 @@ struct MemoryTimelineView: View {
                 .onAppear { filterSheetDetent = .large }
                 .presentationDetents([.large], selection: $filterSheetDetent)
             }
+            .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    performBulkDeletion()
+                }
+                .disabled(isPerformingBulkAction)
+
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(deleteConfirmationMessage)
+            }
         }
     }
 
@@ -129,12 +187,7 @@ struct MemoryTimelineView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(filteredMemories) { memory in
-                    Button {
-                        onSelectMemory(memory)
-                    } label: {
-                        MemoryCardView(memory: memory)
-                    }
-                    .buttonStyle(.plain)
+                    memoryButton(for: memory)
                 }
             }
         } header: {
@@ -175,12 +228,7 @@ struct MemoryTimelineView: View {
                         ) {
                             VStack(alignment: .leading, spacing: 12) {
                                 ForEach(section.memories) { memory in
-                                    Button {
-                                        onSelectMemory(memory)
-                                    } label: {
-                                        MemoryCardView(memory: memory)
-                                    }
-                                    .buttonStyle(.plain)
+                                    memoryButton(for: memory)
                                 }
                             }
                             .padding(.top)
@@ -207,13 +255,8 @@ struct MemoryTimelineView: View {
                         .padding(.top)
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
-                        ForEach(memories, id: \.self) { memory in
-                            Button {
-                                onSelectMemory(memory)
-                            } label: {
-                                MemoryCardView(memory: memory)
-                            }
-                            .buttonStyle(.plain)
+                        ForEach(memories) { memory in
+                            memoryButton(for: memory)
                         }
                     }
                     .padding(.top)
@@ -254,6 +297,120 @@ struct MemoryTimelineView: View {
                 }
             }
         )
+    }
+
+    private func memoryButton(for memory: MemoryModel) -> some View {
+        Button {
+            if isMultiSelecting {
+                toggleMemorySelection(memory)
+            } else {
+                onSelectMemory(memory)
+            }
+        } label: {
+            MemoryCardView(memory: memory)
+                .overlay(selectionOverlay(for: memory))
+                .overlay(alignment: .topTrailing) {
+                    selectionBadge(for: memory)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(isPerformingBulkAction)
+    }
+
+    private func toggleMemorySelection(_ memory: MemoryModel) {
+        let id = memory.id
+        if selectedMemoryIDs.contains(id) {
+            selectedMemoryIDs.remove(id)
+        } else {
+            selectedMemoryIDs.insert(id)
+        }
+    }
+
+    private func isMemorySelected(_ memory: MemoryModel) -> Bool {
+        selectedMemoryIDs.contains(memory.id)
+    }
+
+    @ViewBuilder
+    private func selectionOverlay(for memory: MemoryModel) -> some View {
+        if isMultiSelecting {
+            let isSelected = isMemorySelected(memory)
+            ZStack {
+                if !isSelected {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color.black.opacity(0.05))
+                }
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(isSelected ? Color.accent : Color.secondary.opacity(0.3), lineWidth: isSelected ? 3 : 1)
+                    .animation(.easeInOut(duration: 0.2), value: isSelected)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func selectionBadge(for memory: MemoryModel) -> some View {
+        if isMultiSelecting {
+            let isSelected = isMemorySelected(memory)
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.title2.weight(.medium))
+                .foregroundStyle(isSelected ? Color.accent : Color.secondary)
+                .padding(16)
+                .animation(.easeInOut(duration: 0.2), value: isSelected)
+        }
+    }
+
+    private func toggleMultiSelection() {
+        if isMultiSelecting {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isMultiSelecting = false
+            }
+            selectedMemoryIDs.removeAll()
+        } else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isMultiSelecting = true
+            }
+            selectedMemoryIDs.removeAll()
+            searchText = ""
+        }
+        showingFilterSheet = false
+        showingDeleteConfirmation = false
+    }
+
+    private func performBulkDeletion() {
+        let ids = selectedMemoryIDs
+        guard !ids.isEmpty else { return }
+        isPerformingBulkAction = true
+        Task {
+            await deleteMemories(withIDs: ids)
+            await MainActor.run {
+                selectedMemoryIDs.removeAll()
+                isMultiSelecting = false
+                isPerformingBulkAction = false
+            }
+        }
+    }
+
+    private func deleteMemories(withIDs ids: Set<MemoryModel.ID>) async {
+        for id in ids {
+            guard let memory = memoryService.memory(id: id),
+                  let origin = memory.metadata.origin else {
+                continue
+            }
+
+            do {
+                switch origin {
+                case .reminder(let reminderID):
+                    try await environment.reminderService.deleteReminder(id: reminderID)
+                case .note(let noteID):
+                    try await environment.noteService.deleteNote(id: noteID)
+                case .todoList(let listID):
+                    try await environment.todoService.deleteList(id: listID)
+                }
+            } catch {
+                // Silently ignore failures for now; individual services surface errors independently.
+            }
+        }
+
+        await memoryService.refresh(force: true)
     }
 }
 
