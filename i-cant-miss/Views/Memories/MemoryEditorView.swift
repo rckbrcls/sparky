@@ -389,12 +389,12 @@ struct MemoryEditorView: View {
 
     private func titleHeaderView() -> some View {
         VStack(spacing: 12) {
-            TextField("Memory", text: $viewModel.title)
+            TextField("Memory", text: $viewModel.title, axis: .vertical)
                 .font(.title)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
-                .lineLimit(1)
+                .lineLimit(2)
                 .focused($isTitleFocused)
                 .onSubmit {
                     isTitleFocused = false
@@ -967,7 +967,7 @@ private struct MemoryScheduleTriggerInlineForm: View {
             } label: {
                 Label("Schedule", systemImage: "calendar.badge.plus")
                     .foregroundStyle(.accent)
-                    .font(.caption)
+                    .font(.caption.bold())
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .padding(.vertical, 6)
@@ -1034,7 +1034,7 @@ private struct MemoryLocationTriggerInlineForm: View {
             } label: {
                 Label("Location", systemImage: "mappin.circle.fill")
                     .foregroundStyle(.accent)
-                    .font(.caption)
+                    .font(.caption.bold())
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .padding(.vertical, 6)
@@ -1087,7 +1087,7 @@ private struct MemoryPersonTriggerInlineForm: View {
             } label: {
                 Label("Person", systemImage: "person.crop.circle.badge.plus")
                     .foregroundStyle(.accent)
-                    .font(.caption)
+                    .font(.caption.bold())
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .padding(.vertical, 6)
