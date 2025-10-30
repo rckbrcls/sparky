@@ -31,6 +31,8 @@ struct MemoryEditorView: View {
     @State private var isPhotosExpanded = false
     @State private var isDetailsExpanded = false
     @State private var isPreferencesExpanded = false
+    @State private var showMenu = false
+    
     private let isEditing: Bool
     private let defaultHeaderHeight: CGFloat = 150
     private let minHeaderHeight: CGFloat = 80
@@ -95,11 +97,15 @@ struct MemoryEditorView: View {
                             .listRowSeparator(.hidden)
                             .id("scrollTop")
 
+                        MemoryEditorTriggerButtonsBar(
+                            viewModel: viewModel,
+                            showScheduleSheet: $showScheduleSheet,
+                            showLocationPicker: $showLocationPicker,
+                            showPersonSheet: $showPersonSheet
+                        )
+
                         bodySection
-                        triggersSection
                         photosSection
-                        detailsSection
-                        extrasSection
                     }
                     .listStyle(.insetGrouped)
                     .scrollContentBackground(.hidden)
@@ -114,7 +120,6 @@ struct MemoryEditorView: View {
                     }
                 }
 
-                // Minimized Header - aparece apenas quando o expanded está sumindo
                 VStack(spacing: 0) {
                     Button {
                         scrollToTopAndFocus()
@@ -151,29 +156,99 @@ struct MemoryEditorView: View {
                         }
 
                         Spacer()
-
-                        Button {
-                            commitChecklistDrafts()
-                            Task {
-                                let success = await viewModel.save()
-                                if success { dismiss() }
-                            }
-                        } label: {
-                            Group {
-                                if viewModel.isSaving {
-                                    ProgressView()
-                                        .tint(.white)
-                                } else {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(.primary)
+                        
+                        Menu {
+                            HStack{
+                                Toggle(isOn: $viewModel.isPinned) {
+                                    Label("Pinned", systemImage: "pin.fill")
                                 }
                             }
-                            .frame(width: 44, height: 44)
-                            .glassEffect(.regular.interactive().tint(.accent))
+                            
+                            Section ("Details"){
+                                SpacePicker(selection: Binding(
+                                    get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
+                                    set: { viewModel.selectedSpaceID = $0 }
+                                ), spaces: spacesForPicker)
+                                
+                                Picker(selection: $viewModel.status) {
+                                    ForEach(MemoryStatus.allCases) { status in
+                                        Text(status.rawValue.capitalized).tag(status)
+                                    }
+                                } label: {
+                                    Label("Status", systemImage: "circle.circle")
+                                }
+                                .pickerStyle(.menu)
+                                
+                                Picker(selection: $viewModel.priority) {
+                                    ForEach(MemoryPriority.allCases) { priority in
+                                        Label(priorityLabel(for: priority), systemImage: priority.iconName)
+                                            .tag(priority)
+                                    }
+                                } label: {
+                                    Label("Priority", systemImage: "flag.fill")
+                                }
+                                .pickerStyle(.menu)
+                            }
+                            
+                            Menu("Preferences") {
+                                Toggle(isOn: $viewModel.autoCompleteChecklist) {
+                                    Label("Auto-complete when checklist is done", systemImage: "checkmark.circle")
+                                }
+                                .disabled(!viewModel.canToggleAutoComplete)
+                                .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
+
+                                Toggle(isOn: $viewModel.isPinned) {
+                                    Label("Show in Today view", systemImage: "calendar")
+                                }
+
+                                Toggle(isOn: Binding(
+                                    get: { !viewModel.triggers.isEmpty },
+                                    set: { _ in }
+                                )) {
+                                    Label("Enable notifications", systemImage: "bell.badge")
+                                }
+                                .disabled(true)
+                                .foregroundStyle(.secondary)
+
+                                Toggle(isOn: .constant(false)) {
+                                    Label("Archive when completed", systemImage: "archivebox")
+                                }
+                                .disabled(true)
+                                .foregroundStyle(.secondary)
+                            }
+                            
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 44, height: 44)
                         }
-                        .disabled(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .opacity(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
+                        .tint(.white)
+                        .glassEffect(.regular.interactive())
+                       
+                       
+                        
+//                        Button {
+//                            commitChecklistDrafts()
+//                            Task {
+//                                let success = await viewModel.save()
+//                                if success { dismiss() }
+//                            }
+//                        } label: {
+//                            Group {
+//                                if viewModel.isSaving {
+//                                    ProgressView()
+//                                        .tint(.white)
+//                                } else {
+//                                    Image(systemName: "checkmark")
+//                                        .font(.system(size: 16, weight: .semibold))
+//                                        .foregroundStyle(.primary)
+//                                }
+//                            }
+//                            .frame(width: 44, height: 44)
+//                            .glassEffect(.regular.interactive().tint(.accent))
+//                        }
+//                        .disabled(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+//                        .opacity(viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -297,39 +372,6 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var detailsSection: some View {
-        Section {
-            DisclosureGroup(isExpanded: $isDetailsExpanded) {
-                SpacePicker(selection: Binding(
-                    get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
-                    set: { viewModel.selectedSpaceID = $0 }
-                ), spaces: spacesForPicker)
-
-                Toggle(isOn: $viewModel.isPinned) {
-                    Label("Pinned", systemImage: "pin.fill")
-                }
-
-                Picker(selection: $viewModel.status) {
-                    ForEach(MemoryStatus.allCases) { status in
-                        Text(status.rawValue.capitalized).tag(status)
-                    }
-                } label: {
-                    Label("Status", systemImage: "circle.circle")
-                }
-
-                Picker(selection: $viewModel.priority) {
-                    ForEach(MemoryPriority.allCases) { priority in
-                        Label(priorityLabel(for: priority), systemImage: priority.iconName)
-                            .tag(priority)
-                    }
-                } label: {
-                    Label("Priority", systemImage: "flag.fill")
-                }
-            } label: {
-                Label("Details", systemImage: "info.circle")
-            }
-        }
-    }
     private var bodySection: some View {
         Section("Content") {
             TextEditor(text: $viewModel.body)
@@ -427,55 +469,12 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var triggersSection: some View {
-        Section {
-            MemoryScheduleTriggerInlineForm(viewModel: viewModel, showSheet: $showScheduleSheet)
-
-            MemoryLocationTriggerInlineForm(
-                viewModel: viewModel,
-                showLocationPicker: $showLocationPicker
-            )
-
-            MemoryPersonTriggerInlineForm(
-                viewModel: viewModel,
-                showSheet: $showPersonSheet
-            )
-        } header: {
-            Label("Triggers & Due Date", systemImage: "bolt.fill")
-        }
-    }
-
     private var dueDateSection: some View {
         Section("Due Date") {
             Toggle("Add due date", isOn: $viewModel.dueDateEnabled.animation())
             if viewModel.dueDateEnabled {
                 DatePicker("Date", selection: $viewModel.dueDate, displayedComponents: [.date])
                 DatePicker("Time", selection: $viewModel.dueDate, displayedComponents: [.hourAndMinute])
-            }
-        }
-    }
-
-    private var extrasSection: some View {
-        Section {
-            DisclosureGroup(isExpanded: $isPreferencesExpanded) {
-                Toggle("Auto-complete when checklist is done", isOn: $viewModel.autoCompleteChecklist)
-                    .disabled(!viewModel.canToggleAutoComplete)
-                    .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
-
-                Toggle("Show in Today view", isOn: $viewModel.isPinned)
-
-                Toggle("Enable notifications", isOn: Binding(
-                    get: { !viewModel.triggers.isEmpty },
-                    set: { _ in }
-                ))
-                .disabled(true)
-                .foregroundStyle(.secondary)
-
-                Toggle("Archive when completed", isOn: .constant(false))
-                    .disabled(true)
-                    .foregroundStyle(.secondary)
-            } label: {
-                Label("Preferences", systemImage: "gearshape")
             }
         }
     }
@@ -682,6 +681,7 @@ private struct SpacePicker: View {
         } label: {
             Label("Space", systemImage: "folder")
         }
+        .pickerStyle(.menu)
     }
 }
 
@@ -853,6 +853,35 @@ private struct CameraCaptureView: UIViewControllerRepresentable {
 
 // MARK: - Trigger Inline Forms
 
+private struct MemoryEditorTriggerButtonsBar: View {
+    @ObservedObject var viewModel: MemoryEditorViewModel
+    @Binding var showScheduleSheet: Bool
+    @Binding var showLocationPicker: Bool
+    @Binding var showPersonSheet: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            MemoryScheduleTriggerInlineForm(
+                viewModel: viewModel,
+                showSheet: $showScheduleSheet
+            )
+            MemoryLocationTriggerInlineForm(
+                viewModel: viewModel,
+                showLocationPicker: $showLocationPicker
+            )
+            MemoryPersonTriggerInlineForm(
+                viewModel: viewModel,
+                showSheet: $showPersonSheet
+            )
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 20)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+}
+
 private struct MemoryScheduleTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
@@ -875,15 +904,10 @@ private struct MemoryScheduleTriggerInlineForm: View {
                 showSheet = true
             } label: {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(schedulePrimaryText)
-                            .font(.body)
-                        if let detail = scheduleDetailText {
-                            Text(detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    Label(schedulePrimaryText, systemImage: "calendar")
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption)
@@ -893,7 +917,7 @@ private struct MemoryScheduleTriggerInlineForm: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.clearScheduleTriggers()
@@ -905,16 +929,16 @@ private struct MemoryScheduleTriggerInlineForm: View {
             Button {
                 showSheet = true
             } label: {
-                HStack {
-                    Label("Add schedule or due date", systemImage: "plus.circle.fill")
-                        .foregroundStyle(.accent)
-                    Spacer()
-                }
+                Label("Schedule", systemImage: "plus.circle.fill")
+                    .foregroundStyle(.accent)
+                    .font(.body)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
         }
     }
 
@@ -931,27 +955,6 @@ private struct MemoryScheduleTriggerInlineForm: View {
         return "Custom schedule"
     }
 
-    private var scheduleDetailText: String? {
-        var parts: [String] = []
-
-        if let date = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate {
-            parts.append("Reminder: " + date.formatted(date: .abbreviated, time: .shortened))
-        }
-
-        if let recurrence = timeTrigger?.recurrenceRule {
-            var text = "Repeats \(recurrence.frequency.title.lowercased())"
-            if recurrence.interval > 1 {
-                text += " every \(recurrence.interval)"
-            }
-            parts.append(text)
-        }
-        if let mask = weekdayTrigger?.weekdayMask,
-           mask != 0,
-           timeTrigger?.fireDate != nil {
-            parts.append(weekdayMaskSummary(mask: mask))
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " • ")
-    }
 }
 
 private struct MemoryLocationTriggerInlineForm: View {
@@ -968,13 +971,10 @@ private struct MemoryLocationTriggerInlineForm: View {
                 showLocationPicker = true
             } label: {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(location.name ?? "Location")
-                            .font(.body)
-                        Text("\(Int(location.radius))m • \(location.event.label)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Label(location.name ?? "Location", systemImage: "mappin.circle")
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption)
@@ -984,7 +984,7 @@ private struct MemoryLocationTriggerInlineForm: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.removeTrigger(id: trigger.id)
@@ -996,16 +996,16 @@ private struct MemoryLocationTriggerInlineForm: View {
             Button {
                 showLocationPicker = true
             } label: {
-                HStack {
-                    Label("Add location trigger", systemImage: "plus.circle.fill")
-                        .foregroundStyle(.accent)
-                    Spacer()
-                }
+                Label("Location", systemImage: "plus.circle.fill")
+                    .foregroundStyle(.accent)
+                    .font(.body)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
         }
     }
 }
@@ -1024,15 +1024,10 @@ private struct MemoryPersonTriggerInlineForm: View {
                 showSheet = true
             } label: {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(person.name)
-                            .font(.body)
-                        if person.contactIdentifier != nil {
-                            Text("Linked contact")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    Label(person.name, systemImage: "person.crop.circle")
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption)
@@ -1042,7 +1037,7 @@ private struct MemoryPersonTriggerInlineForm: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
             .swipeActions {
                 Button(role: .destructive) {
                     viewModel.removeTrigger(id: trigger.id)
@@ -1054,16 +1049,16 @@ private struct MemoryPersonTriggerInlineForm: View {
             Button {
                 showSheet = true
             } label: {
-                HStack {
-                    Label("Add person trigger", systemImage: "plus.circle.fill")
-                        .foregroundStyle(.accent)
-                    Spacer()
-                }
+                Label("Person", systemImage: "plus.circle.fill")
+                    .foregroundStyle(.accent)
+                    .font(.body)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glass)
         }
     }
 }
