@@ -18,6 +18,7 @@ struct MemoryTimelineView: View {
     @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
+    @State private var isInboxExpanded = true
 
     @Namespace private var animation
 
@@ -195,28 +196,35 @@ struct MemoryTimelineView: View {
     }
 
     private var inboxSection: some View {
-        Section  {
-            let memories = memoryService.inboxMemories()
-                .filter { isMemoryTypeSelected($0) }
-            if memories.isEmpty {
-                Label("All caught up", systemImage: "checkmark.seal")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(memories, id: \.self) { memory in
-                    Button {
-                        onSelectMemory(memory)
-                    } label: {
-                        MemoryCardView(memory: memory)
+        VStack(alignment: .leading, spacing: 8) {
+            DisclosureGroup(isExpanded: $isInboxExpanded) {
+                let memories = memoryService.inboxMemories()
+                    .filter { isMemoryTypeSelected($0) }
+
+                if memories.isEmpty {
+                    Label("All caught up", systemImage: "checkmark.seal")
+                        .foregroundStyle(.secondary)
+                        .padding(.top)
+                } else {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(memories, id: \.self) { memory in
+                            Button {
+                                onSelectMemory(memory)
+                            } label: {
+                                MemoryCardView(memory: memory)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.top)
                 }
+            } label: {
+                Label("Inbox", systemImage: "tray.fill")
+                    .foregroundStyle(.white)
             }
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
         }
-        header: {
-            Label("Inbox", systemImage: "tray.fill")
-                .padding(.top, 16)
-            Divider()
-        }
+        .padding(.top)
     }
 
     private func isMemoryTypeSelected(_ memory: MemoryModel) -> Bool {
