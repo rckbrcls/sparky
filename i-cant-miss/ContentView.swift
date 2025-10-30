@@ -109,7 +109,7 @@ struct ContentView: View {
                 onEdit: handleMemoryEditRequest
             )
         }
-        .sheet(item: $editorRoute) { route in
+        .fullScreenCover(item: $editorRoute) { route in
             switch route.mode {
             case let .create(space, template):
                 MemoryEditorView(
@@ -117,7 +117,6 @@ struct ContentView: View {
                     defaultSpace: space,
                     template: template
                 )
-                .presentationDetents([.large])
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,
