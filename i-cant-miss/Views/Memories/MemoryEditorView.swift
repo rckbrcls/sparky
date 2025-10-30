@@ -376,7 +376,7 @@ struct MemoryEditorView: View {
         Section("Content") {
             TextEditor(text: $viewModel.body)
                 .frame(minHeight: 100)
-
+            
             ForEach(viewModel.checklistItems) { item in
                 ChecklistItemEditor(
                     item: binding(for: item),
@@ -904,8 +904,8 @@ private struct MemoryScheduleTriggerInlineForm: View {
                 showSheet = true
             } label: {
                 HStack {
-                    Label(schedulePrimaryText, systemImage: "calendar")
-                        .font(.body)
+                    Label(schedulePrimaryText, systemImage: "calendar.badge.clock")
+                        .font(.caption2)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer()
@@ -929,9 +929,9 @@ private struct MemoryScheduleTriggerInlineForm: View {
             Button {
                 showSheet = true
             } label: {
-                Label("Schedule", systemImage: "plus.circle.fill")
+                Label("Schedule", systemImage: "calendar.badge.plus")
                     .foregroundStyle(.accent)
-                    .font(.body)
+                    .font(.caption2)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 .padding(.vertical, 6)
@@ -971,8 +971,8 @@ private struct MemoryLocationTriggerInlineForm: View {
                 showLocationPicker = true
             } label: {
                 HStack {
-                    Label(location.name ?? "Location", systemImage: "mappin.circle")
-                        .font(.body)
+                    Label(location.name ?? "Location", systemImage: "mappin.circle.fill")
+                        .font(.caption2)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer()
@@ -996,9 +996,9 @@ private struct MemoryLocationTriggerInlineForm: View {
             Button {
                 showLocationPicker = true
             } label: {
-                Label("Location", systemImage: "plus.circle.fill")
+                Label("Location", systemImage: "mappin.circle.fill")
                     .foregroundStyle(.accent)
-                    .font(.body)
+                    .font(.caption2)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 .padding(.vertical, 6)
@@ -1024,8 +1024,8 @@ private struct MemoryPersonTriggerInlineForm: View {
                 showSheet = true
             } label: {
                 HStack {
-                    Label(person.name, systemImage: "person.crop.circle")
-                        .font(.body)
+                    Label(person.name, systemImage: "person.crop.circle.fill")
+                        .font(.caption2)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer()
@@ -1049,9 +1049,9 @@ private struct MemoryPersonTriggerInlineForm: View {
             Button {
                 showSheet = true
             } label: {
-                Label("Person", systemImage: "plus.circle.fill")
+                Label("Person", systemImage: "person.crop.circle.badge.plus")
                     .foregroundStyle(.accent)
-                    .font(.body)
+                    .font(.caption2)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 .padding(.vertical, 6)
