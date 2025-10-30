@@ -37,6 +37,7 @@ final class MemoryEditorViewModel: ObservableObject {
     private let existingMemory: MemoryModel?
     private let template: MemoryEditorTemplate
     private let defaultSpace: SpaceModel?
+    private var hasMigratedLegacyAttachments = false
 
     init(environment: AppEnvironment,
          attachmentStore: MemoryAttachmentStore,
@@ -127,18 +128,31 @@ final class MemoryEditorViewModel: ObservableObject {
         checklistItems[index].isCompleted.toggle()
         checklistItems[index].completedAt = checklistItems[index].isCompleted ? (checklistItems[index].completedAt ?? Date()) : nil
     }
-    
-    func addAttachment(data: Data) {
-        attachments.append(MemoryModel.Attachment(
+
+    @MainActor
+    func createAttachment(data: Data) -> MemoryModel.Attachment {
+        let attachment = MemoryModel.Attachment(
             id: UUID(),
             kind: .photo,
             data: data,
             createdAt: Date()
-        ))
+        )
+        attachments.append(attachment)
+        return attachment
     }
 
+    @MainActor
     func removeAttachment(id: UUID) {
         attachments.removeAll { $0.id == id }
+    }
+
+    @MainActor
+    func syncAttachments(withReferencedIDs ids: Set<UUID>) {
+        guard !ids.isEmpty else {
+            attachments.removeAll()
+            return
+        }
+        attachments.removeAll { !ids.contains($0.id) }
     }
 
     func updateSchedule(
@@ -238,6 +252,7 @@ private extension MemoryEditorViewModel {
             selectedSpaceID = defaultSpace?.id ?? environment.spaceService.defaultSpace().id
             applyTemplate(template)
             attachments = []
+            hasMigratedLegacyAttachments = true
         }
     }
 
@@ -268,6 +283,7 @@ private extension MemoryEditorViewModel {
         showChecklist = !checklistItems.isEmpty
         autoCompleteChecklist = memory.metadata.autoCompleteOnChecklistCompletion
         attachments = memory.attachments
+        migrateLegacyAttachmentsIfNeeded()
     }
 
     func apply(reminder: ReminderModel) {
@@ -283,6 +299,7 @@ private extension MemoryEditorViewModel {
         if let folder = reminder.folder {
             selectedSpaceID = environment.spaceService.resolveSpace(for: folder).id
         }
+        migrateLegacyAttachmentsIfNeeded()
     }
 
     func apply(note: NoteModel) {
@@ -294,6 +311,7 @@ private extension MemoryEditorViewModel {
         if let folder = note.folder {
             selectedSpaceID = environment.spaceService.resolveSpace(for: folder).id
         }
+        migrateLegacyAttachmentsIfNeeded()
     }
 
     func apply(todoList: TodoListModel) {
@@ -325,6 +343,7 @@ private extension MemoryEditorViewModel {
         if let folder = todoList.folder {
             selectedSpaceID = environment.spaceService.resolveSpace(for: folder).id
         }
+        migrateLegacyAttachmentsIfNeeded()
     }
 
     func applyTemplate(_ template: MemoryEditorTemplate) {
@@ -365,6 +384,36 @@ private extension MemoryEditorViewModel {
             sanitized.detail = item.detail.trimmingCharacters(in: .whitespacesAndNewlines)
             return sanitized
         }
+    }
+
+    func migrateLegacyAttachmentsIfNeeded() {
+        guard !hasMigratedLegacyAttachments else { return }
+        defer { hasMigratedLegacyAttachments = true }
+
+        guard !attachments.isEmpty else { return }
+
+        var updatedBody = body
+        for attachment in attachments {
+            let token = MemoryRichTextFormatter.attachmentToken(for: attachment.id)
+            guard !updatedBody.contains(token) else { continue }
+
+            if !updatedBody.isEmpty {
+                if updatedBody.hasSuffix("\n\n") {
+                    // already spaced
+                } else if updatedBody.hasSuffix("\n") {
+                    updatedBody.append("\n")
+                } else {
+                    updatedBody.append("\n\n")
+                }
+            }
+
+            updatedBody.append(token)
+            if !updatedBody.hasSuffix("\n") {
+                updatedBody.append("\n")
+            }
+        }
+
+        body = updatedBody
     }
 
     func updateExistingMemory(_ memory: MemoryModel,

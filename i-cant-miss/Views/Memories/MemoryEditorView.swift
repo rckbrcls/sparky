@@ -28,11 +28,11 @@ struct MemoryEditorView: View {
     @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
     @State private var scrollViewProxy: ScrollViewProxy?
-    @State private var isPhotosExpanded = false
     @State private var isDetailsExpanded = false
     @State private var isPreferencesExpanded = false
-    @State private var showMenu = false
     @State private var expandedHeaderHeight: CGFloat = 210
+    @StateObject private var bodyEditorController = RichTextEditorController()
+    private let markdownFormatter = MemoryRichTextFormatter()
 
     private let isEditing: Bool
     private let minHeaderHeight: CGFloat = 80
@@ -112,22 +112,23 @@ struct MemoryEditorView: View {
                 }
                 .zIndex(10)
                 ScrollViewReader { proxy in
-                    List {
-                        Color.clear
-                            .frame(height: expandedHeaderHeight - 36)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets())
-                            .listRowSeparator(.hidden)
-                            .id("scrollTop")
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            Color.clear
+                                .frame(height: expandedHeaderHeight - 36)
+                                .frame(maxWidth: .infinity)
+                                .id("scrollTop")
 
-                        bodySection
-                        photosSection
+                            editorContent
+                                .padding(.top, 32)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 32)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .listStyle(.insetGrouped)
-                    .scrollContentBackground(.hidden)
                     .scrollDismissesKeyboard(.interactively)
                     .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                        return geometry.contentOffset.y + geometry.contentInsets.top
+                        geometry.contentOffset.y + geometry.contentInsets.top
                     } action: { _, new in
                         self.scrollOffset = new
                     }
@@ -204,6 +205,26 @@ struct MemoryEditorView: View {
                                     Label("Priority", systemImage: "flag.fill")
                                 }
                                 .pickerStyle(.menu)
+                            }
+
+                            Section("Media") {
+                                PhotosPicker(selection: $photoSelections,
+                                             maxSelectionCount: 5,
+                                             matching: .images) {
+                                    if isProcessingPhotos {
+                                        Label("Adding Photos…", systemImage: "hourglass")
+                                    } else {
+                                        Label("Add Photo from Library", systemImage: "photo.on.rectangle")
+                                    }
+                                }
+                                .disabled(isProcessingPhotos)
+
+                                Button {
+                                    handleCameraButtonTapped()
+                                } label: {
+                                    Label("Take Photo", systemImage: "camera")
+                                }
+                                .disabled(isProcessingPhotos)
                             }
 
                             Menu("Preferences") {
@@ -322,7 +343,7 @@ struct MemoryEditorView: View {
             }
             .fullScreenCover(isPresented: $showCameraPicker) {
                 CameraCaptureView {
-                    addAttachment($0)
+                    insertInlineImage($0)
                     showCameraPicker = false
                 } onCancel: {
                     showCameraPicker = false
@@ -384,11 +405,16 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var bodySection: some View {
-        Section("Content") {
-            TextEditor(text: $viewModel.body)
-                .frame(minHeight: 100)
+    private var editorContent: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            checklistContent
+            editorView
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
+    private var checklistContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(viewModel.checklistItems) { item in
                 ChecklistItemEditor(
                     item: binding(for: item),
@@ -407,76 +433,24 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var photosSection: some View {
-        Section {
-            DisclosureGroup(isExpanded: $isPhotosExpanded) {
-                if viewModel.attachments.isEmpty {
-                    Text("Attach photos to give this memory more context.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(viewModel.attachments) { attachment in
-                                if let image = UIImage(data: attachment.data) {
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(uiImage: image)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 120, height: 120)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(.thinMaterial, lineWidth: 1)
-                                            )
-                                        Button {
-                                            removeAttachment(attachment.id)
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .symbolRenderingMode(.hierarchical)
-                                                .foregroundStyle(.white, .black.opacity(0.6))
-                                                .padding(6)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                } else {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(.secondary.opacity(0.1))
-                                        .frame(width: 120, height: 120)
-                                        .overlay(
-                                            Image(systemName: "photo.fill")
-                                                .font(.system(size: 24))
-                                                .foregroundStyle(.secondary)
-                                        )
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
+    private var editorView: some View {
+        ZStack(alignment: .topLeading) {
+            // Custom UITextView-backed editor renders Markdown content with inline attachments.
+            RichMarkdownEditor(
+                text: $viewModel.body,
+                attachments: viewModel.attachments,
+                formatter: markdownFormatter,
+                controller: bodyEditorController
+            ) { referencedIDs in
+                viewModel.syncAttachments(withReferencedIDs: referencedIDs)
+            }
+            .frame(minHeight: 160)
 
-                PhotosPicker(selection: $photoSelections,
-                             maxSelectionCount: 5,
-                             matching: .images) {
-                    HStack {
-                        if isProcessingPhotos {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                        Label("Add from Library", systemImage: "photo.on.rectangle")
-                    }
-                }
-                .disabled(isProcessingPhotos)
-
-                Button {
-                    handleCameraButtonTapped()
-                } label: {
-                    Label("Open Camera", systemImage: "camera")
-                }
-                .disabled(isProcessingPhotos)
-            } label: {
-                Label("Photos", systemImage: "photo.stack")
+            if viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("Write something memorable…")
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 8)
+                    .padding(.leading, 4)
             }
         }
     }
@@ -636,17 +610,44 @@ struct MemoryEditorView: View {
     }
 
     @MainActor
-    private func addAttachment(_ image: UIImage) {
+    private func insertInlineImage(_ image: UIImage) {
         guard let data = image.jpegData(compressionQuality: 0.85) else {
             mediaErrorMessage = "The selected photo could not be processed."
             return
         }
-        viewModel.addAttachment(data: data)
+        insertAttachmentData(data)
     }
 
     @MainActor
-    private func removeAttachment(_ id: UUID) {
-        viewModel.removeAttachment(id: id)
+    private func insertAttachmentData(_ data: Data) {
+        let attachment = viewModel.createAttachment(data: data)
+        // Try to inject directly at the current caret; fall back to token insertion if the editor is not ready yet.
+        if !bodyEditorController.insertAttachment(attachment) {
+            appendTokenToBody(for: attachment.id)
+        }
+    }
+
+    private func appendTokenToBody(for attachmentID: UUID) {
+        let token = MemoryRichTextFormatter.attachmentToken(for: attachmentID)
+        var updatedBody = viewModel.body
+
+        if !updatedBody.contains(token) {
+            if !updatedBody.isEmpty {
+                if updatedBody.hasSuffix("\n\n") {
+                    // already has enough spacing
+                } else if updatedBody.hasSuffix("\n") {
+                    updatedBody.append("\n")
+                } else {
+                    updatedBody.append("\n\n")
+                }
+            }
+
+            updatedBody.append(token)
+            if !updatedBody.hasSuffix("\n") {
+                updatedBody.append("\n")
+            }
+            viewModel.body = updatedBody
+        }
     }
 
     private func loadPhotos(from items: [PhotosPickerItem]) async {
@@ -660,7 +661,7 @@ struct MemoryEditorView: View {
                    let image = UIImage(data: data),
                    let jpegData = image.jpegData(compressionQuality: 0.85) {
                     await MainActor.run {
-                        viewModel.addAttachment(data: jpegData)
+                        insertAttachmentData(jpegData)
                     }
                 } else {
                     await MainActor.run {
