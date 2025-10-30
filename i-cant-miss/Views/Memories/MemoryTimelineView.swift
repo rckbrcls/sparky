@@ -17,6 +17,7 @@ struct MemoryTimelineView: View {
     @State private var selectedSection: MemoryService.TimelineSection.Kind?
     @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
+    @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
 
     @Namespace private var animation
 
@@ -167,21 +168,27 @@ struct MemoryTimelineView: View {
                 }
             } else {
                 ForEach(sections) { section in
-                    Section {
-                        ForEach(section.memories) { memory in
-                            Button {
-                                onSelectMemory(memory)
-                            } label: {
-                                MemoryCardView(memory: memory)
+                    VStack(alignment: .leading, spacing: 8) {
+                        DisclosureGroup(
+                            isExpanded: sectionExpansionBinding(for: section.kind)
+                        ) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(section.memories) { memory in
+                                    Button {
+                                        onSelectMemory(memory)
+                                    } label: {
+                                        MemoryCardView(memory: memory)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
-                            .buttonStyle(.plain)
+                            .padding(.top)
+                        } label: {
+                            Label(section.kind.title, systemImage: section.kind.systemImage)
+                                .foregroundStyle(.white)
                         }
-                    } header: {
-                        Label(section.kind.title, systemImage: section.kind.systemImage)
-                            .padding(.top, 16)
-                        Divider()
                     }
-
+                    .padding(.top)
                 }
             }
         }
@@ -224,6 +231,21 @@ struct MemoryTimelineView: View {
         case .todoList:
             return selectedType == .todo
         }
+    }
+
+    private func sectionExpansionBinding(for kind: MemoryService.TimelineSection.Kind) -> Binding<Bool> {
+        Binding(
+            get: { !collapsedSections.contains(kind) },
+            set: { isExpanded in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    if isExpanded {
+                        collapsedSections.remove(kind)
+                    } else {
+                        collapsedSections.insert(kind)
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -392,7 +414,7 @@ struct FilterSheetView: View {
                         Label("Close", systemImage: "xmark")
                     }
                 }
-                
+
                 ToolbarItem(placement: .destructiveAction) {
                     Button(role: .destructive) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
