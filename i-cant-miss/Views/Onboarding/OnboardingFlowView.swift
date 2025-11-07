@@ -7,12 +7,18 @@
 
 import SwiftUI
 
+private enum OnboardingStep: Int, CaseIterable, Identifiable {
+    case welcome, triggers, spaces, memories
+
+    var id: Int { rawValue }
+    var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
+    var isLast: Bool { next == nil }
+}
+
 struct OnboardingFlowView: View {
     let onFinish: () -> Void
 
-    @State private var selection = 0
-
-    private let totalSteps = 4
+    @State private var selection: OnboardingStep = .welcome
 
     var body: some View {
         NavigationStack {
@@ -20,35 +26,17 @@ struct OnboardingFlowView: View {
                 background
                     .ignoresSafeArea()
 
-                GeometryReader { proxy in
-                    TabView(selection: $selection) {
-                        welcomeStep
-                            .frame(width: proxy.size.width, height: proxy.size.height)
-                            .tag(0)
-                            .tabBarSpacer()
-
-                        triggersStep
-                            .frame(width: proxy.size.width, height: proxy.size.height)
-                            .tag(1)
-                            .tabBarSpacer()
-
-                        spacesStep
-                            .frame(width: proxy.size.width, height: proxy.size.height)
-                            .tag(2)
-                            .tabBarSpacer()
-
-                        memoriesStep
-                            .frame(width: proxy.size.width, height: proxy.size.height)
-                            .tag(3)
+                TabView(selection: $selection) {
+                    ForEach(OnboardingStep.allCases) { step in
+                        slide(for: step)
+                            .tag(step)
                             .tabBarSpacer()
                     }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipped()
-                    .zeroContentMarginsIfAvailable()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.3), value: selection)
                 .ignoresSafeArea()
+                .zeroContentMarginsIfAvailable()
             }
             .ignoresSafeArea()
             .overlay(alignment: .bottom) {
@@ -65,9 +53,8 @@ struct OnboardingFlowView: View {
                     leadingBadge
                 }
 
-
                 ToolbarItem(placement: .topBarTrailing) {
-                    if selection < totalSteps - 1 {
+                    if !selection.isLast {
                         Button("Skip") {
                             onFinish()
                         }
@@ -78,6 +65,20 @@ struct OnboardingFlowView: View {
             }
         }
         .toolbar(.hidden, for: .tabBar)
+    }
+
+    private var isLastStep: Bool {
+        selection.isLast
+    }
+
+    @ViewBuilder
+    private func slide(for step: OnboardingStep) -> some View {
+        OnboardingSlide(
+            title: step.title,
+            message: step.message
+        ) {
+            step.visual
+        }
     }
 
     private var background: some View {
@@ -108,16 +109,16 @@ struct OnboardingFlowView: View {
     private var footer: some View {
         VStack(spacing: 20) {
             HStack(spacing: 8) {
-                ForEach(0..<totalSteps, id: \.self) { index in
+                ForEach(OnboardingStep.allCases) { step in
                     Capsule()
-                        .fill(index == selection ? Color.white : Color.white.opacity(0.35))
-                        .frame(width: index == selection ? 24 : 8, height: 8)
+                        .fill(step == selection ? Color.white : Color.white.opacity(0.35))
+                        .frame(width: step == selection ? 24 : 8, height: 8)
                         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: selection)
                 }
             }
 
             Button(action: continueAction) {
-                Text(selection == totalSteps - 1 ? "Start capturing memories" : "Continue")
+                Text(isLastStep ? "Start capturing memories" : "Continue")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
@@ -133,24 +134,46 @@ struct OnboardingFlowView: View {
     }
 
     private func continueAction() {
-        if selection >= totalSteps - 1 {
-            onFinish()
-        } else {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                selection += 1
-            }
+        if let nextStep = selection.next {
+            selection = nextStep
+            return
         }
+
+        onFinish()
     }
 }
 
-// MARK: - Steps
+private extension OnboardingStep {
+    var title: String {
+        switch self {
+        case .welcome:
+            return "Create unforgettable memories"
+        case .triggers:
+            return "Wake memories with smart triggers"
+        case .spaces:
+            return "Organize everything with Spaces"
+        case .memories:
+            return "Memories that tell stories"
+        }
+    }
 
-private extension OnboardingFlowView {
-    var welcomeStep: some View {
-        OnboardingSlide(
-            title: "Create unforgettable memories",
-            message: "Turn ideas into living memories. Capture what matters and get reminders right on time."
-        ) {
+    var message: String {
+        switch self {
+        case .welcome:
+            return "Turn ideas into living memories. Capture what matters and get reminders right on time."
+        case .triggers:
+            return "Combine time and place to be reminded exactly when it matters."
+        case .spaces:
+            return "Group memories by themes or projects so every idea has a home."
+        case .memories:
+            return "Combine rich text, checklists, and media to watch your timeline evolve."
+        }
+    }
+
+    @ViewBuilder
+    var visual: some View {
+        switch self {
+        case .welcome:
             VStack(spacing: 18) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 52, weight: .semibold))
@@ -172,14 +195,8 @@ private extension OnboardingFlowView {
                 .padding(16)
                 .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
-        }
-    }
 
-    var triggersStep: some View {
-        OnboardingSlide(
-            title: "Wake memories with smart triggers",
-            message: "Combine time and place to be reminded exactly when it matters."
-        ) {
+        case .triggers:
             VStack(spacing: 16) {
                 OnboardingMiniCard(
                     icon: "clock.badge.checkmark",
@@ -203,14 +220,8 @@ private extension OnboardingFlowView {
                 .padding(12)
                 .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
-        }
-    }
 
-    var spacesStep: some View {
-        OnboardingSlide(
-            title: "Organize everything with Spaces",
-            message: "Group memories by themes or projects so every idea has a home."
-        ) {
+        case .spaces:
             VStack(alignment: .leading, spacing: 18) {
                 Text("Space examples")
                     .font(.subheadline.weight(.semibold))
@@ -258,14 +269,8 @@ private extension OnboardingFlowView {
                         .blendMode(.softLight)
                 }
             }
-        }
-    }
 
-    var memoriesStep: some View {
-        OnboardingSlide(
-            title: "Memories that tell stories",
-            message: "Combine rich text, checklists, and media to watch your timeline evolve."
-        ) {
+        case .memories:
             VStack(alignment: .leading, spacing: 16) {
                 OnboardingMemoryPreview(
                     title: "Trip to the Atacama Desert",
