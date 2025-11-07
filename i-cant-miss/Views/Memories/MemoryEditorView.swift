@@ -418,6 +418,19 @@ struct MemoryEditorView: View {
                 .onSubmit {
                     isTitleFocused = false
                 }
+                .onChange(of: viewModel.title) { _, newValue in
+                    guard newValue.contains(where: { $0.isNewline }) else { return }
+                    let sanitized = newValue
+                        .split(whereSeparator: \.isNewline)
+                        .joined(separator: " ")
+                    if sanitized != newValue {
+                        viewModel.title = sanitized
+                    }
+                    DispatchQueue.main.async {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        isTitleFocused = false
+                    }
+                }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
