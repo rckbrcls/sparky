@@ -20,6 +20,7 @@ struct MemoryTimelineView: View {
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
+    @State private var isUpcomingExpanded = true
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -183,8 +184,11 @@ struct MemoryTimelineView: View {
     private var searchResultsSection: some View {
         Section {
             if filteredMemories.isEmpty {
-                Label("No results found", systemImage: "magnifyingglass")
-                    .foregroundStyle(.secondary)
+                emptyStateCard(
+                    systemImage: "magnifyingglass",
+                    title: "No memories match your search",
+                    message: "Try different keywords or reset filters to discover more memories."
+                )
             } else {
                 ForEach(filteredMemories) { memory in
                     memoryButton(for: memory)
@@ -216,10 +220,21 @@ struct MemoryTimelineView: View {
 
         return Group {
             if sections.isEmpty {
-                Section("Upcoming") {
-                    Label("No memories with active triggers", systemImage: "tray")
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    DisclosureGroup(isExpanded: $isUpcomingExpanded) {
+                        emptyStateCard(
+                            systemImage: "tray",
+                            title: "No memories with active triggers",
+                            message: "Create or activate reminders to see them organized on your timeline."
+                        )
+                        .padding(.top)
+                    } label: {
+                        Label("Upcoming", systemImage: "calendar")
+                            .foregroundStyle(.white)
+                    }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isUpcomingExpanded)
                 }
+                .padding(.top)
             } else {
                 ForEach(sections) { section in
                     VStack(alignment: .leading, spacing: 8) {
@@ -250,9 +265,12 @@ struct MemoryTimelineView: View {
                     .filter { isMemoryTypeSelected($0) }
 
                 if memories.isEmpty {
-                    Label("All caught up", systemImage: "checkmark.seal")
-                        .foregroundStyle(.secondary)
-                        .padding(.top)
+                    emptyStateCard(
+                        systemImage: "checkmark.seal",
+                        title: "Inbox is clear",
+                        message: "Create a memory or capture a reminder to keep building your inbox."
+                    )
+                    .padding(.top)
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
                         ForEach(memories) { memory in
@@ -411,6 +429,26 @@ struct MemoryTimelineView: View {
         }
 
         await memoryService.refresh(force: true)
+    }
+
+    private func emptyStateCard(systemImage: String, title: String, message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundStyle(.tertiary)
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 36)
+        .padding(.top, 8)
+        .glassEffect(in: .rect(cornerRadius: 16.0))
     }
 }
 
