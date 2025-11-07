@@ -73,7 +73,7 @@ struct OnboardingFlowView: View {
     }
 
     private var leadingBadge: some View {
-        Label("iCantMiss", systemImage: "sparkles")
+        Label("I Can't Miss", systemImage: "sparkles")
             .font(.footnote.weight(.semibold))
             .padding(.vertical, 6)
             .padding(.horizontal, 10)
@@ -115,16 +115,11 @@ struct OnboardingFlowView: View {
 
             Button(action: continueAction) {
                 Text(isLastStep ? "Start capturing memories" : "Continue")
-                    .font(.headline)
+                    .font(.title3.bold())
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
             }
-            .buttonStyle(.plain)
-            .background(
-                Capsule()
-                    .fill(Color.white.opacity(0.95))
-            )
-            .foregroundStyle(Color.accentColor)
+            .buttonStyle(.glassProminent)
             .shadow(color: Color.accentColor.opacity(0.2), radius: 16, y: 8)
         }
         .padding(.horizontal, 24)
