@@ -51,6 +51,7 @@ struct ContentView: View {
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
+        UITabBar.appearance().isHidden = true
     }
 
     var body: some View {
@@ -123,6 +124,7 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            UITabBar.appearance().isHidden = true
             showingOnboarding = !environment.hasCompletedOnboarding
         }
         .onChange(of: environment.hasCompletedOnboarding) { _, completed in
