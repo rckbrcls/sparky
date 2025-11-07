@@ -42,7 +42,6 @@ struct OnboardingFlowView: View {
                             .tag(3)
                             .tabBarSpacer()
                     }
-                    .toolbar(.hidden, for: .tabBar)
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .clipped()
@@ -65,6 +64,7 @@ struct OnboardingFlowView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     leadingBadge
                 }
+
 
                 ToolbarItem(placement: .topBarTrailing) {
                     if selection < totalSteps - 1 {
@@ -180,7 +180,7 @@ private extension OnboardingFlowView {
             title: "Wake memories with smart triggers",
             message: "Combine time and place to be reminded exactly when it matters."
         ) {
-            VStack(spacing: 18) {
+            VStack(spacing: 16) {
                 OnboardingMiniCard(
                     icon: "clock.badge.checkmark",
                     title: "Smart schedules",
@@ -200,7 +200,7 @@ private extension OnboardingFlowView {
                     title: "Loop in the right people with shared triggers",
                     accent: Color.pink.opacity(0.85)
                 )
-                .padding(16)
+                .padding(12)
                 .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
         }
@@ -316,10 +316,10 @@ private struct OnboardingSlide<Visual: View>: View {
     @ViewBuilder let visual: Visual
 
     var body: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 24) {
             Spacer(minLength: 0)
 
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 Text(title)
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
@@ -333,13 +333,13 @@ private struct OnboardingSlide<Visual: View>: View {
             }
 
             visual
-                .frame(maxWidth: 520)
+                .frame(maxWidth: 480)
                 .frame(maxWidth: .infinity)
 
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 40)
+        .padding(.vertical, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .ignoresSafeArea(edges: .top)
     }
@@ -377,11 +377,11 @@ private struct OnboardingMiniCard: View {
     let accent: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Image(systemName: icon)
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(accent)
-                .padding(10)
+                .padding(8)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(accent.opacity(0.22))
@@ -396,7 +396,7 @@ private struct OnboardingMiniCard: View {
                 .foregroundStyle(.white.opacity(0.8))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlass(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
