@@ -117,7 +117,7 @@ struct OnboardingFlowView: View {
                 Text(isLastStep ? "Start capturing memories" : "Continue")
                     .font(.title3.bold())
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding()
             }
             .buttonStyle(.glassProminent)
             .shadow(color: Color.accentColor.opacity(0.2), radius: 16, y: 8)
