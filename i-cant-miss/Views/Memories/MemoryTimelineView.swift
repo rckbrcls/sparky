@@ -14,8 +14,8 @@ struct MemoryTimelineView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @State private var showingFilterSheet = false
     @State private var searchText = ""
-    @State private var selectedMemoryType: MemoryType?
-    @State private var selectedSection: MemoryService.TimelineSection.Kind?
+    @State private var selectedMemoryTypes: Set<MemoryType> = []
+    @State private var selectedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
@@ -38,11 +38,11 @@ struct MemoryTimelineView: View {
 
     private var activeFilterCount: Int {
         var count = 0
-        if selectedMemoryType != nil {
-            count += 1
+        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
+            count += selectedMemoryTypes.count
         }
-        if selectedSection != nil {
-            count += 1
+        if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
+            count += selectedSections.count
         }
         if !showInbox {
             count += 1
@@ -53,12 +53,18 @@ struct MemoryTimelineView: View {
     private var filterDescription: String {
         var parts: [String] = []
 
-        if let type = selectedMemoryType {
-            parts.append(type.label)
+        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
+            let typeLabels = selectedMemoryTypes
+                .map(\.label)
+                .sorted()
+            parts.append(typeLabels.joined(separator: ", "))
         }
 
-        if let section = selectedSection {
-            parts.append(section.title)
+        if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
+            let sectionTitles = selectedSections
+                .map(\.title)
+                .sorted()
+            parts.append(sectionTitles.joined(separator: ", "))
         }
 
         if !showInbox {
@@ -160,8 +166,8 @@ struct MemoryTimelineView: View {
             }
             .sheet(isPresented: $showingFilterSheet) {
                 FilterSheetView(
-                    selectedMemoryType: $selectedMemoryType,
-                    selectedSection: $selectedSection,
+                    selectedMemoryTypes: $selectedMemoryTypes,
+                    selectedSections: $selectedSections,
                     showInbox: $showInbox,
                     detentSelection: $filterSheetDetent
                 )
@@ -203,10 +209,10 @@ struct MemoryTimelineView: View {
     private var timelineSections: some View {
         let sections = memoryService.timelineSections()
             .filter { section in
-                if let selected = selectedSection {
-                    return section.kind == selected
+                if selectedSections.isEmpty {
+                    return true
                 }
-                return true
+                return selectedSections.contains(section.kind)
             }
             .map { section in
                 MemoryService.TimelineSection(
@@ -289,16 +295,18 @@ struct MemoryTimelineView: View {
     }
 
     private func isMemoryTypeSelected(_ memory: MemoryModel) -> Bool {
-        guard let selectedType = selectedMemoryType else { return true }
+        if selectedMemoryTypes.isEmpty {
+            return true
+        }
         guard let origin = memory.metadata.origin else { return true }
 
         switch origin {
         case .reminder:
-            return selectedType == .reminder
+            return selectedMemoryTypes.contains(.reminder)
         case .note:
-            return selectedType == .note
+            return selectedMemoryTypes.contains(.note)
         case .todoList:
-            return selectedType == .todo
+            return selectedMemoryTypes.contains(.todo)
         }
     }
 
@@ -479,12 +487,10 @@ enum MemoryType: String, CaseIterable, Identifiable {
 struct FilterSheetView: View {
     @Environment(\.dismiss) var dismiss
 
-    @Binding var selectedMemoryType: MemoryType?
-    @Binding var selectedSection: MemoryService.TimelineSection.Kind?
+    @Binding var selectedMemoryTypes: Set<MemoryType>
+    @Binding var selectedSections: Set<MemoryService.TimelineSection.Kind>
     @Binding var showInbox: Bool
     @Binding var detentSelection: PresentationDetent
-
-    @Namespace private var selectionAnimation
 
     var body: some View {
         NavigationStack {
@@ -492,19 +498,17 @@ struct FilterSheetView: View {
                 Section {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedMemoryType = nil
+                            selectedMemoryTypes.removeAll()
                         }
                     } label: {
                         HStack {
                             Label("All Types", systemImage: "square.stack.3d.up.fill")
                                 .foregroundStyle(Color.accent)
                             Spacer()
-                            if selectedMemoryType == nil {
+                            if selectedMemoryTypes.isEmpty || selectedMemoryTypes.count == MemoryType.allCases.count {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accent)
                                     .fontWeight(.semibold)
-                                    .matchedGeometryEffect(id: "typeCheck", in: selectionAnimation)
-                                    .transition(.scale.combined(with: .opacity))
                             }
                         }
                     }
@@ -512,19 +516,17 @@ struct FilterSheetView: View {
                     ForEach(MemoryType.allCases) { type in
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedMemoryType = type
+                                toggleMemoryType(type)
                             }
                         } label: {
                             HStack {
                                 Label(type.label, systemImage: type.systemImage)
                                     .foregroundStyle(Color.accent)
                                 Spacer()
-                                if selectedMemoryType == type {
+                                if isMemoryTypeVisuallySelected(type) {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(Color.accent)
                                         .fontWeight(.semibold)
-                                        .matchedGeometryEffect(id: "typeCheck", in: selectionAnimation)
-                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
                         }
@@ -536,19 +538,17 @@ struct FilterSheetView: View {
                 Section {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedSection = nil
+                            selectedSections.removeAll()
                         }
                     } label: {
                         HStack {
                             Label("All Sections", systemImage: "calendar")
                                 .foregroundStyle(Color.accent)
                             Spacer()
-                            if selectedSection == nil {
+                            if selectedSections.isEmpty || selectedSections.count == MemoryService.TimelineSection.Kind.allCases.count {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accent)
                                     .fontWeight(.semibold)
-                                    .matchedGeometryEffect(id: "sectionCheck", in: selectionAnimation)
-                                    .transition(.scale.combined(with: .opacity))
                             }
                         }
                     }
@@ -556,19 +556,17 @@ struct FilterSheetView: View {
                     ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedSection = kind
+                                toggleSection(kind)
                             }
                         } label: {
                             HStack {
                                 Label(kind.title, systemImage: kind.systemImage)
                                     .foregroundStyle(Color.accent)
                                 Spacer()
-                                if selectedSection == kind {
+                                if isSectionVisuallySelected(kind) {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(Color.accent)
                                         .fontWeight(.semibold)
-                                        .matchedGeometryEffect(id: "sectionCheck", in: selectionAnimation)
-                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
                         }
@@ -608,8 +606,8 @@ struct FilterSheetView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .cancel) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedMemoryType = nil
-                            selectedSection = nil
+                            selectedMemoryTypes.removeAll()
+                            selectedSections.removeAll()
                             showInbox = true
                         }
                         dismiss()
@@ -621,8 +619,8 @@ struct FilterSheetView: View {
                 ToolbarItem(placement: .destructiveAction) {
                     Button(role: .destructive) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedMemoryType = nil
-                            selectedSection = nil
+                            selectedMemoryTypes.removeAll()
+                            selectedSections.removeAll()
                             showInbox = true
                         }
                     } label: {
@@ -638,6 +636,36 @@ struct FilterSheetView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func isMemoryTypeVisuallySelected(_ type: MemoryType) -> Bool {
+        if selectedMemoryTypes.isEmpty {
+            return true
+        }
+        return selectedMemoryTypes.contains(type)
+    }
+
+    private func toggleMemoryType(_ type: MemoryType) {
+        if selectedMemoryTypes.contains(type) {
+            selectedMemoryTypes.remove(type)
+        } else {
+            selectedMemoryTypes.insert(type)
+        }
+    }
+
+    private func isSectionVisuallySelected(_ kind: MemoryService.TimelineSection.Kind) -> Bool {
+        if selectedSections.isEmpty {
+            return true
+        }
+        return selectedSections.contains(kind)
+    }
+
+    private func toggleSection(_ kind: MemoryService.TimelineSection.Kind) {
+        if selectedSections.contains(kind) {
+            selectedSections.remove(kind)
+        } else {
+            selectedSections.insert(kind)
         }
     }
 }

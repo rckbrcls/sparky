@@ -18,19 +18,23 @@ struct SpaceDetailView: View {
     let onCreateSpace: () -> Void
 
     @State private var showingFilterSheet = false
-    @State private var selectedMemoryType: MemoryType?
-    @State private var selectedSection: MemoryService.TimelineSection.Kind?
+    @State private var selectedMemoryTypes: Set<MemoryType> = []
+    @State private var selectedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var searchText = ""
+    @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
+    @State private var isInboxExpanded = true
+    @State private var isUpcomingExpanded = true
+    @State private var isOtherExpanded = true
 
     private var activeFilterCount: Int {
         var count = 0
-        if selectedMemoryType != nil {
-            count += 1
+        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
+            count += selectedMemoryTypes.count
         }
-        if selectedSection != nil {
-            count += 1
+        if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
+            count += selectedSections.count
         }
         if !showInbox {
             count += 1
@@ -50,15 +54,59 @@ struct SpaceDetailView: View {
         !trimmedSearchText.isEmpty
     }
 
+    private var nonInboxMemories: [MemoryModel] {
+        filteredMemories.filter { !isInboxMemory($0) }
+    }
+
+    private var inboxMemories: [MemoryModel] {
+        filteredMemories.filter { isInboxMemory($0) }
+    }
+
+    private var timelineSectionsForSpace: [MemoryService.TimelineSection] {
+        let referenceDate = Date()
+        var sections: [MemoryService.TimelineSection] = []
+
+        for kind in MemoryService.TimelineSection.Kind.allCases {
+            let memories = nonInboxMemories.filter { memory in
+                switch kind {
+                case .recurring:
+                    return memory.hasRecurringTriggers
+                default:
+                    guard let sectionKind = sectionKind(for: memory, referenceDate: referenceDate) else {
+                        return false
+                    }
+                    return sectionKind == kind
+                }
+            }
+
+            if !memories.isEmpty {
+                sections.append(MemoryService.TimelineSection(kind: kind, memories: memories))
+            }
+        }
+
+        return sections
+    }
+
+    private var ungroupedMemories: [MemoryModel] {
+        let sectionIDs = Set(timelineSectionsForSpace.flatMap(\.memories).map(\.id))
+        return nonInboxMemories.filter { !sectionIDs.contains($0.id) }
+    }
+
     private var filterDescription: String {
         var parts: [String] = []
 
-        if let type = selectedMemoryType {
-            parts.append(type.label)
+        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
+            let typeLabels = selectedMemoryTypes
+                .map(\.label)
+                .sorted()
+            parts.append(typeLabels.joined(separator: ", "))
         }
 
-        if let section = selectedSection {
-            parts.append(section.title)
+        if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
+            let sectionTitles = selectedSections
+                .map(\.title)
+                .sorted()
+            parts.append(sectionTitles.joined(separator: ", "))
         }
 
         if !showInbox {
@@ -98,7 +146,10 @@ struct SpaceDetailView: View {
                 if isSearching {
                     searchResultsSection
                 } else {
-                    memoriesSection
+                    timelineContent
+                    if showInbox {
+                        inboxSection
+                    }
                 }
 
             }
@@ -123,8 +174,8 @@ struct SpaceDetailView: View {
         }
         .sheet(isPresented: $showingFilterSheet) {
             FilterSheetView(
-                selectedMemoryType: $selectedMemoryType,
-                selectedSection: $selectedSection,
+                selectedMemoryTypes: $selectedMemoryTypes,
+                selectedSections: $selectedSections,
                 showInbox: $showInbox,
                 detentSelection: $filterSheetDetent
             )
@@ -169,59 +220,106 @@ struct SpaceDetailView: View {
     private var searchResultsSection: some View {
         Section {
             if filteredMemories.isEmpty {
-                Label("No results found", systemImage: "magnifyingglass")
-                    .foregroundStyle(.secondary)
+                emptyStateCard(
+                    systemImage: "magnifyingglass",
+                    title: "No memories match your search",
+                    message: "Try different keywords or reset filters to discover more memories."
+                )
             } else {
                 ForEach(filteredMemories) { memory in
-                    Button {
-                        onSelectMemory(memory)
-                    } label: {
-                        MemoryCardView(memory: memory)
-                    }
-                    .buttonStyle(.plain)
+                    memoryButton(for: memory)
                 }
             }
-        } header: {
-            Divider()
-                .padding(.top, 8)
         }
     }
 
     @ViewBuilder
-    private var memoriesSection: some View {
+    private var timelineContent: some View {
+        let sections = timelineSectionsForSpace
+
         Section {
-            if filteredMemories.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 40, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                    Text(emptyStateTitle)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    Text(emptyStateMessage)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 12)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 36)
-                .padding(.top, 8)
-                .glassEffect(in: .rect(cornerRadius: 16.0))
-            } else {
-                ForEach(filteredMemories) { memory in
-                    Button {
-                        onSelectMemory(memory)
+            Group {
+                if sections.isEmpty && ungroupedMemories.isEmpty {
+                    DisclosureGroup(isExpanded: $isUpcomingExpanded) {
+                        emptyStateCard(
+                            systemImage: "tray",
+                            title: emptyStateTitle,
+                            message: emptyStateMessage
+                        )
+                        .padding(.top)
                     } label: {
-                        MemoryCardView(memory: memory)
+                        Label("Upcoming", systemImage: "calendar")
+                            .foregroundStyle(.white)
                     }
-                    .buttonStyle(.plain)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isUpcomingExpanded)
+                    .padding(.top)
+                } else {
+                    ForEach(sections) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            DisclosureGroup(
+                                isExpanded: sectionExpansionBinding(for: section.kind)
+                            ) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    ForEach(section.memories) { memory in
+                                        memoryButton(for: memory)
+                                    }
+                                }
+                                .padding(.top)
+                            } label: {
+                                Label(section.kind.title, systemImage: section.kind.systemImage)
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .padding(.top)
+                    }
+
+                    if !ungroupedMemories.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            DisclosureGroup(isExpanded: $isOtherExpanded) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    ForEach(ungroupedMemories) { memory in
+                                        memoryButton(for: memory)
+                                    }
+                                }
+                                .padding(.top)
+                            } label: {
+                                Label("Other Memories", systemImage: "tray")
+                                    .foregroundStyle(.white)
+                            }
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isOtherExpanded)
+                        }
+                        .padding(.top)
+                    }
                 }
             }
-        } header: {
-            Divider()
-                .padding(.top, 8)
         }
+    }
+
+    private var inboxSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            DisclosureGroup(isExpanded: $isInboxExpanded) {
+                if inboxMemories.isEmpty {
+                    emptyStateCard(
+                        systemImage: "checkmark.seal",
+                        title: "Inbox is clear",
+                        message: "Create a memory or capture a reminder to keep building your inbox."
+                    )
+                    .padding(.top)
+                } else {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(inboxMemories) { memory in
+                            memoryButton(for: memory)
+                        }
+                    }
+                    .padding(.top)
+                }
+            } label: {
+                Label("Inbox", systemImage: "tray.fill")
+                    .foregroundStyle(.white)
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
+        }
+        .padding(.top)
     }
 
     private var filteredMemories: [MemoryModel] {
@@ -246,33 +344,37 @@ struct SpaceDetailView: View {
     }
 
     private func matchesSelectedType(_ memory: MemoryModel) -> Bool {
-        guard let selectedType = selectedMemoryType else { return true }
+        if selectedMemoryTypes.isEmpty {
+            return true
+        }
         guard let origin = memory.metadata.origin else { return true }
 
         switch origin {
         case .reminder:
-            return selectedType == .reminder
+            return selectedMemoryTypes.contains(.reminder)
         case .note:
-            return selectedType == .note
+            return selectedMemoryTypes.contains(.note)
         case .todoList:
-            return selectedType == .todo
+            return selectedMemoryTypes.contains(.todo)
         }
     }
 
     private func matchesSelectedSection(_ memory: MemoryModel, referenceDate: Date = Date()) -> Bool {
-        guard let selected = selectedSection else { return true }
-
-        switch selected {
-        case .recurring:
-            return memory.hasRecurringTriggers
-        case .today, .nextSevenDays, .later:
-            guard memory.status == .active,
-                  memory.hasTriggers,
-                  let kind = sectionKind(for: memory, referenceDate: referenceDate) else {
-                return false
-            }
-            return kind == selected
+        if selectedSections.isEmpty || selectedSections.count == MemoryService.TimelineSection.Kind.allCases.count {
+            return true
         }
+
+        if selectedSections.contains(.recurring), memory.hasRecurringTriggers {
+            return true
+        }
+
+        guard memory.status == .active,
+              memory.hasTriggers,
+              let kind = sectionKind(for: memory, referenceDate: referenceDate) else {
+            return false
+        }
+
+        return selectedSections.contains(kind)
     }
 
     private func sectionKind(for memory: MemoryModel, referenceDate: Date = Date()) -> MemoryService.TimelineSection.Kind? {
@@ -299,6 +401,50 @@ struct SpaceDetailView: View {
     private func memoryCount(for space: SpaceModel) -> Int {
         let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { ids.contains($0.space.id) }.count
+    }
+
+    private func sectionExpansionBinding(for kind: MemoryService.TimelineSection.Kind) -> Binding<Bool> {
+        Binding(
+            get: { !collapsedSections.contains(kind) },
+            set: { isExpanded in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    if isExpanded {
+                        collapsedSections.remove(kind)
+                    } else {
+                        collapsedSections.insert(kind)
+                    }
+                }
+            }
+        )
+    }
+
+    private func memoryButton(for memory: MemoryModel) -> some View {
+        Button {
+            onSelectMemory(memory)
+        } label: {
+            MemoryCardView(memory: memory)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func emptyStateCard(systemImage: String, title: String, message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundStyle(.tertiary)
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 36)
+        .padding(.top, 8)
+        .glassEffect(in: .rect(cornerRadius: 16.0))
     }
 
     private func matchesSearch(_ memory: MemoryModel, query: String) -> Bool {
