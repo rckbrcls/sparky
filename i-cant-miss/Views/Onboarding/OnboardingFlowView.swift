@@ -41,7 +41,7 @@ struct OnboardingFlowView: View {
                 footer
             }
             .padding(.vertical, 32)
-            
+
         }
     }
 
