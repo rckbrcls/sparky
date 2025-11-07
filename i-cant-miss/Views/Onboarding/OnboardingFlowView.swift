@@ -18,57 +18,35 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
 struct OnboardingFlowView: View {
     let onFinish: () -> Void
 
-    @State private var selection: OnboardingStep = .welcome
+    @State private var currentStep: OnboardingStep = .welcome
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                background
-                    .ignoresSafeArea()
+        ZStack {
+            background
+                .ignoresSafeArea()
 
-                TabView(selection: $selection) {
+            VStack(spacing: 32) {
+                header
+
+                TabView(selection: $currentStep) {
                     ForEach(OnboardingStep.allCases) { step in
                         slide(for: step)
                             .tag(step)
-                            .tabBarSpacer()
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.3), value: selection)
-                .ignoresSafeArea()
-                .zeroContentMarginsIfAvailable()
-            }
-            .ignoresSafeArea()
-            .overlay(alignment: .bottom) {
-                footer
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    leadingBadge
-                }
+                .applyPageTabStyle()
+                .animation(.easeInOut(duration: 0.3), value: currentStep)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    if !selection.isLast {
-                        Button("Skip") {
-                            onFinish()
-                        }
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                    }
-                }
+                footer
             }
+            .padding(.vertical, 32)
+            
         }
-        .toolbar(.hidden, for: .tabBar)
     }
 
     private var isLastStep: Bool {
-        selection.isLast
+        currentStep.isLast
     }
 
     @ViewBuilder
@@ -106,14 +84,32 @@ struct OnboardingFlowView: View {
             .foregroundStyle(.white.opacity(0.9))
     }
 
+    private var header: some View {
+        HStack {
+            leadingBadge
+
+            Spacer(minLength: 0)
+
+            if !currentStep.isLast {
+                Button("Skip") {
+                    onFinish()
+                }
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.9))
+            }
+        }
+        .padding(.top, 8)
+        .padding(.horizontal, 24)
+    }
+
     private var footer: some View {
         VStack(spacing: 20) {
             HStack(spacing: 8) {
                 ForEach(OnboardingStep.allCases) { step in
                     Capsule()
-                        .fill(step == selection ? Color.white : Color.white.opacity(0.35))
-                        .frame(width: step == selection ? 24 : 8, height: 8)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: selection)
+                        .fill(step == currentStep ? Color.white : Color.white.opacity(0.35))
+                        .frame(width: step == currentStep ? 24 : 8, height: 8)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: currentStep)
                 }
             }
 
@@ -131,15 +127,18 @@ struct OnboardingFlowView: View {
             .foregroundStyle(Color.accentColor)
             .shadow(color: Color.accentColor.opacity(0.2), radius: 16, y: 8)
         }
+        .padding(.horizontal, 24)
     }
 
     private func continueAction() {
-        if let nextStep = selection.next {
-            selection = nextStep
+        guard let nextStep = currentStep.next else {
+            onFinish()
             return
         }
 
-        onFinish()
+        withAnimation(.easeInOut(duration: 0.35)) {
+            currentStep = nextStep
+        }
     }
 }
 
@@ -491,6 +490,15 @@ private extension View {
             contentMargins(.zero, for: .scrollContent)
         } else {
             self
+        }
+    }
+
+    @ViewBuilder
+    func applyPageTabStyle() -> some View {
+        if #available(iOS 17.0, *) {
+            self.tabViewStyle(.page(indexDisplayMode: .never))
+        } else {
+            self.tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         }
     }
 }
