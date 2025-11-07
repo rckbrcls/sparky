@@ -18,6 +18,7 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
 struct OnboardingFlowView: View {
     let onFinish: () -> Void
 
+    @EnvironmentObject private var environment: AppEnvironment
     @State private var currentStep: OnboardingStep = .welcome
 
     var body: some View {
@@ -55,7 +56,7 @@ struct OnboardingFlowView: View {
             title: step.title,
             message: step.message
         ) {
-            step.visual
+            step.visual(environment: environment)
         }
     }
 
@@ -165,7 +166,7 @@ private extension OnboardingStep {
     }
 
     @ViewBuilder
-    var visual: some View {
+    func visual(environment: AppEnvironment) -> some View {
         switch self {
         case .welcome:
             VStack(spacing: 18) {
@@ -222,27 +223,19 @@ private extension OnboardingStep {
                     .foregroundStyle(.white.opacity(0.85))
 
                 VStack(spacing: 12) {
-                    OnboardingSpaceRow(
-                        icon: "briefcase.fill",
-                        title: "Work",
-                        description: "Projects and decisions ready for the next meeting.",
-                        color: Color.orange
-                    )
-
-                    OnboardingSpaceRow(
-                        icon: "heart.circle.fill",
-                        title: "Family",
-                        description: "Celebrations and small wins to share together.",
-                        color: Color.red
-                    )
-
-                    OnboardingSpaceRow(
-                        icon: "leaf.fill",
-                        title: "Wellness",
-                        description: "Self-care rituals that keep you balanced.",
-                        color: Color.green
-                    )
+                    ForEach(OnboardingSampleData.spaces) { entry in
+                        SpaceRowView(space: entry.space, count: entry.count)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .fill(Color.white.opacity(0.06))
+                            )
+                            .allowsHitTesting(false)
+                    }
                 }
+                .padding(12)
+                .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(alignment: .bottom) {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(
@@ -259,31 +252,22 @@ private extension OnboardingStep {
                         .frame(maxWidth: .infinity)
                         .frame(height: 90)
                         .padding(.horizontal, 6)
+                        .padding(.bottom, 4)
                         .allowsHitTesting(false)
                         .blendMode(.softLight)
                 }
+                .allowsHitTesting(false)
             }
 
         case .memories:
             VStack(alignment: .leading, spacing: 16) {
-                OnboardingMemoryPreview(
-                    title: "Trip to the Atacama Desert",
-                    subtitle: "Prep checklist complete • Location trigger at the airport",
-                    highlights: [
-                        ("checklist", "8/8 items completed"),
-                        ("location.fill", "Reminder at GRU arrival")
-                    ]
-                )
-
-                OnboardingMemoryPreview(
-                    title: "Investor meeting",
-                    subtitle: "Quick notes + reminder 30 min before",
-                    highlights: [
-                        ("doc.richtext.fill", "Key points summary"),
-                        ("timer", "Recurring trigger every Monday")
-                    ]
-                )
+                ForEach(OnboardingSampleData.memories) { memory in
+                    MemoryCardView(memory: memory)
+                        .environmentObject(environment)
+                        .allowsHitTesting(false)
+                }
             }
+            .padding(.horizontal, 4)
             .overlay(alignment: .bottom) {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(
@@ -300,11 +284,180 @@ private extension OnboardingStep {
                     .frame(maxWidth: .infinity)
                     .frame(height: 80)
                     .padding(.horizontal, 4)
+                    .padding(.bottom, 4)
                     .allowsHitTesting(false)
                     .blendMode(.softLight)
             }
         }
     }
+}
+
+// MARK: - Sample Content
+
+private enum OnboardingSampleData {
+    struct SpaceEntry: Identifiable {
+        let id = UUID()
+        let space: SpaceModel
+        let count: Int
+    }
+
+    static let spaces: [SpaceEntry] = {
+        let work = SpaceModel(
+            id: UUID(),
+            name: "Work",
+            colorHex: "#F97316",
+            iconName: "briefcase.fill",
+            sortOrder: 0
+        )
+
+        let family = SpaceModel(
+            id: UUID(),
+            name: "Family",
+            colorHex: "#EC4899",
+            iconName: "heart.circle.fill",
+            sortOrder: 1
+        )
+
+        let adventures = SpaceModel(
+            id: UUID(),
+            name: "Adventures",
+            colorHex: "#14B8A6",
+            iconName: "airplane",
+            sortOrder: 2
+        )
+
+        return [
+            SpaceEntry(space: work, count: 24),
+            SpaceEntry(space: family, count: 12),
+            SpaceEntry(space: adventures, count: 6)
+        ]
+    }()
+
+    static let memories: [MemoryModel] = {
+        guard
+            let workSpace = spaces.first(where: { $0.space.name == "Work" })?.space,
+            let adventureSpace = spaces.first(where: { $0.space.name == "Adventures" })?.space
+        else {
+            return []
+        }
+
+        let now = Date()
+        let calendar = Calendar.current
+
+        let travelChecklist: [CheckItemModel] = [
+            CheckItemModel(
+                id: UUID(),
+                title: "Confirm hotel pickup",
+                detail: nil,
+                isCompleted: true,
+                sortOrder: 0,
+                createdAt: now.addingTimeInterval(-86_400 * 6),
+                updatedAt: now.addingTimeInterval(-86_400 * 5),
+                completedAt: now.addingTimeInterval(-86_400 * 5)
+            ),
+            CheckItemModel(
+                id: UUID(),
+                title: "Pack camera gear",
+                detail: nil,
+                isCompleted: true,
+                sortOrder: 1,
+                createdAt: now.addingTimeInterval(-86_400 * 5),
+                updatedAt: now.addingTimeInterval(-86_400 * 3),
+                completedAt: now.addingTimeInterval(-86_400 * 3)
+            ),
+            CheckItemModel(
+                id: UUID(),
+                title: "Download offline maps",
+                detail: nil,
+                isCompleted: false,
+                sortOrder: 2,
+                createdAt: now.addingTimeInterval(-86_400 * 4),
+                updatedAt: now.addingTimeInterval(-3_600),
+                completedAt: nil
+            )
+        ]
+
+        let travelTrigger = MemoryTriggerModel(
+            id: UUID(),
+            type: .location,
+            fireDate: calendar.date(byAdding: .day, value: 3, to: now),
+            startDate: now,
+            recurrenceRule: nil,
+            timeZoneIdentifier: TimeZone.current.identifier,
+            weekdayMask: 0,
+            isActive: true,
+            location: MemoryTriggerModel.TriggerLocation(
+                latitude: -22.9068,
+                longitude: -43.1729,
+                radius: 300,
+                name: "GRU Airport",
+                event: .onEntry
+            ),
+            person: nil,
+            spacedStage: 0,
+            lastReviewDate: nil,
+            ignoreCount: 0
+        )
+
+        let investorTrigger = MemoryTriggerModel(
+            id: UUID(),
+            type: .time,
+            fireDate: calendar.date(byAdding: .hour, value: 6, to: now),
+            startDate: now,
+            recurrenceRule: RecurrenceRule(frequency: .weekly, interval: 1),
+            timeZoneIdentifier: TimeZone.current.identifier,
+            weekdayMask: 0,
+            isActive: true,
+            location: nil,
+            person: MemoryTriggerModel.TriggerPerson(
+                name: "Maya Singh",
+                contactIdentifier: nil
+            ),
+            spacedStage: 0,
+            lastReviewDate: nil,
+            ignoreCount: 0
+        )
+
+        let travelMemory = MemoryModel(
+            id: UUID(),
+            title: "Trip to the Atacama Desert",
+            body: "Final checks complete. Flight reminder when arriving at GRU.",
+            createdAt: now.addingTimeInterval(-86_400 * 10),
+            updatedAt: now,
+            status: .active,
+            isPinned: true,
+            priority: .high,
+            dueDate: calendar.date(byAdding: .day, value: 12, to: now),
+            space: adventureSpace,
+            triggers: [travelTrigger],
+            checkItems: travelChecklist,
+            snoozeCount: 1,
+            lastCompletionDate: nil,
+            metadata: MemoryModel.Metadata(origin: .reminder(UUID())),
+            attachments: []
+        )
+
+        let investorMemory = MemoryModel(
+            id: UUID(),
+            title: "Investor update with Maya",
+            body: "Share growth metrics and highlight the new onboarding experience.",
+            createdAt: now.addingTimeInterval(-86_400 * 2),
+            updatedAt: now,
+            status: .active,
+            isPinned: false,
+            priority: .medium,
+            dueDate: calendar.date(byAdding: .day, value: 2, to: now),
+            space: workSpace,
+            triggers: [investorTrigger],
+            checkItems: [],
+            snoozeCount: 0,
+            lastCompletionDate: nil,
+            metadata: MemoryModel.Metadata(origin: .note(UUID())),
+            attachments: []
+        )
+
+        return [travelMemory, investorMemory]
+    }()
 }
 
 // MARK: - Building Blocks
@@ -401,81 +554,6 @@ private struct OnboardingMiniCard: View {
     }
 }
 
-private struct OnboardingSpaceRow: View {
-    let icon: String
-    let title: String
-    let description: String
-    let color: Color
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: icon)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(color)
-                .frame(width: 40, height: 40)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(color.opacity(0.22))
-                )
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.white)
-
-                Text(description)
-                    .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(16)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-    }
-}
-
-private struct OnboardingMemoryPreview: View {
-    let title: String
-    let subtitle: String
-    let highlights: [(String, String)]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.white)
-
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-
-            Divider()
-                .overlay(Color.white.opacity(0.3))
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
-                ForEach(highlights.indices, id: \.self) { index in
-                    let highlight = highlights[index]
-                    Label(highlight.1, systemImage: highlight.0)
-                        .font(.footnote.weight(.medium))
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 10)
-                        .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.12))
-                        )
-                        .foregroundStyle(.white.opacity(0.85))
-                }
-            }
-        }
-        .padding(18)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-}
-
 // MARK: - Utilities
 
 private extension View {
@@ -499,5 +577,8 @@ private extension View {
 }
 
 #Preview {
-    OnboardingFlowView(onFinish: {})
+    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    environment.bootstrap()
+    return OnboardingFlowView(onFinish: {})
+        .environmentObject(environment)
 }
