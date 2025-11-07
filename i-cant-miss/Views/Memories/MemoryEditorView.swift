@@ -25,6 +25,7 @@ struct MemoryEditorView: View {
     @State private var photoSelections: [PhotosPickerItem] = []
     @State private var isProcessingPhotos = false
     @State private var showCameraPicker = false
+    @State private var showPhotoLibraryPicker = false
     @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
     @State private var scrollViewProxy: ScrollViewProxy?
@@ -175,10 +176,42 @@ struct MemoryEditorView: View {
                         Spacer()
 
                         Menu {
-                            HStack{
-                                Toggle(isOn: $viewModel.isPinned) {
-                                    Label("Pinned", systemImage: "pin.fill")
+                            HStack(spacing: 12) {
+                                Button {
+                                    viewModel.isPinned.toggle()
+                                } label: {
+                                    Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .frame(width: 36, height: 36)
+                                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
+                                        .glassEffect(.regular.interactive())
                                 }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
+
+                                Button {
+                                    showPhotoLibraryPicker = true
+                                } label: {
+                                    Image(systemName: isProcessingPhotos ? "hourglass" : "photo.on.rectangle")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .frame(width: 36, height: 36)
+                                        .glassEffect(.regular.interactive())
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(isProcessingPhotos)
+                                .accessibilityLabel(isProcessingPhotos ? "Processing photos" : "Add photo from library")
+
+                                Button {
+                                    handleCameraButtonTapped()
+                                } label: {
+                                    Image(systemName: "camera")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .frame(width: 36, height: 36)
+                                        .glassEffect(.regular.interactive())
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(isProcessingPhotos)
+                                .accessibilityLabel("Take photo with camera")
                             }
 
                             Section ("Details"){
@@ -205,26 +238,6 @@ struct MemoryEditorView: View {
                                     Label("Priority", systemImage: "flag.fill")
                                 }
                                 .pickerStyle(.menu)
-                            }
-
-                            Section("Media") {
-                                PhotosPicker(selection: $photoSelections,
-                                             maxSelectionCount: 5,
-                                             matching: .images) {
-                                    if isProcessingPhotos {
-                                        Label("Adding Photos…", systemImage: "hourglass")
-                                    } else {
-                                        Label("Add Photo from Library", systemImage: "photo.on.rectangle")
-                                    }
-                                }
-                                             .disabled(isProcessingPhotos)
-
-                                Button {
-                                    handleCameraButtonTapped()
-                                } label: {
-                                    Label("Take Photo", systemImage: "camera")
-                                }
-                                .disabled(isProcessingPhotos)
                             }
 
                             Menu("Preferences") {
@@ -286,6 +299,10 @@ struct MemoryEditorView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 saveActionBar
             }
+            .photosPicker(isPresented: $showPhotoLibraryPicker,
+                          selection: $photoSelections,
+                          maxSelectionCount: 5,
+                          matching: .images)
             .sheet(isPresented: $showScheduleSheet) {
                 MemoryScheduleTriggerSheet(viewModel: viewModel)
             }
@@ -358,7 +375,8 @@ struct MemoryEditorView: View {
     }
 
     private var saveActionBar: some View {
-        VStack(spacing: 12) {
+        HStack {
+            Spacer()
             Button(role: .confirm) {
                 commitChecklistDrafts()
                 Task {
@@ -366,24 +384,29 @@ struct MemoryEditorView: View {
                     if success { dismiss() }
                 }
             } label: {
-                Group {
+                ZStack {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .glassEffect(.regular.interactive())
+                        .frame(width: 56, height: 56)
+
                     if viewModel.isSaving {
                         ProgressView()
-                            .tint(.white)
+                            .tint(.primary)
                     } else {
-                        Label(saveButtonTitle, systemImage: "checkmark")
-                            .font(.title3.bold())
+                        Image(systemName: "checkmark")
+                            .font(.title2.bold())
+                            .foregroundStyle(.primary)
                     }
                 }
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
             .disabled(isSaveDisabled)
+            .opacity(isSaveDisabled ? 0.45 : 1)
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
-        .padding(.bottom, 12)
+        .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
     }
 
