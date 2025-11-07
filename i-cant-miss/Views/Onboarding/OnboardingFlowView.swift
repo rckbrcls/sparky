@@ -42,6 +42,7 @@ struct OnboardingFlowView: View {
                             .tag(3)
                             .tabBarSpacer()
                     }
+                    .toolbar(.hidden, for: .tabBar)
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .clipped()
@@ -76,6 +77,7 @@ struct OnboardingFlowView: View {
                 }
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var background: some View {
@@ -147,15 +149,15 @@ private extension OnboardingFlowView {
     var welcomeStep: some View {
         OnboardingSlide(
             title: "Create unforgettable memories",
-            message: "iCantMiss turns your moments and ideas into living memories. Capture what matters and receive reminders at the perfect time."
+            message: "Turn ideas into living memories. Capture what matters and get reminders right on time."
         ) {
-            VStack(spacing: 20) {
+            VStack(spacing: 18) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 56, weight: .semibold))
+                    .font(.system(size: 52, weight: .semibold))
                     .foregroundStyle(.white)
-                    .shadow(color: .white.opacity(0.4), radius: 12, y: 4)
+                    .shadow(color: .white.opacity(0.35), radius: 12, y: 4)
 
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     OnboardingHighlightRow(
                         icon: "pencil",
                         title: "Capture feelings, commitments, and ideas",
@@ -163,16 +165,11 @@ private extension OnboardingFlowView {
                     )
                     OnboardingHighlightRow(
                         icon: "bell.badge.fill",
-                        title: "Get personalized alerts so you never forget",
+                        title: "Stay on track with personalized alerts",
                         accent: Color.white.opacity(0.75)
                     )
-                    OnboardingHighlightRow(
-                        icon: "photo.on.rectangle.angled",
-                        title: "Add visual attachments to enrich every memory",
-                        accent: Color.white.opacity(0.65)
-                    )
                 }
-                .padding(20)
+                .padding(16)
                 .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
         }
@@ -181,31 +178,30 @@ private extension OnboardingFlowView {
     var triggersStep: some View {
         OnboardingSlide(
             title: "Wake memories with smart triggers",
-            message: "Combine time, location, and people to be reminded in the perfect moment."
+            message: "Combine time and place to be reminded exactly when it matters."
         ) {
-            VStack(spacing: 16) {
-                HStack(spacing: 16) {
-                    OnboardingMiniCard(
-                        icon: "clock.badge.checkmark",
-                        title: "Smart schedules",
-                        description: "Pick specific dates or repeating patterns. Never miss due dates or appointments again.",
-                        accent: Color.blue
-                    )
-
-                    OnboardingMiniCard(
-                        icon: "mappin.and.ellipse",
-                        title: "Places that matter",
-                        description: "Enter or leave key areas and get reminded automatically.",
-                        accent: Color.green
-                    )
-                }
+            VStack(spacing: 18) {
+                OnboardingMiniCard(
+                    icon: "clock.badge.checkmark",
+                    title: "Smart schedules",
+                    description: "Pick specific dates or repeating patterns so nothing slips.",
+                    accent: Color.blue
+                )
 
                 OnboardingMiniCard(
-                    icon: "person.2.wave.2.fill",
-                    title: "Important people",
-                    description: "Trigger memories when you are with someone special. Technology handles the rest.",
-                    accent: Color.pink
+                    icon: "mappin.and.ellipse",
+                    title: "Places that matter",
+                    description: "Arrive or leave a location and receive timely reminders.",
+                    accent: Color.green
                 )
+
+                OnboardingHighlightRow(
+                    icon: "person.2.wave.2.fill",
+                    title: "Loop in the right people with shared triggers",
+                    accent: Color.pink.opacity(0.85)
+                )
+                .padding(16)
+                .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
         }
     }
@@ -213,34 +209,53 @@ private extension OnboardingFlowView {
     var spacesStep: some View {
         OnboardingSlide(
             title: "Organize everything with Spaces",
-            message: "Group memories by themes, life areas, or projects. Spaces keep everything right where it belongs."
+            message: "Group memories by themes or projects so every idea has a home."
         ) {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 18) {
                 Text("Space examples")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.85))
 
-                VStack(spacing: 14) {
+                VStack(spacing: 12) {
                     OnboardingSpaceRow(
                         icon: "briefcase.fill",
                         title: "Work",
-                        description: "Projects, meeting ideas, and critical deliverables always within reach.",
+                        description: "Projects and decisions ready for the next meeting.",
                         color: Color.orange
                     )
 
                     OnboardingSpaceRow(
                         icon: "heart.circle.fill",
                         title: "Family",
-                        description: "Celebrations, daily care, and moments worth sharing together.",
+                        description: "Celebrations and small wins to share together.",
                         color: Color.red
                     )
 
                     OnboardingSpaceRow(
                         icon: "leaf.fill",
                         title: "Wellness",
-                        description: "Self-care routines, habits, and rituals you will want to repeat.",
+                        description: "Self-care rituals that keep you balanced.",
                         color: Color.green
                     )
+                }
+                .overlay(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.clear,
+                                    Color.black.opacity(0.25),
+                                    Color.black.opacity(0.45)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 90)
+                        .padding(.horizontal, 6)
+                        .allowsHitTesting(false)
+                        .blendMode(.softLight)
                 }
             }
         }
@@ -249,7 +264,7 @@ private extension OnboardingFlowView {
     var memoriesStep: some View {
         OnboardingSlide(
             title: "Memories that tell stories",
-            message: "Every memory is alive: combine rich text, checklists, attachments, and watch your timeline evolve."
+            message: "Combine rich text, checklists, and media to watch your timeline evolve."
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 OnboardingMemoryPreview(
@@ -257,8 +272,7 @@ private extension OnboardingFlowView {
                     subtitle: "Prep checklist complete • Location trigger at the airport",
                     highlights: [
                         ("checklist", "8/8 items completed"),
-                        ("location.fill", "Fires when arriving at GRU"),
-                        ("photo", "4 highlight photos")
+                        ("location.fill", "Reminder at GRU arrival")
                     ]
                 )
 
@@ -267,10 +281,28 @@ private extension OnboardingFlowView {
                     subtitle: "Quick notes + reminder 30 min before",
                     highlights: [
                         ("doc.richtext.fill", "Key points summary"),
-                        ("timer", "Recurring trigger, every Monday"),
-                        ("sparkles.rectangle.stack", "Slide deck attachments")
+                        ("timer", "Recurring trigger every Monday")
                     ]
                 )
+            }
+            .overlay(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                Color.black.opacity(0.25),
+                                Color.black.opacity(0.45)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 80)
+                    .padding(.horizontal, 4)
+                    .allowsHitTesting(false)
+                    .blendMode(.softLight)
             }
         }
     }
@@ -284,31 +316,31 @@ private struct OnboardingSlide<Visual: View>: View {
     @ViewBuilder let visual: Visual
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 32) {
-                VStack(spacing: 16) {
-                    Text(title)
-                        .font(.largeTitle.bold())
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.white)
+        VStack(spacing: 28) {
+            Spacer(minLength: 0)
 
-                    Text(message)
-                        .font(.body)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .frame(maxWidth: 420)
-                }
-                .padding(.top, 100)
+            VStack(spacing: 16) {
+                Text(title)
+                    .font(.largeTitle.bold())
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white)
 
-                visual
-                    .frame(maxWidth: .infinity)
+                Text(message)
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .frame(maxWidth: 420)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
-            .frame(maxWidth: .infinity, alignment: .top)
+
+            visual
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 0)
         }
-        .scrollIndicators(.hidden)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .ignoresSafeArea(edges: .top)
     }
 }
@@ -319,21 +351,21 @@ private struct OnboardingHighlightRow: View {
     let accent: Color
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.title3.weight(.semibold))
-                .frame(width: 36, height: 36)
+                .font(.headline.weight(.semibold))
+                .frame(width: 32, height: 32)
                 .background(
                     Circle()
-                        .fill(accent.opacity(0.2))
+                        .fill(accent.opacity(0.18))
                 )
                 .foregroundStyle(accent)
 
             Text(title)
-                .font(.subheadline.weight(.medium))
+                .font(.callout.weight(.medium))
                 .foregroundStyle(Color.white.opacity(0.9))
 
-            Spacer()
+            Spacer(minLength: 0)
         }
     }
 }
@@ -345,28 +377,28 @@ private struct OnboardingMiniCard: View {
     let accent: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
-                .font(.title.weight(.semibold))
+                .font(.title2.weight(.semibold))
                 .foregroundStyle(accent)
-                .padding(12)
+                .padding(10)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(accent.opacity(0.2))
+                        .fill(accent.opacity(0.22))
                 )
 
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(.headline.weight(.semibold))
                 .foregroundStyle(.white)
 
             Text(description)
-                .font(.subheadline)
+                .font(.footnote)
                 .foregroundStyle(.white.opacity(0.8))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(20)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 }
 
@@ -377,29 +409,30 @@ private struct OnboardingSpaceRow: View {
     let color: Color
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
-                .font(.title2.weight(.bold))
+                .font(.title3.weight(.bold))
                 .foregroundStyle(color)
-                .frame(width: 44, height: 44)
+                .frame(width: 40, height: 40)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(color.opacity(0.2))
+                        .fill(color.opacity(0.22))
                 )
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(title)
                     .font(.headline)
                     .foregroundStyle(.white)
 
                 Text(description)
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundStyle(.white.opacity(0.75))
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding(18)
+        .padding(16)
         .liquidGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
@@ -410,8 +443,8 @@ private struct OnboardingMemoryPreview: View {
     let highlights: [(String, String)]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(title)
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -422,15 +455,15 @@ private struct OnboardingMemoryPreview: View {
             }
 
             Divider()
-                .overlay(Color.white.opacity(0.35))
+                .overlay(Color.white.opacity(0.3))
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], alignment: .leading, spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], alignment: .leading, spacing: 8) {
                 ForEach(highlights.indices, id: \.self) { index in
                     let highlight = highlights[index]
                     Label(highlight.1, systemImage: highlight.0)
                         .font(.footnote.weight(.medium))
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 10)
                         .background(
                             Capsule()
                                 .fill(Color.white.opacity(0.12))
@@ -439,7 +472,7 @@ private struct OnboardingMemoryPreview: View {
                 }
             }
         }
-        .padding(22)
+        .padding(18)
         .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }
