@@ -78,3 +78,21 @@ private extension View {
         }
     }
 }
+
+// MARK: - Safe Area Bar
+
+extension View {
+    /// Adds a standard tab bar spacer (55pt height) to hide the native tab bar.
+    /// Use this for tab content views that need to reserve space for a custom tab bar.
+    /// - Parameter edge: The edge where the spacer should be placed (default: .bottom).
+    /// - Returns: A view with tab bar hidden and standard spacer reserved.
+    func tabBarSpacer(edge: VerticalEdge = .bottom) -> some View {
+        self
+            .safeAreaBar(edge: .bottom, spacing: 0, content: {
+                    Text (" ")
+                        .blendMode(.destinationOver)
+                        .frame (height: 55)
+                })
+            .toolbarVisibility(.hidden, for: .tabBar)
+    }
+}

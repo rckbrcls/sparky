@@ -61,12 +61,7 @@ struct ContentView: View {
                         memoryService: environment.memoryService,
                         onSelectMemory: handleMemorySelection
                     )
-                    .safeAreaBar(edge: .bottom, spacing: 0, content: {
-                        Text (" ")
-                            .blendMode(.destinationOver)
-                            .frame (height: 55)
-                    })
-                    .toolbarVisibility(.hidden, for: .tabBar)
+                    .tabBarSpacer()
                 }
 
                 Tab.init(value: .spaces){
@@ -79,22 +74,12 @@ struct ContentView: View {
                         onSelectMemory: handleMemorySelection,
                         onCreateSpace: presentSpaceCreation
                     )
-                    .safeAreaBar(edge: .bottom, spacing: 0, content: {
-                        Text (" ")
-                            .blendMode(.destinationOver)
-                            .frame (height: 55)
-                    })
-                    .toolbarVisibility(.hidden, for: .tabBar)
+                    .tabBarSpacer()
                 }
 
                 Tab.init(value: .settings){
                     SettingsView(environment: environment)
-                        .safeAreaBar(edge: .bottom, spacing: 0, content: {
-                            Text (" ")
-                                .blendMode(.destinationOver)
-                                .frame (height: 55)
-                        })
-                        .toolbarVisibility(.hidden, for: .tabBar)
+                        .tabBarSpacer()
                 }
             }
             .safeAreaBar(edge: .bottom, spacing: 0){
@@ -130,12 +115,12 @@ struct ContentView: View {
         .sheet(isPresented: $showSpaceComposer) {
             SpaceComposerView(environment: environment)
         }
-        .fullScreenCover(isPresented: $showingOnboarding) {
-            OnboardingFlowView {
-                environment.completeOnboarding()
-                showingOnboarding = false
-            }
-        }
+        // .fullScreenCover(isPresented: $showingOnboarding) {
+        //     OnboardingFlowView {
+        //         environment.completeOnboarding()
+        //         showingOnboarding = false
+        //     }
+        // }
         .onAppear {
             showingOnboarding = !environment.hasCompletedOnboarding
         }
