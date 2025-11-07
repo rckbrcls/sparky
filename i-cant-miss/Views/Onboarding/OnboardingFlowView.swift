@@ -144,7 +144,7 @@ private extension OnboardingStep {
         case .welcome:
             return "Capture what matters"
         case .triggers:
-            return "Triggers that anticipate you"
+            return "Smart triggers"
         case .spaces:
             return "Spaces for every plan"
         case .memories:
@@ -157,7 +157,7 @@ private extension OnboardingStep {
         case .welcome:
             return "Turn commitments into living memories so the right trigger always finds you."
         case .triggers:
-            return "Blend time, place, and people to fire reminders exactly when they help."
+            return "Time, place, people for nudges right on cue."
         case .spaces:
             return "Group every promise into Spaces that stay organized and easy to scan."
         case .memories:
@@ -479,6 +479,8 @@ private struct OnboardingSlide<Visual: View>: View {
                 Text(message)
                     .font(.body)
                     .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.white.opacity(0.85))
                     .frame(maxWidth: 420)
             }
