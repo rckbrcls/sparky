@@ -70,9 +70,7 @@ final class SettingsStore: ObservableObject {
 
     @Published var hasCompletedOnboarding: Bool {
         didSet {
-#if !DEBUG
             defaults.set(hasCompletedOnboarding, forKey: Keys.onboardingCompleted)
-#endif
         }
     }
 
@@ -102,11 +100,7 @@ final class SettingsStore: ObservableObject {
         }
         self.preferAlwaysOnLocationAccess = defaults.bool(forKey: Keys.locationAlways)
 
-#if DEBUG
-        self.hasCompletedOnboarding = false
-#else
         self.hasCompletedOnboarding = defaults.bool(forKey: Keys.onboardingCompleted)
-#endif
     }
 
     private static func clamp(minutes: Int, fallback: Int) -> Int {

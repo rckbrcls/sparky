@@ -32,7 +32,7 @@ struct MemoryEditorView: View {
     @State private var isPreferencesExpanded = false
     @State private var expandedHeaderHeight: CGFloat = 210
     @StateObject private var bodyEditorController = RichTextEditorController()
-    private let markdownFormatter = MemoryRichTextFormatter()
+    private let richTextFormatter = MemoryRichTextFormatter()
 
     private let isEditing: Bool
     private let minHeaderHeight: CGFloat = 80
@@ -454,11 +454,11 @@ struct MemoryEditorView: View {
 
     private var editorView: some View {
         ZStack(alignment: .topLeading) {
-            // Custom UITextView-backed editor renders Markdown content with inline attachments.
-            RichMarkdownEditor(
+            // Custom UITextView-backed editor renders rich text content with inline attachments.
+            RichTextEditor(
                 text: $viewModel.body,
                 attachments: viewModel.attachments,
-                formatter: markdownFormatter,
+                formatter: richTextFormatter,
                 controller: bodyEditorController
             ) { referencedIDs in
                 viewModel.syncAttachments(withReferencedIDs: referencedIDs)
