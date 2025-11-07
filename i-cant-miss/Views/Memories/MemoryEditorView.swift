@@ -384,22 +384,18 @@ struct MemoryEditorView: View {
                     if success { dismiss() }
                 }
             } label: {
-                ZStack {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .glassEffect(.regular.interactive())
-                        .frame(width: 56, height: 56)
-
+                Group {
                     if viewModel.isSaving {
                         ProgressView()
-                            .tint(.primary)
+                            .tint(.white)
                     } else {
                         Image(systemName: "checkmark")
-                            .font(.title2.bold())
-                            .foregroundStyle(.primary)
+                            .font(.title3.bold())
                     }
                 }
+                .padding(10)
             }
+            .buttonBorderShape(.circle)
             .buttonStyle(.glassProminent)
             .disabled(isSaveDisabled)
             .opacity(isSaveDisabled ? 0.45 : 1)
@@ -491,8 +487,8 @@ struct MemoryEditorView: View {
             if viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text("Write something memorable…")
                     .foregroundStyle(.secondary)
-                    .padding(.top, 8)
-                    .padding(.leading, 4)
+                    .padding(.top, 12)
+
             }
         }
     }
