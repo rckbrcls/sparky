@@ -25,18 +25,22 @@ struct OnboardingFlowView: View {
                         welcomeStep
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .tag(0)
+                            .tabBarSpacer()
 
                         triggersStep
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .tag(1)
+                            .tabBarSpacer()
 
                         spacesStep
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .tag(2)
+                            .tabBarSpacer()
 
                         memoriesStep
                             .frame(width: proxy.size.width, height: proxy.size.height)
                             .tag(3)
+                            .tabBarSpacer()
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .frame(width: proxy.size.width, height: proxy.size.height)
@@ -47,7 +51,7 @@ struct OnboardingFlowView: View {
                 .ignoresSafeArea()
             }
             .ignoresSafeArea()
-            .safeAreaInset(edge: .bottom) {
+            .overlay(alignment: .bottom) {
                 footer
                     .padding(.horizontal, 24)
                     .padding(.bottom, 24)

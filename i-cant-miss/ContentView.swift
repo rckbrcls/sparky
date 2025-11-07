@@ -82,6 +82,7 @@ struct ContentView: View {
                         .tabBarSpacer()
                 }
             }
+            .toolbar(.hidden, for: .tabBar)
             .safeAreaBar(edge: .bottom, spacing: 0){
                 CustomTabBarView()
                     .padding(.horizontal, 20)
@@ -115,12 +116,12 @@ struct ContentView: View {
         .sheet(isPresented: $showSpaceComposer) {
             SpaceComposerView(environment: environment)
         }
-        // .fullScreenCover(isPresented: $showingOnboarding) {
-        //     OnboardingFlowView {
-        //         environment.completeOnboarding()
-        //         showingOnboarding = false
-        //     }
-        // }
+        .fullScreenCover(isPresented: $showingOnboarding) {
+            OnboardingFlowView {
+                environment.completeOnboarding()
+                showingOnboarding = false
+            }
+        }
         .onAppear {
             showingOnboarding = !environment.hasCompletedOnboarding
         }
