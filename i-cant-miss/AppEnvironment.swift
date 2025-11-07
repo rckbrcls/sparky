@@ -25,6 +25,9 @@ final class AppEnvironment: ObservableObject {
 
     @Published var isBootstrapping = true
     @Published var hasBootstrapped = false
+    @Published var hasCompletedOnboarding = false
+
+    private var cancellables: Set<AnyCancellable> = []
 
     init(persistence: PersistenceController) {
         self.persistence = persistence
@@ -43,11 +46,20 @@ final class AppEnvironment: ObservableObject {
         self.notificationScheduler = NotificationScheduler(settings: settings)
         self.geofenceManager = GeofenceManager()
 
+        self.hasCompletedOnboarding = settings.hasCompletedOnboarding
+
         reminderService.notificationScheduler = notificationScheduler
         reminderService.geofenceManager = geofenceManager
         memoryService.notificationScheduler = notificationScheduler
         memoryService.geofenceManager = geofenceManager
         geofenceManager.notificationScheduler = notificationScheduler
+
+        settings.$hasCompletedOnboarding
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completed in
+                self?.hasCompletedOnboarding = completed
+            }
+            .store(in: &cancellables)
 
         // Mark initialization as complete
         self.isBootstrapping = false
@@ -75,5 +87,14 @@ final class AppEnvironment: ObservableObject {
             hasBootstrapped = true
             isBootstrapping = false
         }
+    }
+
+    func completeOnboarding() {
+#if DEBUG
+        settings.hasCompletedOnboarding = false
+        hasCompletedOnboarding = false
+#else
+        settings.hasCompletedOnboarding = true
+#endif
     }
 }

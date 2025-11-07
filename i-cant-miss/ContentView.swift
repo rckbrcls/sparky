@@ -47,6 +47,7 @@ struct ContentView: View {
     @State private var viewerRoute: MemoryViewerRoute?
     @State private var showSpaceComposer = false
     @State private var activeTab: CustomTab = .home
+    @State private var showingOnboarding = false
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -128,6 +129,20 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSpaceComposer) {
             SpaceComposerView(environment: environment)
+        }
+        .fullScreenCover(isPresented: $showingOnboarding) {
+            OnboardingFlowView {
+                environment.completeOnboarding()
+                showingOnboarding = false
+            }
+        }
+        .onAppear {
+            showingOnboarding = !environment.hasCompletedOnboarding
+        }
+        .onChange(of: environment.hasCompletedOnboarding) { _, completed in
+            withAnimation(.easeInOut) {
+                showingOnboarding = !completed
+            }
         }
     }
 
