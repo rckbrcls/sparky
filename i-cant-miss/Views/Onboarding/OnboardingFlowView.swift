@@ -186,6 +186,11 @@ private extension OnboardingStep {
                         title: "Stay aligned with personal alerts",
                         accent: Color.white.opacity(0.75)
                     )
+                    OnboardingHighlightRow(
+                        icon: "bolt.fill",
+                        title: "Auto-schedule follow-ups fast",
+                        accent: Color.white.opacity(0.65)
+                    )
                 }
                 .padding(16)
                 .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
