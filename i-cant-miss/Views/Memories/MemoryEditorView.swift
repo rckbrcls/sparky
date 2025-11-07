@@ -176,28 +176,20 @@ struct MemoryEditorView: View {
                         Spacer()
 
                         Menu {
-                            HStack(spacing: 12) {
+                            ControlGroup {
                                 Button {
                                     viewModel.isPinned.toggle()
                                 } label: {
                                     Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .frame(width: 36, height: 36)
                                         .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
-                                        .glassEffect(.regular.interactive())
                                 }
-                                .buttonStyle(.plain)
                                 .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
 
                                 Button {
                                     showPhotoLibraryPicker = true
                                 } label: {
                                     Image(systemName: isProcessingPhotos ? "hourglass" : "photo.on.rectangle")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .frame(width: 36, height: 36)
-                                        .glassEffect(.regular.interactive())
                                 }
-                                .buttonStyle(.plain)
                                 .disabled(isProcessingPhotos)
                                 .accessibilityLabel(isProcessingPhotos ? "Processing photos" : "Add photo from library")
 
@@ -205,11 +197,7 @@ struct MemoryEditorView: View {
                                     handleCameraButtonTapped()
                                 } label: {
                                     Image(systemName: "camera")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .frame(width: 36, height: 36)
-                                        .glassEffect(.regular.interactive())
                                 }
-                                .buttonStyle(.plain)
                                 .disabled(isProcessingPhotos)
                                 .accessibilityLabel("Take photo with camera")
                             }
