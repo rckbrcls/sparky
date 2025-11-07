@@ -115,7 +115,7 @@ struct OnboardingFlowView: View {
             }
 
             Button(action: continueAction) {
-                Text(isLastStep ? "Start capturing memories" : "Continue")
+                Text(isLastStep ? "Get started" : "Continue")
                     .font(.title3.bold())
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -142,26 +142,26 @@ private extension OnboardingStep {
     var title: String {
         switch self {
         case .welcome:
-            return "Create unforgettable memories"
+            return "Capture what matters"
         case .triggers:
-            return "Wake memories with smart triggers"
+            return "Triggers that anticipate you"
         case .spaces:
-            return "Organize everything with Spaces"
+            return "Spaces for every plan"
         case .memories:
-            return "Memories that tell stories"
+            return "Timeline of wins"
         }
     }
 
     var message: String {
         switch self {
         case .welcome:
-            return "Turn ideas into living memories. Capture what matters and get reminders right on time."
+            return "Turn commitments into living memories so the right trigger always finds you."
         case .triggers:
-            return "Combine time and place to be reminded exactly when it matters."
+            return "Blend time, place, and people to fire reminders exactly when they help."
         case .spaces:
-            return "Group memories by themes or projects so every idea has a home."
+            return "Group every promise into Spaces that stay organized and easy to scan."
         case .memories:
-            return "Combine rich text, checklists, and media to watch your timeline evolve."
+            return "Review notes, checklists, and media in a single, evolving storyline."
         }
     }
 
@@ -178,12 +178,12 @@ private extension OnboardingStep {
                 VStack(spacing: 10) {
                     OnboardingHighlightRow(
                         icon: "pencil",
-                        title: "Capture feelings, commitments, and ideas",
+                        title: "Capture commitments and ideas",
                         accent: Color.white.opacity(0.85)
                     )
                     OnboardingHighlightRow(
                         icon: "bell.badge.fill",
-                        title: "Stay on track with personalized alerts",
+                        title: "Stay aligned with personal alerts",
                         accent: Color.white.opacity(0.75)
                     )
                 }
@@ -196,29 +196,28 @@ private extension OnboardingStep {
                 OnboardingMiniCard(
                     icon: "clock.badge.checkmark",
                     title: "Smart schedules",
-                    description: "Pick specific dates or repeating patterns so nothing slips.",
+                    description: "Pick one-off dates or simple repeats in seconds.",
                     accent: Color.blue
                 )
 
                 OnboardingMiniCard(
                     icon: "mappin.and.ellipse",
                     title: "Places that matter",
-                    description: "Arrive or leave a location and receive timely reminders.",
+                    description: "Arrive or leave and get nudged right on time.",
                     accent: Color.green
                 )
 
-                OnboardingHighlightRow(
+                OnboardingMiniCard(
                     icon: "person.2.wave.2.fill",
-                    title: "Loop in the right people with shared triggers",
-                    accent: Color.pink.opacity(0.85)
+                    title: "Shared triggers",
+                    description: "Loop in the right people to remember together.",
+                    accent: Color.pink
                 )
-                .padding(12)
-                .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
 
         case .spaces:
             VStack(alignment: .leading, spacing: 18) {
-                Text("Space examples")
+                Text("Sample Spaces")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.85))
 
@@ -420,8 +419,8 @@ private enum OnboardingSampleData {
 
         let travelMemory = MemoryModel(
             id: UUID(),
-            title: "Trip to the Atacama Desert",
-            body: "Final checks complete. Flight reminder when arriving at GRU.",
+            title: "Atacama Desert Trip",
+            body: "Checklist done. Trigger fires as soon as you arrive at GRU.",
             createdAt: now.addingTimeInterval(-86_400 * 10),
             updatedAt: now,
             status: .active,
@@ -440,7 +439,7 @@ private enum OnboardingSampleData {
         let investorMemory = MemoryModel(
             id: UUID(),
             title: "Investor update with Maya",
-            body: "Share growth metrics and highlight the new onboarding experience.",
+            body: "Share growth metrics and highlight the new trigger-first onboarding.",
             createdAt: now.addingTimeInterval(-86_400 * 2),
             updatedAt: now,
             status: .active,
