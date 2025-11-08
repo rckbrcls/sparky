@@ -57,6 +57,10 @@ final class MemoryEditorViewModel: ObservableObject {
         environment.spaceService.spaces
     }
 
+    var editingMemoryID: UUID? {
+        existingMemory?.id
+    }
+
     var selectedSpace: SpaceModel? {
         guard let id = selectedSpaceID else { return nil }
         return environment.spaceService.space(id: id)
@@ -64,6 +68,10 @@ final class MemoryEditorViewModel: ObservableObject {
 
     var canToggleAutoComplete: Bool {
         !checklistItems.isEmpty
+    }
+
+    var sequentialTrigger: MemoryTriggerDraft? {
+        triggers.first(where: { $0.type == .sequential })
     }
 
     func loadLatestDataIfNeeded() {
@@ -201,6 +209,37 @@ final class MemoryEditorViewModel: ObservableObject {
 
     func clearScheduleTriggers() {
         triggers.removeAll { $0.type == .time || $0.type == .dayOfWeek }
+    }
+
+    func updateSequentialTrigger(previousMemoryID: UUID?, nextMemoryID: UUID?) {
+        let sanitizedPrevious = previousMemoryID
+        let sanitizedNext = nextMemoryID
+
+        guard sanitizedPrevious != nil || sanitizedNext != nil else {
+            triggers.removeAll { $0.type == .sequential }
+            return
+        }
+
+        let sequential = MemoryTriggerModel.TriggerSequential(
+            previousMemoryID: sanitizedPrevious,
+            nextMemoryID: sanitizedNext
+        )
+
+        if let index = triggers.firstIndex(where: { $0.type == .sequential }) {
+            triggers[index].sequential = sequential
+            triggers[index].isActive = true
+        } else {
+            let draft = MemoryTriggerDraft(
+                type: .sequential,
+                isActive: true,
+                sequential: sequential
+            )
+            triggers.append(draft)
+        }
+    }
+
+    func removeSequentialTrigger() {
+        triggers.removeAll { $0.type == .sequential }
     }
 
     func selectTemplate(_ template: MemoryEditorTemplate) {
@@ -583,6 +622,7 @@ private extension MemoryEditorViewModel {
             isActive: model.isActive,
             location: model.location,
             person: model.person,
+            sequential: model.sequential,
             spacedStage: model.spacedStage,
             lastReviewDate: model.lastReviewDate,
             ignoreCount: model.ignoreCount

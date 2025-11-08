@@ -13,6 +13,7 @@ import UIKit
 struct LocationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var searchModel = LocationSearchViewModel()
+    @StateObject private var geocodingModel = LocationGeocoder()
     private let defaultRadius: Double = 200
     private let expandedSuggestionBottomPadding: CGFloat = 120
     @State private var region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
@@ -26,6 +27,9 @@ struct LocationPickerView: View {
     @State private var event: LocationEvent = .onEntry
     @State private var isSearching = false
     @State private var isMapExpanded = false
+    @State private var isCameraAdjusting = false
+    @State private var geocodeTask: Task<Void, Never>?
+    @State private var cameraCooldownTask: Task<Void, Never>?
     @FocusState private var isSearchFieldFocused: Bool
 
     let onAdd: (String, Double, Double, Double, LocationEvent) -> Void
@@ -67,6 +71,16 @@ struct LocationPickerView: View {
         }
         .fullScreenCover(isPresented: $isMapExpanded) {
             expandedMapView
+        }
+        .onAppear {
+            if selectedCoordinate == nil {
+                let center = region.center
+                updateSelection(to: center, resetName: true, updateCamera: true)
+            }
+        }
+        .onDisappear {
+            geocodeTask?.cancel()
+            cameraCooldownTask?.cancel()
         }
     }
 
@@ -156,7 +170,7 @@ struct LocationPickerView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Adjust the pin")
                 .font(.headline)
-            Text("Tap the map to drop the marker. We'll monitor a \(Int(defaultRadius)) m radius automatically.")
+            Text("Drag the map to position the pin. We'll monitor a \(Int(defaultRadius)) m radius automatically.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
@@ -199,13 +213,16 @@ struct LocationPickerView: View {
 
     private var expandedMapView: some View {
         NavigationStack {
-            ZStack(alignment: .topLeading) {
+            ZStack {
                 mapView(allowsSelection: true)
                     .ignoresSafeArea()
-
-                mapSelectionOverlay
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
+                VStack(spacing: 0) {
+                    mapSelectionOverlay
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                    Spacer()
+                }
+                mapCenterIndicator
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -225,10 +242,13 @@ struct LocationPickerView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                expandedSuggestionPanel
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, expandedSuggestionBottomPadding)
-                    .zIndex(1)
+                VStack(spacing: 16) {
+                    expandedSuggestionPanel
+                    expandedConfirmationPanel
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, expandedSuggestionBottomPadding)
+                .zIndex(1)
             }
         }
         .onAppear {
@@ -281,6 +301,76 @@ struct LocationPickerView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 18))
         }
+    }
+
+    private var expandedConfirmationPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.35))
+                .frame(width: 40, height: 4)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
+
+            Label {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(resolvedLocationName)
+                        .font(.body.weight(.semibold))
+                    Text(coordinateSummary)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "mappin.circle.fill")
+                    .foregroundStyle(Color.accentColor)
+            }
+
+            if geocodingModel.isResolving {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                    Text("Resolving address…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Button {
+                isMapExpanded = false
+            } label: {
+                Text("Use this location")
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
+                    .foregroundStyle(Color.white)
+            }
+        }
+        .padding(16)
+        .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 22))
+        .shadow(color: Color.black.opacity(0.12), radius: 20, y: 12)
+    }
+
+    private var mapCenterIndicator: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: 4) {
+                Image(systemName: geocodingModel.isResolving ? "mappin.circle" : "mappin.circle.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Color.accentColor)
+                    .shadow(color: Color.black.opacity(0.25), radius: 8, y: 6)
+                Circle()
+                    .fill(Color.accentColor.opacity(0.25))
+                    .frame(width: 18, height: 18)
+                    .overlay(
+                        Circle()
+                            .fill(Color.accentColor)
+                            .frame(width: 6, height: 6)
+                    )
+            }
+            .offset(y: -28)
+            Spacer()
+        }
+        .allowsHitTesting(false)
     }
 
     private var expandedSearchBar: some View {
@@ -365,41 +455,29 @@ struct LocationPickerView: View {
     @ViewBuilder
     private func mapView(allowsSelection: Bool) -> some View {
         if #available(iOS 17, *) {
-            MapReader { proxy in
-                let baseMap = Map(position: $mapCameraPosition,
-                                  interactionModes: allowsSelection ? .all : [])
-                {
-                    if let coordinate = selectedCoordinate {
-                        MapCircle(center: coordinate, radius: defaultRadius)
-                            .foregroundStyle(Color.accentColor.opacity(0.18))
-
+            Map(position: $mapCameraPosition,
+                interactionModes: allowsSelection ? .all : []) {
+                if let coordinate = selectedCoordinate {
+                    MapCircle(center: coordinate, radius: defaultRadius)
+                        .foregroundStyle(Color.accentColor.opacity(0.18))
+                    if !allowsSelection {
                         Marker(markerTitle, coordinate: coordinate)
                             .tint(Color.accentColor)
                     }
                 }
-                .onMapCameraChange { context in
-                    let span = sanitizedSpan(context.region.span)
-                    let center = selectedCoordinate ?? context.region.center
-                    region = MKCoordinateRegion(center: center, span: span)
-                }
-
+            }
+            .onMapCameraChange { context in
+                let span = sanitizedSpan(context.region.span)
+                let updatedRegion = MKCoordinateRegion(center: context.region.center, span: span)
+                region = updatedRegion
                 if allowsSelection {
-                    baseMap
-                        .mapControls {
-                            MapCompass()
-                            MapUserLocationButton()
-                        }
-                        .simultaneousGesture(
-                            SpatialTapGesture(coordinateSpace: .local)
-                                .onEnded { value in
-                                    let tapPoint = value.location
-                                    if let coordinate = proxy.convert(tapPoint, from: .local) {
-                                        updateSelection(to: coordinate)
-                                    }
-                                }
-                        )
-                } else {
-                    baseMap
+                    handleCameraRegionChange(to: updatedRegion)
+                }
+            }
+            .mapControls {
+                if allowsSelection {
+                    MapCompass()
+                    MapUserLocationButton()
                 }
             }
         } else {
@@ -407,33 +485,33 @@ struct LocationPickerView: View {
                                 selectedCoordinate: $selectedCoordinate,
                                 allowsSelection: allowsSelection,
                                 defaultRadius: defaultRadius,
+                                shouldShowMarker: !allowsSelection,
                                 resolvedLocationName: resolvedLocationName,
                                 onCoordinateSelected: { coordinate in
-                                    updateSelection(to: coordinate)
+                                    updateSelection(to: coordinate,
+                                                    resetName: true,
+                                                    updateCamera: false,
+                                                    shouldGeocode: true)
                                 },
                                 onRegionChange: { newRegion in
                                     let span = sanitizedSpan(newRegion.span)
-                                    let center = selectedCoordinate ?? newRegion.center
-                                    region = MKCoordinateRegion(center: center, span: span)
+                                    let updatedRegion = MKCoordinateRegion(center: newRegion.center, span: span)
+                                    region = updatedRegion
                                 })
         }
     }
 
     private var mapSelectionOverlay: some View {
-        Group {
-            if selectedCoordinate == nil {
-                HStack {
-                    Text("Tap anywhere on the map to drop your marker.")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .background(Color(.systemBackground), in: Capsule())
-                    Spacer()
-                }
-                .padding(12)
-            }
+        HStack {
+            Text("Drag the map to position the pin precisely.")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(Color(.systemBackground), in: Capsule())
+            Spacer()
         }
+        .padding(12)
         .allowsHitTesting(false)
     }
 
@@ -441,7 +519,8 @@ struct LocationPickerView: View {
                                  span overrideSpan: MKCoordinateSpan? = nil,
                                  name: String? = nil,
                                  resetName: Bool = true,
-                                 updateCamera: Bool = false) {
+                                 updateCamera: Bool = false,
+                                 shouldGeocode: Bool = true) {
         let targetSpan = sanitizedSpan(overrideSpan ?? region.span)
         let updatedRegion = MKCoordinateRegion(center: coordinate, span: targetSpan)
 
@@ -449,13 +528,53 @@ struct LocationPickerView: View {
         region = updatedRegion
 
         if updateCamera, #available(iOS 17, *) {
+            isCameraAdjusting = true
             mapCameraPosition = .region(updatedRegion)
+            cameraCooldownTask?.cancel()
+            cameraCooldownTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                isCameraAdjusting = false
+            }
         }
 
         if let providedName = name {
             selectedName = providedName
         } else if resetName {
             selectedName = ""
+        }
+
+        if shouldGeocode {
+            scheduleReverseGeocode(for: coordinate, force: name == nil)
+        }
+    }
+
+    private func handleCameraRegionChange(to updatedRegion: MKCoordinateRegion) {
+        guard !isCameraAdjusting else { return }
+        let coordinate = updatedRegion.center
+        if selectedCoordinate?.isApproximatelyEqual(to: coordinate) == true {
+            return
+        }
+        selectedName = ""
+        selectedCoordinate = coordinate
+        scheduleReverseGeocode(for: coordinate)
+    }
+
+    private func scheduleReverseGeocode(for coordinate: CLLocationCoordinate2D, force: Bool = false) {
+        geocodeTask?.cancel()
+        geocodeTask = Task { @MainActor in
+            if !force {
+                try? await Task.sleep(nanoseconds: 350_000_000)
+            }
+            guard !Task.isCancelled else { return }
+            if let resolved = await geocodingModel.resolveName(for: coordinate) {
+                guard !Task.isCancelled else { return }
+                if let currentCoordinate = selectedCoordinate,
+                   currentCoordinate.isApproximatelyEqual(to: coordinate) {
+                    selectedName = resolved
+                }
+            } else if selectedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                selectedName = "Pinned Location"
+            }
         }
     }
 
@@ -469,12 +588,15 @@ struct LocationPickerView: View {
         guard selectedCoordinate != nil else {
             return "Select a place on the map"
         }
+        if geocodingModel.isResolving && selectedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Resolving address..."
+        }
         return markerTitle
     }
 
     private var coordinateSummary: String {
         guard let coordinate = selectedCoordinate else {
-            return "Tap the map to choose a location."
+            return "Drag the map to choose a location."
         }
         return String(format: "%.4f, %.4f", coordinate.latitude, coordinate.longitude)
     }
@@ -501,7 +623,8 @@ struct LocationPickerView: View {
                 updateSelection(to: coordinate,
                                 name: resolvedName,
                                 resetName: false,
-                                updateCamera: true)
+                                updateCamera: true,
+                                shouldGeocode: false)
                 searchModel.query = suggestion.title
                 withAnimation(.easeInOut(duration: 0.2)) {
                     searchModel.suggestions = []
@@ -531,6 +654,7 @@ private struct LegacySelectableMap: UIViewRepresentable {
     @Binding var selectedCoordinate: CLLocationCoordinate2D?
     let allowsSelection: Bool
     let defaultRadius: Double
+    let shouldShowMarker: Bool
     let resolvedLocationName: String
     let onCoordinateSelected: (CLLocationCoordinate2D) -> Void
     let onRegionChange: (MKCoordinateRegion) -> Void
@@ -546,14 +670,6 @@ private struct LegacySelectableMap: UIViewRepresentable {
         mapView.isZoomEnabled = allowsSelection
         mapView.isPitchEnabled = allowsSelection
         mapView.isRotateEnabled = allowsSelection
-
-        if allowsSelection {
-            let tapRecognizer = UITapGestureRecognizer(target: context.coordinator,
-                                                       action: #selector(Coordinator.handleTap(_:)))
-            tapRecognizer.numberOfTapsRequired = 1
-            tapRecognizer.numberOfTouchesRequired = 1
-            mapView.addGestureRecognizer(tapRecognizer)
-        }
 
         context.coordinator.refreshAnnotationsAndOverlays(on: mapView)
         return mapView
@@ -580,15 +696,11 @@ private struct LegacySelectableMap: UIViewRepresentable {
             self.parent = parent
         }
 
-        @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
-            guard let mapView = recognizer.view as? MKMapView else { return }
-            let location = recognizer.location(in: mapView)
-            let coordinate = mapView.convert(location, toCoordinateFrom: mapView)
-            parent.onCoordinateSelected(coordinate)
-        }
-
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             parent.onRegionChange(mapView.region)
+            if parent.allowsSelection {
+                parent.onCoordinateSelected(mapView.centerCoordinate)
+            }
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -631,14 +743,67 @@ private struct LegacySelectableMap: UIViewRepresentable {
 
             guard let coordinate = parent.selectedCoordinate else { return }
 
-            let annotation = MKPointAnnotation()
-            annotation.coordinate = coordinate
-            annotation.title = parent.resolvedLocationName
-            mapView.addAnnotation(annotation)
+            if parent.shouldShowMarker {
+                let annotation = MKPointAnnotation()
+                annotation.coordinate = coordinate
+                annotation.title = parent.resolvedLocationName
+                mapView.addAnnotation(annotation)
+            }
 
             let circle = MKCircle(center: coordinate, radius: parent.defaultRadius)
             mapView.addOverlay(circle)
         }
+    }
+}
+
+@MainActor
+private final class LocationGeocoder: ObservableObject {
+    @Published private(set) var isResolving = false
+
+    private let geocoder = CLGeocoder()
+    private var activeCoordinate: CLLocationCoordinate2D?
+
+    func resolveName(for coordinate: CLLocationCoordinate2D) async -> String? {
+        activeCoordinate = coordinate
+        geocoder.cancelGeocode()
+        isResolving = true
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        do {
+            let placemarks = try await geocoder.reverseGeocodeLocation(location)
+            let name = placemarks.first?.formattedAddress
+            if activeCoordinate?.isApproximatelyEqual(to: coordinate) ?? false {
+                isResolving = false
+            }
+            return name
+        } catch {
+            if activeCoordinate?.isApproximatelyEqual(to: coordinate) ?? false {
+                isResolving = false
+            }
+            return nil
+        }
+    }
+}
+
+private extension CLLocationCoordinate2D {
+    func isApproximatelyEqual(to other: CLLocationCoordinate2D, tolerance: CLLocationDegrees = 0.00001) -> Bool {
+        abs(latitude - other.latitude) < tolerance && abs(longitude - other.longitude) < tolerance
+    }
+}
+
+private extension CLPlacemark {
+    var formattedAddress: String {
+        let street = [subThoroughfare, thoroughfare]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
+        let localityComponents = [subLocality, locality, administrativeArea]
+            .compactMap { $0 }
+        let combined = ([street] + localityComponents)
+            .filter { !$0.isEmpty }
+        if !combined.isEmpty {
+            return combined.joined(separator: ", ")
+        }
+        return name ?? "Pinned Location"
     }
 }
 

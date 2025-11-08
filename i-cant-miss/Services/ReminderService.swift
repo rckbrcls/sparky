@@ -286,11 +286,12 @@ final class ReminderService: ObservableObject {
     }
 
     func completeReminder(id: UUID) async throws -> ReminderModel {
-        try await mutateReminder(id: id) { reminder, _ in
+        try await mutateReminder(id: id) { reminder, context in
             reminder.setStatus(.completed)
             reminder.lastCompletionDate = Date()
             reminder.updatedAt = Date()
             ReminderService.updatePersonTriggers(reminder, success: true)
+            try self.activateSequentialTriggers(forCompletedReminder: reminder, context: context)
         }
     }
 
@@ -554,6 +555,14 @@ final class ReminderService: ObservableObject {
                 trigger.personContactIdentifier = person.contactIdentifier
             }
 
+            if let sequential = triggerDraft.sequential {
+                trigger.sequentialPreviousMemoryID = sequential.previousMemoryID
+                trigger.sequentialNextMemoryID = sequential.nextMemoryID
+            } else {
+                trigger.sequentialPreviousMemoryID = nil
+                trigger.sequentialNextMemoryID = nil
+            }
+
             reminder.addToTriggers(trigger)
         }
 
@@ -605,6 +614,14 @@ final class ReminderService: ObservableObject {
                     trigger.personName = nil
                     trigger.personContactIdentifier = nil
                 }
+
+                if let sequential = model.sequential {
+                    trigger.sequentialPreviousMemoryID = sequential.previousMemoryID
+                    trigger.sequentialNextMemoryID = sequential.nextMemoryID
+                } else {
+                    trigger.sequentialPreviousMemoryID = nil
+                    trigger.sequentialNextMemoryID = nil
+                }
             } else {
                 let draft = ReminderTriggerDraft(
                     id: model.id,
@@ -617,6 +634,7 @@ final class ReminderService: ObservableObject {
                     isActive: model.isActive,
                     location: model.location,
                     person: model.person,
+                    sequential: model.sequential,
                     spacedStage: model.spacedStage,
                     lastReviewDate: model.lastReviewDate,
                     ignoreCount: model.ignoreCount
@@ -647,11 +665,124 @@ final class ReminderService: ObservableObject {
                     trigger.personContactIdentifier = person.contactIdentifier
                 }
 
+                if let sequential = draft.sequential {
+                    trigger.sequentialPreviousMemoryID = sequential.previousMemoryID
+                    trigger.sequentialNextMemoryID = sequential.nextMemoryID
+                }
+
                 reminder.addToTriggers(trigger)
             }
         }
     }
 
+}
+
+// MARK: - Sequential triggers
+
+private extension ReminderService {
+    func activateSequentialTriggers(forCompletedReminder reminder: Reminder,
+                                    context: NSManagedObjectContext) throws {
+        var scheduledReminders: Set<UUID> = []
+        try scheduleNextReminders(from: reminder, context: context, scheduled: &scheduledReminders)
+        if let reminderID = reminder.id {
+            try scheduleFollowers(in: context,
+                                  completedReminderID: reminderID,
+                                  scheduled: &scheduledReminders)
+        }
+    }
+
+    func scheduleNextReminders(from reminder: Reminder,
+                               context: NSManagedObjectContext,
+                               scheduled: inout Set<UUID>) throws {
+        guard !reminder.triggerSet.isEmpty else { return }
+        for trigger in reminder.triggerSet where trigger.triggerType == .sequential && trigger.isActive {
+            guard
+                let nextID = trigger.sequentialNextMemoryID,
+                let reminderID = reminder.id,
+                nextID != reminderID,
+                !scheduled.contains(nextID),
+                let nextReminder = try fetchReminder(by: nextID, context: context)
+            else { continue }
+
+            try scheduleReminder(nextReminder, context: context)
+            scheduled.insert(nextID)
+        }
+    }
+
+    func scheduleFollowers(in context: NSManagedObjectContext,
+                           completedReminderID: UUID,
+                           scheduled: inout Set<UUID>) throws {
+        let request: NSFetchRequest<ReminderTrigger> = ReminderTrigger.fetchRequest()
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "typeRaw == %@", ReminderTriggerType.sequential.rawValue),
+            NSPredicate(format: "sequentialPreviousMemoryID == %@", completedReminderID as CVarArg),
+            NSPredicate(format: "isActive == YES")
+        ])
+        request.relationshipKeyPathsForPrefetching = ["reminder"]
+
+        let triggers = try context.fetch(request)
+        for trigger in triggers {
+            guard
+                let reminder = trigger.reminder,
+                let id = reminder.id,
+                !scheduled.contains(id)
+            else { continue }
+
+            try scheduleReminder(reminder, context: context)
+            scheduled.insert(id)
+        }
+    }
+
+    func scheduleReminder(_ reminder: Reminder,
+                          context: NSManagedObjectContext) throws {
+        let workingContext = reminder.managedObjectContext ?? context
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: Date())
+        let scheduledDay = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? Date().addingTimeInterval(86_400)
+
+        let timeTrigger = ensureTimeTrigger(for: reminder, context: workingContext)
+        let baseline = timeTrigger.fireDate ?? timeTrigger.startDate
+        let components = baseline.map { calendar.dateComponents([.hour, .minute, .second], from: $0) }
+        let targetDate = calendar.date(
+            bySettingHour: components?.hour ?? 9,
+            minute: components?.minute ?? 0,
+            second: components?.second ?? 0,
+            of: scheduledDay
+        ) ?? scheduledDay
+
+        activate(timeTrigger: timeTrigger, targetDate: targetDate)
+
+        reminder.setStatus(.active)
+        reminder.updatedAt = Date()
+    }
+
+    func ensureTimeTrigger(for reminder: Reminder,
+                           context: NSManagedObjectContext) -> ReminderTrigger {
+        if let trigger = reminder.triggerSet.first(where: { $0.triggerType == .time }) {
+            return trigger
+        }
+
+        let trigger = ReminderTrigger(context: context)
+        trigger.id = UUID()
+        trigger.setType(.time)
+        trigger.weekdayMask = 0
+        trigger.isActive = true
+        trigger.spacedStage = 0
+        trigger.ignoreCount = 0
+        reminder.addToTriggers(trigger)
+        return trigger
+    }
+
+    func activate(timeTrigger: ReminderTrigger, targetDate: Date) {
+        timeTrigger.fireDate = targetDate
+        timeTrigger.startDate = targetDate
+        timeTrigger.isActive = true
+        timeTrigger.weekdayMask = 0
+        timeTrigger.setRecurrence(nil)
+        timeTrigger.timeZoneIdentifier = TimeZone.current.identifier
+        timeTrigger.lastReviewDate = nil
+        timeTrigger.ignoreCount = 0
+    }
 }
 
 // MARK: - ReminderModel helpers
@@ -671,8 +802,8 @@ extension ReminderTriggerModel {
             return fireDate
         case .dayOfWeek:
             return nextWeekdayOccurrence(from: reference)
-        case .location, .person:
-            // Location and person triggers rely on external events; fallback to startDate for ordering.
+        case .location, .person, .sequential:
+            // Location, person, and sequential triggers rely on external events; fallback to startDate for ordering.
             return startDate ?? fireDate
         }
     }

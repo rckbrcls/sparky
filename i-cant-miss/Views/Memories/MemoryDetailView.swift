@@ -13,6 +13,8 @@ struct MemoryDetailView: View {
     let onClose: () -> Void
     let onEdit: (MemoryModel) -> Void
 
+    @EnvironmentObject private var environment: AppEnvironment
+
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .full
@@ -212,7 +214,7 @@ struct MemoryDetailView: View {
                             }
                         }
                     }
-                    
+
                     detailSection(title: "Details", systemImage: "info.circle.fill") {
                         VStack(spacing: 12) {
                             detailRow(icon: "tray.fill", title: "Space", value: memory.space.name)
@@ -400,6 +402,8 @@ struct MemoryDetailView: View {
             return trigger.location?.name ?? "Location reminder"
         case .person:
             return trigger.person?.name ?? "Person reminder"
+        case .sequential:
+            return "Sequential trigger"
         }
     }
 
@@ -435,7 +439,29 @@ struct MemoryDetailView: View {
                 return "When interacting with \(person.name)"
             }
             return "Person-based trigger"
+        case .sequential:
+            let sequential = trigger.sequential
+            var parts: [String] = []
+            if let previous = sequential?.previousMemoryID {
+                parts.append("After \(memoryName(for: previous))")
+            }
+            if let next = sequential?.nextMemoryID {
+                parts.append("Then \(memoryName(for: next))")
+            }
+            return parts.isEmpty ? "Links to another memory" : parts.joined(separator: " • ")
         }
+    }
+}
+
+private extension MemoryDetailView {
+    func memoryName(for id: UUID) -> String {
+        if let memory = environment.memoryService.memory(id: id) {
+            let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+        return String(id.uuidString.prefix(6)) + "…"
     }
 }
 
@@ -508,6 +534,7 @@ private func weekdayMaskSummary(mask: Int16) -> String {
         isActive: true,
         location: nil,
         person: nil,
+        sequential: nil,
         spacedStage: 1,
         lastReviewDate: calendar.date(byAdding: .day, value: -3, to: now),
         ignoreCount: 0
@@ -524,6 +551,7 @@ private func weekdayMaskSummary(mask: Int16) -> String {
         isActive: true,
         location: nil,
         person: nil,
+        sequential: nil,
         spacedStage: 2,
         lastReviewDate: calendar.date(byAdding: .day, value: -10, to: now),
         ignoreCount: 1
@@ -546,6 +574,7 @@ private func weekdayMaskSummary(mask: Int16) -> String {
             event: .onEntry
         ),
         person: nil,
+        sequential: nil,
         spacedStage: 0,
         lastReviewDate: nil,
         ignoreCount: 0
@@ -562,6 +591,7 @@ private func weekdayMaskSummary(mask: Int16) -> String {
         isActive: true,
         location: nil,
         person: .init(name: "Coach Taylor", contactIdentifier: "contact-coach"),
+        sequential: nil,
         spacedStage: 0,
         lastReviewDate: calendar.date(byAdding: .day, value: -14, to: now),
         ignoreCount: 2

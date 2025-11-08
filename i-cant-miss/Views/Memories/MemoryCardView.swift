@@ -55,6 +55,21 @@ struct MemoryCardView: View {
         return "\(completed)/\(total)"
     }
 
+    private var sequentialSummary: String? {
+        guard let sequential = memory.triggers.first(where: { $0.type == .sequential })?.sequential else {
+            return nil
+        }
+
+        var parts: [String] = []
+        if let previous = sequential.previousMemoryID {
+            parts.append("After \(sequentialLabel(for: previous))")
+        }
+        if let next = sequential.nextMemoryID {
+            parts.append("Then \(sequentialLabel(for: next))")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " • ")
+    }
+
     private var statusBadge: (text: String, systemImage: String, color: Color)? {
         switch memory.status {
         case .active:
@@ -65,7 +80,7 @@ struct MemoryCardView: View {
             return ("Archived", "archivebox.fill", .gray)
         }
     }
-    
+
     private var spaceAccent: Color {
         if let hex = memory.space.colorHex,
            let color = Color(hex: hex) {
@@ -77,7 +92,7 @@ struct MemoryCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                
+
                 HStack(spacing: 8) {
                     if let icon = memory.space.iconName {
                         Image(systemName: icon)
@@ -92,15 +107,15 @@ struct MemoryCardView: View {
                 .padding(.horizontal, 12)
                 .glassEffect(in: .rect(cornerRadius: 8.0))
                 .glassEffect(.regular.tint(spaceAccent.opacity(0.15)))
-                
+
                 Spacer()
-                
+
                 if let priority = memory.priority {
                     Image(systemName: priority.iconName)
                         .font(.subheadline)
                         .foregroundStyle(priorityColor(for: priority))
                 }
-                
+
                 if memory.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.subheadline)
@@ -108,7 +123,7 @@ struct MemoryCardView: View {
                         .rotationEffect(.degrees(45))
                         .accessibilityLabel("Pinned")
                 }
-                
+
                 if let statusBadge {
                     Label {
                         Text(statusBadge.text)
@@ -121,29 +136,38 @@ struct MemoryCardView: View {
                     .padding(.leading, 4)
                 }
             }
-            
+
             VStack (alignment: .leading, spacing: 6){
                 Text(title)
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                
-                
+
+
                 if let bodyPreview {
                     Text(bodyPreview)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
-                
+
             }
-            
+
             if nextTriggerText != nil || dueDateText != nil || checklistProgressText != nil {
                 Divider()
             }
-            
+
             HStack(spacing: 12) {
+                if let sequentialSummary {
+                    Label(sequentialSummary, systemImage: "arrowshape.turn.up.right.circle")
+                        .font(.caption)
+                        .lineLimit(1)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .glassEffect()
+                }
+
                 if let nextTriggerText {
                     Label(nextTriggerText, systemImage: "alarm")
                         .font(.caption)
@@ -366,6 +390,16 @@ struct MemoryCardView: View {
         } catch {
             // Handle error silently for now
         }
+    }
+
+    private func sequentialLabel(for id: UUID) -> String {
+        if let memory = environment.memoryService.memory(id: id) {
+            let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return trimmed
+            }
+        }
+        return String(id.uuidString.prefix(6)) + "…"
     }
 }
 #Preview {

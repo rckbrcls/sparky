@@ -38,6 +38,7 @@ enum ReminderTriggerType: String, CaseIterable, Identifiable {
     case dayOfWeek
     case location
     case person
+    case sequential
 
     var id: String { rawValue }
 
@@ -47,6 +48,7 @@ enum ReminderTriggerType: String, CaseIterable, Identifiable {
         case .dayOfWeek: return "calendar"
         case .location: return "mappin.and.ellipse"
         case .person: return "person.crop.circle"
+        case .sequential: return "arrowshape.turn.up.right.circle"
         }
     }
 
@@ -56,6 +58,7 @@ enum ReminderTriggerType: String, CaseIterable, Identifiable {
         case .dayOfWeek: return "Weekday"
         case .location: return "Location"
         case .person: return "Person"
+        case .sequential: return "Sequential"
         }
     }
 }
@@ -140,6 +143,7 @@ struct ReminderTriggerModel: Identifiable, Hashable {
     var isActive: Bool
     var location: TriggerLocation?
     var person: TriggerPerson?
+    var sequential: TriggerSequential?
     var spacedStage: Int
     var lastReviewDate: Date?
     var ignoreCount: Int
@@ -155,6 +159,11 @@ struct ReminderTriggerModel: Identifiable, Hashable {
     struct TriggerPerson: Hashable {
         var name: String
         var contactIdentifier: String?
+    }
+
+    struct TriggerSequential: Hashable {
+        var previousMemoryID: UUID?
+        var nextMemoryID: UUID?
     }
 }
 
@@ -194,6 +203,7 @@ struct ReminderTriggerDraft: Identifiable {
     var isActive: Bool
     var location: ReminderTriggerModel.TriggerLocation?
     var person: ReminderTriggerModel.TriggerPerson?
+    var sequential: ReminderTriggerModel.TriggerSequential?
     var spacedStage: Int
     var lastReviewDate: Date?
     var ignoreCount: Int
@@ -209,6 +219,7 @@ struct ReminderTriggerDraft: Identifiable {
         isActive: Bool = true,
         location: ReminderTriggerModel.TriggerLocation? = nil,
         person: ReminderTriggerModel.TriggerPerson? = nil,
+        sequential: ReminderTriggerModel.TriggerSequential? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
         ignoreCount: Int = 0
@@ -223,6 +234,7 @@ struct ReminderTriggerDraft: Identifiable {
         self.isActive = isActive
         self.location = location
         self.person = person
+        self.sequential = sequential
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
         self.ignoreCount = ignoreCount
@@ -254,6 +266,7 @@ extension ReminderTriggerDraft {
             isActive: isActive,
             location: location,
             person: person,
+            sequential: sequential,
             spacedStage: spacedStage,
             lastReviewDate: lastReviewDate,
             ignoreCount: ignoreCount
@@ -439,6 +452,14 @@ extension ReminderTrigger {
             return ReminderTriggerModel.TriggerPerson(name: name, contactIdentifier: personContactIdentifier)
         }()
 
+        let sequential: ReminderTriggerModel.TriggerSequential? = {
+            guard triggerType == .sequential else { return nil }
+            return ReminderTriggerModel.TriggerSequential(
+                previousMemoryID: sequentialPreviousMemoryID,
+                nextMemoryID: sequentialNextMemoryID
+            )
+        }()
+
         return ReminderTriggerModel(
             id: id ?? UUID(),
             type: triggerType,
@@ -450,6 +471,7 @@ extension ReminderTrigger {
             isActive: isActive,
             location: location,
             person: person,
+            sequential: sequential,
             spacedStage: Int(spacedStage),
             lastReviewDate: lastReviewDate,
             ignoreCount: Int(ignoreCount)
@@ -631,8 +653,8 @@ extension ReminderTriggerModel {
             return nextTimeTriggerDate(after: date)
         case .dayOfWeek:
             return nextWeekdayTriggerDate(after: date)
-        case .location, .person:
-            // Location and person triggers don't have specific fire dates
+        case .location, .person, .sequential:
+            // Location, person, and sequential triggers don't have specific fire dates
             return nil
         }
     }

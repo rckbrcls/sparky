@@ -77,6 +77,8 @@
         <attribute name="personContactIdentifier" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="personName" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="recurrenceRule" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="sequentialNextMemoryID" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="sequentialPreviousMemoryID" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="spacedStage" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
         <attribute name="startDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
         <attribute name="timeZoneIdentifier" optional="YES" attributeType="String" syncable="YES"/>

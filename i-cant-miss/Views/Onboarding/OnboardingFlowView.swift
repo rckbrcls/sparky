@@ -398,6 +398,7 @@ private enum OnboardingSampleData {
                 event: .onEntry
             ),
             person: nil,
+            sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,
             ignoreCount: 0
@@ -417,6 +418,7 @@ private enum OnboardingSampleData {
                 name: "Maya Singh",
                 contactIdentifier: nil
             ),
+            sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,
             ignoreCount: 0

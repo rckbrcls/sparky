@@ -87,8 +87,8 @@ final class NotificationScheduler {
                                                         trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))
                     requests.append(request)
                 }
-            case .location, .person:
-                // Location and person triggers rely on geofencing or manual events.
+            case .location, .person, .sequential:
+                // Location, person, and sequential triggers rely on geofencing or manual events.
                 continue
             }
         }
