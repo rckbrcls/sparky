@@ -27,6 +27,8 @@ struct SpaceDetailView: View {
     @State private var isInboxExpanded = true
     @State private var isUpcomingExpanded = true
     @State private var isOtherExpanded = true
+    @State private var autoCollapsedInbox = false
+    @State private var autoCollapsedUpcoming = false
 
     private var activeFilterCount: Int {
         var count = 0
@@ -144,6 +146,16 @@ struct SpaceDetailView: View {
                                     parentLookup: spaceService.space(id:)
                                 )
                             }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                if canDeleteSpace(child) {
+                                    Button(role: .destructive) {
+                                        deleteSpace(child)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -205,6 +217,12 @@ struct SpaceDetailView: View {
         }
         .onChange(of: inboxMemories.count) { _ in
             syncExpansionStates()
+        }
+        .onChange(of: isUpcomingExpanded) { _ in
+            autoCollapsedUpcoming = timelineSectionsForSpace.isEmpty && ungroupedMemories.isEmpty && !isUpcomingExpanded
+        }
+        .onChange(of: isInboxExpanded) { _ in
+            autoCollapsedInbox = inboxMemories.isEmpty && !isInboxExpanded
         }
     }
 
@@ -347,12 +365,26 @@ struct SpaceDetailView: View {
     }
 
     private func syncExpansionStates() {
-        if timelineSectionsForSpace.isEmpty && ungroupedMemories.isEmpty {
-            isUpcomingExpanded = false
+        let timelineIsEmpty = timelineSectionsForSpace.isEmpty && ungroupedMemories.isEmpty
+        if timelineIsEmpty {
+            if isUpcomingExpanded {
+                isUpcomingExpanded = false
+                autoCollapsedUpcoming = true
+            }
+        } else if autoCollapsedUpcoming && !isUpcomingExpanded {
+            isUpcomingExpanded = true
+            autoCollapsedUpcoming = false
         }
 
-        if inboxMemories.isEmpty {
-            isInboxExpanded = false
+        let inboxIsEmpty = inboxMemories.isEmpty
+        if inboxIsEmpty {
+            if isInboxExpanded {
+                isInboxExpanded = false
+                autoCollapsedInbox = true
+            }
+        } else if autoCollapsedInbox && !isInboxExpanded {
+            isInboxExpanded = true
+            autoCollapsedInbox = false
         }
     }
     private var filteredMemories: [MemoryModel] {
@@ -434,6 +466,20 @@ struct SpaceDetailView: View {
     private func memoryCount(for space: SpaceModel) -> Int {
         let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { ids.contains($0.space.id) }.count
+    }
+
+    private func canDeleteSpace(_ space: SpaceModel) -> Bool {
+        space.id != SpaceModel.inboxIdentifier && !space.isDefault
+    }
+
+    private func deleteSpace(_ space: SpaceModel) {
+        Task { @MainActor in
+            do {
+                try await spaceService.deleteSpace(space)
+            } catch {
+                assertionFailure("Failed to delete space: \(error.localizedDescription)")
+            }
+        }
     }
 
     private func sectionExpansionBinding(for kind: MemoryService.TimelineSection.Kind) -> Binding<Bool> {

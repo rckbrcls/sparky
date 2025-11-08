@@ -21,6 +21,8 @@ struct MemoryTimelineView: View {
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
     @State private var isUpcomingExpanded = true
+    @State private var autoCollapsedInbox = false
+    @State private var autoCollapsedUpcoming = false
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -215,6 +217,12 @@ struct MemoryTimelineView: View {
             .onChange(of: filteredInboxMemories.count) { _ in
                 syncExpansionStates()
             }
+            .onChange(of: isUpcomingExpanded) { _ in
+                autoCollapsedUpcoming = timelineSectionData.isEmpty && !isUpcomingExpanded
+            }
+            .onChange(of: isInboxExpanded) { _ in
+                autoCollapsedInbox = filteredInboxMemories.isEmpty && !isInboxExpanded
+            }
         }
     }
 
@@ -367,11 +375,23 @@ struct MemoryTimelineView: View {
 
     private func syncExpansionStates() {
         if timelineSectionData.isEmpty {
-            isUpcomingExpanded = false
+            if isUpcomingExpanded {
+                isUpcomingExpanded = false
+                autoCollapsedUpcoming = true
+            }
+        } else if autoCollapsedUpcoming && !isUpcomingExpanded {
+            isUpcomingExpanded = true
+            autoCollapsedUpcoming = false
         }
 
         if filteredInboxMemories.isEmpty {
-            isInboxExpanded = false
+            if isInboxExpanded {
+                isInboxExpanded = false
+                autoCollapsedInbox = true
+            }
+        } else if autoCollapsedInbox && !isInboxExpanded {
+            isInboxExpanded = true
+            autoCollapsedInbox = false
         }
     }
 
