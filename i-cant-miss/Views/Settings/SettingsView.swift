@@ -48,8 +48,7 @@ struct SettingsView: View {
                     } label: {
                         SettingsRow(
                             iconName: "bell.badge",
-                            title: "Notifications",
-                            accessory: notificationStatus.summaryLabel
+                            title: "Notifications"
                         )
                     }
 
@@ -63,8 +62,7 @@ struct SettingsView: View {
                     } label: {
                         SettingsRow(
                             iconName: "location.circle",
-                            title: "Location & Geofencing",
-                            accessory: geofenceManager.authorizationStatus.summaryLabel
+                            title: "Location & Geofencing"
                         )
                     }
                 }
@@ -195,7 +193,6 @@ private struct LocationSettingsView: View {
 private struct SettingsRow: View {
     let iconName: String
     let title: String
-    var accessory: String?
 
     var body: some View {
         HStack(spacing: 16) {
@@ -207,12 +204,6 @@ private struct SettingsRow: View {
                 .foregroundStyle(.primary)
 
             Spacer()
-
-            if let accessory {
-                Text(accessory)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
         }
         .padding(.vertical, 6)
     }
@@ -300,15 +291,6 @@ private extension UNAuthorizationStatus {
         @unknown default: return "Unknown"
         }
     }
-
-    var summaryLabel: String? {
-        switch self {
-        case .notDetermined:
-            return nil
-        default:
-            return displayName
-        }
-    }
 }
 
 private extension CLAuthorizationStatus {
@@ -320,15 +302,6 @@ private extension CLAuthorizationStatus {
         case .authorizedAlways: return "Always"
         case .authorizedWhenInUse: return "When in use"
         @unknown default: return "Unknown"
-        }
-    }
-
-    var summaryLabel: String? {
-        switch self {
-        case .notDetermined:
-            return nil
-        default:
-            return displayName
         }
     }
 }
