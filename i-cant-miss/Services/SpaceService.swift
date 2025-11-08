@@ -58,6 +58,7 @@ final class SpaceService: ObservableObject {
             NSSortDescriptor(keyPath: \Folder.name, ascending: true)
         ]
         request.returnsObjectsAsFaults = false
+        request.relationshipKeyPathsForPrefetching = ["parent", "children"]
 
         do {
             let folders = try context.fetch(request)
@@ -65,7 +66,7 @@ final class SpaceService: ObservableObject {
 
             for folder in folders {
                 let folderModel = folder.toModel()
-                let space = folderModel.toSpace(parentID: nil, childIDs: [])
+                let space = folderModel.toSpace()
                 nextSpaces.append(space)
             }
 
@@ -128,7 +129,8 @@ final class SpaceService: ObservableObject {
     }
 
     func children(of parent: SpaceModel) -> [SpaceModel] {
-        parent.childIDs.compactMap { spaceIndex[$0] }
+        guard let resolvedParent = spaceIndex[parent.id] else { return [] }
+        return resolvedParent.childIDs.compactMap { spaceIndex[$0] }
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder

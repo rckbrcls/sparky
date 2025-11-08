@@ -13,7 +13,7 @@ struct SpacesRootView: View {
 
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
-    let onCreateSpace: () -> Void
+    let onCreateSpace: (SpaceModel?) -> Void
 
     var body: some View {
         NavigationStack {
@@ -38,7 +38,7 @@ struct SpacesRootView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        onCreateSpace()
+                        onCreateSpace(nil)
                     } label: {
                         Image(systemName: "folder.badge.plus")
                     }
@@ -91,6 +91,6 @@ struct SpacesRootView: View {
         memoryService: environment.memoryService,
         onCreateMemory: { _ in },
         onSelectMemory: { _ in },
-        onCreateSpace: {}
+        onCreateSpace: { _ in }
     )
 }

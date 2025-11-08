@@ -15,7 +15,7 @@ struct SpaceDetailView: View {
 
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
-    let onCreateSpace: () -> Void
+    let onCreateSpace: (SpaceModel?) -> Void
 
     @State private var showingFilterSheet = false
     @State private var selectedMemoryTypes: Set<MemoryType> = []
@@ -52,6 +52,10 @@ struct SpaceDetailView: View {
 
     private var isSearching: Bool {
         !trimmedSearchText.isEmpty
+    }
+
+    private var resolvedSpace: SpaceModel {
+        spaceService.space(id: space.id) ?? space
     }
 
     private var nonInboxMemories: [MemoryModel] {
@@ -156,7 +160,7 @@ struct SpaceDetailView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 70)
         }
-        .navigationTitle(space.name)
+        .navigationTitle(resolvedSpace.name)
         .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -165,7 +169,16 @@ struct SpaceDetailView: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    onCreateMemory(space)
+                    onCreateSpace(resolvedSpace)
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                }
+                .accessibilityLabel("Create Space")
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    onCreateMemory(resolvedSpace)
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -213,7 +226,7 @@ struct SpaceDetailView: View {
     }
 
     private var childSpaces: [SpaceModel] {
-        spaceService.children(of: space)
+        spaceService.children(of: resolvedSpace)
     }
 
     @ViewBuilder
@@ -324,7 +337,7 @@ struct SpaceDetailView: View {
 
     private var filteredMemories: [MemoryModel] {
         let base = memoryService.memories(
-            in: space,
+            in: resolvedSpace,
             includeDescendants: false,
             statuses: [],
             includeCompleted: true,
@@ -470,7 +483,7 @@ struct SpaceDetailView: View {
         memoryService: environment.memoryService,
         onCreateMemory: { _ in },
         onSelectMemory: { _ in },
-        onCreateSpace: {}
+        onCreateSpace: { _ in }
     )
     .environmentObject(environment)
 }

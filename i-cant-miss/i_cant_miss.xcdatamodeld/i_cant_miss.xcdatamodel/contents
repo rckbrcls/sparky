@@ -8,6 +8,8 @@
         <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
         <attribute name="audienceRaw" optional="NO" attributeType="String" defaultValueString="reminders" syncable="YES"/>
         <attribute name="sortOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <relationship name="parent" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="children" inverseEntity="Folder" syncable="YES"/>
+        <relationship name="children" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Folder" inverseName="parent" inverseEntity="Folder" syncable="YES"/>
         <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Note" inverseName="folder" inverseEntity="Note" syncable="YES"/>
         <relationship name="todoLists" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TodoList" inverseName="folder" inverseEntity="TodoList" syncable="YES"/>
         <relationship name="reminders" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Reminder" inverseName="folder" inverseEntity="Reminder" syncable="YES"/>

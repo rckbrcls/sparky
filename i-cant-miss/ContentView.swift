@@ -46,6 +46,7 @@ struct ContentView: View {
     @State private var editorRoute: MemoryEditorRoute?
     @State private var viewerRoute: MemoryViewerRoute?
     @State private var showSpaceComposer = false
+    @State private var pendingParentSpace: SpaceModel?
     @State private var activeTab: CustomTab = .home
     @State private var showingOnboarding = false
 
@@ -73,7 +74,9 @@ struct ContentView: View {
                             prepareMemoryCreation(for: space)
                         },
                         onSelectMemory: handleMemorySelection,
-                        onCreateSpace: presentSpaceCreation
+                        onCreateSpace: { parent in
+                            presentSpaceCreation(for: parent)
+                        }
                     )
                     .tabBarSpacer()
                 }
@@ -114,8 +117,10 @@ struct ContentView: View {
                 )
             }
         }
-        .sheet(isPresented: $showSpaceComposer) {
-            SpaceComposerView(environment: environment)
+        .sheet(isPresented: $showSpaceComposer, onDismiss: {
+            pendingParentSpace = nil
+        }) {
+            SpaceComposerView(environment: environment, defaultParent: pendingParentSpace)
         }
         .fullScreenCover(isPresented: $showingOnboarding) {
             OnboardingFlowView {
@@ -183,7 +188,8 @@ struct ContentView: View {
         viewerRoute = MemoryViewerRoute(memory: memory)
     }
 
-    private func presentSpaceCreation() {
+    private func presentSpaceCreation(for parent: SpaceModel?) {
+        pendingParentSpace = parent
         showSpaceComposer = true
     }
 

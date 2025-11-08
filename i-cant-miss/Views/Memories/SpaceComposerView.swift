@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SpaceComposerView: View {
     let environment: AppEnvironment
+    @ObservedObject private var spaceService: SpaceService
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
@@ -16,6 +17,13 @@ struct SpaceComposerView: View {
     @State private var selectedColorHex: String = Color.PresetColors.all.first?.hex ?? "#6366F1"
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var selectedParentID: UUID? = nil
+
+    init(environment: AppEnvironment, defaultParent: SpaceModel? = nil) {
+        self.environment = environment
+        _spaceService = ObservedObject(wrappedValue: environment.spaceService)
+        _selectedParentID = State(initialValue: defaultParent?.id)
+    }
 
     var body: some View {
         NavigationStack {
@@ -38,6 +46,10 @@ struct SpaceComposerView: View {
 
                 Section("Color") {
                     colorSelector
+                }
+
+                Section("Parent Space") {
+                    parentPicker
                 }
 
                 if let errorMessage {
@@ -158,7 +170,8 @@ struct SpaceComposerView: View {
                     colorHex: selectedColorHex,
                     iconName: selectedIcon,
                     isDefault: false,
-                    audience: .reminders
+                    audience: .reminders,
+                    parentID: selectedParentID
                 )
 
                 async let refreshFolders = environment.folderService.refreshFolders(force: true)
@@ -176,6 +189,46 @@ struct SpaceComposerView: View {
                 }
             }
         }
+    }
+
+    private var parentPicker: some View {
+        Picker("Parent Space", selection: $selectedParentID) {
+            Text("None")
+                .tag(UUID?.none)
+
+            ForEach(selectableSpaces, id: \.id) { space in
+                Text(displayName(for: space))
+                    .tag(Optional(space.id))
+            }
+        }
+        .pickerStyle(.menu)
+    }
+
+    private var selectableSpaces: [SpaceModel] {
+        spaceService.spaces
+            .filter { $0.id != SpaceModel.inbox.id }
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder {
+                    return lhs.sortOrder < rhs.sortOrder
+                }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+    }
+
+    private func displayName(for space: SpaceModel) -> String {
+        var components: [String] = [space.name]
+        var currentParentID = space.parentID
+        var visited: Set<UUID> = [space.id]
+
+        while let parentID = currentParentID,
+              !visited.contains(parentID),
+              let parent = spaceService.space(id: parentID) {
+            components.insert(parent.name, at: 0)
+            visited.insert(parentID)
+            currentParentID = parent.parentID
+        }
+
+        return components.joined(separator: " / ")
     }
 }
 

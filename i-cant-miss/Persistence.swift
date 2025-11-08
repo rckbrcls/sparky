@@ -139,6 +139,16 @@ private extension PersistenceController {
         workFolder.isDefault = false
         workFolder.sortOrder = 1
 
+        let errandsSubfolder = Folder(context: context)
+        errandsSubfolder.id = UUID()
+        errandsSubfolder.name = "Weekend Projects"
+        errandsSubfolder.iconName = "hammer.fill"
+        errandsSubfolder.colorHex = "#F59E0B"
+        errandsSubfolder.isDefault = false
+        errandsSubfolder.parent = defaultFolder
+        errandsSubfolder.sortOrder = 0
+        errandsSubfolder.setAudience(.reminders)
+
         let swiftTag = Tag(context: context)
         swiftTag.id = UUID()
         swiftTag.name = "SwiftUI"

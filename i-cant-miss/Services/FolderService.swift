@@ -48,6 +48,8 @@ final class FolderService: ObservableObject {
             folderRequest.sortDescriptors = [
                 NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true)
             ]
+            folderRequest.returnsObjectsAsFaults = false
+            folderRequest.relationshipKeyPathsForPrefetching = ["parent", "children"]
             let folderResults = try context.fetch(folderRequest)
             folderModels = folderResults.map { $0.toModel() }
 
@@ -135,7 +137,8 @@ final class FolderService: ObservableObject {
         colorHex: String?,
         iconName: String?,
         isDefault: Bool,
-        audience: FolderAudience
+        audience: FolderAudience,
+        parentID: UUID? = nil
     ) async throws -> FolderModel {
         try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
@@ -155,7 +158,15 @@ final class FolderService: ObservableObject {
                     folder.iconName = iconName
                     folder.isDefault = isDefault
                     folder.setAudience(audience)
-                    folder.sortOrder = Int16(self.folders.count)
+                    if let parentID,
+                       let parentFolder = try self.fetchFolder(by: parentID, context: context) {
+                        folder.parentFolder = parentFolder
+                        let siblingCount = parentFolder.childFolderSet.count
+                        folder.sortOrder = Int16(siblingCount)
+                    } else {
+                        let rootCount = try self.countRootFolders(in: context)
+                        folder.sortOrder = Int16(rootCount)
+                    }
 
                     try context.save()
                     self.fetchFolder(by: folder.objectID) { result in
@@ -190,6 +201,18 @@ final class FolderService: ObservableObject {
                     folder.isDefault = model.isDefault
                     folder.setAudience(model.audience)
                     folder.sortOrder = Int16(model.sortOrder)
+                    if let parentID = model.parentID {
+                        guard parentID != model.id else {
+                            throw FolderServiceError.validationFailed("A folder cannot be its own parent.")
+                        }
+                        if let parentFolder = try self.fetchFolder(by: parentID, context: context) {
+                            folder.parentFolder = parentFolder
+                        } else {
+                            throw FolderServiceError.folderNotFound
+                        }
+                    } else {
+                        folder.parentFolder = nil
+                    }
 
                     try context.save()
                     self.fetchFolder(by: folder.objectID) { result in
@@ -330,6 +353,8 @@ final class FolderService: ObservableObject {
             NSSortDescriptor(keyPath: \Folder.sortOrder, ascending: true),
             NSSortDescriptor(keyPath: \Folder.name, ascending: true)
         ]
+        request.returnsObjectsAsFaults = false
+        request.relationshipKeyPathsForPrefetching = ["parent", "children"]
 
         let results = try context.fetch(request)
         var needsSave = false
@@ -412,5 +437,12 @@ final class FolderService: ObservableObject {
 
     func defaultFolder(for audience: FolderAudience) -> FolderModel? {
         folders.first(where: { $0.isDefault && $0.audience == audience })
+    }
+
+    private func countRootFolders(in context: NSManagedObjectContext) throws -> Int {
+        let request: NSFetchRequest<Folder> = Folder.fetchRequest()
+        request.predicate = NSPredicate(format: "parent == nil")
+        let result = try context.count(for: request)
+        return max(result, 0)
     }
 }

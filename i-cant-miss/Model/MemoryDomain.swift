@@ -256,8 +256,8 @@ extension FolderModel {
             colorHex: colorHex,
             iconName: iconName,
             sortOrder: sortOrder,
-            parentID: parentID,
-            childIDs: childIDs,
+            parentID: parentID ?? self.parentID,
+            childIDs: childIDs.isEmpty ? self.childIDs : childIDs,
             isDefault: isDefault,
             legacyFolder: self
         )
