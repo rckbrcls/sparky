@@ -133,40 +133,24 @@ struct SpaceDetailView: View {
     }
 
     var body: some View {
-        List {
-            if !childSpaces.isEmpty {
-                Section("Subspaces") {
-                    ForEach(childSpaces) { child in
-                        NavigationLink(value: child) {
-                            SpaceRowView(
-                                space: child,
-                                count: memoryCount(for: child),
-                                parentLookup: spaceService.space(id:)
-                            )
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            if canDeleteSpace(child) {
-                                Button(role: .destructive) {
-                                    deleteSpace(child)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                if !childSpaces.isEmpty {
+                    subspacesList
+                }
+
+                if isSearching {
+                    searchResultsSection
+                } else {
+                    timelineContent
+                    if showInbox {
+                        inboxSection
                     }
                 }
             }
-
-            if isSearching {
-                searchResultsSection
-            } else {
-                timelineContent
-                if showInbox {
-                    inboxSection
-                }
-            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 70)
         }
-        .listStyle(.insetGrouped)
         .navigationTitle(resolvedSpace.name)
         .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
         .toolbar {
@@ -250,6 +234,44 @@ struct SpaceDetailView: View {
 
     private var childSpaces: [SpaceModel] {
         spaceService.children(of: resolvedSpace)
+    }
+
+    private var subspacesList: some View {
+        List {
+            Section("Subspaces") {
+                ForEach(childSpaces) { child in
+                    NavigationLink(value: child) {
+                        SpaceRowView(
+                            space: child,
+                            count: memoryCount(for: child),
+                            parentLookup: spaceService.space(id:)
+                        )
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        if canDeleteSpace(child) {
+                            Button(role: .destructive) {
+                                deleteSpace(child)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .listRowSeparator(.hidden)
+        .listSectionSeparator(.hidden)
+        .scrollContentBackground(.hidden)
+        .scrollDisabled(true)
+        .frame(height: subspacesListHeight)
+        .padding(.horizontal, -16)
+    }
+
+    private var subspacesListHeight: CGFloat {
+        let rowHeight: CGFloat = 68
+        let headerHeight: CGFloat = 48
+        return (CGFloat(childSpaces.count) * rowHeight) + headerHeight
     }
 
     @ViewBuilder
