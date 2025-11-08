@@ -10,10 +10,23 @@ import SwiftUI
 struct SpaceRowView: View {
     let space: SpaceModel
     let count: Int
+    let spaceService: SpaceService?
+
+    init(
+        space: SpaceModel,
+        count: Int,
+        spaceService: SpaceService? = nil,
+        parentLookup: ((UUID) -> SpaceModel?)? = nil
+    ) {
+        self.space = space
+        self.count = count
+        self.spaceService = spaceService
+        self.parentLookup = parentLookup
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            
+
             Image(systemName: space.iconName ?? "square.grid.2x2")
                 .foregroundStyle(spaceColor)
                 .frame(width: 36, height: 36)
@@ -39,6 +52,15 @@ struct SpaceRowView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            if canDeleteSpace {
+                Button(role: .destructive) {
+                    deleteSpace()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
     }
 
     /// Optional closure used to render breadcrumb context while the hierarchy is still evolving.
@@ -49,6 +71,25 @@ struct SpaceRowView: View {
             return color
         }
         return .accentColor
+    }
+
+    private var canDeleteSpace: Bool {
+        guard spaceService != nil else { return false }
+        guard space.id != SpaceModel.inboxIdentifier else { return false }
+        return !space.isDefault
+    }
+
+    private func deleteSpace() {
+        guard let service = spaceService else { return }
+        guard space.id != SpaceModel.inboxIdentifier, !space.isDefault else { return }
+
+        Task { @MainActor in
+            do {
+                try await service.deleteSpace(space)
+            } catch {
+                assertionFailure("Failed to delete space: \(error.localizedDescription)")
+            }
+        }
     }
 }
 

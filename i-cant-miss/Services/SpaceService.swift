@@ -9,6 +9,20 @@ import Combine
 @preconcurrency import CoreData
 import os.log
 
+enum SpaceServiceError: LocalizedError {
+    case cannotDeleteDefaultSpace
+    case spaceNotFound
+
+    var errorDescription: String? {
+        switch self {
+        case .cannotDeleteDefaultSpace:
+            return "Default spaces cannot be deleted."
+        case .spaceNotFound:
+            return "The space could not be found."
+        }
+    }
+}
+
 @MainActor
 final class SpaceService: ObservableObject {
     @Published private(set) var spaces: [SpaceModel] = []
@@ -159,5 +173,33 @@ final class SpaceService: ObservableObject {
         }
 
         return visited
+    }
+
+    func deleteSpace(_ space: SpaceModel) async throws {
+        guard space.id != SpaceModel.inboxIdentifier, !space.isDefault else {
+            throw SpaceServiceError.cannotDeleteDefaultSpace
+        }
+
+        try await withCheckedThrowingContinuation { continuation in
+            persistence.performBackgroundTask { context in
+                do {
+                    let request: NSFetchRequest<Folder> = Folder.fetchRequest()
+                    request.predicate = NSPredicate(format: "id == %@", space.id as CVarArg)
+                    request.fetchLimit = 1
+
+                    guard let folder = try context.fetch(request).first else {
+                        throw SpaceServiceError.spaceNotFound
+                    }
+
+                    context.delete(folder)
+                    try context.save()
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+
+        _ = await refresh(force: true)
     }
 }

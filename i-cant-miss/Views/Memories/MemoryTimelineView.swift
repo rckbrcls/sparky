@@ -36,6 +36,30 @@ struct MemoryTimelineView: View {
         isSearching ? memoryService.searchMemories(query: searchText) : []
     }
 
+    private var timelineSectionData: [MemoryService.TimelineSection] {
+        memoryService.timelineSections()
+            .filter { section in
+                if selectedSections.isEmpty {
+                    return true
+                }
+                return selectedSections.contains(section.kind)
+            }
+            .map { section in
+                MemoryService.TimelineSection(
+                    kind: section.kind,
+                    memories: section.memories.filter { memory in
+                        isMemoryTypeSelected(memory)
+                    }
+                )
+            }
+            .filter { !$0.memories.isEmpty }
+    }
+
+    private var filteredInboxMemories: [MemoryModel] {
+        memoryService.inboxMemories()
+            .filter { isMemoryTypeSelected($0) }
+    }
+
     private var activeFilterCount: Int {
         var count = 0
         if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
@@ -184,6 +208,13 @@ struct MemoryTimelineView: View {
             } message: {
                 Text(deleteConfirmationMessage)
             }
+            .onAppear(perform: syncExpansionStates)
+            .onChange(of: timelineSectionData.count) { _ in
+                syncExpansionStates()
+            }
+            .onChange(of: filteredInboxMemories.count) { _ in
+                syncExpansionStates()
+            }
         }
     }
 
@@ -207,22 +238,7 @@ struct MemoryTimelineView: View {
     }
 
     private var timelineSections: some View {
-        let sections = memoryService.timelineSections()
-            .filter { section in
-                if selectedSections.isEmpty {
-                    return true
-                }
-                return selectedSections.contains(section.kind)
-            }
-            .map { section in
-                MemoryService.TimelineSection(
-                    kind: section.kind,
-                    memories: section.memories.filter { memory in
-                        isMemoryTypeSelected(memory)
-                    }
-                )
-            }
-            .filter { !$0.memories.isEmpty }
+        let sections = timelineSectionData
 
         return Group {
             if sections.isEmpty {
@@ -267,10 +283,7 @@ struct MemoryTimelineView: View {
     private var inboxSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             DisclosureGroup(isExpanded: $isInboxExpanded) {
-                let memories = memoryService.inboxMemories()
-                    .filter { isMemoryTypeSelected($0) }
-
-                if memories.isEmpty {
+                if filteredInboxMemories.isEmpty {
                     emptyStateCard(
                         systemImage: "checkmark.seal",
                         title: "Inbox is clear",
@@ -279,7 +292,7 @@ struct MemoryTimelineView: View {
                     .padding(.top)
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
-                        ForEach(memories) { memory in
+                        ForEach(filteredInboxMemories) { memory in
                             memoryButton(for: memory)
                         }
                     }
@@ -349,6 +362,16 @@ struct MemoryTimelineView: View {
             selectedMemoryIDs.remove(id)
         } else {
             selectedMemoryIDs.insert(id)
+        }
+    }
+
+    private func syncExpansionStates() {
+        if timelineSectionData.isEmpty {
+            isUpcomingExpanded = false
+        }
+
+        if filteredInboxMemories.isEmpty {
+            isInboxExpanded = false
         }
     }
 

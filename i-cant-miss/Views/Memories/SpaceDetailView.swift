@@ -140,6 +140,7 @@ struct SpaceDetailView: View {
                                 SpaceRowView(
                                     space: child,
                                     count: memoryCount(for: child),
+                                    spaceService: spaceService,
                                     parentLookup: spaceService.space(id:)
                                 )
                             }
@@ -194,6 +195,16 @@ struct SpaceDetailView: View {
             )
             .onAppear { filterSheetDetent = .large }
             .presentationDetents([.large], selection: $filterSheetDetent)
+        }
+        .onAppear(perform: syncExpansionStates)
+        .onChange(of: timelineSectionsForSpace.count) { _ in
+            syncExpansionStates()
+        }
+        .onChange(of: ungroupedMemories.count) { _ in
+            syncExpansionStates()
+        }
+        .onChange(of: inboxMemories.count) { _ in
+            syncExpansionStates()
         }
     }
 
@@ -335,6 +346,15 @@ struct SpaceDetailView: View {
         .padding(.top)
     }
 
+    private func syncExpansionStates() {
+        if timelineSectionsForSpace.isEmpty && ungroupedMemories.isEmpty {
+            isUpcomingExpanded = false
+        }
+
+        if inboxMemories.isEmpty {
+            isInboxExpanded = false
+        }
+    }
     private var filteredMemories: [MemoryModel] {
         let base = memoryService.memories(
             in: resolvedSpace,
