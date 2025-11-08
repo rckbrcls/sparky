@@ -211,16 +211,16 @@ struct MemoryTimelineView: View {
                 Text(deleteConfirmationMessage)
             }
             .onAppear(perform: syncExpansionStates)
-            .onChange(of: timelineSectionData.count) { _ in
+            .onChange(of: timelineSectionData.count) {
                 syncExpansionStates()
             }
-            .onChange(of: filteredInboxMemories.count) { _ in
+            .onChange(of: filteredInboxMemories.count) {
                 syncExpansionStates()
             }
-            .onChange(of: isUpcomingExpanded) { _ in
+            .onChange(of: isUpcomingExpanded) {
                 autoCollapsedUpcoming = timelineSectionData.isEmpty && !isUpcomingExpanded
             }
-            .onChange(of: isInboxExpanded) { _ in
+            .onChange(of: isInboxExpanded) {
                 autoCollapsedInbox = filteredInboxMemories.isEmpty && !isInboxExpanded
             }
         }

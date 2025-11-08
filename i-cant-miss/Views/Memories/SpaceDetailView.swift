@@ -133,46 +133,40 @@ struct SpaceDetailView: View {
     }
 
     var body: some View {
-        ScrollView{
-            VStack(alignment: .leading, spacing: 22) {
-                if !childSpaces.isEmpty {
-                    Section("Subspaces") {
-                        ForEach(childSpaces) { child in
-                            NavigationLink(value: child) {
-                                SpaceRowView(
-                                    space: child,
-                                    count: memoryCount(for: child),
-                                    spaceService: spaceService,
-                                    parentLookup: spaceService.space(id:)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                if canDeleteSpace(child) {
-                                    Button(role: .destructive) {
-                                        deleteSpace(child)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
+        List {
+            if !childSpaces.isEmpty {
+                Section("Subspaces") {
+                    ForEach(childSpaces) { child in
+                        NavigationLink(value: child) {
+                            SpaceRowView(
+                                space: child,
+                                count: memoryCount(for: child),
+                                parentLookup: spaceService.space(id:)
+                            )
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            if canDeleteSpace(child) {
+                                Button(role: .destructive) {
+                                    deleteSpace(child)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
                         }
                     }
                 }
-
-                if isSearching {
-                    searchResultsSection
-                } else {
-                    timelineContent
-                    if showInbox {
-                        inboxSection
-                    }
-                }
-
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 70)
+
+            if isSearching {
+                searchResultsSection
+            } else {
+                timelineContent
+                if showInbox {
+                    inboxSection
+                }
+            }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle(resolvedSpace.name)
         .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
         .toolbar {
@@ -209,19 +203,19 @@ struct SpaceDetailView: View {
             .presentationDetents([.large], selection: $filterSheetDetent)
         }
         .onAppear(perform: syncExpansionStates)
-        .onChange(of: timelineSectionsForSpace.count) { _ in
+        .onChange(of: timelineSectionsForSpace.count) {
             syncExpansionStates()
         }
-        .onChange(of: ungroupedMemories.count) { _ in
+        .onChange(of: ungroupedMemories.count) {
             syncExpansionStates()
         }
-        .onChange(of: inboxMemories.count) { _ in
+        .onChange(of: inboxMemories.count) {
             syncExpansionStates()
         }
-        .onChange(of: isUpcomingExpanded) { _ in
+        .onChange(of: isUpcomingExpanded) {
             autoCollapsedUpcoming = timelineSectionsForSpace.isEmpty && ungroupedMemories.isEmpty && !isUpcomingExpanded
         }
-        .onChange(of: isInboxExpanded) { _ in
+        .onChange(of: isInboxExpanded) {
             autoCollapsedInbox = inboxMemories.isEmpty && !isInboxExpanded
         }
     }
