@@ -27,11 +27,49 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                reminderSection
-                notificationSection
-                locationSection
+            List {
+                Section {
+                    NavigationLink {
+                        ReminderSettingsView(settings: settings)
+                    } label: {
+                        SettingsRow(
+                            iconName: "checklist",
+                            title: "Reminders"
+                        )
+                    }
+
+                    NavigationLink {
+                        NotificationSettingsView(
+                            settings: settings,
+                            notificationStatus: $notificationStatus,
+                            isRequestingNotifications: $isRequestingNotifications,
+                            requestAuthorization: { await requestNotificationAuthorization() }
+                        )
+                    } label: {
+                        SettingsRow(
+                            iconName: "bell.badge",
+                            title: "Notifications",
+                            accessory: notificationStatus.summaryLabel
+                        )
+                    }
+
+                    NavigationLink {
+                        LocationSettingsView(
+                            settings: settings,
+                            geofenceManager: geofenceManager,
+                            isRequestingLocation: $isRequestingLocation,
+                            requestAuthorization: requestLocationAuthorization
+                        )
+                    } label: {
+                        SettingsRow(
+                            iconName: "location.circle",
+                            title: "Location & Geofencing",
+                            accessory: geofenceManager.authorizationStatus.summaryLabel
+                        )
+                    }
+                }
             }
+            .listStyle(.insetGrouped)
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height:  70)
             }
@@ -44,102 +82,139 @@ struct SettingsView: View {
             requestLocationAuthorization(always: newValue)
         }
     }
+}
 
-    private var reminderSection: some View {
-        Section {
-            Picker("Timeline default filter", selection: $settings.defaultTimelineFilter) {
-                ForEach(ReminderService.TimelineFilter.allCases, id: \.self) { filter in
-                    Text(filter.displayTitle).tag(filter)
+// MARK: - Detail Views
+
+private struct ReminderSettingsView: View {
+    @ObservedObject var settings: SettingsStore
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Timeline default filter", selection: $settings.defaultTimelineFilter) {
+                    ForEach(ReminderService.TimelineFilter.allCases, id: \.self) { filter in
+                        Text(filter.displayTitle).tag(filter)
+                    }
                 }
-            }
 
-            Picker("Default reminder priority", selection: $settings.defaultReminderPriority) {
-                ForEach(ReminderPriority.allCases, id: \.self) { priority in
-                    Label(priority.displayName, systemImage: priority.iconName)
-                        .tag(priority)
+                Picker("Default reminder priority", selection: $settings.defaultReminderPriority) {
+                    ForEach(ReminderPriority.allCases, id: \.self) { priority in
+                        Label(priority.displayName, systemImage: priority.iconName)
+                            .tag(priority)
+                    }
                 }
-            }
 
-            Stepper(value: $settings.defaultSnoozeMinutes, in: 5...180, step: 5) {
-                Text("Snooze duration: \(durationDescription(minutes: settings.defaultSnoozeMinutes))")
-            }
-            .accessibilityLabel("Default snooze duration")
+                Stepper(value: $settings.defaultSnoozeMinutes, in: 5...180, step: 5) {
+                    Text("Snooze duration: \(durationDescription(minutes: settings.defaultSnoozeMinutes))")
+                }
+                .accessibilityLabel("Default snooze duration")
 
-            Stepper(value: $settings.defaultPostponeMinutes, in: 15...720, step: 15) {
-                Text("Postpone duration: \(durationDescription(minutes: settings.defaultPostponeMinutes))")
+                Stepper(value: $settings.defaultPostponeMinutes, in: 15...720, step: 15) {
+                    Text("Postpone duration: \(durationDescription(minutes: settings.defaultPostponeMinutes))")
+                }
+                .accessibilityLabel("Default postpone duration")
+            } footer: {
+                Text("These defaults affect new reminders and quick actions in the timeline.")
             }
-            .accessibilityLabel("Default postpone duration")
-        } header: {
-            Text("Reminders")
-        } footer: {
-            Text("These defaults affect new reminders and quick actions in the timeline.")
         }
+        .navigationTitle("Reminders")
     }
+}
 
-    private var notificationSection: some View {
-        Section {
-            Toggle("Play sound for reminder alerts", isOn: $settings.notificationSoundEnabled)
+private struct NotificationSettingsView: View {
+    @ObservedObject var settings: SettingsStore
+    @Binding var notificationStatus: UNAuthorizationStatus
+    @Binding var isRequestingNotifications: Bool
 
-            HStack {
-                Text("Status")
-                Spacer()
-                Text(notificationStatus.displayName)
+    let requestAuthorization: () async -> Void
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Play sound for reminder alerts", isOn: $settings.notificationSoundEnabled)
+
+                Button(role: .none) {
+                    Task {
+                        await requestAuthorization()
+                    }
+                } label: {
+                    HStack {
+                        if isRequestingNotifications {
+                            ProgressView()
+                        }
+                        Text("Request Notification Permission")
+                    }
+                }
+                .disabled(isRequestingNotifications)
+
+                Button("Open System Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } footer: {
+                Text("Notification permissions control badges, sounds and alerts for your reminders.")
+            }
+        }
+        .navigationTitle("Notifications")
+    }
+}
+
+private struct LocationSettingsView: View {
+    @ObservedObject var settings: SettingsStore
+    @ObservedObject var geofenceManager: GeofenceManager
+    @Binding var isRequestingLocation: Bool
+
+    let requestAuthorization: (Bool) -> Void
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Prefer always-on location access", isOn: $settings.preferAlwaysOnLocationAccess)
+
+                Button(role: .none) {
+                    requestAuthorization(settings.preferAlwaysOnLocationAccess)
+                } label: {
+                    HStack {
+                        if isRequestingLocation {
+                            ProgressView()
+                        }
+                        Text("Request Location Access")
+                    }
+                }
+                .disabled(isRequestingLocation)
+            } footer: {
+                Text("Location-based triggers work best with always-on access, but you can opt for when-in-use if you prefer.")
+            }
+        }
+        .navigationTitle("Location & Geofencing")
+    }
+}
+
+private struct SettingsRow: View {
+    let iconName: String
+    let title: String
+    var accessory: String?
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: iconName)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 24, height: 24, alignment: .center)
+
+            Text(title)
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            if let accessory {
+                Text(accessory)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-
-            Button(role: .none) {
-                Task {
-                    await requestNotificationAuthorization()
-                }
-            } label: {
-                HStack {
-                    if isRequestingNotifications {
-                        ProgressView()
-                    }
-                    Text("Request Notification Permission")
-                }
-            }
-            .disabled(isRequestingNotifications)
-
-            Button("Open System Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-        } header: {
-            Text("Notifications")
-        } footer: {
-            Text("Notification permissions control badges, sounds and alerts for your reminders.")
         }
-    }
-
-    private var locationSection: some View {
-        Section {
-            Toggle("Prefer always-on location access", isOn: $settings.preferAlwaysOnLocationAccess)
-
-            HStack {
-                Text("Authorization")
-                Spacer()
-                Text(geofenceManager.authorizationStatus.displayName)
-                    .foregroundStyle(.secondary)
-            }
-
-            Button(role: .none) {
-                requestLocationAuthorization(always: settings.preferAlwaysOnLocationAccess)
-            } label: {
-                HStack {
-                    if isRequestingLocation {
-                        ProgressView()
-                    }
-                    Text("Request Location Access")
-                }
-            }
-            .disabled(isRequestingLocation)
-        } header: {
-            Text("Location & Geofencing")
-        } footer: {
-            Text("Location-based triggers work best with always-on access, but you can opt for when-in-use if you prefer.")
-        }
+        .padding(.vertical, 6)
     }
 }
 
@@ -171,16 +246,19 @@ private extension SettingsView {
         environment.geofenceManager.requestAuthorization(always: always)
     }
 
-    func durationDescription(minutes: Int) -> String {
-        guard minutes >= 60, minutes % 60 == 0 else {
-            return "\(minutes) min"
-        }
-        let hours = minutes / 60
-        return "\(hours) hour" + (hours == 1 ? "" : "s")
-    }
 }
 
-// MARK: - Helpers
+// MARK: - Shared Helpers
+
+private func durationDescription(minutes: Int) -> String {
+    guard minutes >= 60, minutes % 60 == 0 else {
+        return "\(minutes) min"
+    }
+    let hours = minutes / 60
+    return "\(hours) hour" + (hours == 1 ? "" : "s")
+}
+
+// MARK: - Extensions
 
 private extension ReminderService.TimelineFilter {
     var displayTitle: String {
@@ -222,6 +300,15 @@ private extension UNAuthorizationStatus {
         @unknown default: return "Unknown"
         }
     }
+
+    var summaryLabel: String? {
+        switch self {
+        case .notDetermined:
+            return nil
+        default:
+            return displayName
+        }
+    }
 }
 
 private extension CLAuthorizationStatus {
@@ -233,6 +320,15 @@ private extension CLAuthorizationStatus {
         case .authorizedAlways: return "Always"
         case .authorizedWhenInUse: return "When in use"
         @unknown default: return "Unknown"
+        }
+    }
+
+    var summaryLabel: String? {
+        switch self {
+        case .notDetermined:
+            return nil
+        default:
+            return displayName
         }
     }
 }
