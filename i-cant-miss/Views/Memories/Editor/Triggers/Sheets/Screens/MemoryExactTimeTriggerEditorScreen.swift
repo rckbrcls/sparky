@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryExactTimeTriggerSheet: View {
+struct MemoryExactTimeTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     @State private var fireDate: Date
@@ -22,36 +22,34 @@ struct MemoryExactTimeTriggerSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Exact Time") {
-                    DatePicker("Date", selection: $fireDate, displayedComponents: [.date])
-                    DatePicker("Time", selection: $fireDate, displayedComponents: [.hourAndMinute])
+        Form {
+            Section("Exact Time") {
+                DatePicker("Date", selection: $fireDate, displayedComponents: [.date])
+                DatePicker("Time", selection: $fireDate, displayedComponents: [.hourAndMinute])
 
-                    Picker("Repeat", selection: $selectedFrequency) {
-                        Text("Never").tag(nil as RecurrenceRule.Frequency?)
-                        ForEach(RecurrenceRule.Frequency.allCases, id: \.self) { frequency in
-                            Text(frequency.title).tag(Optional(frequency))
-                        }
+                Picker("Repeat", selection: $selectedFrequency) {
+                    Text("Never").tag(nil as RecurrenceRule.Frequency?)
+                    ForEach(RecurrenceRule.Frequency.allCases, id: \.self) { frequency in
+                        Text(frequency.title).tag(Optional(frequency))
                     }
+                }
 
-                    if selectedFrequency != nil {
-                        Stepper(value: $repeatInterval, in: 1...30) {
-                            Text("Every \(repeatInterval) interval\(repeatInterval == 1 ? "" : "s")")
-                        }
+                if selectedFrequency != nil {
+                    Stepper(value: $repeatInterval, in: 1...30) {
+                        Text("Every \(repeatInterval) interval\(repeatInterval == 1 ? "" : "s")")
                     }
                 }
             }
-            .navigationTitle("Exact Time")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        applyChanges()
-                    }
+        }
+        .navigationTitle("Exact Time")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(existingTrigger == nil ? "Add" : "Save") {
+                    applyChanges()
                 }
             }
         }
@@ -63,3 +61,5 @@ struct MemoryExactTimeTriggerSheet: View {
         dismiss()
     }
 }
+
+

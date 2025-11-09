@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryWeekdayTriggerSheet: View {
+struct MemoryWeekdayTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     @State private var selectedDays: Set<Int>
@@ -14,49 +14,43 @@ struct MemoryWeekdayTriggerSheet: View {
         self.viewModel = viewModel
         let weekdayTrigger = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
         let timeTrigger = viewModel.triggers.first(where: { $0.type == .time })
-        let initialSet = Self.initialWeekdaySelection(from: weekdayTrigger?.weekdayMask ?? 0)
+        let initialSelection = Self.initialWeekdaySelection(from: weekdayTrigger?.weekdayMask ?? 0)
         let defaultReference = weekdayTrigger?.fireDate ?? timeTrigger?.fireDate ?? Date().addingTimeInterval(3600)
-        _selectedDays = State(initialValue: initialSet)
+        _selectedDays = State(initialValue: initialSelection)
         _referenceTime = State(initialValue: defaultReference)
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Weekday Routine") {
-                    MemoryWeekdaySelectionView(selectedDays: $selectedDays)
+        Form {
+            Section("Weekday Routine") {
+                MemoryWeekdaySelectionView(selectedDays: $selectedDays)
 
-                    DatePicker("Time", selection: $referenceTime, displayedComponents: [.hourAndMinute])
+                DatePicker("Time", selection: $referenceTime, displayedComponents: [.hourAndMinute])
 
-                    if selectedDays.isEmpty {
-                        Text("Select at least one weekday to keep this trigger active.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(summaryText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .navigationTitle("Weekday Routine")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        applyChanges()
-                    }
-                    .disabled(isSaveDisabled)
+                if selectedDays.isEmpty {
+                    Text("Select at least one weekday to keep this trigger active.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(summaryText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
-    }
-
-    private var isSaveDisabled: Bool {
-        selectedDays.isEmpty
+        .navigationTitle("Weekday Routine")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(existingTrigger == nil ? "Add" : "Save") {
+                    applyChanges()
+                }
+                .disabled(selectedDays.isEmpty)
+            }
+        }
     }
 
     private var summaryText: String {
@@ -99,3 +93,5 @@ struct MemoryWeekdayTriggerSheet: View {
         Calendar.current.component(.weekday, from: Date())
     }
 }
+
+

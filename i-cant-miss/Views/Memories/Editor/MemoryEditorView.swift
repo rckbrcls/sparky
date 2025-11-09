@@ -18,10 +18,7 @@ struct MemoryEditorView: View {
     @State private var showTriggerPickerSheet = false
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
-    @State private var showContactPicker = false
     @State private var showSequentialSheet = false
-    @State private var pendingTriggerDestination: MemoryTriggerPickerDestination?
-    @State private var showAccessDeniedAlert = false
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
@@ -292,60 +289,16 @@ struct MemoryEditorView: View {
                           selection: $photoSelections,
                           maxSelectionCount: 5,
                           matching: .images)
-            .sheet(isPresented: $showDueDateSheet) {
-                MemoryDueDateTriggerSheet(viewModel: viewModel)
-            }
-            .sheet(isPresented: $showExactTimeSheet) {
-                MemoryExactTimeTriggerSheet(viewModel: viewModel)
-            }
-            .sheet(isPresented: $showWeekdaySheet) {
-                MemoryWeekdayTriggerSheet(viewModel: viewModel)
-            }
+            .sheet(isPresented: $showDueDateSheet, content: dueDateSheet)
+            .sheet(isPresented: $showExactTimeSheet, content: exactTimeSheet)
+            .sheet(isPresented: $showWeekdaySheet, content: weekdaySheet)
             .sheet(isPresented: $showTriggerPickerSheet) {
-                MemoryTriggerPickerSheet(
-                    viewModel: viewModel
-                ) { destination in
-                    pendingTriggerDestination = destination
-                }
+                MemoryTriggerPickerSheet(viewModel: viewModel)
                 .presentationDetents([.large])
             }
-            .sheet(isPresented: $showLocationPicker) {
-                LocationPickerView { name, latitude, longitude, radius, event in
-                    viewModel.addLocationTrigger(name: name,
-                                                 latitude: latitude,
-                                                 longitude: longitude,
-                                                 radius: radius,
-                                                 event: event)
-                    showLocationPicker = false
-                }
-            }
-            .sheet(isPresented: $showPersonSheet) {
-                MemoryPersonTriggerSheet(
-                    viewModel: viewModel,
-                    showContactPicker: $showContactPicker,
-                    showAccessDeniedAlert: $showAccessDeniedAlert
-                )
-                .presentationDetents([.medium])
-            }
-            .sheet(isPresented: $showSequentialSheet) {
-                MemorySequentialTriggerSheet(
-                    viewModel: viewModel,
-                    excludedMemoryID: viewModel.editingMemoryID
-                )
-                .presentationDetents([.large])
-            }
-            .sheet(isPresented: $showContactPicker) {
-                ContactPickerView { contactName, contactId in
-                    if let trigger = viewModel.triggers.first(where: { $0.type == .person }) {
-                        var updated = trigger
-                        updated.person = .init(name: contactName, contactIdentifier: contactId)
-                        viewModel.updateTrigger(id: trigger.id, with: updated)
-                    } else {
-                        viewModel.addPersonTrigger(name: contactName, identifier: contactId)
-                    }
-                    showContactPicker = false
-                }
-            }
+            .sheet(isPresented: $showLocationPicker, content: locationSheet)
+            .sheet(isPresented: $showPersonSheet, content: personSheet)
+            .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
             .fullScreenCover(isPresented: $showCameraPicker) {
                 CameraCaptureView {
                     insertInlineImage($0)
@@ -355,16 +308,6 @@ struct MemoryEditorView: View {
                 }
                 .ignoresSafeArea()
             }
-            .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Settings") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                }
-            } message: {
-                Text("Allow contact access in Settings to pick a person trigger.")
-            }
             .alert("Unable to add photo", isPresented: Binding(
                 get: { mediaErrorMessage != nil },
                 set: { _ in mediaErrorMessage = nil }
@@ -373,11 +316,6 @@ struct MemoryEditorView: View {
             } message: {
                 Text(mediaErrorMessage ?? "")
             }
-        }
-        .onChange(of: showTriggerPickerSheet) { _, isPresented in
-            guard !isPresented, let destination = pendingTriggerDestination else { return }
-            handleTriggerPickerDestination(destination)
-            pendingTriggerDestination = nil
         }
     }
 
@@ -735,21 +673,51 @@ struct MemoryEditorView: View {
         }
     }
 
-    private func handleTriggerPickerDestination(_ destination: MemoryTriggerPickerDestination) {
-        switch destination {
-        case .dueDate:
-            showDueDateSheet = true
-        case .exactTime:
-            showExactTimeSheet = true
-        case .weekdayRoutine:
-            showWeekdaySheet = true
-        case .location:
-            showLocationPicker = true
-        case .person:
-            showPersonSheet = true
-        case .sequential:
-            showSequentialSheet = true
+    @ViewBuilder
+    private func dueDateSheet() -> some View {
+        NavigationStack {
+            MemoryDueDateTriggerEditorScreen(viewModel: viewModel)
         }
+    }
+
+    @ViewBuilder
+    private func exactTimeSheet() -> some View {
+        NavigationStack {
+            MemoryExactTimeTriggerEditorScreen(viewModel: viewModel)
+        }
+    }
+
+    @ViewBuilder
+    private func weekdaySheet() -> some View {
+        NavigationStack {
+            MemoryWeekdayTriggerEditorScreen(viewModel: viewModel)
+        }
+    }
+
+    @ViewBuilder
+    private func locationSheet() -> some View {
+        NavigationStack {
+            MemoryLocationTriggerEditorScreen(viewModel: viewModel)
+        }
+    }
+
+    @ViewBuilder
+    private func personSheet() -> some View {
+        NavigationStack {
+            MemoryPersonTriggerEditorScreen(viewModel: viewModel)
+        }
+        .presentationDetents([.medium])
+    }
+
+    @ViewBuilder
+    private func sequentialSheet() -> some View {
+        NavigationStack {
+            MemorySequentialTriggerEditorScreen(
+                viewModel: viewModel,
+                excludedMemoryID: viewModel.editingMemoryID
+            )
+        }
+        .presentationDetents([.large])
     }
 }
 

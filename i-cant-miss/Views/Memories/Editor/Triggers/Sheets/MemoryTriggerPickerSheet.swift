@@ -3,10 +3,10 @@ import SwiftUI
 struct MemoryTriggerPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
-    let onSelect: (MemoryTriggerPickerDestination) -> Void
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             List {
                 Section("Date & Time") {
                     TriggerPickerRow(
@@ -70,6 +70,25 @@ struct MemoryTriggerPickerSheet: View {
                     Button("Close") { dismiss() }
                 }
             }
+            .navigationDestination(for: MemoryTriggerPickerDestination.self) { destination in
+                switch destination {
+                case .dueDate:
+                    MemoryDueDateTriggerEditorScreen(viewModel: viewModel)
+                case .exactTime:
+                    MemoryExactTimeTriggerEditorScreen(viewModel: viewModel)
+                case .weekdayRoutine:
+                    MemoryWeekdayTriggerEditorScreen(viewModel: viewModel)
+                case .location:
+                    MemoryLocationTriggerEditorScreen(viewModel: viewModel)
+                case .person:
+                    MemoryPersonTriggerEditorScreen(viewModel: viewModel)
+                case .sequential:
+                    MemorySequentialTriggerEditorScreen(
+                        viewModel: viewModel,
+                        excludedMemoryID: viewModel.editingMemoryID
+                    )
+                }
+            }
         }
     }
 
@@ -109,9 +128,6 @@ struct MemoryTriggerPickerSheet: View {
     }
 
     private func select(_ destination: MemoryTriggerPickerDestination) {
-        onSelect(destination)
-        dismiss()
+        navigationPath.append(destination)
     }
 }
-
-

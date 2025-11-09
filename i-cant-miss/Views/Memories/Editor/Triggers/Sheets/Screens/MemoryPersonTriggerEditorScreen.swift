@@ -1,0 +1,132 @@
+import SwiftUI
+import Contacts
+import UIKit
+
+struct MemoryPersonTriggerEditorScreen: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: MemoryEditorViewModel
+    @State private var name: String
+    @State private var contactIdentifier: String
+    @State private var showContactPicker = false
+    @State private var showAccessDeniedAlert = false
+
+    private var existingTrigger: MemoryTriggerDraft? {
+        viewModel.triggers.first(where: { $0.type == .person })
+    }
+
+    init(viewModel: MemoryEditorViewModel) {
+        self.viewModel = viewModel
+        let trigger = viewModel.triggers.first(where: { $0.type == .person })
+        _name = State(initialValue: trigger?.person?.name ?? "")
+        _contactIdentifier = State(initialValue: trigger?.person?.contactIdentifier ?? "")
+    }
+
+    var body: some View {
+        Form {
+            Section("Contact") {
+                HStack {
+                    TextField("Name", text: $name)
+                    Button {
+                        Task { await requestContactsAndShow() }
+                    } label: {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Pick from contacts")
+                }
+
+                if !contactIdentifier.isEmpty {
+                    Label("Contact linked", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+            }
+
+            Section {
+                Text("Enter a name or choose from contacts.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .navigationTitle(existingTrigger == nil ? "Add Person Trigger" : "Edit Person Trigger")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(existingTrigger == nil ? "Add" : "Save") {
+                    commitChanges()
+                }
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .sheet(isPresented: $showContactPicker) {
+            ContactPickerView { selectedName, identifier in
+                name = selectedName
+                contactIdentifier = identifier ?? ""
+                showContactPicker = false
+            }
+        }
+        .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        } message: {
+            Text("Allow contact access in Settings to pick a person trigger.")
+        }
+    }
+
+    private func commitChanges() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        if let trigger = existingTrigger {
+            var updated = trigger
+            updated.person = .init(
+                name: trimmedName,
+                contactIdentifier: contactIdentifier.isEmpty ? nil : contactIdentifier
+            )
+            viewModel.updateTrigger(id: trigger.id, with: updated)
+        } else {
+            viewModel.addPersonTrigger(
+                name: trimmedName,
+                identifier: contactIdentifier.isEmpty ? nil : contactIdentifier
+            )
+        }
+        dismiss()
+    }
+
+    private func requestContactsAndShow() async {
+        let status = ContactAccessHelper.checkAuthorizationStatus()
+        switch status {
+        case .authorized, .limited:
+            await MainActor.run {
+                showContactPicker = true
+            }
+        case .notDetermined:
+            let granted = await ContactAccessHelper.requestAccess()
+            await MainActor.run {
+                if granted {
+                    showContactPicker = true
+                } else {
+                    showAccessDeniedAlert = true
+                }
+            }
+        case .denied, .restricted:
+            await MainActor.run {
+                showAccessDeniedAlert = true
+            }
+        @unknown default:
+            await MainActor.run {
+                showAccessDeniedAlert = true
+            }
+        }
+    }
+}
+
+

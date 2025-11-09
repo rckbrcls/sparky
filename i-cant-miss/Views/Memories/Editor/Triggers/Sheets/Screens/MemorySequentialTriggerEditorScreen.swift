@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemorySequentialTriggerSheet: View {
+struct MemorySequentialTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     let excludedMemoryID: UUID?
@@ -18,38 +18,36 @@ struct MemorySequentialTriggerSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                infoSection
-                selectionSection(kind: .previous)
-                selectionSection(kind: .next)
+        List {
+            infoSection
+            selectionSection(kind: .previous)
+            selectionSection(kind: .next)
 
-                if selectedPrevious != nil || selectedNext != nil {
-                    Section {
-                        Button("Remove sequential trigger", role: .destructive) {
-                            viewModel.removeSequentialTrigger()
-                            selectedPrevious = nil
-                            selectedNext = nil
-                        }
+            if selectedPrevious != nil || selectedNext != nil {
+                Section {
+                    Button("Remove sequential trigger", role: .destructive) {
+                        viewModel.removeSequentialTrigger()
+                        selectedPrevious = nil
+                        selectedNext = nil
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .searchable(text: $searchText, prompt: "Search memories")
-            .navigationTitle("Sequential Trigger")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        viewModel.updateSequentialTrigger(
-                            previousMemoryID: selectedPrevious,
-                            nextMemoryID: selectedNext
-                        )
-                        dismiss()
-                    }
+        }
+        .listStyle(.insetGrouped)
+        .searchable(text: $searchText, prompt: "Search memories")
+        .navigationTitle("Sequential Trigger")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    viewModel.updateSequentialTrigger(
+                        previousMemoryID: selectedPrevious,
+                        nextMemoryID: selectedNext
+                    )
+                    dismiss()
                 }
             }
         }
