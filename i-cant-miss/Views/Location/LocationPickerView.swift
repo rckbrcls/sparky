@@ -760,21 +760,21 @@ private struct LegacySelectableMap: UIViewRepresentable {
 private final class LocationGeocoder: ObservableObject {
     @Published private(set) var isResolving = false
 
-    private let geocoder = CLGeocoder()
     private var activeCoordinate: CLLocationCoordinate2D?
+    private var currentReverseRequest: MKReverseGeocodingRequest?
 
     func resolveName(for coordinate: CLLocationCoordinate2D) async -> String? {
         activeCoordinate = coordinate
-        geocoder.cancelGeocode()
+        cancelActiveGeocode()
         isResolving = true
+
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         do {
-            let placemarks = try await geocoder.reverseGeocodeLocation(location)
-            let name = placemarks.first?.formattedAddress
+            let address = try await fetchAddress(for: location)
             if activeCoordinate?.isApproximatelyEqual(to: coordinate) ?? false {
                 isResolving = false
             }
-            return name
+            return address
         } catch {
             if activeCoordinate?.isApproximatelyEqual(to: coordinate) ?? false {
                 isResolving = false
@@ -782,28 +782,43 @@ private final class LocationGeocoder: ObservableObject {
             return nil
         }
     }
+
+    private func cancelActiveGeocode() {
+        currentReverseRequest?.cancel()
+        currentReverseRequest = nil
+    }
+
+    private func fetchAddress(for location: CLLocation) async throws -> String? {
+        guard let request = MKReverseGeocodingRequest(location: location) else {
+            return nil
+        }
+
+        currentReverseRequest = request
+        do {
+            let mapItems = try await request.mapItems
+            guard currentReverseRequest === request else { return nil }
+            currentReverseRequest = nil
+
+            guard let mapItem = mapItems.first else { return nil }
+            if let address = mapItem.address {
+                return address.shortAddress ?? address.fullAddress
+            }
+            if let name = mapItem.name, !name.isEmpty {
+                return name
+            }
+            return nil
+        } catch {
+            if currentReverseRequest === request {
+                currentReverseRequest = nil
+            }
+            throw error
+        }
+    }
 }
 
 private extension CLLocationCoordinate2D {
     func isApproximatelyEqual(to other: CLLocationCoordinate2D, tolerance: CLLocationDegrees = 0.00001) -> Bool {
         abs(latitude - other.latitude) < tolerance && abs(longitude - other.longitude) < tolerance
-    }
-}
-
-private extension CLPlacemark {
-    var formattedAddress: String {
-        let street = [subThoroughfare, thoroughfare]
-            .compactMap { $0 }
-            .joined(separator: " ")
-            .trimmingCharacters(in: .whitespaces)
-        let localityComponents = [subLocality, locality, administrativeArea]
-            .compactMap { $0 }
-        let combined = ([street] + localityComponents)
-            .filter { !$0.isEmpty }
-        if !combined.isEmpty {
-            return combined.joined(separator: ", ")
-        }
-        return name ?? "Pinned Location"
     }
 }
 

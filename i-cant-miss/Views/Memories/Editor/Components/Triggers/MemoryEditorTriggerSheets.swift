@@ -205,7 +205,7 @@ struct MemoryWeekdayTriggerSheet: View {
                     .disabled(isSaveDisabled)
                 }
             }
-            .onChange(of: isEnabled) { newValue in
+            .onChange(of: isEnabled) { _, newValue in
                 if !newValue {
                     selectedDays.removeAll()
                 } else if selectedDays.isEmpty {

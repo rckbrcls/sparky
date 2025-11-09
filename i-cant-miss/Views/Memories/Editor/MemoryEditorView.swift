@@ -374,7 +374,7 @@ struct MemoryEditorView: View {
                 Text(mediaErrorMessage ?? "")
             }
         }
-        .onChange(of: showTriggerPickerSheet) { isPresented in
+        .onChange(of: showTriggerPickerSheet) { _, isPresented in
             guard !isPresented, let destination = pendingTriggerDestination else { return }
             handleTriggerPickerDestination(destination)
             pendingTriggerDestination = nil
