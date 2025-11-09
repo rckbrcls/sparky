@@ -1,52 +1,24 @@
 import SwiftUI
 import Contacts
 
-struct MemoryScheduleTriggerSheet: View {
+struct MemoryDueDateTriggerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @State private var dueDateEnabled: Bool
+    @State private var isEnabled: Bool
     @State private var dueDate: Date
-    @State private var timeTriggerEnabled: Bool
-    @State private var timeDate: Date
-    @State private var selectedFrequency: RecurrenceRule.Frequency?
-    @State private var repeatInterval: Int
-    @State private var weekdayEnabled: Bool
-    @State private var weekdaySelection: Set<Int>
-    @State private var weekdayReferenceTime: Date
-
-    private var timeTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .time })
-    }
-
-    private var weekdayTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .dayOfWeek })
-    }
 
     init(viewModel: MemoryEditorViewModel) {
         self.viewModel = viewModel
-
-        let existingTime = viewModel.triggers.first(where: { $0.type == .time })
-        let existingWeekday = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
-        let defaultReferenceDate = existingTime?.fireDate ?? existingWeekday?.fireDate ?? Date().addingTimeInterval(3600)
-        let initialWeekdays = MemoryScheduleTriggerSheet.weekdaySet(from: existingWeekday?.weekdayMask ?? 0)
-
-        _dueDateEnabled = State(initialValue: viewModel.dueDateEnabled)
+        _isEnabled = State(initialValue: viewModel.dueDateEnabled)
         _dueDate = State(initialValue: viewModel.dueDate)
-        _timeTriggerEnabled = State(initialValue: existingTime != nil)
-        _timeDate = State(initialValue: existingTime?.fireDate ?? defaultReferenceDate)
-        _selectedFrequency = State(initialValue: existingTime?.recurrenceRule?.frequency)
-        _repeatInterval = State(initialValue: max(existingTime?.recurrenceRule?.interval ?? 1, 1))
-        _weekdayEnabled = State(initialValue: !initialWeekdays.isEmpty)
-        _weekdaySelection = State(initialValue: initialWeekdays)
-        _weekdayReferenceTime = State(initialValue: existingWeekday?.fireDate ?? existingTime?.fireDate ?? defaultReferenceDate)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Due Date") {
-                    Toggle("Enable due date", isOn: $dueDateEnabled.animation())
-                    if dueDateEnabled {
+                    Toggle("Enable due date", isOn: $isEnabled.animation())
+                    if isEnabled {
                         DatePicker("Date", selection: $dueDate, displayedComponents: [.date])
                         DatePicker("Time", selection: $dueDate, displayedComponents: [.hourAndMinute])
                     } else {
@@ -56,11 +28,76 @@ struct MemoryScheduleTriggerSheet: View {
                     }
                 }
 
-                Section("Exact Date & Time") {
-                    Toggle("Enable time trigger", isOn: $timeTriggerEnabled.animation())
-                    if timeTriggerEnabled {
-                        DatePicker("Date", selection: $timeDate, displayedComponents: [.date])
-                        DatePicker("Time", selection: $timeDate, displayedComponents: [.hourAndMinute])
+                if viewModel.dueDateEnabled {
+                    Section {
+                        Button("Remove due date", role: .destructive) {
+                            removeDueDate()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Due Date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        applyChanges()
+                    }
+                }
+            }
+        }
+    }
+
+    private func applyChanges() {
+        if isEnabled {
+            viewModel.dueDate = dueDate
+            viewModel.dueDateEnabled = true
+        } else {
+            viewModel.dueDateEnabled = false
+        }
+        dismiss()
+    }
+
+    private func removeDueDate() {
+        viewModel.dueDateEnabled = false
+        dismiss()
+    }
+}
+
+struct MemoryExactTimeTriggerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: MemoryEditorViewModel
+    @State private var isEnabled: Bool
+    @State private var fireDate: Date
+    @State private var selectedFrequency: RecurrenceRule.Frequency?
+    @State private var repeatInterval: Int
+
+    private var existingTrigger: MemoryTriggerDraft? {
+        viewModel.triggers.first(where: { $0.type == .time })
+    }
+
+    init(viewModel: MemoryEditorViewModel) {
+        self.viewModel = viewModel
+        let timeTrigger = viewModel.triggers.first(where: { $0.type == .time })
+        let weekdayTrigger = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
+        let defaultDate = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate ?? Date().addingTimeInterval(3600)
+        _isEnabled = State(initialValue: timeTrigger != nil)
+        _fireDate = State(initialValue: defaultDate)
+        _selectedFrequency = State(initialValue: timeTrigger?.recurrenceRule?.frequency)
+        _repeatInterval = State(initialValue: max(timeTrigger?.recurrenceRule?.interval ?? 1, 1))
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Exact Time") {
+                    Toggle("Enable exact time", isOn: $isEnabled.animation())
+                    if isEnabled {
+                        DatePicker("Date", selection: $fireDate, displayedComponents: [.date])
+                        DatePicker("Time", selection: $fireDate, displayedComponents: [.hourAndMinute])
 
                         Picker("Repeat", selection: $selectedFrequency) {
                             Text("Never").tag(nil as RecurrenceRule.Frequency?)
@@ -74,37 +111,88 @@ struct MemoryScheduleTriggerSheet: View {
                                 Text("Every \(repeatInterval) interval\(repeatInterval == 1 ? "" : "s")")
                             }
                         }
-                    } else if timeTrigger != nil {
+                    } else if existingTrigger != nil {
                         Text("This memory currently has a time trigger. Disabling removes it.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+            .navigationTitle("Exact Time")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        applyChanges()
+                    }
+                }
+            }
+        }
+    }
 
+    private func applyChanges() {
+        if isEnabled {
+            let recurrence = selectedFrequency.map { RecurrenceRule(frequency: $0, interval: repeatInterval) }
+            viewModel.setTimeTrigger(fireDate: fireDate, recurrence: recurrence)
+        } else {
+            viewModel.setTimeTrigger(fireDate: nil, recurrence: nil)
+        }
+        dismiss()
+    }
+}
+
+struct MemoryWeekdayTriggerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: MemoryEditorViewModel
+    @State private var isEnabled: Bool
+    @State private var selectedDays: Set<Int>
+    @State private var referenceTime: Date
+
+    private var existingTrigger: MemoryTriggerDraft? {
+        viewModel.triggers.first(where: { $0.type == .dayOfWeek })
+    }
+
+    init(viewModel: MemoryEditorViewModel) {
+        self.viewModel = viewModel
+        let weekdayTrigger = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
+        let timeTrigger = viewModel.triggers.first(where: { $0.type == .time })
+        let initialSet = Self.weekdaySet(from: weekdayTrigger?.weekdayMask ?? 0)
+        let defaultReference = weekdayTrigger?.fireDate ?? timeTrigger?.fireDate ?? Date().addingTimeInterval(3600)
+        _isEnabled = State(initialValue: !initialSet.isEmpty)
+        _selectedDays = State(initialValue: initialSet)
+        _referenceTime = State(initialValue: defaultReference)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
                 Section("Weekday Routine") {
-                    Toggle("Enable weekday schedule", isOn: $weekdayEnabled.animation())
-                    if weekdayEnabled {
-                        MemoryWeekdaySelectionView(selectedDays: $weekdaySelection)
+                    Toggle("Enable weekday schedule", isOn: $isEnabled.animation())
+                    if isEnabled {
+                        MemoryWeekdaySelectionView(selectedDays: $selectedDays)
 
-                        DatePicker("Time", selection: $weekdayReferenceTime, displayedComponents: [.hourAndMinute])
+                        DatePicker("Time", selection: $referenceTime, displayedComponents: [.hourAndMinute])
 
-                        if weekdaySelection.isEmpty {
+                        if selectedDays.isEmpty {
                             Text("Select at least one weekday to keep this trigger active.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {
-                            Text(weekdaySummaryText)
+                            Text(summaryText)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                    } else if weekdayTrigger != nil {
-                        Text("This memory already repeats on weekdays. Disable to remove it.")
+                    } else if existingTrigger != nil {
+                        Text("This memory already repeats on weekdays. Disabling removes it.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-            .navigationTitle("Date Triggers")
+            .navigationTitle("Weekday Routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -117,43 +205,31 @@ struct MemoryScheduleTriggerSheet: View {
                     .disabled(isSaveDisabled)
                 }
             }
-            .onChange(of: weekdayEnabled) { newValue in
+            .onChange(of: isEnabled) { newValue in
                 if !newValue {
-                    weekdaySelection.removeAll()
-                } else if weekdaySelection.isEmpty {
-                    weekdaySelection.insert(MemoryScheduleTriggerSheet.currentWeekday())
+                    selectedDays.removeAll()
+                } else if selectedDays.isEmpty {
+                    selectedDays.insert(Self.currentWeekday())
                 }
             }
         }
     }
 
     private var isSaveDisabled: Bool {
-        weekdayEnabled && weekdaySelection.isEmpty
+        isEnabled && selectedDays.isEmpty
     }
 
-    private var weekdaySummaryText: String {
-        weekdayMaskSummary(mask: MemoryScheduleTriggerSheet.mask(from: weekdaySelection))
+    private var summaryText: String {
+        let mask = Self.mask(from: selectedDays)
+        return weekdayMaskSummary(mask: mask)
     }
 
     private func applyChanges() {
-        viewModel.dueDateEnabled = dueDateEnabled
-        if dueDateEnabled {
-            viewModel.dueDate = dueDate
-        }
-
-        if timeTriggerEnabled {
-            let recurrence = selectedFrequency.map { RecurrenceRule(frequency: $0, interval: repeatInterval) }
-            viewModel.setTimeTrigger(fireDate: timeDate, recurrence: recurrence)
+        if isEnabled && !selectedDays.isEmpty {
+            viewModel.setWeekdayTrigger(weekdaySelection: selectedDays, referenceTime: referenceTime)
         } else {
-            viewModel.setTimeTrigger(fireDate: nil, recurrence: nil)
+            viewModel.setWeekdayTrigger(weekdaySelection: [], referenceTime: referenceTime)
         }
-
-        if weekdayEnabled && !weekdaySelection.isEmpty {
-            viewModel.setWeekdayTrigger(weekdaySelection: weekdaySelection, referenceTime: weekdayReferenceTime)
-        } else {
-            viewModel.setWeekdayTrigger(weekdaySelection: [], referenceTime: weekdayReferenceTime)
-        }
-
         dismiss()
     }
 
@@ -180,7 +256,9 @@ struct MemoryScheduleTriggerSheet: View {
 }
 
 enum MemoryTriggerPickerDestination: Hashable {
-    case date
+    case dueDate
+    case exactTime
+    case weekdayRoutine
     case location
     case person
     case sequential
@@ -196,11 +274,25 @@ struct MemoryTriggerPickerSheet: View {
             List {
                 Section("Date & Time") {
                     TriggerPickerRow(
-                        title: "Date triggers",
-                        subtitle: dateSubtitle,
+                        title: "Due date",
+                        subtitle: dueDateSubtitle,
+                        systemImage: "calendar"
+                    ) {
+                        select(.dueDate)
+                    }
+                    TriggerPickerRow(
+                        title: "Exact time",
+                        subtitle: exactTimeSubtitle,
+                        systemImage: "alarm"
+                    ) {
+                        select(.exactTime)
+                    }
+                    TriggerPickerRow(
+                        title: "Weekday routine",
+                        subtitle: weekdaySubtitle,
                         systemImage: "calendar.badge.clock"
                     ) {
-                        select(.date)
+                        select(.weekdayRoutine)
                     }
                 }
 
@@ -245,11 +337,25 @@ struct MemoryTriggerPickerSheet: View {
         }
     }
 
-    private var dateSubtitle: String {
-        if viewModel.dueDateEnabled || viewModel.triggers.contains(where: { $0.type == .time || $0.type == .dayOfWeek }) {
-            return "Update existing due date or schedule."
+    private var dueDateSubtitle: String {
+        if viewModel.dueDateEnabled {
+            return "Edit the due date for this memory."
         }
-        return "Create due dates, specific events or weekday routines."
+        return "Convert this memory into a dated checklist."
+    }
+
+    private var exactTimeSubtitle: String {
+        if viewModel.triggers.contains(where: { $0.type == .time }) {
+            return "Update the existing exact time trigger."
+        }
+        return "Schedule a specific date and time with optional repeats."
+    }
+
+    private var weekdaySubtitle: String {
+        if viewModel.triggers.contains(where: { $0.type == .dayOfWeek }) {
+            return "Modify the current weekday routine."
+        }
+        return "Pick days of the week to repeat this memory."
     }
 
     private var locationSubtitle: String {

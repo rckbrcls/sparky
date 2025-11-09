@@ -3,7 +3,9 @@ import SwiftUI
 struct MemoryEditorTriggerButtonsBar: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showTriggerPicker: Bool
-    @Binding var showScheduleSheet: Bool
+    @Binding var showDueDateSheet: Bool
+    @Binding var showExactTimeSheet: Bool
+    @Binding var showWeekdaySheet: Bool
     @Binding var showLocationPicker: Bool
     @Binding var showPersonSheet: Bool
     @Binding var showSequentialSheet: Bool
@@ -13,12 +15,18 @@ struct MemoryEditorTriggerButtonsBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
                 MemoryTriggerAddBadge(isPresented: $showTriggerPicker)
-                if hasScheduleTrigger {
-                    MemoryScheduleTriggerInlineForm(
-                        viewModel: viewModel,
-                        showSheet: $showScheduleSheet
-                    )
-                }
+                MemoryDueDateTriggerInlineForm(
+                    viewModel: viewModel,
+                    showSheet: $showDueDateSheet
+                )
+                MemoryExactTimeTriggerInlineForm(
+                    viewModel: viewModel,
+                    showSheet: $showExactTimeSheet
+                )
+                MemoryWeekdayTriggerInlineForm(
+                    viewModel: viewModel,
+                    showSheet: $showWeekdaySheet
+                )
                 if hasLocationTrigger {
                     MemoryLocationTriggerInlineForm(
                         viewModel: viewModel,
@@ -42,12 +50,6 @@ struct MemoryEditorTriggerButtonsBar: View {
             .padding(.horizontal, 4)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private var hasScheduleTrigger: Bool {
-        viewModel.dueDateEnabled || viewModel.triggers.contains(where: { trigger in
-            trigger.type == .time || trigger.type == .dayOfWeek
-        })
     }
 
     private var hasLocationTrigger: Bool {
@@ -90,77 +92,230 @@ struct MemoryTriggerAddBadge: View {
     }
 }
 
-struct MemoryScheduleTriggerInlineForm: View {
+struct MemoryDueDateTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
 
-    private var timeTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .time })
-    }
-
-    private var weekdayTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .dayOfWeek })
-    }
-
-    private var hasSchedule: Bool {
-        timeTrigger != nil || weekdayTrigger != nil || viewModel.dueDateEnabled
-    }
-
     var body: some View {
-        if hasSchedule {
-            Button {
-                showSheet = true
-            } label: {
-                HStack {
-                    Label(schedulePrimaryText, systemImage: "calendar.badge.clock")
-                        .font(.caption)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
+        Group {
+            if viewModel.dueDateEnabled {
+                configuredButton
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            viewModel.dueDateEnabled = false
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            } else {
+                addButton
+            }
+        }
+    }
+
+    private var configuredButton: some View {
+        Button {
+            showSheet = true
+        } label: {
+            HStack {
+                Label("Due: " + viewModel.dueDate.formatted(date: .abbreviated, time: .shortened),
+                      systemImage: "calendar")
+                    .font(.caption)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.glass)
+    }
+
+    private var addButton: some View {
+        Button {
+            showSheet = true
+        } label: {
+            Label("Add due date", systemImage: "calendar.badge.plus")
+                .foregroundStyle(.accent)
+                .font(.caption.bold())
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
+        }
+        .buttonStyle(.glass)
+    }
+}
+
+struct MemoryExactTimeTriggerInlineForm: View {
+    @ObservedObject var viewModel: MemoryEditorViewModel
+    @Binding var showSheet: Bool
+
+    private var trigger: MemoryTriggerDraft? {
+        viewModel.triggers.first(where: { $0.type == .time })
+    }
+
+    var body: some View {
+        Group {
+            if let trigger, let fireDate = trigger.fireDate {
+                configuredButton(for: trigger, fireDate: fireDate)
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            viewModel.setTimeTrigger(fireDate: nil, recurrence: nil)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            } else {
+                addButton
             }
-            .buttonStyle(.glass)
-            .swipeActions {
-                Button(role: .destructive) {
-                    viewModel.clearScheduleTriggers()
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
-        } else {
-            Button {
-                showSheet = true
-            } label: {
-                Label("Schedule", systemImage: "calendar.badge.plus")
-                    .foregroundStyle(.accent)
-                    .font(.caption.bold())
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.glass)
         }
     }
 
-    private var schedulePrimaryText: String {
-        if viewModel.dueDateEnabled {
-            return "Due: " + viewModel.dueDate.formatted(date: .abbreviated, time: .shortened)
+    private func configuredButton(for trigger: MemoryTriggerDraft, fireDate: Date) -> some View {
+        Button {
+            showSheet = true
+        } label: {
+            HStack {
+                Label(timeSummary(for: trigger, fireDate: fireDate),
+                      systemImage: "clock.badge")
+                    .font(.caption)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        if let date = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate {
-            return date.formatted(date: .abbreviated, time: .shortened)
+        .buttonStyle(.glass)
+    }
+
+    private var addButton: some View {
+        Button {
+            showSheet = true
+        } label: {
+            Label("Add exact time", systemImage: "clock.badge.plus")
+                .foregroundStyle(.accent)
+                .font(.caption.bold())
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
         }
-        if let mask = weekdayTrigger?.weekdayMask, mask != 0 {
-            return weekdayMaskSummary(mask: mask)
+        .buttonStyle(.glass)
+    }
+
+    private func timeSummary(for trigger: MemoryTriggerDraft, fireDate: Date) -> String {
+        if let recurrence = trigger.recurrenceRule {
+            let formatter = DateFormatter()
+            formatter.timeStyle = .short
+            formatter.dateStyle = .medium
+            let dateText = formatter.string(from: fireDate)
+            let recurrenceText = recurrenceSummary(recurrence)
+            return "\(dateText) · \(recurrenceText)"
         }
-        return "Custom schedule"
+        return fireDate.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func recurrenceSummary(_ recurrence: RecurrenceRule) -> String {
+        switch recurrence.frequency {
+        case .daily:
+            return recurrence.interval == 1 ? "Daily" : "Every \(recurrence.interval) days"
+        case .weekly:
+            return recurrence.interval == 1 ? "Weekly" : "Every \(recurrence.interval) weeks"
+        case .monthly:
+            return recurrence.interval == 1 ? "Monthly" : "Every \(recurrence.interval) months"
+        case .yearly:
+            return recurrence.interval == 1 ? "Yearly" : "Every \(recurrence.interval) years"
+        }
+    }
+}
+
+struct MemoryWeekdayTriggerInlineForm: View {
+    @ObservedObject var viewModel: MemoryEditorViewModel
+    @Binding var showSheet: Bool
+
+    private var trigger: MemoryTriggerDraft? {
+        viewModel.triggers.first(where: { $0.type == .dayOfWeek })
+    }
+
+    var body: some View {
+        Group {
+            if let trigger {
+                configuredButton(for: trigger)
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            viewModel.setWeekdayTrigger(
+                                weekdaySelection: [],
+                                referenceTime: trigger.fireDate ?? Date()
+                            )
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            } else {
+                addButton
+            }
+        }
+    }
+
+    private func configuredButton(for trigger: MemoryTriggerDraft) -> some View {
+        Button {
+            showSheet = true
+        } label: {
+            HStack {
+                Label(weekdaySummary(for: trigger),
+                      systemImage: "calendar")
+                    .font(.caption)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.glass)
+    }
+
+    private var addButton: some View {
+        Button {
+            showSheet = true
+        } label: {
+            Label("Add weekday routine", systemImage: "calendar.badge.clock")
+                .foregroundStyle(.accent)
+                .font(.caption.bold())
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.glass)
+    }
+
+    private func weekdaySummary(for trigger: MemoryTriggerDraft) -> String {
+        if trigger.weekdayMask == 0 {
+            return "No weekdays selected"
+        }
+        var summary = weekdayMaskSummary(mask: trigger.weekdayMask)
+        if let fireDate = trigger.fireDate {
+            summary += " · " + fireDate.formatted(date: .omitted, time: .shortened)
+        }
+        return summary
     }
 }
 

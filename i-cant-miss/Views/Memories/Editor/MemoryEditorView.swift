@@ -12,7 +12,9 @@ import UIKit
 struct MemoryEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: MemoryEditorViewModel
-    @State private var showScheduleSheet = false
+    @State private var showDueDateSheet = false
+    @State private var showExactTimeSheet = false
+    @State private var showWeekdaySheet = false
     @State private var showTriggerPickerSheet = false
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
@@ -81,7 +83,9 @@ struct MemoryEditorView: View {
                         MemoryEditorTriggerButtonsBar(
                             viewModel: viewModel,
                             showTriggerPicker: $showTriggerPickerSheet,
-                            showScheduleSheet: $showScheduleSheet,
+                            showDueDateSheet: $showDueDateSheet,
+                            showExactTimeSheet: $showExactTimeSheet,
+                            showWeekdaySheet: $showWeekdaySheet,
                             showLocationPicker: $showLocationPicker,
                             showPersonSheet: $showPersonSheet,
                             showSequentialSheet: $showSequentialSheet,
@@ -288,8 +292,14 @@ struct MemoryEditorView: View {
                           selection: $photoSelections,
                           maxSelectionCount: 5,
                           matching: .images)
-            .sheet(isPresented: $showScheduleSheet) {
-                MemoryScheduleTriggerSheet(viewModel: viewModel)
+            .sheet(isPresented: $showDueDateSheet) {
+                MemoryDueDateTriggerSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showExactTimeSheet) {
+                MemoryExactTimeTriggerSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showWeekdaySheet) {
+                MemoryWeekdayTriggerSheet(viewModel: viewModel)
             }
             .sheet(isPresented: $showTriggerPickerSheet) {
                 MemoryTriggerPickerSheet(
@@ -727,8 +737,12 @@ struct MemoryEditorView: View {
 
     private func handleTriggerPickerDestination(_ destination: MemoryTriggerPickerDestination) {
         switch destination {
-        case .date:
-            showScheduleSheet = true
+        case .dueDate:
+            showDueDateSheet = true
+        case .exactTime:
+            showExactTimeSheet = true
+        case .weekdayRoutine:
+            showWeekdaySheet = true
         case .location:
             showLocationPicker = true
         case .person:
