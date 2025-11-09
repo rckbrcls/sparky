@@ -15,18 +15,24 @@ struct MemoryEditorTriggerButtonsBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
                 MemoryTriggerAddBadge(isPresented: $showTriggerPicker)
-                MemoryDueDateTriggerInlineForm(
-                    viewModel: viewModel,
-                    showSheet: $showDueDateSheet
-                )
-                MemoryExactTimeTriggerInlineForm(
-                    viewModel: viewModel,
-                    showSheet: $showExactTimeSheet
-                )
-                MemoryWeekdayTriggerInlineForm(
-                    viewModel: viewModel,
-                    showSheet: $showWeekdaySheet
-                )
+                if hasDueDateTrigger {
+                    MemoryDueDateTriggerInlineForm(
+                        viewModel: viewModel,
+                        showSheet: $showDueDateSheet
+                    )
+                }
+                if hasExactTimeTrigger {
+                    MemoryExactTimeTriggerInlineForm(
+                        viewModel: viewModel,
+                        showSheet: $showExactTimeSheet
+                    )
+                }
+                if hasWeekdayTrigger {
+                    MemoryWeekdayTriggerInlineForm(
+                        viewModel: viewModel,
+                        showSheet: $showWeekdaySheet
+                    )
+                }
                 if hasLocationTrigger {
                     MemoryLocationTriggerInlineForm(
                         viewModel: viewModel,
@@ -52,6 +58,18 @@ struct MemoryEditorTriggerButtonsBar: View {
         .frame(maxWidth: .infinity)
     }
 
+    private var hasDueDateTrigger: Bool {
+        viewModel.dueDateEnabled
+    }
+
+    private var hasExactTimeTrigger: Bool {
+        viewModel.triggers.contains(where: { $0.type == .time })
+    }
+
+    private var hasWeekdayTrigger: Bool {
+        viewModel.triggers.contains(where: { $0.type == .dayOfWeek })
+    }
+
     private var hasLocationTrigger: Bool {
         viewModel.triggers.contains(where: { $0.type == .location })
     }
@@ -65,5 +83,3 @@ struct MemoryEditorTriggerButtonsBar: View {
         return configuration.previousMemoryID != nil || configuration.nextMemoryID != nil
     }
 }
-
-

@@ -307,7 +307,7 @@ struct MemoryEditorView: View {
                 ) { destination in
                     pendingTriggerDestination = destination
                 }
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
             }
             .sheet(isPresented: $showLocationPicker) {
                 LocationPickerView { name, latitude, longitude, radius, event in

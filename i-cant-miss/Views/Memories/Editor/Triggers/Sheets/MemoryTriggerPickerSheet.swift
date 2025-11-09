@@ -56,7 +56,7 @@ struct MemoryTriggerPickerSheet: View {
                     TriggerPickerRow(
                         title: "Sequential trigger",
                         subtitle: "Link this memory with others to create sequences.",
-                        systemImage: "arrowshape.turn.up.right.circle.badge.clockwise"
+                        systemImage: "arrow.right"
                     ) {
                         select(.sequential)
                     }
