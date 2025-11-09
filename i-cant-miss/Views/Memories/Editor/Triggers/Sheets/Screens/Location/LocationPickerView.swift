@@ -26,48 +26,46 @@ struct LocationPickerView: View {
     let onAdd: (String, Double, Double, Double, LocationEvent) -> Void
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    SearchSection(
-                        searchModel: searchModel,
-                        isSearching: isSearching,
-                        onClearQuery: clearSearchQuery,
-                        onSuggestionSelected: handleSuggestionTap(_:)
-                    )
-                    MapSection(
-                        defaultRadius: defaultRadius,
-                        onExpand: { isMapExpanded = true },
-                        mapPreview: { mapPreviewContent },
-                        selectionOverlay: { mapSelectionOverlay },
-                        hint: { mapPreviewHint }
-                    )
-                    EventSection(event: $event, description: eventDescription)
-                    SummarySection(
-                        resolvedLocationName: resolvedLocationName,
-                        coordinateSummary: coordinateSummary,
-                        defaultRadius: defaultRadius
-                    )
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 20)
+        ScrollView {
+            VStack(spacing: 20) {
+                SearchSection(
+                    searchModel: searchModel,
+                    isSearching: isSearching,
+                    onClearQuery: clearSearchQuery,
+                    onSuggestionSelected: handleSuggestionTap(_:)
+                )
+                MapSection(
+                    defaultRadius: defaultRadius,
+                    onExpand: { isMapExpanded = true },
+                    mapPreview: { mapPreviewContent },
+                    selectionOverlay: { mapSelectionOverlay },
+                    hint: { mapPreviewHint }
+                )
+                EventSection(event: $event, description: eventDescription)
+                SummarySection(
+                    resolvedLocationName: resolvedLocationName,
+                    coordinateSummary: coordinateSummary,
+                    defaultRadius: defaultRadius
+                )
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Location Trigger")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("Location Trigger")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel", role: .cancel) { dismiss() }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Add") {
+                    guard let coordinate = selectedCoordinate else { return }
+                    let name = resolvedLocationName
+                    onAdd(name, coordinate.latitude, coordinate.longitude, defaultRadius, event)
+                    dismiss()
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Add") {
-                        guard let coordinate = selectedCoordinate else { return }
-                        let name = resolvedLocationName
-                        onAdd(name, coordinate.latitude, coordinate.longitude, defaultRadius, event)
-                        dismiss()
-                    }
-                    .disabled(isSearching || selectedCoordinate == nil)
-                }
+                .disabled(isSearching || selectedCoordinate == nil)
             }
         }
         .onReceive(searchModel.$isSearching) { value in
