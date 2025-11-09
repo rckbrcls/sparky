@@ -3,7 +3,6 @@ import SwiftUI
 struct MemoryWeekdayTriggerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @State private var isEnabled: Bool
     @State private var selectedDays: Set<Int>
     @State private var referenceTime: Date
 
@@ -15,9 +14,8 @@ struct MemoryWeekdayTriggerSheet: View {
         self.viewModel = viewModel
         let weekdayTrigger = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
         let timeTrigger = viewModel.triggers.first(where: { $0.type == .time })
-        let initialSet = Self.weekdaySet(from: weekdayTrigger?.weekdayMask ?? 0)
+        let initialSet = Self.initialWeekdaySelection(from: weekdayTrigger?.weekdayMask ?? 0)
         let defaultReference = weekdayTrigger?.fireDate ?? timeTrigger?.fireDate ?? Date().addingTimeInterval(3600)
-        _isEnabled = State(initialValue: !initialSet.isEmpty)
         _selectedDays = State(initialValue: initialSet)
         _referenceTime = State(initialValue: defaultReference)
     }
@@ -26,23 +24,16 @@ struct MemoryWeekdayTriggerSheet: View {
         NavigationStack {
             Form {
                 Section("Weekday Routine") {
-                    Toggle("Enable weekday schedule", isOn: $isEnabled.animation())
-                    if isEnabled {
-                        MemoryWeekdaySelectionView(selectedDays: $selectedDays)
+                    MemoryWeekdaySelectionView(selectedDays: $selectedDays)
 
-                        DatePicker("Time", selection: $referenceTime, displayedComponents: [.hourAndMinute])
+                    DatePicker("Time", selection: $referenceTime, displayedComponents: [.hourAndMinute])
 
-                        if selectedDays.isEmpty {
-                            Text("Select at least one weekday to keep this trigger active.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text(summaryText)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } else if existingTrigger != nil {
-                        Text("This memory already repeats on weekdays. Disabling removes it.")
+                    if selectedDays.isEmpty {
+                        Text("Select at least one weekday to keep this trigger active.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(summaryText)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -61,18 +52,11 @@ struct MemoryWeekdayTriggerSheet: View {
                     .disabled(isSaveDisabled)
                 }
             }
-            .onChange(of: isEnabled) { _, newValue in
-                if !newValue {
-                    selectedDays.removeAll()
-                } else if selectedDays.isEmpty {
-                    selectedDays.insert(Self.currentWeekday())
-                }
-            }
         }
     }
 
     private var isSaveDisabled: Bool {
-        isEnabled && selectedDays.isEmpty
+        selectedDays.isEmpty
     }
 
     private var summaryText: String {
@@ -81,12 +65,17 @@ struct MemoryWeekdayTriggerSheet: View {
     }
 
     private func applyChanges() {
-        if isEnabled && !selectedDays.isEmpty {
-            viewModel.setWeekdayTrigger(weekdaySelection: selectedDays, referenceTime: referenceTime)
-        } else {
-            viewModel.setWeekdayTrigger(weekdaySelection: [], referenceTime: referenceTime)
-        }
+        guard !selectedDays.isEmpty else { return }
+        viewModel.setWeekdayTrigger(weekdaySelection: selectedDays, referenceTime: referenceTime)
         dismiss()
+    }
+
+    private static func initialWeekdaySelection(from mask: Int16) -> Set<Int> {
+        var set = weekdaySet(from: mask)
+        if set.isEmpty {
+            set.insert(currentWeekday())
+        }
+        return set
     }
 
     private static func weekdaySet(from mask: Int16) -> Set<Int> {
@@ -110,5 +99,3 @@ struct MemoryWeekdayTriggerSheet: View {
         Calendar.current.component(.weekday, from: Date())
     }
 }
-
-
