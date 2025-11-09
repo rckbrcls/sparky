@@ -278,14 +278,20 @@ struct SpaceDetailView: View {
     private var searchResultsSection: some View {
         Section {
             if filteredMemories.isEmpty {
-                emptyStateCard(
+                MemoryEmptyStateCard(
                     systemImage: "magnifyingglass",
                     title: "No memories match your search",
                     message: "Try different keywords or reset filters to discover more memories."
                 )
             } else {
                 ForEach(filteredMemories) { memory in
-                    memoryButton(for: memory)
+                    MemoryListItemButton(
+                        memory: memory,
+                        isMultiSelecting: false,
+                        isSelected: false,
+                        isDisabled: false,
+                        onSelect: onSelectMemory,
+                        onToggleSelection: nil)
                 }
             }
         }
@@ -299,7 +305,7 @@ struct SpaceDetailView: View {
             Group {
                 if sections.isEmpty && ungroupedMemories.isEmpty {
                     DisclosureGroup(isExpanded: $isUpcomingExpanded) {
-                        emptyStateCard(
+                        MemoryEmptyStateCard(
                             systemImage: "tray",
                             title: emptyStateTitle,
                             message: emptyStateMessage
@@ -313,22 +319,16 @@ struct SpaceDetailView: View {
                     .padding(.top)
                 } else {
                     ForEach(sections) { section in
-                        VStack(alignment: .leading, spacing: 8) {
-                            DisclosureGroup(
-                                isExpanded: sectionExpansionBinding(for: section.kind)
-                            ) {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    ForEach(section.memories) { memory in
-                                        memoryButton(for: memory)
-                                    }
-                                }
-                                .padding(.top)
-                            } label: {
-                                Label(section.kind.title, systemImage: section.kind.systemImage)
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .padding(.top)
+                        MemoryDisclosureListSection(
+                            title: section.kind.title,
+                            systemImage: section.kind.systemImage,
+                            isExpanded: sectionExpansionBinding(for: section.kind),
+                            memories: section.memories,
+                            isMultiSelecting: false,
+                            selectedMemoryIDs: [],
+                            isDisabled: false,
+                            onSelect: onSelectMemory,
+                            onToggleSelection: nil)
                     }
 
                     if !ungroupedMemories.isEmpty {
@@ -336,7 +336,13 @@ struct SpaceDetailView: View {
                             DisclosureGroup(isExpanded: $isOtherExpanded) {
                                 VStack(alignment: .leading, spacing: 12) {
                                     ForEach(ungroupedMemories) { memory in
-                                        memoryButton(for: memory)
+                                        MemoryListItemButton(
+                                            memory: memory,
+                                            isMultiSelecting: false,
+                                            isSelected: false,
+                                            isDisabled: false,
+                                            onSelect: onSelectMemory,
+                                            onToggleSelection: nil)
                                     }
                                 }
                                 .padding(.top)
@@ -357,7 +363,7 @@ struct SpaceDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             DisclosureGroup(isExpanded: $isInboxExpanded) {
                 if inboxMemories.isEmpty {
-                    emptyStateCard(
+                    MemoryEmptyStateCard(
                         systemImage: "checkmark.seal",
                         title: "Inbox is clear",
                         message: "Create a memory or capture a reminder to keep building your inbox."
@@ -366,7 +372,13 @@ struct SpaceDetailView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
                         ForEach(inboxMemories) { memory in
-                            memoryButton(for: memory)
+                            MemoryListItemButton(
+                                memory: memory,
+                                isMultiSelecting: false,
+                                isSelected: false,
+                                isDisabled: false,
+                                onSelect: onSelectMemory,
+                                onToggleSelection: nil)
                         }
                     }
                     .padding(.top)
@@ -511,35 +523,6 @@ struct SpaceDetailView: View {
                 }
             }
         )
-    }
-
-    private func memoryButton(for memory: MemoryModel) -> some View {
-        Button {
-            onSelectMemory(memory)
-        } label: {
-            MemoryCardView(memory: memory)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func emptyStateCard(systemImage: String, title: String, message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 40, weight: .semibold))
-                .foregroundStyle(.tertiary)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 36)
-        .padding(.top, 8)
-        .glassEffect(in: .rect(cornerRadius: 16.0))
     }
 
     private func matchesSearch(_ memory: MemoryModel, query: String) -> Bool {

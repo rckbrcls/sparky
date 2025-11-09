@@ -28,8 +28,6 @@ struct MemoryTimelineView: View {
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
 
-    @Namespace private var animation
-
     private var isSearching: Bool {
         !searchText.isEmpty
     }
@@ -229,14 +227,20 @@ struct MemoryTimelineView: View {
     private var searchResultsSection: some View {
         Section {
             if filteredMemories.isEmpty {
-                emptyStateCard(
+                MemoryEmptyStateCard(
                     systemImage: "magnifyingglass",
                     title: "No memories match your search",
                     message: "Try different keywords or reset filters to discover more memories."
                 )
             } else {
                 ForEach(filteredMemories) { memory in
-                    memoryButton(for: memory)
+                    MemoryListItemButton(
+                        memory: memory,
+                        isMultiSelecting: isMultiSelecting,
+                        isSelected: isMemorySelected(memory),
+                        isDisabled: isPerformingBulkAction,
+                        onSelect: onSelectMemory,
+                        onToggleSelection: toggleMemorySelection(_:))
                 }
             }
         } header: {
@@ -252,7 +256,7 @@ struct MemoryTimelineView: View {
             if sections.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     DisclosureGroup(isExpanded: $isUpcomingExpanded) {
-                        emptyStateCard(
+                        MemoryEmptyStateCard(
                             systemImage: "tray",
                             title: "No memories with active triggers",
                             message: "Create or activate reminders to see them organized on your timeline."
@@ -267,22 +271,16 @@ struct MemoryTimelineView: View {
                 .padding(.top)
             } else {
                 ForEach(sections) { section in
-                    VStack(alignment: .leading, spacing: 8) {
-                        DisclosureGroup(
-                            isExpanded: sectionExpansionBinding(for: section.kind)
-                        ) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                ForEach(section.memories) { memory in
-                                    memoryButton(for: memory)
-                                }
-                            }
-                            .padding(.top)
-                        } label: {
-                            Label(section.kind.title, systemImage: section.kind.systemImage)
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .padding(.top)
+                    MemoryDisclosureListSection(
+                        title: section.kind.title,
+                        systemImage: section.kind.systemImage,
+                        isExpanded: sectionExpansionBinding(for: section.kind),
+                        memories: section.memories,
+                        isMultiSelecting: isMultiSelecting,
+                        selectedMemoryIDs: selectedMemoryIDs,
+                        isDisabled: isPerformingBulkAction,
+                        onSelect: onSelectMemory,
+                        onToggleSelection: toggleMemorySelection(_:))
                 }
             }
         }
@@ -292,7 +290,7 @@ struct MemoryTimelineView: View {
         VStack(alignment: .leading, spacing: 8) {
             DisclosureGroup(isExpanded: $isInboxExpanded) {
                 if filteredInboxMemories.isEmpty {
-                    emptyStateCard(
+                    MemoryEmptyStateCard(
                         systemImage: "checkmark.seal",
                         title: "Inbox is clear",
                         message: "Create a memory or capture a reminder to keep building your inbox."
@@ -301,7 +299,13 @@ struct MemoryTimelineView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
                         ForEach(filteredInboxMemories) { memory in
-                            memoryButton(for: memory)
+                            MemoryListItemButton(
+                                memory: memory,
+                                isMultiSelecting: isMultiSelecting,
+                                isSelected: isMemorySelected(memory),
+                                isDisabled: isPerformingBulkAction,
+                                onSelect: onSelectMemory,
+                                onToggleSelection: toggleMemorySelection(_:))
                         }
                     }
                     .padding(.top)
@@ -346,24 +350,6 @@ struct MemoryTimelineView: View {
         )
     }
 
-    private func memoryButton(for memory: MemoryModel) -> some View {
-        Button {
-            if isMultiSelecting {
-                toggleMemorySelection(memory)
-            } else {
-                onSelectMemory(memory)
-            }
-        } label: {
-            MemoryCardView(memory: memory)
-                .overlay(selectionOverlay(for: memory))
-                .overlay(alignment: .topTrailing) {
-                    selectionBadge(for: memory)
-                }
-        }
-        .buttonStyle(.plain)
-        .disabled(isPerformingBulkAction)
-    }
-
     private func toggleMemorySelection(_ memory: MemoryModel) {
         let id = memory.id
         if selectedMemoryIDs.contains(id) {
@@ -397,34 +383,6 @@ struct MemoryTimelineView: View {
 
     private func isMemorySelected(_ memory: MemoryModel) -> Bool {
         selectedMemoryIDs.contains(memory.id)
-    }
-
-    @ViewBuilder
-    private func selectionOverlay(for memory: MemoryModel) -> some View {
-        if isMultiSelecting {
-            let isSelected = isMemorySelected(memory)
-            ZStack {
-                if !isSelected {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color.black.opacity(0.05))
-                }
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(isSelected ? Color.accent : Color.secondary.opacity(0.3), lineWidth: isSelected ? 3 : 1)
-                    .animation(.easeInOut(duration: 0.2), value: isSelected)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func selectionBadge(for memory: MemoryModel) -> some View {
-        if isMultiSelecting {
-            let isSelected = isMemorySelected(memory)
-            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .font(.title2.weight(.medium))
-                .foregroundStyle(isSelected ? Color.accent : Color.secondary)
-                .padding(16)
-                .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
     }
 
     private func toggleMultiSelection() {
@@ -482,25 +440,6 @@ struct MemoryTimelineView: View {
         await memoryService.refresh(force: true)
     }
 
-    private func emptyStateCard(systemImage: String, title: String, message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 40, weight: .semibold))
-                .foregroundStyle(.tertiary)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 36)
-        .padding(.top, 8)
-        .glassEffect(in: .rect(cornerRadius: 16.0))
-    }
 }
 
 enum MemoryType: String, CaseIterable, Identifiable {
