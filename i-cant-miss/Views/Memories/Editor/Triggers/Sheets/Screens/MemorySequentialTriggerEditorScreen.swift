@@ -38,17 +38,11 @@ struct MemorySequentialTriggerEditorScreen: View {
         .navigationTitle("Sequential Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    viewModel.updateSequentialTrigger(
-                        previousMemoryID: selectedPrevious,
-                        nextMemoryID: selectedNext
-                    )
-                    dismiss()
+                Button(action: confirmChanges) {
+                    Image(systemName: "checkmark")
                 }
+                .accessibilityLabel("Save")
             }
         }
     }
@@ -200,6 +194,14 @@ struct MemorySequentialTriggerEditorScreen: View {
         }
     }
 
+    private func confirmChanges() {
+        viewModel.updateSequentialTrigger(
+            previousMemoryID: selectedPrevious,
+            nextMemoryID: selectedNext
+        )
+        dismiss()
+    }
+
     private func spaceSections(filteredBy query: String) -> [SpaceSection] {
         let candidates = filteredCandidates(query: query)
         let grouped = Dictionary(grouping: candidates, by: \.space)
@@ -267,5 +269,3 @@ struct MemorySequentialTriggerEditorScreen: View {
         var id: UUID { space.id }
     }
 }
-
-

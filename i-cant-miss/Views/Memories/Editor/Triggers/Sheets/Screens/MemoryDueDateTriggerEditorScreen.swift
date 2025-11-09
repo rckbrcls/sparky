@@ -28,13 +28,11 @@ struct MemoryDueDateTriggerEditorScreen: View {
         .navigationTitle("Due Date")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    applyChanges()
+                Button(action: applyChanges) {
+                    Image(systemName: "checkmark")
                 }
+                .accessibilityLabel("Save")
             }
         }
     }
@@ -50,5 +48,3 @@ struct MemoryDueDateTriggerEditorScreen: View {
         dismiss()
     }
 }
-
-

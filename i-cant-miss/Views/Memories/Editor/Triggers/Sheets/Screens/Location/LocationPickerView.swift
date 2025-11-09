@@ -55,16 +55,17 @@ struct LocationPickerView: View {
         .navigationTitle("Location Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel", role: .cancel) { dismiss() }
-            }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Add") {
+                Button {
                     guard let coordinate = selectedCoordinate else { return }
                     let name = resolvedLocationName
                     onAdd(name, coordinate.latitude, coordinate.longitude, defaultRadius, event)
                     dismiss()
                 }
+                label: {
+                    Image(systemName: "checkmark")
+                }
+                .accessibilityLabel("Confirm Location Trigger")
                 .disabled(isSearching || selectedCoordinate == nil)
             }
         }

@@ -44,13 +44,11 @@ struct MemoryExactTimeTriggerEditorScreen: View {
         .navigationTitle("Exact Time")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
             ToolbarItem(placement: .confirmationAction) {
-                Button(existingTrigger == nil ? "Add" : "Save") {
-                    applyChanges()
+                Button(action: applyChanges) {
+                    Image(systemName: confirmationIconName)
                 }
+                .accessibilityLabel(confirmationAccessibilityLabel)
             }
         }
     }
@@ -60,6 +58,12 @@ struct MemoryExactTimeTriggerEditorScreen: View {
         viewModel.setTimeTrigger(fireDate: fireDate, recurrence: recurrence)
         dismiss()
     }
+
+    private var confirmationIconName: String {
+        existingTrigger == nil ? "plus" : "checkmark"
+    }
+
+    private var confirmationAccessibilityLabel: String {
+        existingTrigger == nil ? "Add" : "Save"
+    }
 }
-
-

@@ -41,14 +41,12 @@ struct MemoryWeekdayTriggerEditorScreen: View {
         .navigationTitle("Weekday Routine")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
             ToolbarItem(placement: .confirmationAction) {
-                Button(existingTrigger == nil ? "Add" : "Save") {
-                    applyChanges()
+                Button(action: applyChanges) {
+                    Image(systemName: confirmationIconName)
                 }
                 .disabled(selectedDays.isEmpty)
+                .accessibilityLabel(confirmationAccessibilityLabel)
             }
         }
     }
@@ -62,6 +60,14 @@ struct MemoryWeekdayTriggerEditorScreen: View {
         guard !selectedDays.isEmpty else { return }
         viewModel.setWeekdayTrigger(weekdaySelection: selectedDays, referenceTime: referenceTime)
         dismiss()
+    }
+
+    private var confirmationIconName: String {
+        existingTrigger == nil ? "plus" : "checkmark"
+    }
+
+    private var confirmationAccessibilityLabel: String {
+        existingTrigger == nil ? "Add" : "Save"
     }
 
     private static func initialWeekdaySelection(from mask: Int16) -> Set<Int> {
@@ -93,5 +99,3 @@ struct MemoryWeekdayTriggerEditorScreen: View {
         Calendar.current.component(.weekday, from: Date())
     }
 }
-
-

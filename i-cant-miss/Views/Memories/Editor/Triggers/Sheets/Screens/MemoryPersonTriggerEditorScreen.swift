@@ -52,13 +52,11 @@ struct MemoryPersonTriggerEditorScreen: View {
         .navigationTitle(existingTrigger == nil ? "Add Person Trigger" : "Edit Person Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
             ToolbarItem(placement: .confirmationAction) {
-                Button(existingTrigger == nil ? "Add" : "Save") {
-                    commitChanges()
+                Button(action: commitChanges) {
+                    Image(systemName: confirmationIconName)
                 }
+                .accessibilityLabel(confirmationAccessibilityLabel)
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
@@ -127,6 +125,12 @@ struct MemoryPersonTriggerEditorScreen: View {
             }
         }
     }
+
+    private var confirmationIconName: String {
+        existingTrigger == nil ? "plus" : "checkmark"
+    }
+
+    private var confirmationAccessibilityLabel: String {
+        existingTrigger == nil ? "Add" : "Save"
+    }
 }
-
-
