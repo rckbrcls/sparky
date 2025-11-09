@@ -13,27 +13,54 @@ struct MemoryEditorTriggerButtonsBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
                 MemoryTriggerAddBadge(isPresented: $showTriggerPicker)
-                MemoryScheduleTriggerInlineForm(
-                    viewModel: viewModel,
-                    showSheet: $showScheduleSheet
-                )
-                MemoryLocationTriggerInlineForm(
-                    viewModel: viewModel,
-                    showLocationPicker: $showLocationPicker
-                )
-                MemoryPersonTriggerInlineForm(
-                    viewModel: viewModel,
-                    showSheet: $showPersonSheet
-                )
-                MemorySequentialTriggerInlineForm(
-                    viewModel: viewModel,
-                    showSheet: $showSequentialSheet,
-                    memoryLookup: memoryLookup
-                )
+                if hasScheduleTrigger {
+                    MemoryScheduleTriggerInlineForm(
+                        viewModel: viewModel,
+                        showSheet: $showScheduleSheet
+                    )
+                }
+                if hasLocationTrigger {
+                    MemoryLocationTriggerInlineForm(
+                        viewModel: viewModel,
+                        showLocationPicker: $showLocationPicker
+                    )
+                }
+                if hasPersonTrigger {
+                    MemoryPersonTriggerInlineForm(
+                        viewModel: viewModel,
+                        showSheet: $showPersonSheet
+                    )
+                }
+                if hasSequentialTrigger {
+                    MemorySequentialTriggerInlineForm(
+                        viewModel: viewModel,
+                        showSheet: $showSequentialSheet,
+                        memoryLookup: memoryLookup
+                    )
+                }
             }
             .padding(.horizontal, 4)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var hasScheduleTrigger: Bool {
+        viewModel.dueDateEnabled || viewModel.triggers.contains(where: { trigger in
+            trigger.type == .time || trigger.type == .dayOfWeek
+        })
+    }
+
+    private var hasLocationTrigger: Bool {
+        viewModel.triggers.contains(where: { $0.type == .location })
+    }
+
+    private var hasPersonTrigger: Bool {
+        viewModel.triggers.contains(where: { $0.type == .person })
+    }
+
+    private var hasSequentialTrigger: Bool {
+        guard let configuration = viewModel.sequentialTrigger?.sequential else { return false }
+        return configuration.previousMemoryID != nil || configuration.nextMemoryID != nil
     }
 }
 
@@ -44,12 +71,22 @@ struct MemoryTriggerAddBadge: View {
         Button {
             isPresented = true
         } label: {
-            Label("Add Trigger", systemImage: "plus")
-                .font(.caption.bold())
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+            HStack {
+                Label("Add Trigger", systemImage: "plus")
+                    .font(.caption.bold())
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundStyle(.accent)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.glass)
     }
 }
 
