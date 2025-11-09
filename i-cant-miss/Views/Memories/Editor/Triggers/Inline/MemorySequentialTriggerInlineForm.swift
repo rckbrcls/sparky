@@ -84,3 +84,5 @@ struct MemorySequentialTriggerInlineForm: View {
         return String(id.uuidString.prefix(6)) + "…"
     }
 }
+
+

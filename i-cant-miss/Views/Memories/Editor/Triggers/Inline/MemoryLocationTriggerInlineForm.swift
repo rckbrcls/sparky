@@ -1,20 +1,20 @@
 import SwiftUI
 
-struct MemoryPersonTriggerInlineForm: View {
+struct MemoryLocationTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @Binding var showSheet: Bool
+    @Binding var showLocationPicker: Bool
 
     private var trigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .person })
+        viewModel.triggers.first(where: { $0.type == .location })
     }
 
     var body: some View {
-        if let trigger, let person = trigger.person {
+        if let trigger, let location = trigger.location {
             Button {
-                showSheet = true
+                showLocationPicker = true
             } label: {
                 HStack {
-                    Label(person.name, systemImage: "person.crop.circle.fill")
+                    Label(location.name ?? "Location", systemImage: "mappin.circle.fill")
                         .font(.caption)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -37,9 +37,9 @@ struct MemoryPersonTriggerInlineForm: View {
             }
         } else {
             Button {
-                showSheet = true
+                showLocationPicker = true
             } label: {
-                Label("Person", systemImage: "person.crop.circle.badge.plus")
+                Label("Location", systemImage: "mappin.circle.fill")
                     .foregroundStyle(.accent)
                     .font(.caption.bold())
                     .lineLimit(1)
@@ -52,3 +52,5 @@ struct MemoryPersonTriggerInlineForm: View {
         }
     }
 }
+
+

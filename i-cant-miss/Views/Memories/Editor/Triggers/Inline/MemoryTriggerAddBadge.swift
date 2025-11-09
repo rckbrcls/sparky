@@ -25,3 +25,5 @@ struct MemoryTriggerAddBadge: View {
         .buttonStyle(.glass)
     }
 }
+
+

@@ -6,3 +6,5 @@ enum MemoryTriggerPickerDestination: Hashable {
     case person
     case sequential
 }
+
+

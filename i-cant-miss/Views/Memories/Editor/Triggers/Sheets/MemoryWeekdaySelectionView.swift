@@ -72,3 +72,5 @@ struct MemoryWeekdaySelectionView: View {
         return symbols[(day - 1) % symbols.count]
     }
 }
+
+

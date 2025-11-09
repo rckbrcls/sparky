@@ -77,3 +77,5 @@ struct MemoryWeekdayTriggerInlineForm: View {
         return summary
     }
 }
+
+

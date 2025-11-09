@@ -15,18 +15,14 @@ struct MemoryEditorTriggerButtonsBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
                 MemoryTriggerAddBadge(isPresented: $showTriggerPicker)
-                if hasDueDateTrigger {
-                    MemoryDueDateTriggerInlineForm(
-                        viewModel: viewModel,
-                        showSheet: $showDueDateSheet
-                    )
-                }
-                if hasExactTimeTrigger {
-                    MemoryExactTimeTriggerInlineForm(
-                        viewModel: viewModel,
-                        showSheet: $showExactTimeSheet
-                    )
-                }
+                MemoryDueDateTriggerInlineForm(
+                    viewModel: viewModel,
+                    showSheet: $showDueDateSheet
+                )
+                MemoryExactTimeTriggerInlineForm(
+                    viewModel: viewModel,
+                    showSheet: $showExactTimeSheet
+                )
                 MemoryWeekdayTriggerInlineForm(
                     viewModel: viewModel,
                     showSheet: $showWeekdaySheet
@@ -64,18 +60,10 @@ struct MemoryEditorTriggerButtonsBar: View {
         viewModel.triggers.contains(where: { $0.type == .person })
     }
 
-    private var hasDueDateTrigger: Bool {
-        viewModel.dueDateEnabled
-    }
-
-    private var hasExactTimeTrigger: Bool {
-        viewModel.triggers.contains { trigger in
-            trigger.type == .time && trigger.fireDate != nil
-        }
-    }
-
     private var hasSequentialTrigger: Bool {
         guard let configuration = viewModel.sequentialTrigger?.sequential else { return false }
         return configuration.previousMemoryID != nil || configuration.nextMemoryID != nil
     }
 }
+
+

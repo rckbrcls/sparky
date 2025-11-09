@@ -12,3 +12,5 @@ func weekdayMaskSummary(mask: Int16) -> String {
     }
     return days.isEmpty ? "No days selected" : days.joined(separator: ", ")
 }
+
+
