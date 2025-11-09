@@ -173,6 +173,14 @@ final class MemoryEditorViewModel: ObservableObject {
         updateWeekdayTrigger(weekdaySelection: weekdaySelection, referenceTime: weekdayReferenceTime)
     }
 
+    func setTimeTrigger(fireDate: Date?, recurrence: RecurrenceRule?) {
+        updateTimeTrigger(fireDate: fireDate, recurrence: recurrence)
+    }
+
+    func setWeekdayTrigger(weekdaySelection: Set<Int>, referenceTime: Date) {
+        updateWeekdayTrigger(weekdaySelection: weekdaySelection, referenceTime: referenceTime)
+    }
+
     func addLocationTrigger(name: String, latitude: Double, longitude: Double, radius: Double, event: LocationEvent) {
         let draft = MemoryTriggerDraft(
             type: .location,
