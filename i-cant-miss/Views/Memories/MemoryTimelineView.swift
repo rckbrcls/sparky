@@ -164,8 +164,7 @@ struct MemoryTimelineView: View {
                         activeFilterCount: activeFilterCount,
                         filterDescription: filterDescription,
                         isSheetPresented: showingFilterSheet,
-                        isDisabled: isMultiSelecting || isPerformingBulkAction,
-                        paddingInsets: EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10)
+                        isDisabled: isMultiSelecting || isPerformingBulkAction
                     ) {
                         filterSheetDetent = .large
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {

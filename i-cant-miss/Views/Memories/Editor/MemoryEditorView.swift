@@ -77,6 +77,7 @@ struct MemoryEditorView: View {
 
                     VStack(spacing: 12) {
                         titleHeaderView()
+                            .padding(.horizontal, 20)
                         MemoryEditorTriggerButtonsBar(
                             viewModel: viewModel,
                             showTriggerPicker: $showTriggerPickerSheet,

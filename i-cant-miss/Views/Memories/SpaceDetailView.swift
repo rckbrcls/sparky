@@ -10,6 +10,7 @@ import SwiftUI
 struct SpaceDetailView: View {
     let space: SpaceModel
 
+    @EnvironmentObject private var environment: AppEnvironment
     @ObservedObject var spaceService: SpaceService
     @ObservedObject var memoryService: MemoryService
 
@@ -29,6 +30,10 @@ struct SpaceDetailView: View {
     @State private var isOtherExpanded = true
     @State private var autoCollapsedInbox = false
     @State private var autoCollapsedUpcoming = false
+    @State private var isMultiSelecting = false
+    @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
+    @State private var isPerformingBulkAction = false
+    @State private var showingDeleteConfirmation = false
 
     private var activeFilterCount: Int {
         var count = 0
@@ -132,76 +137,36 @@ struct SpaceDetailView: View {
             : "Create a memory to get started in this space."
     }
 
+    private var navigationTitleText: String {
+        if isMultiSelecting {
+            if selectedMemoryIDs.isEmpty {
+                return "Select Memories"
+            }
+            return "\(selectedMemoryIDs.count) Selected"
+        }
+        return resolvedSpace.name
+    }
+
+    private var deleteConfirmationMessage: String {
+        let count = selectedMemoryIDs.count
+        if count == 1 {
+            return "This will permanently remove 1 memory."
+        }
+        return "This will permanently remove \(count) memories."
+    }
+
     private var canCreateSubspace: Bool {
         resolvedSpace.id != SpaceModel.inboxIdentifier
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                if !childSpaces.isEmpty {
-                    subspacesList
-                }
-
-                if isSearching {
-                    searchResultsSection
-                } else {
-                    timelineContent
-                    if showInbox {
-                        inboxSection
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 70)
+            content
         }
-        .navigationTitle(resolvedSpace.name)
+        .navigationTitle(navigationTitleText)
         .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                MemoryFilterSummaryButton(
-                    activeFilterCount: activeFilterCount,
-                    filterDescription: filterDescription,
-                    isSheetPresented: showingFilterSheet,
-                    paddingInsets: EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
-                ) {
-                    filterSheetDetent = .large
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        showingFilterSheet = true
-                    }
-                }
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if canCreateSubspace {
-                    Button {
-                        onCreateSpace(resolvedSpace)
-                    } label: {
-                        Image(systemName: "folder.badge.plus")
-                    }
-                    .accessibilityLabel("Create Space")
-                }
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    onCreateMemory(resolvedSpace)
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("Create Memory")
-            }
-        }
-        .sheet(isPresented: $showingFilterSheet) {
-            FilterSheetView(
-                selectedMemoryTypes: $selectedMemoryTypes,
-                selectedSections: $selectedSections,
-                showInbox: $showInbox,
-                detentSelection: $filterSheetDetent
-            )
-            .onAppear { filterSheetDetent = .large }
-            .presentationDetents([.large], selection: $filterSheetDetent)
-        }
+        .toolbar { toolbarContent }
+        .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
         .onAppear(perform: syncExpansionStates)
         .onChange(of: timelineSectionsForSpace.count) {
             syncExpansionStates()
@@ -218,166 +183,126 @@ struct SpaceDetailView: View {
         .onChange(of: isInboxExpanded) {
             autoCollapsedInbox = inboxMemories.isEmpty && !isInboxExpanded
         }
+        .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                performBulkDeletion()
+            }
+            .disabled(isPerformingBulkAction)
+
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(deleteConfirmationMessage)
+        }
     }
 
     private var childSpaces: [SpaceModel] {
         spaceService.children(of: resolvedSpace)
     }
 
-    private var subspacesList: some View {
-        List {
-            Section("Subspaces") {
-                ForEach(childSpaces) { child in
-                    NavigationLink(value: child) {
-                        SpaceRowView(
-                            space: child,
-                            count: memoryCount(for: child),
-                            parentLookup: spaceService.space(id:)
-                        )
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        if canDeleteSpace(child) {
-                            Button(role: .destructive) {
-                                deleteSpace(child)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .listStyle(.insetGrouped)
-        .listRowSeparator(.hidden)
-        .listSectionSeparator(.hidden)
-        .scrollContentBackground(.hidden)
-        .scrollDisabled(true)
-        .frame(height: subspacesListHeight)
-        .padding(.horizontal, -16)
-    }
-
-    private var subspacesListHeight: CGFloat {
-        let rowHeight: CGFloat = 68
-        let headerHeight: CGFloat = 48
-        return (CGFloat(childSpaces.count) * rowHeight) + headerHeight
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        SpaceDetailToolbarContent(
+            activeFilterCount: activeFilterCount,
+            filterDescription: filterDescription,
+            isFilterSheetPresented: showingFilterSheet,
+            isMultiSelecting: isMultiSelecting,
+            isPerformingBulkAction: isPerformingBulkAction,
+            hasSelectedMemories: !selectedMemoryIDs.isEmpty,
+            canCreateSubspace: canCreateSubspace,
+            onShowFilters: presentFilterSheet,
+            onToggleMultiSelection: toggleMultiSelection,
+            onRequestDeletion: { showingDeleteConfirmation = true },
+            onCreateMemory: { onCreateMemory(resolvedSpace) },
+            onCreateSpace: { onCreateSpace(resolvedSpace) }
+        )
     }
 
     @ViewBuilder
-    private var searchResultsSection: some View {
-        Section {
-            if filteredMemories.isEmpty {
-                MemoryEmptyStateCard(
-                    systemImage: "magnifyingglass",
-                    title: "No memories match your search",
-                    message: "Try different keywords or reset filters to discover more memories."
-                )
-            } else {
-                ForEach(filteredMemories) { memory in
-                    MemoryListItemButton(
-                        memory: memory,
-                        isMultiSelecting: false,
-                        isSelected: false,
-                        isDisabled: false,
-                        onSelect: onSelectMemory,
-                        onToggleSelection: nil)
-                }
-            }
+    private func filterSheetContent() -> some View {
+        FilterSheetView(
+            selectedMemoryTypes: $selectedMemoryTypes,
+            selectedSections: $selectedSections,
+            showInbox: $showInbox,
+            detentSelection: $filterSheetDetent
+        )
+        .onAppear { filterSheetDetent = .large }
+        .presentationDetents([.large], selection: $filterSheetDetent)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            subspacesSection
+            mainSection
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 70)
+    }
+
+    @ViewBuilder
+    private var subspacesSection: some View {
+        if !childSpaces.isEmpty {
+            SpaceDetailSubspacesSection(
+                childSpaces: childSpaces,
+                spaceService: spaceService,
+                memoryCountProvider: memoryCount(for:),
+                parentLookup: { id in spaceService.space(id: id) }
+            )
         }
     }
 
     @ViewBuilder
-    private var timelineContent: some View {
-        let sections = timelineSectionsForSpace
-
-        Section {
-            Group {
-                if sections.isEmpty && ungroupedMemories.isEmpty {
-                    DisclosureGroup(isExpanded: $isUpcomingExpanded) {
-                        MemoryEmptyStateCard(
-                            systemImage: "tray",
-                            title: emptyStateTitle,
-                            message: emptyStateMessage
-                        )
-                        .padding(.top)
-                    } label: {
-                        Label("Upcoming", systemImage: "calendar")
-                            .foregroundStyle(.white)
-                    }
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isUpcomingExpanded)
-                    .padding(.top)
-                } else {
-                    ForEach(sections) { section in
-                        MemoryDisclosureListSection(
-                            title: section.kind.title,
-                            systemImage: section.kind.systemImage,
-                            isExpanded: sectionExpansionBinding(for: section.kind),
-                            memories: section.memories,
-                            isMultiSelecting: false,
-                            selectedMemoryIDs: [],
-                            isDisabled: false,
-                            onSelect: onSelectMemory,
-                            onToggleSelection: nil)
-                    }
-
-                    if !ungroupedMemories.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            DisclosureGroup(isExpanded: $isOtherExpanded) {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    ForEach(ungroupedMemories) { memory in
-                                        MemoryListItemButton(
-                                            memory: memory,
-                                            isMultiSelecting: false,
-                                            isSelected: false,
-                                            isDisabled: false,
-                                            onSelect: onSelectMemory,
-                                            onToggleSelection: nil)
-                                    }
-                                }
-                                .padding(.top)
-                            } label: {
-                                Label("Other Memories", systemImage: "tray")
-                                    .foregroundStyle(.white)
-                            }
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isOtherExpanded)
-                        }
-                        .padding(.top)
-                    }
-                }
-            }
+    private var mainSection: some View {
+        if isSearching {
+            SpaceDetailSearchResultsView(
+                memories: filteredMemories,
+                isMultiSelecting: isMultiSelecting,
+                isPerformingBulkAction: isPerformingBulkAction,
+                isMemorySelected: isMemorySelected(_:),
+                onSelectMemory: onSelectMemory,
+                onToggleSelection: toggleMemorySelection(_:)
+            )
+        } else {
+            timelineAndInboxSection
         }
     }
 
-    private var inboxSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            DisclosureGroup(isExpanded: $isInboxExpanded) {
-                if inboxMemories.isEmpty {
-                    MemoryEmptyStateCard(
-                        systemImage: "checkmark.seal",
-                        title: "Inbox is clear",
-                        message: "Create a memory or capture a reminder to keep building your inbox."
-                    )
-                    .padding(.top)
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(inboxMemories) { memory in
-                            MemoryListItemButton(
-                                memory: memory,
-                                isMultiSelecting: false,
-                                isSelected: false,
-                                isDisabled: false,
-                                onSelect: onSelectMemory,
-                                onToggleSelection: nil)
-                        }
-                    }
-                    .padding(.top)
-                }
-            } label: {
-                Label("Inbox", systemImage: "tray.fill")
-                    .foregroundStyle(.white)
-            }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
+    @ViewBuilder
+    private var timelineAndInboxSection: some View {
+        SpaceDetailTimelineContentView(
+            sections: timelineSectionsForSpace,
+            ungroupedMemories: ungroupedMemories,
+            emptyStateTitle: emptyStateTitle,
+            emptyStateMessage: emptyStateMessage,
+            isMultiSelecting: isMultiSelecting,
+            selectedMemoryIDs: selectedMemoryIDs,
+            isPerformingBulkAction: isPerformingBulkAction,
+            isUpcomingExpanded: $isUpcomingExpanded,
+            isOtherExpanded: $isOtherExpanded,
+            sectionExpansionProvider: sectionExpansionBinding(for:),
+            isMemorySelected: isMemorySelected(_:),
+            onSelectMemory: onSelectMemory,
+            onToggleSelection: toggleMemorySelection(_:)
+        )
+
+        if showInbox {
+            SpaceDetailInboxSectionView(
+                inboxMemories: inboxMemories,
+                isMultiSelecting: isMultiSelecting,
+                selectedMemoryIDs: selectedMemoryIDs,
+                isPerformingBulkAction: isPerformingBulkAction,
+                isInboxExpanded: $isInboxExpanded,
+                onSelectMemory: onSelectMemory,
+                onToggleSelection: toggleMemorySelection(_:)
+            )
         }
-        .padding(.top)
+    }
+
+    private func presentFilterSheet() {
+        filterSheetDetent = .large
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showingFilterSheet = true
+        }
     }
 
     private func syncExpansionStates() {
@@ -484,20 +409,6 @@ struct SpaceDetailView: View {
         return memoryService.memories.filter { ids.contains($0.space.id) }.count
     }
 
-    private func canDeleteSpace(_ space: SpaceModel) -> Bool {
-        space.id != SpaceModel.inboxIdentifier && !space.isDefault
-    }
-
-    private func deleteSpace(_ space: SpaceModel) {
-        Task { @MainActor in
-            do {
-                try await spaceService.deleteSpace(space)
-            } catch {
-                assertionFailure("Failed to delete space: \(error.localizedDescription)")
-            }
-        }
-    }
-
     private func sectionExpansionBinding(for kind: MemoryService.TimelineSection.Kind) -> Binding<Bool> {
         Binding(
             get: { !collapsedSections.contains(kind) },
@@ -525,6 +436,74 @@ struct SpaceDetailView: View {
         }
 
         return false
+    }
+
+    private func isMemorySelected(_ memory: MemoryModel) -> Bool {
+        selectedMemoryIDs.contains(memory.id)
+    }
+
+    private func toggleMemorySelection(_ memory: MemoryModel) {
+        let id = memory.id
+        if selectedMemoryIDs.contains(id) {
+            selectedMemoryIDs.remove(id)
+        } else {
+            selectedMemoryIDs.insert(id)
+        }
+    }
+
+    private func toggleMultiSelection() {
+        if isMultiSelecting {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isMultiSelecting = false
+            }
+            selectedMemoryIDs.removeAll()
+        } else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isMultiSelecting = true
+            }
+            selectedMemoryIDs.removeAll()
+            searchText = ""
+        }
+        showingFilterSheet = false
+        showingDeleteConfirmation = false
+    }
+
+    private func performBulkDeletion() {
+        let ids = selectedMemoryIDs
+        guard !ids.isEmpty else { return }
+        isPerformingBulkAction = true
+        Task {
+            await deleteMemories(withIDs: ids)
+            await MainActor.run {
+                selectedMemoryIDs.removeAll()
+                isMultiSelecting = false
+                isPerformingBulkAction = false
+            }
+        }
+    }
+
+    private func deleteMemories(withIDs ids: Set<MemoryModel.ID>) async {
+        for id in ids {
+            guard let memory = memoryService.memory(id: id),
+                  let origin = memory.metadata.origin else {
+                continue
+            }
+
+            do {
+                switch origin {
+                case .reminder(let reminderID):
+                    try await environment.reminderService.deleteReminder(id: reminderID)
+                case .note(let noteID):
+                    try await environment.noteService.deleteNote(id: noteID)
+                case .todoList(let listID):
+                    try await environment.todoService.deleteList(id: listID)
+                }
+            } catch {
+                // Failures are handled individually by each service.
+            }
+        }
+
+        await memoryService.refresh(force: true)
     }
 }
 
