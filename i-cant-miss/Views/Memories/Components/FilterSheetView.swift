@@ -19,7 +19,7 @@ struct FilterSheetView: View {
                     } label: {
                         HStack {
                             Label("All Types", systemImage: "square.stack.3d.up.fill")
-                                .foregroundStyle(Color.accent)
+                                .foregroundStyle(.primary)
                             Spacer()
                             if selectedMemoryTypes.isEmpty || selectedMemoryTypes.count == MemoryType.allCases.count {
                                 Image(systemName: "checkmark")
@@ -28,6 +28,7 @@ struct FilterSheetView: View {
                             }
                         }
                     }
+                    .tint(.primary)
 
                     ForEach(MemoryType.allCases) { type in
                         Button {
@@ -37,7 +38,7 @@ struct FilterSheetView: View {
                         } label: {
                             HStack {
                                 Label(type.label, systemImage: type.systemImage)
-                                    .foregroundStyle(Color.accent)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 if isMemoryTypeVisuallySelected(type) {
                                     Image(systemName: "checkmark")
@@ -46,6 +47,7 @@ struct FilterSheetView: View {
                                 }
                             }
                         }
+                        .tint(.primary)
                     }
                 } header: {
                     Text("Memory Type")
@@ -59,7 +61,7 @@ struct FilterSheetView: View {
                     } label: {
                         HStack {
                             Label("All Sections", systemImage: "calendar")
-                                .foregroundStyle(Color.accent)
+                                .foregroundStyle(.primary)
                             Spacer()
                             if selectedSections.isEmpty || selectedSections.count == MemoryService.TimelineSection.Kind.allCases.count {
                                 Image(systemName: "checkmark")
@@ -68,6 +70,7 @@ struct FilterSheetView: View {
                             }
                         }
                     }
+                    .tint(.primary)
 
                     ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
                         Button {
@@ -77,7 +80,7 @@ struct FilterSheetView: View {
                         } label: {
                             HStack {
                                 Label(kind.title, systemImage: kind.systemImage)
-                                    .foregroundStyle(Color.accent)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 if isSectionVisuallySelected(kind) {
                                     Image(systemName: "checkmark")
@@ -86,6 +89,7 @@ struct FilterSheetView: View {
                                 }
                             }
                         }
+                        .tint(.primary)
                     }
                 } header: {
                     Text("Timeline Section")
@@ -99,7 +103,7 @@ struct FilterSheetView: View {
                     } label: {
                         HStack {
                             Label("Show Inbox", systemImage: "tray.fill")
-                                .foregroundStyle(Color.accent)
+                                .foregroundStyle(.primary)
                             Spacer()
                             if showInbox {
                                 Image(systemName: "checkmark")
@@ -109,6 +113,7 @@ struct FilterSheetView: View {
                             }
                         }
                     }
+                    .tint(.primary)
                 } header: {
                     Text("Inbox")
                 }

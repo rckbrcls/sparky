@@ -89,7 +89,6 @@ struct MemoryEditorView: View {
                             memoryLookup: memoryLookup
                         )
                     }
-                    .padding(.horizontal, 16)
                     .padding(.top, 80)
                     .padding(.bottom, 20)
                     .background(
@@ -389,7 +388,7 @@ struct MemoryEditorView: View {
                     }
                 }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .padding(.vertical, 10)
         .glassEffect(.regular.interactive())
         .contentShape(Rectangle())
