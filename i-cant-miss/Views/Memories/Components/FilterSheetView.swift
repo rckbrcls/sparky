@@ -185,4 +185,3 @@ struct FilterSheetView: View {
         }
     }
 }
-

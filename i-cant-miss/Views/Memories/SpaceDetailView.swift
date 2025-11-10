@@ -159,7 +159,17 @@ struct SpaceDetailView: View {
         .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
         .toolbar {
             ToolbarItem(placement: .principal) {
-                filterSummaryButton
+                MemoryFilterSummaryButton(
+                    activeFilterCount: activeFilterCount,
+                    filterDescription: filterDescription,
+                    isSheetPresented: showingFilterSheet,
+                    paddingInsets: EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+                ) {
+                    filterSheetDetent = .large
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showingFilterSheet = true
+                    }
+                }
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -207,34 +217,6 @@ struct SpaceDetailView: View {
         }
         .onChange(of: isInboxExpanded) {
             autoCollapsedInbox = inboxMemories.isEmpty && !isInboxExpanded
-        }
-    }
-
-    private var filterSummaryButton: some View {
-        Button {
-            filterSheetDetent = .large
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                showingFilterSheet = true
-            }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                    .symbolEffect(.bounce, value: activeFilterCount)
-                Text(filterDescription)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .contentTransition(.opacity)
-                Image(systemName: "chevron.down")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .rotationEffect(.degrees(showingFilterSheet ? 180 : 0))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showingFilterSheet)
-            }
-            .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
-            .padding(10)
-            .glassEffect(.regular.interactive())
         }
     }
 
