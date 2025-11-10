@@ -3,6 +3,7 @@ import SwiftUI
 struct MemoryWeekdayTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
+    private let showsCloseButton: Bool
     @State private var selectedDays: Set<Int>
     @State private var referenceTime: Date
 
@@ -10,8 +11,9 @@ struct MemoryWeekdayTriggerEditorScreen: View {
         viewModel.triggers.first(where: { $0.type == .dayOfWeek })
     }
 
-    init(viewModel: MemoryEditorViewModel) {
+    init(viewModel: MemoryEditorViewModel, showsCloseButton: Bool = true) {
         self.viewModel = viewModel
+        self.showsCloseButton = showsCloseButton
         let weekdayTrigger = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
         let timeTrigger = viewModel.triggers.first(where: { $0.type == .time })
         let initialSelection = Self.initialWeekdaySelection(from: weekdayTrigger?.weekdayMask ?? 0)
@@ -41,11 +43,13 @@ struct MemoryWeekdayTriggerEditorScreen: View {
         .navigationTitle("Weekday Routine")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "xmark")
+            if showsCloseButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
-                .accessibilityLabel("Close")
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: applyChanges) {

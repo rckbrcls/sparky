@@ -8,3 +8,6 @@ enum MemoryTriggerPickerDestination: Hashable {
 }
 
 
+extension MemoryTriggerPickerDestination: Identifiable {
+    var id: Self { self }
+}

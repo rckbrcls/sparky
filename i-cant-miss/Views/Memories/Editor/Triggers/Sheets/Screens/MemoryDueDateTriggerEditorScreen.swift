@@ -4,9 +4,11 @@ struct MemoryDueDateTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     @State private var dueDate: Date
+    private let showsCloseButton: Bool
 
-    init(viewModel: MemoryEditorViewModel) {
+    init(viewModel: MemoryEditorViewModel, showsCloseButton: Bool = true) {
         self.viewModel = viewModel
+        self.showsCloseButton = showsCloseButton
         _dueDate = State(initialValue: viewModel.dueDate)
     }
 
@@ -28,11 +30,13 @@ struct MemoryDueDateTriggerEditorScreen: View {
         .navigationTitle("Due Date")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "xmark")
+            if showsCloseButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
-                .accessibilityLabel("Close")
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: applyChanges) {

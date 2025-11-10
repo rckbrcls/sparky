@@ -5,6 +5,7 @@ import UIKit
 struct MemoryPersonTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
+    private let showsCloseButton: Bool
     @State private var name: String
     @State private var contactIdentifier: String
     @State private var showContactPicker = false
@@ -14,8 +15,9 @@ struct MemoryPersonTriggerEditorScreen: View {
         viewModel.triggers.first(where: { $0.type == .person })
     }
 
-    init(viewModel: MemoryEditorViewModel) {
+    init(viewModel: MemoryEditorViewModel, showsCloseButton: Bool = true) {
         self.viewModel = viewModel
+        self.showsCloseButton = showsCloseButton
         let trigger = viewModel.triggers.first(where: { $0.type == .person })
         _name = State(initialValue: trigger?.person?.name ?? "")
         _contactIdentifier = State(initialValue: trigger?.person?.contactIdentifier ?? "")
@@ -52,11 +54,13 @@ struct MemoryPersonTriggerEditorScreen: View {
         .navigationTitle(existingTrigger == nil ? "Add Person Trigger" : "Edit Person Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "xmark")
+            if showsCloseButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
-                .accessibilityLabel("Close")
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: commitChanges) {

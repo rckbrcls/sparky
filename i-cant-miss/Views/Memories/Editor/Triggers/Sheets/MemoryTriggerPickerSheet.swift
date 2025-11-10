@@ -3,10 +3,10 @@ import SwiftUI
 struct MemoryTriggerPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @State private var navigationPath = NavigationPath()
+    @State private var selectedDestination: MemoryTriggerPickerDestination?
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        NavigationStack {
             List {
                 Section("Date & Time") {
                     TriggerPickerRow(
@@ -75,22 +75,23 @@ struct MemoryTriggerPickerSheet: View {
                 .accessibilityLabel("Close")
                 }
             }
-            .navigationDestination(for: MemoryTriggerPickerDestination.self) { destination in
+            .navigationDestination(item: $selectedDestination) { destination in
                 switch destination {
                 case .dueDate:
-                    MemoryDueDateTriggerEditorScreen(viewModel: viewModel)
+                    MemoryDueDateTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .exactTime:
-                    MemoryExactTimeTriggerEditorScreen(viewModel: viewModel)
+                    MemoryExactTimeTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .weekdayRoutine:
-                    MemoryWeekdayTriggerEditorScreen(viewModel: viewModel)
+                    MemoryWeekdayTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .location:
-                    MemoryLocationTriggerEditorScreen(viewModel: viewModel)
+                    MemoryLocationTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .person:
-                    MemoryPersonTriggerEditorScreen(viewModel: viewModel)
+                    MemoryPersonTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .sequential:
                     MemorySequentialTriggerEditorScreen(
                         viewModel: viewModel,
-                        excludedMemoryID: viewModel.editingMemoryID
+                        excludedMemoryID: viewModel.editingMemoryID,
+                        showsCloseButton: false
                     )
                 }
             }
@@ -133,6 +134,6 @@ struct MemoryTriggerPickerSheet: View {
     }
 
     private func select(_ destination: MemoryTriggerPickerDestination) {
-        navigationPath.append(destination)
+        selectedDestination = destination
     }
 }

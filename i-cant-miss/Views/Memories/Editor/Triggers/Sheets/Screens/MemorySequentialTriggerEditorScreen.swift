@@ -4,14 +4,17 @@ struct MemorySequentialTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     let excludedMemoryID: UUID?
+    private let showsCloseButton: Bool
     @State private var selectedPrevious: UUID?
     @State private var selectedNext: UUID?
     @State private var searchText: String = ""
 
     init(viewModel: MemoryEditorViewModel,
-         excludedMemoryID: UUID?) {
+         excludedMemoryID: UUID?,
+         showsCloseButton: Bool = true) {
         self.viewModel = viewModel
         self.excludedMemoryID = excludedMemoryID
+        self.showsCloseButton = showsCloseButton
         let configuration = viewModel.sequentialTrigger?.sequential
         _selectedPrevious = State(initialValue: configuration?.previousMemoryID)
         _selectedNext = State(initialValue: configuration?.nextMemoryID)
@@ -38,11 +41,13 @@ struct MemorySequentialTriggerEditorScreen: View {
         .navigationTitle("Sequential Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "xmark")
+            if showsCloseButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
-                .accessibilityLabel("Close")
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: confirmChanges) {

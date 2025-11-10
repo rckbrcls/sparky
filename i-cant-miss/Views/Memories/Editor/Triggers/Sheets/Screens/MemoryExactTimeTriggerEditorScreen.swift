@@ -3,6 +3,7 @@ import SwiftUI
 struct MemoryExactTimeTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
+    private let showsCloseButton: Bool
     @State private var fireDate: Date
     @State private var selectedFrequency: RecurrenceRule.Frequency?
     @State private var repeatInterval: Int
@@ -11,8 +12,9 @@ struct MemoryExactTimeTriggerEditorScreen: View {
         viewModel.triggers.first(where: { $0.type == .time })
     }
 
-    init(viewModel: MemoryEditorViewModel) {
+    init(viewModel: MemoryEditorViewModel, showsCloseButton: Bool = true) {
         self.viewModel = viewModel
+        self.showsCloseButton = showsCloseButton
         let timeTrigger = viewModel.triggers.first(where: { $0.type == .time })
         let weekdayTrigger = viewModel.triggers.first(where: { $0.type == .dayOfWeek })
         let defaultDate = timeTrigger?.fireDate ?? weekdayTrigger?.fireDate ?? Date().addingTimeInterval(3600)
@@ -44,11 +46,13 @@ struct MemoryExactTimeTriggerEditorScreen: View {
         .navigationTitle("Exact Time")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "xmark")
+            if showsCloseButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
-                .accessibilityLabel("Close")
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: applyChanges) {

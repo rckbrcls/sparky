@@ -3,27 +3,47 @@ import MapKit
 
 struct LocationPickerView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var searchModel = LocationSearchViewModel()
-    @StateObject private var geocodingModel = LocationGeocoder()
+    @StateObject private var searchModel: LocationSearchViewModel
+    @StateObject private var geocodingModel: LocationGeocoder
     private let defaultRadius: Double = 200
     private let expandedSuggestionBottomPadding: CGFloat = 120
-    @State private var region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
-                                                   span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
-    @State private var mapCameraPosition = MapCameraPosition.region(
-        MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
-                           span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
-    )
+    @State private var region: MKCoordinateRegion
+    @State private var mapCameraPosition: MapCameraPosition
     @State private var selectedCoordinate: CLLocationCoordinate2D?
-    @State private var selectedName: String = ""
-    @State private var event: LocationEvent = .onEntry
-    @State private var isSearching = false
-    @State private var isMapExpanded = false
-    @State private var isCameraAdjusting = false
+    @State private var selectedName: String
+    @State private var event: LocationEvent
+    @State private var isSearching: Bool
+    @State private var isMapExpanded: Bool
+    @State private var isCameraAdjusting: Bool
     @State private var geocodeTask: Task<Void, Never>?
     @State private var cameraCooldownTask: Task<Void, Never>?
     @FocusState private var isSearchFieldFocused: Bool
-
+    private let showsCloseButton: Bool
     let onAdd: (String, Double, Double, Double, LocationEvent) -> Void
+
+    init(
+        showsCloseButton: Bool = true,
+        onAdd: @escaping (String, Double, Double, Double, LocationEvent) -> Void
+    ) {
+        let initialRegion = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        _searchModel = StateObject(wrappedValue: LocationSearchViewModel())
+        _geocodingModel = StateObject(wrappedValue: LocationGeocoder())
+        _region = State(initialValue: initialRegion)
+        _mapCameraPosition = State(initialValue: .region(initialRegion))
+        _selectedCoordinate = State(initialValue: nil)
+        _selectedName = State(initialValue: "")
+        _event = State(initialValue: .onEntry)
+        _isSearching = State(initialValue: false)
+        _isMapExpanded = State(initialValue: false)
+        _isCameraAdjusting = State(initialValue: false)
+        _geocodeTask = State(initialValue: nil)
+        _cameraCooldownTask = State(initialValue: nil)
+        self.showsCloseButton = showsCloseButton
+        self.onAdd = onAdd
+    }
 
     var body: some View {
         ScrollView {
@@ -55,11 +75,13 @@ struct LocationPickerView: View {
         .navigationTitle("Location Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "xmark")
+            if showsCloseButton {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
                 }
-                .accessibilityLabel("Close")
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
