@@ -16,6 +16,22 @@ struct SpaceDetailToolbarContent: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .navigationBarTrailing) {
+            Menu {
+                Button(action: onCreateMemory) {
+                    Label("Add Memory", systemImage: "plus")
+                }
+
+                if canCreateSubspace {
+                    Button(action: onCreateSpace) {
+                        Label("Add Space", systemImage: "folder.badge.plus")
+                    }
+                }
+            } label: {
+                Image(systemName: "plus.circle")
+            }
+            .accessibilityLabel("Add Item")
+            .disabled(isMultiSelecting || isPerformingBulkAction)
+
             MemoryFilterSummaryButton(
                 activeFilterCount: activeFilterCount,
                 filterDescription: filterDescription,
@@ -41,24 +57,6 @@ struct SpaceDetailToolbarContent: ToolbarContent {
                 }
             }
             .disabled(isPerformingBulkAction)
-        }
-
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Menu {
-                Button(action: onCreateMemory) {
-                    Label("Add Memory", systemImage: "plus")
-                }
-
-                if canCreateSubspace {
-                    Button(action: onCreateSpace) {
-                        Label("Add Space", systemImage: "folder.badge.plus")
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-            }
-            .accessibilityLabel("Add Item")
-            .disabled(isMultiSelecting || isPerformingBulkAction)
         }
     }
 }
