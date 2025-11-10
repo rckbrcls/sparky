@@ -69,6 +69,14 @@ struct MemoryPersonTriggerEditorScreen: View {
                 .accessibilityLabel(confirmationAccessibilityLabel)
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if existingTrigger != nil {
+                    Button(role: .destructive, action: removeTrigger) {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel("Remove person trigger")
+                }
+            }
         }
         .sheet(isPresented: $showContactPicker) {
             ContactPickerView { selectedName, identifier in
@@ -140,5 +148,11 @@ struct MemoryPersonTriggerEditorScreen: View {
 
     private var confirmationAccessibilityLabel: String {
         existingTrigger == nil ? "Add" : "Save"
+    }
+
+    private func removeTrigger() {
+        guard let trigger = existingTrigger else { return }
+        viewModel.removeTrigger(id: trigger.id)
+        dismiss()
     }
 }

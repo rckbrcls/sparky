@@ -18,14 +18,6 @@ struct MemoryDueDateTriggerEditorScreen: View {
                 DatePicker("Date", selection: $dueDate, displayedComponents: [.date])
                 DatePicker("Time", selection: $dueDate, displayedComponents: [.hourAndMinute])
             }
-
-            if viewModel.dueDateEnabled {
-                Section {
-                    Button("Remove due date", role: .destructive) {
-                        removeDueDate()
-                    }
-                }
-            }
         }
         .navigationTitle("Due Date")
         .navigationBarTitleDisplayMode(.inline)
@@ -43,6 +35,14 @@ struct MemoryDueDateTriggerEditorScreen: View {
                     Image(systemName: "checkmark")
                 }
                 .accessibilityLabel("Save")
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if viewModel.dueDateEnabled {
+                    Button(role: .destructive, action: removeDueDate) {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel("Remove due date")
+                }
             }
         }
     }

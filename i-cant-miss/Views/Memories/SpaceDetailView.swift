@@ -132,6 +132,10 @@ struct SpaceDetailView: View {
             : "Create a memory to get started in this space."
     }
 
+    private var canCreateSubspace: Bool {
+        resolvedSpace.id != SpaceModel.inboxIdentifier
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
@@ -159,12 +163,14 @@ struct SpaceDetailView: View {
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    onCreateSpace(resolvedSpace)
-                } label: {
-                    Image(systemName: "folder.badge.plus")
+                if canCreateSubspace {
+                    Button {
+                        onCreateSpace(resolvedSpace)
+                    } label: {
+                        Image(systemName: "folder.badge.plus")
+                    }
+                    .accessibilityLabel("Create Space")
                 }
-                .accessibilityLabel("Create Space")
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {

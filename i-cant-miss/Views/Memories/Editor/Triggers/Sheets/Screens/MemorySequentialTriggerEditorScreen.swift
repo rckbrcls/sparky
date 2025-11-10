@@ -9,6 +9,10 @@ struct MemorySequentialTriggerEditorScreen: View {
     @State private var selectedNext: UUID?
     @State private var searchText: String = ""
 
+    private var existingTrigger: MemoryTriggerDraft? {
+        viewModel.sequentialTrigger
+    }
+
     init(viewModel: MemoryEditorViewModel,
          excludedMemoryID: UUID?,
          showsCloseButton: Bool = true) {
@@ -25,16 +29,6 @@ struct MemorySequentialTriggerEditorScreen: View {
             infoSection
             selectionSection(kind: .previous)
             selectionSection(kind: .next)
-
-            if selectedPrevious != nil || selectedNext != nil {
-                Section {
-                    Button("Remove sequential trigger", role: .destructive) {
-                        viewModel.removeSequentialTrigger()
-                        selectedPrevious = nil
-                        selectedNext = nil
-                    }
-                }
-            }
         }
         .listStyle(.insetGrouped)
         .searchable(text: $searchText, prompt: "Search memories")
@@ -54,6 +48,14 @@ struct MemorySequentialTriggerEditorScreen: View {
                     Image(systemName: "checkmark")
                 }
                 .accessibilityLabel("Save")
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if existingTrigger != nil {
+                    Button(role: .destructive, action: removeSequentialTrigger) {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel("Remove sequential trigger")
+                }
             }
         }
     }
@@ -210,6 +212,13 @@ struct MemorySequentialTriggerEditorScreen: View {
             previousMemoryID: selectedPrevious,
             nextMemoryID: selectedNext
         )
+        dismiss()
+    }
+
+    private func removeSequentialTrigger() {
+        viewModel.removeSequentialTrigger()
+        selectedPrevious = nil
+        selectedNext = nil
         dismiss()
     }
 

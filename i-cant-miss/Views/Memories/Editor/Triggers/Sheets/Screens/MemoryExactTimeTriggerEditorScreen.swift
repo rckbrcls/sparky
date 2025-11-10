@@ -60,12 +60,26 @@ struct MemoryExactTimeTriggerEditorScreen: View {
                 }
                 .accessibilityLabel(confirmationAccessibilityLabel)
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if existingTrigger != nil {
+                    Button(role: .destructive, action: removeTrigger) {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel("Remove exact time trigger")
+                }
+            }
         }
     }
 
     private func applyChanges() {
         let recurrence = selectedFrequency.map { RecurrenceRule(frequency: $0, interval: repeatInterval) }
         viewModel.setTimeTrigger(fireDate: fireDate, recurrence: recurrence)
+        dismiss()
+    }
+
+    private func removeTrigger() {
+        guard let trigger = existingTrigger else { return }
+        viewModel.removeTrigger(id: trigger.id)
         dismiss()
     }
 

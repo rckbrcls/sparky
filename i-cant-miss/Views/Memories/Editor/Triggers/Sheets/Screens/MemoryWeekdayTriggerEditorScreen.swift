@@ -58,6 +58,14 @@ struct MemoryWeekdayTriggerEditorScreen: View {
                 .disabled(selectedDays.isEmpty)
                 .accessibilityLabel(confirmationAccessibilityLabel)
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if existingTrigger != nil {
+                    Button(role: .destructive, action: removeTrigger) {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel("Remove weekday routine")
+                }
+            }
         }
     }
 
@@ -76,6 +84,12 @@ struct MemoryWeekdayTriggerEditorScreen: View {
 
     private var confirmationAccessibilityLabel: String {
         existingTrigger == nil ? "Add" : "Save"
+    }
+
+    private func removeTrigger() {
+        guard let trigger = existingTrigger else { return }
+        viewModel.removeTrigger(id: trigger.id)
+        dismiss()
     }
 
     private static func initialWeekdaySelection(from mask: Int16) -> Set<Int> {

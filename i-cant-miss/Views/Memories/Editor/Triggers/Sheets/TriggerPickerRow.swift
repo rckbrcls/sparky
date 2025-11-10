@@ -31,5 +31,3 @@ struct TriggerPickerRow: View {
         .buttonStyle(.plain)
     }
 }
-
-
