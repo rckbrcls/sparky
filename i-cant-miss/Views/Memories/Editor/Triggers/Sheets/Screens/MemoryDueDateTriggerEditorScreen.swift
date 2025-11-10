@@ -28,6 +28,12 @@ struct MemoryDueDateTriggerEditorScreen: View {
         .navigationTitle("Due Date")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: dismiss.callAsFunction) {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: applyChanges) {
                     Image(systemName: "checkmark")

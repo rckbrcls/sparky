@@ -44,6 +44,12 @@ struct MemoryExactTimeTriggerEditorScreen: View {
         .navigationTitle("Exact Time")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: dismiss.callAsFunction) {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: applyChanges) {
                     Image(systemName: confirmationIconName)
@@ -59,9 +65,7 @@ struct MemoryExactTimeTriggerEditorScreen: View {
         dismiss()
     }
 
-    private var confirmationIconName: String {
-        existingTrigger == nil ? "plus" : "checkmark"
-    }
+    private var confirmationIconName: String { "checkmark" }
 
     private var confirmationAccessibilityLabel: String {
         existingTrigger == nil ? "Add" : "Save"

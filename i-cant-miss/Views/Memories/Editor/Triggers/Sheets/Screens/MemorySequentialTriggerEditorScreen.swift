@@ -38,6 +38,12 @@ struct MemorySequentialTriggerEditorScreen: View {
         .navigationTitle("Sequential Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: dismiss.callAsFunction) {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: confirmChanges) {
                     Image(systemName: "checkmark")

@@ -55,6 +55,12 @@ struct LocationPickerView: View {
         .navigationTitle("Location Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: dismiss.callAsFunction) {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     guard let coordinate = selectedCoordinate else { return }

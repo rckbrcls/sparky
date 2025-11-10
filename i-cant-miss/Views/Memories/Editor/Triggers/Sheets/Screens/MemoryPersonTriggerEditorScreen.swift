@@ -52,6 +52,12 @@ struct MemoryPersonTriggerEditorScreen: View {
         .navigationTitle(existingTrigger == nil ? "Add Person Trigger" : "Edit Person Trigger")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: dismiss.callAsFunction) {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Close")
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button(action: commitChanges) {
                     Image(systemName: confirmationIconName)
@@ -126,9 +132,7 @@ struct MemoryPersonTriggerEditorScreen: View {
         }
     }
 
-    private var confirmationIconName: String {
-        existingTrigger == nil ? "plus" : "checkmark"
-    }
+    private var confirmationIconName: String { "checkmark" }
 
     private var confirmationAccessibilityLabel: String {
         existingTrigger == nil ? "Add" : "Save"
