@@ -15,7 +15,7 @@ struct SpaceDetailToolbarContent: ToolbarContent {
     let onCreateSpace: () -> Void
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
             MemoryFilterSummaryButton(
                 activeFilterCount: activeFilterCount,
                 filterDescription: filterDescription,
@@ -23,9 +23,7 @@ struct SpaceDetailToolbarContent: ToolbarContent {
                 isDisabled: isMultiSelecting || isPerformingBulkAction,
                 onTap: onShowFilters
             )
-        }
 
-        ToolbarItemGroup(placement: .navigationBarTrailing) {
             if isMultiSelecting {
                 Button(role: .destructive, action: onRequestDeletion) {
                     Image(systemName: "trash")

@@ -136,6 +136,18 @@ struct MemoryTimelineView: View {
             .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    MemoryFilterSummaryButton(
+                        activeFilterCount: activeFilterCount,
+                        filterDescription: filterDescription,
+                        isSheetPresented: showingFilterSheet,
+                        isDisabled: isMultiSelecting || isPerformingBulkAction
+                    ) {
+                        filterSheetDetent = .large
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showingFilterSheet = true
+                        }
+                    }
+
                     if isMultiSelecting {
                         Button(role: .destructive) {
                             showingDeleteConfirmation = true
@@ -157,20 +169,6 @@ struct MemoryTimelineView: View {
                         }
                     }
                     .disabled(isPerformingBulkAction)
-                }
-
-                ToolbarItem(placement: .principal) {
-                    MemoryFilterSummaryButton(
-                        activeFilterCount: activeFilterCount,
-                        filterDescription: filterDescription,
-                        isSheetPresented: showingFilterSheet,
-                        isDisabled: isMultiSelecting || isPerformingBulkAction
-                    ) {
-                        filterSheetDetent = .large
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            showingFilterSheet = true
-                        }
-                    }
                 }
             }
             .sheet(isPresented: $showingFilterSheet) {
