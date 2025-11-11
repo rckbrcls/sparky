@@ -437,30 +437,7 @@ private extension MemoryEditorViewModel {
         guard !hasMigratedLegacyAttachments else { return }
         defer { hasMigratedLegacyAttachments = true }
 
-        guard !attachments.isEmpty else { return }
-
-        var updatedBody = body
-        for attachment in attachments {
-            let token = MemoryRichTextFormatter.attachmentToken(for: attachment.id)
-            guard !updatedBody.contains(token) else { continue }
-
-            if !updatedBody.isEmpty {
-                if updatedBody.hasSuffix("\n\n") {
-                    // already spaced
-                } else if updatedBody.hasSuffix("\n") {
-                    updatedBody.append("\n")
-                } else {
-                    updatedBody.append("\n\n")
-                }
-            }
-
-            updatedBody.append(token)
-            if !updatedBody.hasSuffix("\n") {
-                updatedBody.append("\n")
-            }
-        }
-
-        body = updatedBody
+        attachments.removeAll()
     }
 
     func updateExistingMemory(_ memory: MemoryModel,

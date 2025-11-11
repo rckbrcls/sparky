@@ -1,23 +1,46 @@
 import SwiftUI
 
 struct MemoryTriggerAddBadge: View {
+    enum DisplayStyle {
+        case inline
+        case toolbar
+    }
+
     @Binding var isPresented: Bool
+    var displayStyle: DisplayStyle = .inline
 
     var body: some View {
+        switch displayStyle {
+        case .inline:
+            inlineButton
+        case .toolbar:
+            toolbarButton
+        }
+    }
+
+    private var inlineButton: some View {
         Button {
             isPresented = true
         } label: {
-            HStack {
-                Label("Add Trigger", systemImage: "plus")
-                    .font(.caption.bold())
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Label("Add Trigger", systemImage: "bolt.fill")
+                .font(.caption.bold())
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 6)
         }
         .buttonStyle(.glassProminent)
+        .accessibilityLabel("Add trigger")
+    }
+
+    private var toolbarButton: some View {
+        Button {
+            isPresented = true
+        } label: {
+            Label("Add Trigger", systemImage: "bolt.fill")
+                .labelStyle(.titleAndIcon)
+                .font(.body.weight(.semibold))
+        }
+        .accessibilityLabel("Add trigger")
     }
 }
-
-

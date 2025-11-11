@@ -79,25 +79,39 @@ struct SpaceComposerView: View {
     }
 
     private var iconGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
-            ForEach(Self.iconOptions, id: \.self) { icon in
-                Button {
-                    selectedIcon = icon
-                } label: {
-                    Image(systemName: icon)
-                        .font(.title2)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .padding()
-                        .foregroundStyle(iconForeground(for: icon))
-                        .glassEffect(iconGlass(for: icon))
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHGrid(rows: iconGridRows, spacing: 16) {
+                ForEach(Self.iconOptions, id: \.self) { icon in
+                    Button {
+                        selectedIcon = icon
+                    } label: {
+                        Circle()
+                            .fill(iconBackground(for: icon))
+                            .frame(width: 56, height: 56)
+                            .overlay(
+                                Image(systemName: icon)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(iconForeground(for: icon))
+                            )
+                            .animation(.easeInOut(duration: 0.2), value: selectedIcon)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Select \(icon) icon")
+                    .accessibilityAddTraits(icon == selectedIcon ? .isSelected : [])
                 }
-                .buttonStyle(.plain)
-                .contentShape(Rectangle())
-                .accessibilityLabel("Select \(icon) icon")
-                .accessibilityAddTraits(icon == selectedIcon ? .isSelected : [])
             }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
         }
-        .padding(.vertical, 4)
+        .frame(height: 240)
+        .listRowInsets(EdgeInsets())
+    }
+
+    private var iconGridRows: [GridItem] {
+        Array(
+            repeating: GridItem(.fixed(56), spacing: 16, alignment: .center),
+            count: 3
+        )
     }
 
     private var colorSelector: some View {
@@ -131,19 +145,16 @@ struct SpaceComposerView: View {
         .listRowInsets(EdgeInsets())
     }
 
+    private var selectedSpaceColor: Color {
+        Color(hex: selectedColorHex) ?? .accentColor
+    }
+
     private func iconBackground(for icon: String) -> Color {
-        if icon == selectedIcon {
-            return Color(uiColor: .secondarySystemBackground)
-        }
-        return Color(uiColor: .systemBackground)
+        icon == selectedIcon ? selectedSpaceColor : Color(uiColor: .secondarySystemBackground)
     }
 
     private func iconForeground(for icon: String) -> Color {
-        icon == selectedIcon ? .primary : .accentColor
-    }
-
-    private func iconGlass(for icon: String) -> Glass {
-        icon == selectedIcon ? .regular.tint(.accentColor).interactive() : .regular.interactive()
+        .primary
     }
 
     private func saveSpace() {
@@ -189,17 +200,64 @@ struct SpaceComposerView: View {
 private extension SpaceComposerView {
     static let iconOptions: [String] = [
         "square.grid.2x2",
+        "square.grid.3x3.fill",
         "folder",
+        "folder.fill",
         "tray.fill",
+        "tray.full.fill",
         "bookmark.fill",
+        "bookmark.circle.fill",
         "pin.fill",
+        "pin.circle.fill",
         "list.bullet.rectangle",
+        "list.bullet.clipboard",
         "alarm",
+        "alarm.fill",
         "lightbulb",
+        "lightbulb.fill",
         "star.fill",
+        "star.circle.fill",
         "checkmark.circle.fill",
+        "checkmark.seal.fill",
         "doc.text.fill",
-        "calendar"
+        "doc.on.doc.fill",
+        "calendar",
+        "calendar.circle.fill",
+        "paperplane.fill",
+        "paperclip",
+        "paperclip.circle.fill",
+        "tag.fill",
+        "tag.circle.fill",
+        "bell.fill",
+        "bell.circle.fill",
+        "clock.fill",
+        "clock.badge.checkmark",
+        "bolt.fill",
+        "flame.fill",
+        "heart.fill",
+        "heart.circle.fill",
+        "gearshape.fill",
+        "hammer.fill",
+        "brain.head.profile",
+        "graduationcap.fill",
+        "music.note.list",
+        "book.fill",
+        "bookmark.square.fill",
+        "camera.fill",
+        "video.fill",
+        "photo.fill",
+        "paintbrush.fill",
+        "square.and.pencil",
+        "square.and.arrow.up",
+        "quote.bubble.fill",
+        "bubble.left.and.bubble.right.fill",
+        "map.fill",
+        "location.fill",
+        "globe",
+        "moon.stars.fill",
+        "sun.max.fill",
+        "cloud.fill",
+        "leaf.fill"
     ]
 }
 

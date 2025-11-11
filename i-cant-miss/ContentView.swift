@@ -48,6 +48,9 @@ struct ContentView: View {
     @State private var showSpaceComposer = false
     @State private var pendingParentSpace: SpaceModel?
     @State private var activeTab: CustomTab = .home
+    @State private var homeNavigationPath = NavigationPath()
+    @State private var spacesNavigationPath = NavigationPath()
+    @State private var settingsNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
 
     init(environment: AppEnvironment) {
@@ -61,7 +64,8 @@ struct ContentView: View {
                 Tab.init(value: .home){
                     MemoryTimelineView(
                         memoryService: environment.memoryService,
-                        onSelectMemory: handleMemorySelection
+                        onSelectMemory: handleMemorySelection,
+                        navigationPath: $homeNavigationPath
                     )
                     .tabBarSpacer()
                 }
@@ -70,6 +74,7 @@ struct ContentView: View {
                     SpacesRootView(
                         spaceService: environment.spaceService,
                         memoryService: environment.memoryService,
+                        navigationPath: $spacesNavigationPath,
                         onCreateMemory: { space in
                             prepareMemoryCreation(for: space)
                         },
@@ -82,7 +87,7 @@ struct ContentView: View {
                 }
 
                 Tab.init(value: .settings){
-                    SettingsView(environment: environment)
+                    SettingsView(environment: environment, navigationPath: $settingsNavigationPath)
                         .tabBarSpacer()
                 }
             }
@@ -144,7 +149,12 @@ struct ContentView: View {
         GlassEffectContainer(spacing: 10){
             HStack(spacing: 0){
                 GeometryReader{
-                    CustomTabBar(size: $0.size, activeTab: $activeTab){ tab in
+                    CustomTabBar(
+                        size: $0.size,
+                        activeTint: Color.accent,
+                        barTint: Color.gray.opacity(0.15),
+                        activeTab: $activeTab,
+                        tabItemView: { tab in
                         VStack(spacing: 3){
                             Image(systemName: tab.symbol)
                                 .font(.title3)
@@ -155,7 +165,9 @@ struct ContentView: View {
                         }
                         .symbolVariant(.fill)
                         .frame(maxWidth: .infinity)
-                    }
+                    },
+                        onTabReselected: handleTabReselection
+                    )
                     .glassEffect(.regular.interactive(), in: .capsule)
                     .contentShape(Rectangle())
                 }
@@ -197,6 +209,17 @@ struct ContentView: View {
         viewerRoute = nil
         DispatchQueue.main.async {
             editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+        }
+    }
+
+    private func handleTabReselection(_ tab: CustomTab) {
+        switch tab {
+        case .home:
+            homeNavigationPath = NavigationPath()
+        case .spaces:
+            spacesNavigationPath = NavigationPath()
+        case .settings:
+            settingsNavigationPath = NavigationPath()
         }
     }
 }

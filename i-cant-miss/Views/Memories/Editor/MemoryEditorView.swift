@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PhotosUI
 import UIKit
 
 struct MemoryEditorView: View {
@@ -22,22 +21,21 @@ struct MemoryEditorView: View {
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
-    @State private var photoSelections: [PhotosPickerItem] = []
-    @State private var isProcessingPhotos = false
-    @State private var showCameraPicker = false
-    @State private var showPhotoLibraryPicker = false
-    @State private var mediaErrorMessage: String?
     @State private var scrollOffset: CGFloat = 20
     @State private var scrollViewProxy: ScrollViewProxy?
     @State private var isDetailsExpanded = false
     @State private var isPreferencesExpanded = false
-    @State private var expandedHeaderHeight: CGFloat = 210
+    @State private var expandedHeaderHeight: CGFloat = 148
     @StateObject private var bodyEditorController = RichTextEditorController()
-    private let richTextFormatter = MemoryRichTextFormatter()
+    @State private var isAddContentMenuExpanded = false
+    @State private var hasEnabledRichTextManually = false
+    @State private var hasEnabledPhotosManually = false
+    @State private var hasInitializedContentState = false
 
     private let isEditing: Bool
-    private let minHeaderHeight: CGFloat = 80
-    private let transitionThreshold: CGFloat = 36
+    private let minHeaderHeight: CGFloat = 76
+    private let transitionThreshold: CGFloat = 32
+
 
     init(environment: AppEnvironment,
          memory: MemoryModel? = nil,
@@ -56,14 +54,13 @@ struct MemoryEditorView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                let headerTransitionRange = expandedHeaderHeight - minHeaderHeight
+                let headerTransitionRange = max(expandedHeaderHeight - minHeaderHeight, 1)
+                let fadeZoneLength = min(48, headerTransitionRange)
+                let fadeZoneStart = headerTransitionRange - fadeZoneLength
                 let showMinimizedHeader = scrollOffset >= headerTransitionRange
 
-                let fadeZoneStart = headerTransitionRange - 50
-                let fadeZoneRange: CGFloat = 50
-
-                let expandedOpacity = scrollOffset < fadeZoneStart ? 1.0 : max(0, min(1, 1 - ((scrollOffset - fadeZoneStart) / fadeZoneRange)))
-                let minimizedOpacity = scrollOffset < fadeZoneStart ? 0.0 : max(0, min(1, (scrollOffset - fadeZoneStart) / fadeZoneRange))
+                let expandedOpacity = scrollOffset < fadeZoneStart ? 1.0 : max(0, min(1, 1 - ((scrollOffset - fadeZoneStart) / fadeZoneLength)))
+                let minimizedOpacity = scrollOffset < fadeZoneStart ? 0.0 : max(0, min(1, (scrollOffset - fadeZoneStart) / fadeZoneLength))
 
                 ZStack(alignment: .top) {
                     Rectangle()
@@ -75,23 +72,12 @@ struct MemoryEditorView: View {
                     let minOffset = expandedHeaderHeight - minHeaderHeight
                     let offset = scrollOffset <= 0 ? -scrollOffset : scrollOffset <= minOffset ? -scrollOffset : -minOffset
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         titleHeaderView()
                             .padding(.horizontal, 20)
-                        MemoryEditorTriggerButtonsBar(
-                            viewModel: viewModel,
-                            showTriggerPicker: $showTriggerPickerSheet,
-                            showDueDateSheet: $showDueDateSheet,
-                            showExactTimeSheet: $showExactTimeSheet,
-                            showWeekdaySheet: $showWeekdaySheet,
-                            showLocationPicker: $showLocationPicker,
-                            showPersonSheet: $showPersonSheet,
-                            showSequentialSheet: $showSequentialSheet,
-                            memoryLookup: memoryLookup
-                        )
                     }
-                    .padding(.top, 80)
-                    .padding(.bottom, 20)
+                    .padding(.top, 72)
+                    .padding(.bottom, 12)
                     .background(
                         GeometryReader { proxy in
                             Color.clear
@@ -122,7 +108,6 @@ struct MemoryEditorView: View {
                             editorContent
                                 .padding(.top, 32)
                         }
-                        .padding(.horizontal, 16)
                         .padding(.bottom, 32)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -174,32 +159,6 @@ struct MemoryEditorView: View {
                         Spacer()
 
                         Menu {
-                            ControlGroup {
-                                Button {
-                                    viewModel.isPinned.toggle()
-                                } label: {
-                                    Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
-                                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
-                                }
-                                .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
-
-                                Button {
-                                    showPhotoLibraryPicker = true
-                                } label: {
-                                    Image(systemName: isProcessingPhotos ? "hourglass" : "photo.on.rectangle")
-                                }
-                                .disabled(isProcessingPhotos)
-                                .accessibilityLabel(isProcessingPhotos ? "Processing photos" : "Add photo from library")
-
-                                Button {
-                                    handleCameraButtonTapped()
-                                } label: {
-                                    Image(systemName: "camera")
-                                }
-                                .disabled(isProcessingPhotos)
-                                .accessibilityLabel("Take photo with camera")
-                            }
-
                             Section("Details") {
                                 SpacePicker(selection: Binding(
                                     get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
@@ -260,6 +219,23 @@ struct MemoryEditorView: View {
                         }
                         .tint(.white)
                         .glassEffect(.regular.interactive())
+
+                        Button(role: .confirm) {
+                            commitChecklistDrafts()
+                            Task {
+                                let success = await viewModel.save()
+                                if success { dismiss() }
+                            }
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 44, height: 44)
+                                .tint(.white)
+                                .glassEffect(.regular.tint(.accent).interactive())
+                        }
+                        .disabled(isSaveDisabled)
+                        .opacity(isSaveDisabled ? 0.45 : 1)
+
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -270,9 +246,7 @@ struct MemoryEditorView: View {
             }
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
-            }
-            .onChange(of: photoSelections) { _, newValue in
-                handlePhotoSelections(newValue)
+                initializeContentStateIfNeeded()
             }
             .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
@@ -282,13 +256,38 @@ struct MemoryEditorView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                saveActionBar
+            .toolbar {
+                ToolbarItemGroup(placement: .bottomBar) {
+                    MemoryTriggerAddBadge(
+                        isPresented: $showTriggerPickerSheet,
+                        displayStyle: .toolbar
+                    )
+
+                    Spacer()
+
+                    ControlGroup {
+                        Button {
+                            viewModel.isPinned.toggle()
+                        } label: {
+                            Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
+                                .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
+                        }
+                        .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
+
+                        Button(action: {}) {
+                            Image(systemName: "photo.on.rectangle")
+                        }
+                        .disabled(true)
+                        .accessibilityLabel("Image attachments are disabled")
+
+                        Button(action: {}) {
+                            Image(systemName: "camera")
+                        }
+                        .disabled(true)
+                        .accessibilityLabel("Image capture is disabled")
+                    }
+                }
             }
-            .photosPicker(isPresented: $showPhotoLibraryPicker,
-                          selection: $photoSelections,
-                          maxSelectionCount: 5,
-                          matching: .images)
             .sheet(isPresented: $showDueDateSheet, content: dueDateSheet)
             .sheet(isPresented: $showExactTimeSheet, content: exactTimeSheet)
             .sheet(isPresented: $showWeekdaySheet, content: weekdaySheet)
@@ -299,22 +298,18 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
-            .fullScreenCover(isPresented: $showCameraPicker) {
-                CameraCaptureView {
-                    insertInlineImage($0)
-                    showCameraPicker = false
-                } onCancel: {
-                    showCameraPicker = false
+            .onChange(of: viewModel.body) { _, newValue in
+                guard !hasEnabledRichTextManually else { return }
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    hasEnabledRichTextManually = true
                 }
-                .ignoresSafeArea()
             }
-            .alert("Unable to add photo", isPresented: Binding(
-                get: { mediaErrorMessage != nil },
-                set: { _ in mediaErrorMessage = nil }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(mediaErrorMessage ?? "")
+            .onChange(of: viewModel.attachments) { _, newValue in
+                guard !hasEnabledPhotosManually else { return }
+                if !newValue.isEmpty {
+                    hasEnabledPhotosManually = true
+                }
             }
         }
     }
@@ -329,38 +324,6 @@ struct MemoryEditorView: View {
 
     private var isSaveDisabled: Bool {
         viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var saveActionBar: some View {
-        HStack {
-            Spacer()
-            Button(role: .confirm) {
-                commitChecklistDrafts()
-                Task {
-                    let success = await viewModel.save()
-                    if success { dismiss() }
-                }
-            } label: {
-                Group {
-                    if viewModel.isSaving {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: "checkmark")
-                            .font(.title3.bold())
-                    }
-                }
-                .padding(10)
-            }
-            .buttonBorderShape(.circle)
-            .buttonStyle(.glassProminent)
-            .disabled(isSaveDisabled)
-            .opacity(isSaveDisabled ? 0.45 : 1)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 20)
-        .frame(maxWidth: .infinity)
     }
 
     private func titleHeaderView() -> some View {
@@ -412,51 +375,198 @@ struct MemoryEditorView: View {
 
     private var editorContent: some View {
         VStack(alignment: .leading, spacing: 24) {
-            checklistContent
-            editorView
+            triggerButtonsBar
+            VStack(alignment: .leading, spacing: 20) {
+                addContentButton
+                if isAddContentMenuExpanded {
+                    MemoryEditorAddContentMenu(
+                        options: contentMenuOptions,
+                        onSelect: handleAddContentSelection
+                    )
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+                VStack(alignment: .leading, spacing: 20) {
+                    if shouldShowChecklistCard {
+                        checklistCard
+                    }
+                    if shouldShowRichTextCard {
+                        richTextCard
+                    }
+                    if shouldShowPhotosCard {
+                        photosCard
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: shouldShowChecklistCard)
+                .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
+                .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var checklistContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(viewModel.checklistItems) { item in
-                ChecklistItemEditor(
-                    item: binding(for: item),
-                    onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
-                    onDelete: { removeChecklist(item) }
-                )
-            }
-            ForEach(checklistDraftRows) { draft in
-                ChecklistNewItemRow(
-                    draft: draftBinding(for: draft),
-                    focus: $focusedDraftID,
-                    onSubmit: handleDraftSubmit,
-                    onTitleChange: handleDraftTitleChange
-                )
+    private var checklistCard: some View {
+        MemoryEditorChecklistCard(subtitle: checklistSubtitle, onRemove: { disableContent(.checklist) }) {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(viewModel.checklistItems) { item in
+                    ChecklistItemEditor(
+                        item: binding(for: item),
+                        onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
+                        onDelete: { removeChecklist(item) }
+                    )
+                }
+                ForEach(checklistDraftRows) { draft in
+                    ChecklistNewItemRow(
+                        draft: draftBinding(for: draft),
+                        focus: $focusedDraftID,
+                        onSubmit: handleDraftSubmit,
+                        onTitleChange: handleDraftTitleChange
+                    )
+                }
             }
         }
     }
 
-    private var editorView: some View {
-        ZStack(alignment: .topLeading) {
-            RichTextEditor(
-                text: $viewModel.body,
-                attachments: viewModel.attachments,
-                formatter: richTextFormatter,
-                controller: bodyEditorController
-            ) { referencedIDs in
-                viewModel.syncAttachments(withReferencedIDs: referencedIDs)
-            }
-            .frame(minHeight: 160)
+    private var richTextCard: some View {
+        MemoryEditorRichTextCard(
+            text: $viewModel.body,
+            controller: bodyEditorController,
+            onRemove: { disableContent(.richText) }
+        )
+    }
 
-            if viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Write something memorable…")
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 12)
+    private var photosCard: some View {
+        MemoryEditorPhotosCard(
+            attachments: $viewModel.attachments,
+            onAddAttachment: { data in
+                _ = viewModel.createAttachment(data: data)
+            },
+            onRemoveAttachment: { id in
+                viewModel.removeAttachment(id: id)
+            },
+            onRemove: { disableContent(.photos) }
+        )
+    }
 
+    private var addContentButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                isAddContentMenuExpanded.toggle()
             }
+        } label: {
+            Label("Add content", systemImage: "plus.circle.fill")
+                .font(.headline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isAddContentMenuExpanded ? "Hide content options" : "Show content options")
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var contentMenuOptions: [MemoryEditorAddContentMenu.Option] {
+        MemoryEditorContentType.allCases.map { type in
+            MemoryEditorAddContentMenu.Option(
+                id: type,
+                iconName: type.iconName,
+                title: type.title,
+                subtitle: type.subtitle,
+                isActive: isContentActive(type)
+            )
+        }
+    }
+
+    private var shouldShowChecklistCard: Bool {
+        viewModel.showChecklist || !viewModel.checklistItems.isEmpty
+    }
+
+    private var shouldShowRichTextCard: Bool {
+        hasEnabledRichTextManually || !viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var shouldShowPhotosCard: Bool {
+        hasEnabledPhotosManually || !viewModel.attachments.isEmpty
+    }
+
+    private var checklistSubtitle: String? {
+        guard !viewModel.checklistItems.isEmpty else { return nil }
+        let completed = viewModel.checklistItems.filter(\.isCompleted).count
+        return "\(completed) of \(viewModel.checklistItems.count) completed"
+    }
+
+    private func handleAddContentSelection(_ type: MemoryEditorContentType) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+            isAddContentMenuExpanded = false
+        }
+
+        switch type {
+        case .richText:
+            hasEnabledRichTextManually = true
+        case .checklist:
+            if !viewModel.showChecklist {
+                viewModel.showChecklist = true
+            }
+            if viewModel.checklistItems.isEmpty && checklistDraftRows.isEmpty {
+                let placeholder = ChecklistDraftRow()
+                checklistDraftRows = [placeholder]
+                focusedDraftID = placeholder.id
+            } else if let firstDraft = checklistDraftRows.first {
+                focusedDraftID = firstDraft.id
+            }
+        case .photos:
+            hasEnabledPhotosManually = true
+        }
+    }
+
+    private func disableContent(_ type: MemoryEditorContentType) {
+        switch type {
+        case .richText:
+            viewModel.body = ""
+            hasEnabledRichTextManually = false
+        case .checklist:
+            viewModel.checklistItems.removeAll()
+            viewModel.showChecklist = false
+            checklistDraftRows = [ChecklistDraftRow()]
+            focusedDraftID = nil
+        case .photos:
+            viewModel.attachments.removeAll()
+            hasEnabledPhotosManually = false
+        }
+    }
+
+    private func isContentActive(_ type: MemoryEditorContentType) -> Bool {
+        switch type {
+        case .richText:
+            return shouldShowRichTextCard
+        case .checklist:
+            return shouldShowChecklistCard
+        case .photos:
+            return shouldShowPhotosCard
+        }
+    }
+
+    private func initializeContentStateIfNeeded() {
+        guard !hasInitializedContentState else { return }
+        hasInitializedContentState = true
+        let trimmedBody = viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedBody.isEmpty {
+            hasEnabledRichTextManually = true
+        }
+        if !viewModel.attachments.isEmpty {
+            hasEnabledPhotosManually = true
+        }
+    }
+
+    private var triggerButtonsBar: some View {
+        MemoryEditorTriggerButtonsBar(
+            viewModel: viewModel,
+            showDueDateSheet: $showDueDateSheet,
+            showExactTimeSheet: $showExactTimeSheet,
+            showWeekdaySheet: $showWeekdaySheet,
+            showLocationPicker: $showLocationPicker,
+            showPersonSheet: $showPersonSheet,
+            showSequentialSheet: $showSequentialSheet,
+            memoryLookup: memoryLookup
+        )
     }
 
     private func binding(for item: CheckItemDraft) -> Binding<CheckItemDraft> {
@@ -586,91 +696,6 @@ struct MemoryEditorView: View {
     private var spacesForPicker: [SpaceModel] {
         let spaces = viewModel.availableSpaces
         return spaces.isEmpty ? [SpaceModel.inbox] : spaces
-    }
-
-    private func handlePhotoSelections(_ items: [PhotosPickerItem]) {
-        guard !items.isEmpty else { return }
-        Task {
-            await loadPhotos(from: items)
-        }
-    }
-
-    private func handleCameraButtonTapped() {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            mediaErrorMessage = "Camera is not available on this device."
-            return
-        }
-        showCameraPicker = true
-    }
-
-    @MainActor
-    private func insertInlineImage(_ image: UIImage) {
-        guard let data = image.jpegData(compressionQuality: 0.85) else {
-            mediaErrorMessage = "The selected photo could not be processed."
-            return
-        }
-        insertAttachmentData(data)
-    }
-
-    @MainActor
-    private func insertAttachmentData(_ data: Data) {
-        let attachment = viewModel.createAttachment(data: data)
-        if !bodyEditorController.insertAttachment(attachment) {
-            appendTokenToBody(for: attachment.id)
-        }
-    }
-
-    private func appendTokenToBody(for attachmentID: UUID) {
-        let token = MemoryRichTextFormatter.attachmentToken(for: attachmentID)
-        var updatedBody = viewModel.body
-
-        if !updatedBody.contains(token) {
-            if !updatedBody.isEmpty {
-                if updatedBody.hasSuffix("\n\n") {
-                } else if updatedBody.hasSuffix("\n") {
-                    updatedBody.append("\n")
-                } else {
-                    updatedBody.append("\n\n")
-                }
-            }
-
-            updatedBody.append(token)
-            if !updatedBody.hasSuffix("\n") {
-                updatedBody.append("\n")
-            }
-            viewModel.body = updatedBody
-        }
-    }
-
-    private func loadPhotos(from items: [PhotosPickerItem]) async {
-        await MainActor.run {
-            isProcessingPhotos = true
-        }
-
-        for item in items {
-            do {
-                if let data = try await item.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data),
-                   let jpegData = image.jpegData(compressionQuality: 0.85) {
-                    await MainActor.run {
-                        insertAttachmentData(jpegData)
-                    }
-                } else {
-                    await MainActor.run {
-                        mediaErrorMessage = "One of the selected photos could not be loaded."
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    mediaErrorMessage = "One of the selected photos could not be loaded."
-                }
-            }
-        }
-
-        await MainActor.run {
-            isProcessingPhotos = false
-            photoSelections = []
-        }
     }
 
     @ViewBuilder

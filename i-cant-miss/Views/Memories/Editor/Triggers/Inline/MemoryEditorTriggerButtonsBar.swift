@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MemoryEditorTriggerButtonsBar: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @Binding var showTriggerPicker: Bool
     @Binding var showDueDateSheet: Bool
     @Binding var showExactTimeSheet: Bool
     @Binding var showWeekdaySheet: Bool
@@ -14,7 +13,6 @@ struct MemoryEditorTriggerButtonsBar: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
-                MemoryTriggerAddBadge(isPresented: $showTriggerPicker)
                 if hasDueDateTrigger {
                     MemoryDueDateTriggerInlineForm(
                         viewModel: viewModel,
@@ -55,8 +53,9 @@ struct MemoryEditorTriggerButtonsBar: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var hasDueDateTrigger: Bool {

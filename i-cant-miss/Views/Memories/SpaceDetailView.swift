@@ -513,6 +513,7 @@ struct SpaceDetailView: View {
     return SpacesRootView(
         spaceService: environment.spaceService,
         memoryService: environment.memoryService,
+        navigationPath: .constant(NavigationPath()),
         onCreateMemory: { _ in },
         onSelectMemory: { _ in },
         onCreateSpace: { _ in }

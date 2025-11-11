@@ -10,6 +10,7 @@ import SwiftUI
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onSelectMemory: (MemoryModel) -> Void
+    @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject private var environment: AppEnvironment
     @State private var showingFilterSheet = false
@@ -117,7 +118,7 @@ struct MemoryTimelineView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if isSearching {
@@ -454,7 +455,8 @@ enum MemoryType: String, CaseIterable, Identifiable {
     environment.bootstrap()
     return MemoryTimelineView(
         memoryService: environment.memoryService,
-        onSelectMemory: { _ in }
+        onSelectMemory: { _ in },
+        navigationPath: .constant(NavigationPath())
     )
     .environmentObject(environment)
 }

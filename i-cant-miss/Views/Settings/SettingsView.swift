@@ -14,52 +14,44 @@ struct SettingsView: View {
     @ObservedObject private var settings: SettingsStore
     @ObservedObject private var geofenceManager: GeofenceManager
     private let environment: AppEnvironment
+    @Binding private var navigationPath: NavigationPath
+
+    private enum Route: Hashable {
+        case reminders
+        case notifications
+        case location
+    }
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var isRequestingNotifications = false
     @State private var isRequestingLocation = false
 
-    init(environment: AppEnvironment) {
+    init(environment: AppEnvironment, navigationPath: Binding<NavigationPath>) {
         self.environment = environment
         _settings = ObservedObject(wrappedValue: environment.settings)
         _geofenceManager = ObservedObject(wrappedValue: environment.geofenceManager)
+        _navigationPath = navigationPath
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             List {
                 Section {
-                    NavigationLink {
-                        ReminderSettingsView(settings: settings)
-                    } label: {
+                    NavigationLink(value: Route.reminders) {
                         SettingsRow(
                             iconName: "checklist",
                             title: "Reminders"
                         )
                     }
 
-                    NavigationLink {
-                        NotificationSettingsView(
-                            settings: settings,
-                            notificationStatus: $notificationStatus,
-                            isRequestingNotifications: $isRequestingNotifications,
-                            requestAuthorization: { await requestNotificationAuthorization() }
-                        )
-                    } label: {
+                    NavigationLink(value: Route.notifications) {
                         SettingsRow(
                             iconName: "bell.badge",
                             title: "Notifications"
                         )
                     }
 
-                    NavigationLink {
-                        LocationSettingsView(
-                            settings: settings,
-                            geofenceManager: geofenceManager,
-                            isRequestingLocation: $isRequestingLocation,
-                            requestAuthorization: requestLocationAuthorization
-                        )
-                    } label: {
+                    NavigationLink(value: Route.location) {
                         SettingsRow(
                             iconName: "location.circle",
                             title: "Location & Geofencing"
@@ -72,6 +64,26 @@ struct SettingsView: View {
                 Color.clear.frame(height:  70)
             }
             .navigationTitle("Settings")
+            .navigationDestination(for: Route.self) { destination in
+                switch destination {
+                case .reminders:
+                    ReminderSettingsView(settings: settings)
+                case .notifications:
+                    NotificationSettingsView(
+                        settings: settings,
+                        notificationStatus: $notificationStatus,
+                        isRequestingNotifications: $isRequestingNotifications,
+                        requestAuthorization: { await requestNotificationAuthorization() }
+                    )
+                case .location:
+                    LocationSettingsView(
+                        settings: settings,
+                        geofenceManager: geofenceManager,
+                        isRequestingLocation: $isRequestingLocation,
+                        requestAuthorization: requestLocationAuthorization
+                    )
+                }
+            }
         }
         .task {
             await refreshNotificationStatus()
@@ -309,5 +321,8 @@ private extension CLAuthorizationStatus {
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
-    return SettingsView(environment: environment)
+    return SettingsView(
+        environment: environment,
+        navigationPath: .constant(NavigationPath())
+    )
 }

@@ -10,13 +10,14 @@ import SwiftUI
 struct SpacesRootView: View {
     @ObservedObject var spaceService: SpaceService
     @ObservedObject var memoryService: MemoryService
+    @Binding var navigationPath: NavigationPath
 
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: (SpaceModel?) -> Void
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             List {
                 Section {
                     ForEach(rootSpaces) { space in
@@ -90,6 +91,7 @@ struct SpacesRootView: View {
     return SpacesRootView(
         spaceService: environment.spaceService,
         memoryService: environment.memoryService,
+        navigationPath: .constant(NavigationPath()),
         onCreateMemory: { _ in },
         onSelectMemory: { _ in },
         onCreateSpace: { _ in }
