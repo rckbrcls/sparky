@@ -7,9 +7,7 @@ struct MemoryEditorRichTextCard: View {
 
     var body: some View {
         MemoryEditorContentCard(
-            iconName: MemoryEditorContentType.richText.iconName,
-            title: MemoryEditorContentType.richText.title,
-            subtitle: "Use formatting-friendly notes",
+            removeLabel: "Remove rich text",
             onRemove: onRemove
         ) {
             ZStack(alignment: .topLeading) {

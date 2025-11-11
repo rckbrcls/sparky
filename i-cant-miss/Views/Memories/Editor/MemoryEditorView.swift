@@ -156,6 +156,67 @@ struct MemoryEditorView: View {
 
                         Spacer()
 
+                        Button(role: .confirm) {
+                            commitChecklistDrafts()
+                            Task {
+                                let success = await viewModel.save()
+                                if success { dismiss() }
+                            }
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 44, height: 44)
+                                .tint(.white)
+                                .glassEffect(.regular.tint(.accent).interactive())
+                        }
+                        .disabled(isSaveDisabled)
+                        .opacity(isSaveDisabled ? 0.45 : 1)
+
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                    Spacer()
+                }
+                .zIndex(100)
+            }
+            .onAppear {
+                viewModel.loadLatestDataIfNeeded()
+                initializeContentStateIfNeeded()
+            }
+            .alert("Unable to save", isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { _ in viewModel.errorMessage = nil }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.errorMessage ?? "")
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .bottomBar) {
+
+
+                    ControlGroup {
+                        Button {
+                            viewModel.isPinned.toggle()
+                        } label: {
+                            Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
+                                .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
+                        }
+                        .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
+
+                        Button(action: {}) {
+                            Image(systemName: "photo.on.rectangle")
+                        }
+                        .disabled(true)
+                        .accessibilityLabel("Image attachments are disabled")
+
+                        Button(action: {}) {
+                            Image(systemName: "camera")
+                        }
+                        .disabled(true)
+                        .accessibilityLabel("Image capture is disabled")
+
                         Menu {
                             Section("Details") {
                                 SpacePicker(selection: Binding(
@@ -212,78 +273,15 @@ struct MemoryEditorView: View {
 
                         } label: {
                             Image(systemName: "ellipsis")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(width: 44, height: 44)
                         }
-                        .tint(.white)
-                        .glassEffect(.regular.interactive())
-
-                        Button(role: .confirm) {
-                            commitChecklistDrafts()
-                            Task {
-                                let success = await viewModel.save()
-                                if success { dismiss() }
-                            }
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(width: 44, height: 44)
-                                .tint(.white)
-                                .glassEffect(.regular.tint(.accent).interactive())
-                        }
-                        .disabled(isSaveDisabled)
-                        .opacity(isSaveDisabled ? 0.45 : 1)
-
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
 
                     Spacer()
-                }
-                .zIndex(100)
-            }
-            .onAppear {
-                viewModel.loadLatestDataIfNeeded()
-                initializeContentStateIfNeeded()
-            }
-            .alert("Unable to save", isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
-                set: { _ in viewModel.errorMessage = nil }
-            )) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(viewModel.errorMessage ?? "")
-            }
-            .toolbar {
-                ToolbarItemGroup(placement: .bottomBar) {
+
                     MemoryTriggerAddBadge(
                         isPresented: $showTriggerPickerSheet,
                         displayStyle: .toolbar
                     )
-
-                    Spacer()
-
-                    ControlGroup {
-                        Button {
-                            viewModel.isPinned.toggle()
-                        } label: {
-                            Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
-                                .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
-                        }
-                        .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
-
-                        Button(action: {}) {
-                            Image(systemName: "photo.on.rectangle")
-                        }
-                        .disabled(true)
-                        .accessibilityLabel("Image attachments are disabled")
-
-                        Button(action: {}) {
-                            Image(systemName: "camera")
-                        }
-                        .disabled(true)
-                        .accessibilityLabel("Image capture is disabled")
-                    }
                 }
             }
             .sheet(isPresented: $showDueDateSheet, content: dueDateSheet)
@@ -393,8 +391,13 @@ struct MemoryEditorView: View {
     }
 
     private var checklistCard: some View {
-        MemoryEditorChecklistCard(subtitle: checklistSubtitle, onRemove: { disableContent(.checklist) }) {
+        MemoryEditorChecklistCard(onRemove: { disableContent(.checklist) }) {
             VStack(alignment: .leading, spacing: 12) {
+                if let subtitle = checklistSubtitle {
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
                 ForEach(viewModel.checklistItems) { item in
                     ChecklistItemEditor(
                         item: binding(for: item),
@@ -446,7 +449,7 @@ struct MemoryEditorView: View {
             }
         } label: {
             Label("Add content", systemImage: "plus.circle.fill")
-                .font(.headline.bold())
+                .font(.caption.bold())
                 .padding()
                 .glassEffect()
         }

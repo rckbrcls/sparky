@@ -14,9 +14,7 @@ struct MemoryEditorPhotosCard: View {
 
     var body: some View {
         MemoryEditorContentCard(
-            iconName: MemoryEditorContentType.photos.iconName,
-            title: MemoryEditorContentType.photos.title,
-            subtitle: "Keep visual references close by",
+            removeLabel: "Remove photos",
             onRemove: onRemove
         ) {
             VStack(alignment: .leading, spacing: 16) {
