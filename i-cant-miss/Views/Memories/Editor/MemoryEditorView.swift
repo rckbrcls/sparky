@@ -21,19 +21,12 @@ struct MemoryEditorView: View {
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
-    @State private var scrollOffset: CGFloat = 20
-    @State private var scrollViewProxy: ScrollViewProxy?
-    @State private var isDetailsExpanded = false
-    @State private var isPreferencesExpanded = false
-    @State private var expandedHeaderHeight: CGFloat = 148
     @StateObject private var bodyEditorController = RichTextEditorController()
     @State private var hasEnabledRichTextManually = false
     @State private var hasEnabledPhotosManually = false
     @State private var hasInitializedContentState = false
 
     private let isEditing: Bool
-    private let minHeaderHeight: CGFloat = 76
-    private let transitionThreshold: CGFloat = 32
 
 
     init(environment: AppEnvironment,
@@ -52,138 +45,19 @@ struct MemoryEditorView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .top) {
-                let headerTransitionRange = max(expandedHeaderHeight - minHeaderHeight, 1)
-                let fadeZoneLength = min(48, headerTransitionRange)
-                let fadeZoneStart = headerTransitionRange - fadeZoneLength
-                let showMinimizedHeader = scrollOffset >= headerTransitionRange
-
-                let expandedOpacity = scrollOffset < fadeZoneStart ? 1.0 : max(0, min(1, 1 - ((scrollOffset - fadeZoneStart) / fadeZoneLength)))
-                let minimizedOpacity = scrollOffset < fadeZoneStart ? 0.0 : max(0, min(1, (scrollOffset - fadeZoneStart) / fadeZoneLength))
-
-                ZStack(alignment: .top) {
-                    Rectangle()
-                        .fill(.ultraThinMaterial)
-                        .ignoresSafeArea()
-                        .frame(height: max(minHeaderHeight, expandedHeaderHeight - scrollOffset))
-                        .allowsHitTesting(true)
-
-                    let minOffset = expandedHeaderHeight - minHeaderHeight
-                    let offset = scrollOffset <= 0 ? -scrollOffset : scrollOffset <= minOffset ? -scrollOffset : -minOffset
-
-                    VStack(spacing: 8) {
-                        titleHeaderView()
-                            .padding(.horizontal, 20)
-                    }
-                    .padding(.top, 72)
-                    .padding(.bottom, 12)
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear
-                                .preference(key: HeaderHeightPreferenceKey.self, value: proxy.size.height)
-                        }
-                    )
-                    .frame(maxWidth: .infinity)
-                    .offset(y: offset)
-                    .opacity(expandedOpacity)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    editorContent
                 }
-                .onPreferenceChange(HeaderHeightPreferenceKey.self) { newHeight in
-                    guard newHeight > 0 else { return }
-                    let clampedHeight = max(newHeight, minHeaderHeight + 20)
-                    if abs(expandedHeaderHeight - clampedHeight) > 0.5 {
-                        expandedHeaderHeight = clampedHeight
-                    }
-                }
-                .zIndex(10)
-
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            Color.clear
-                                .frame(height: expandedHeaderHeight - transitionThreshold)
-                                .frame(maxWidth: .infinity)
-                                .id("scrollTop")
-
-                            editorContent
-                        }
-                        .padding(.top, 16)
-                        .padding()
-                    }
-                    .scrollDismissesKeyboard(.interactively)
-                    .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                        geometry.contentOffset.y + geometry.contentInsets.top
-                    } action: { _, new in
-                        scrollOffset = new
-                    }
-                    .onAppear {
-                        scrollViewProxy = proxy
-                    }
-                }
-
-                VStack(spacing: 0) {
-                    Button {
-                        scrollToTopAndFocus()
-                    } label: {
-                        let displayTitle = viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                        Text(displayTitle.isEmpty ? "Memory" : displayTitle)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(displayTitle.isEmpty ? .secondary : .primary)
-                            .lineLimit(1)
-                            .padding(.horizontal, 76)
-                            .padding(.vertical, 20)
-                            .frame(height: minHeaderHeight)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .opacity(minimizedOpacity)
-                }
-                .frame(maxWidth: .infinity)
-                .allowsHitTesting(minimizedOpacity > 0.3)
-                .zIndex(showMinimizedHeader ? 11 : 9)
-
-                VStack {
-                    HStack {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(width: 44, height: 44)
-                                .tint(.white)
-                                .glassEffect(.regular.interactive())
-                        }
-
-                        Spacer()
-
-                        Button(role: .confirm) {
-                            commitChecklistDrafts()
-                            Task {
-                                let success = await viewModel.save()
-                                if success { dismiss() }
-                            }
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(width: 44, height: 44)
-                                .tint(.white)
-                                .glassEffect(.regular.tint(.accent).interactive())
-                        }
-                        .disabled(isSaveDisabled)
-                        .opacity(isSaveDisabled ? 0.45 : 1)
-
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-
-                    Spacer()
-                }
-                .zIndex(100)
+                .padding()
             }
+            .scrollDismissesKeyboard(.interactively)
             .onAppear {
                 viewModel.loadLatestDataIfNeeded()
                 initializeContentStateIfNeeded()
             }
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.inline)
             .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { _ in viewModel.errorMessage = nil }
@@ -193,6 +67,27 @@ struct MemoryEditorView: View {
                 Text(viewModel.errorMessage ?? "")
             }
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .cancel) {
+                        dismiss()
+                    } label: {
+                        Label("Cancel", systemImage: "xmark")
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(role: .confirm) {
+                        commitChecklistDrafts()
+                        Task {
+                            let success = await viewModel.save()
+                            if success { dismiss() }
+                        }
+                    } label: {
+                        Label(saveButtonTitle, systemImage: "checkmark")
+                    }
+                    .disabled(isSaveDisabled)
+                }
+
                 ToolbarItemGroup(placement: .bottomBar) {
 
 
@@ -322,8 +217,30 @@ struct MemoryEditorView: View {
         viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private func titleHeaderView() -> some View {
-        VStack(spacing: 12) {
+    private var editorContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            titleSection
+            addContentMenu
+            VStack(alignment: .leading, spacing: 20) {
+                if shouldShowChecklistCard {
+                    checklistCard
+                }
+                if shouldShowRichTextCard {
+                    richTextCard
+                }
+                if shouldShowPhotosCard {
+                    photosCard
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: shouldShowChecklistCard)
+            .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
+            .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
+        }
+
+    }
+
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
             TextField("Memory", text: $viewModel.title, axis: .vertical)
                 .font(.title3)
                 .fontWeight(.bold)
@@ -352,42 +269,6 @@ struct MemoryEditorView: View {
         .padding(.vertical)
         .glassEffect(.regular.interactive())
         .contentShape(Rectangle())
-        .allowsHitTesting(true)
-    }
-
-    private func scrollToTopAndFocus() {
-        guard let proxy = scrollViewProxy else { return }
-
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-            proxy.scrollTo("scrollTop", anchor: .bottom)
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            isTitleFocused = true
-        }
-    }
-
-    private var editorContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            addContentMenu
-            VStack(alignment: .leading, spacing: 20) {
-                if shouldShowChecklistCard {
-                    checklistCard
-                }
-                if shouldShowRichTextCard {
-                    richTextCard
-                }
-                if shouldShowPhotosCard {
-                    photosCard
-                }
-            }
-            .animation(.easeInOut(duration: 0.2), value: shouldShowChecklistCard)
-            .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
-            .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
-        }
-
     }
 
     private var checklistCard: some View {
