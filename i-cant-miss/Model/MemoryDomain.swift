@@ -224,7 +224,22 @@ struct SpaceModel: Identifiable, Hashable {
 }
 
 extension SpaceModel {
+    static let allSpacesIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
     static let inboxIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
+    static var allSpaces: SpaceModel {
+        SpaceModel(
+            id: allSpacesIdentifier,
+            name: "All",
+            colorHex: nil,
+            iconName: "square.grid.2x2",
+            sortOrder: Int.min,
+            parentID: nil,
+            childIDs: [],
+            isDefault: true,
+            legacyFolder: nil
+        )
+    }
 
     static var inbox: SpaceModel {
         SpaceModel(
@@ -238,6 +253,10 @@ extension SpaceModel {
             isDefault: true,
             legacyFolder: nil
         )
+    }
+
+    var isAllSpaces: Bool {
+        id == SpaceModel.allSpacesIdentifier
     }
 
     func isAncestor(of space: SpaceModel, using lookup: (UUID) -> SpaceModel?) -> Bool {
@@ -307,7 +326,7 @@ private extension Sequence where Element == TodoItemModel {
 
 extension ReminderModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
-        let space = space ?? folder?.toSpace() ?? SpaceModel.inbox
+        let space = space ?? folder?.toSpace() ?? SpaceModel.allSpaces
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
         let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -340,7 +359,7 @@ extension ReminderModel {
 
 extension NoteModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
-        let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.inbox
+        let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.allSpaces
         let trimmedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = trimmedTitle ?? (trimmedContent.isEmpty ? "Untitled" : trimmedContent)
@@ -372,7 +391,7 @@ extension NoteModel {
 
 extension TodoListModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
-        let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.inbox
+        let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.allSpaces
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
         let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)

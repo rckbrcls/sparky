@@ -65,6 +65,10 @@ struct SpaceDetailView: View {
         spaceService.space(id: space.id) ?? space
     }
 
+    private var isAllSpace: Bool {
+        resolvedSpace.isAllSpaces
+    }
+
     private var nonInboxMemories: [MemoryModel] {
         filteredMemories.filter { !isInboxMemory($0) }
     }
@@ -156,7 +160,7 @@ struct SpaceDetailView: View {
     }
 
     private var canCreateSubspace: Bool {
-        resolvedSpace.id != SpaceModel.inboxIdentifier
+        !resolvedSpace.isAllSpaces && resolvedSpace.id != SpaceModel.inboxIdentifier
     }
 
     var body: some View {
@@ -196,7 +200,10 @@ struct SpaceDetailView: View {
     }
 
     private var childSpaces: [SpaceModel] {
-        spaceService.children(of: resolvedSpace)
+        if isAllSpace {
+            return []
+        }
+        return spaceService.children(of: resolvedSpace)
     }
 
     @ToolbarContentBuilder
@@ -212,8 +219,8 @@ struct SpaceDetailView: View {
             onShowFilters: presentFilterSheet,
             onToggleMultiSelection: toggleMultiSelection,
             onRequestDeletion: { showingDeleteConfirmation = true },
-            onCreateMemory: { onCreateMemory(resolvedSpace) },
-            onCreateSpace: { onCreateSpace(resolvedSpace) }
+            onCreateMemory: { onCreateMemory(isAllSpace ? nil : resolvedSpace) },
+            onCreateSpace: { onCreateSpace(isAllSpace ? nil : resolvedSpace) }
         )
     }
 
@@ -329,8 +336,9 @@ struct SpaceDetailView: View {
         }
     }
     private var filteredMemories: [MemoryModel] {
+        let targetSpace = isAllSpace ? nil : resolvedSpace
         let base = memoryService.memories(
-            in: resolvedSpace,
+            in: targetSpace,
             includeDescendants: false,
             statuses: [],
             includeCompleted: true,

@@ -56,8 +56,6 @@ struct MemoryEditorView: View {
                 viewModel.loadLatestDataIfNeeded()
                 initializeContentStateIfNeeded()
             }
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.inline)
             .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { _ in viewModel.errorMessage = nil }
@@ -88,87 +86,82 @@ struct MemoryEditorView: View {
                     .disabled(isSaveDisabled)
                 }
 
-                ToolbarItemGroup(placement: .bottomBar) {
-
-
-                    ControlGroup {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
                         Button {
                             viewModel.isPinned.toggle()
                         } label: {
-                            Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
+                            Label(viewModel.isPinned ? "Unpin" : "Pin",
+                                  systemImage: viewModel.isPinned ? "pin.fill" : "pin")
                                 .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
                         }
                         .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
 
-                        Button(action: {}) {
-                            Image(systemName: "photo.on.rectangle")
-                        }
-                        .disabled(true)
-                        .accessibilityLabel("Image attachments are disabled")
+                        Section("Details") {
+                            SpacePicker(selection: Binding(
+                                get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
+                                set: { viewModel.selectedSpaceID = $0 }
+                            ), spaces: spacesForPicker)
 
-                        Button(action: {}) {
-                            Image(systemName: "camera")
-                        }
-                        .disabled(true)
-                        .accessibilityLabel("Image capture is disabled")
-
-                        Menu {
-                            Section("Details") {
-                                SpacePicker(selection: Binding(
-                                    get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
-                                    set: { viewModel.selectedSpaceID = $0 }
-                                ), spaces: spacesForPicker)
-
-                                Picker(selection: $viewModel.status) {
-                                    ForEach(MemoryStatus.allCases) { status in
-                                        Text(status.rawValue.capitalized).tag(status)
-                                    }
-                                } label: {
-                                    Label("Status", systemImage: "circle.circle")
+                            Picker(selection: $viewModel.status) {
+                                ForEach(MemoryStatus.allCases) { status in
+                                    Text(status.rawValue.capitalized).tag(status)
                                 }
-                                .pickerStyle(.menu)
+                            } label: {
+                                Label("Status", systemImage: "circle.circle")
+                            }
+                            .pickerStyle(.menu)
 
-                                Picker(selection: $viewModel.priority) {
-                                    ForEach(MemoryPriority.allCases) { priority in
-                                        Label(priorityLabel(for: priority), systemImage: priority.iconName)
-                                            .tag(priority)
-                                    }
-                                } label: {
-                                    Label("Priority", systemImage: "flag.fill")
+                            Picker(selection: $viewModel.priority) {
+                                ForEach(MemoryPriority.allCases) { priority in
+                                    Label(priorityLabel(for: priority), systemImage: priority.iconName)
+                                        .tag(priority)
                                 }
-                                .pickerStyle(.menu)
+                            } label: {
+                                Label("Priority", systemImage: "flag.fill")
+                            }
+                            .pickerStyle(.menu)
+                        }
+
+                        Menu("Preferences") {
+                            Toggle(isOn: $viewModel.autoCompleteChecklist) {
+                                Label("Auto-complete when checklist is done", systemImage: "checkmark.circle")
+                            }
+                            .disabled(!viewModel.canToggleAutoComplete)
+                            .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
+
+                            Toggle(isOn: $viewModel.isPinned) {
+                                Label("Show in Today view", systemImage: "calendar")
                             }
 
-                            Menu("Preferences") {
-                                Toggle(isOn: $viewModel.autoCompleteChecklist) {
-                                    Label("Auto-complete when checklist is done", systemImage: "checkmark.circle")
-                                }
-                                .disabled(!viewModel.canToggleAutoComplete)
-                                .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
-
-                                Toggle(isOn: $viewModel.isPinned) {
-                                    Label("Show in Today view", systemImage: "calendar")
-                                }
-
-                                Toggle(isOn: Binding(
-                                    get: { !viewModel.triggers.isEmpty },
-                                    set: { _ in }
-                                )) {
-                                    Label("Enable notifications", systemImage: "bell.badge")
-                                }
-                                .disabled(true)
-                                .foregroundStyle(.secondary)
-
-                                Toggle(isOn: .constant(false)) {
-                                    Label("Archive when completed", systemImage: "archivebox")
-                                }
-                                .disabled(true)
-                                .foregroundStyle(.secondary)
+                            Toggle(isOn: Binding(
+                                get: { !viewModel.triggers.isEmpty },
+                                set: { _ in }
+                            )) {
+                                Label("Enable notifications", systemImage: "bell.badge")
                             }
+                            .disabled(true)
+                            .foregroundStyle(.secondary)
 
-                        } label: {
-                            Image(systemName: "ellipsis")
+                            Toggle(isOn: .constant(false)) {
+                                Label("Archive when completed", systemImage: "archivebox")
+                            }
+                            .disabled(true)
+                            .foregroundStyle(.secondary)
                         }
+
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                }
+
+                ToolbarItemGroup(placement: .bottomBar) {
+
+
+                    ControlGroup {
+                        addRichTextButton
+                        addChecklistButton
+                        addPhotosButton
                     }
 
                     Spacer()
@@ -220,7 +213,6 @@ struct MemoryEditorView: View {
     private var editorContent: some View {
         VStack(alignment: .leading, spacing: 20) {
             titleSection
-            addContentMenu
             VStack(alignment: .leading, spacing: 20) {
                 if shouldShowChecklistCard {
                     checklistCard
@@ -319,33 +311,37 @@ struct MemoryEditorView: View {
         )
     }
 
-    private var addContentMenu: some View {
-        Menu {
-            ForEach(contentMenuOptions) { option in
-                Button {
-                    handleAddContentSelection(option.id)
-                } label: {
-                    Label(option.title, systemImage: option.iconName)
-                }
-            }
+    private var addRichTextButton: some View {
+        Button {
+            handleAddContentSelection(.richText)
         } label: {
-            Label("Add content", systemImage: "plus.circle.fill")
-                .font(.caption.bold())
-                .padding()
-                .glassEffect()
+            Label("Add rich text", systemImage: MemoryEditorContentType.richText.iconName)
         }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(shouldShowRichTextCard ? Color.accentColor : .primary)
+        .accessibilityLabel("Add rich text")
     }
 
-    private var contentMenuOptions: [MemoryEditorAddContentMenu.Option] {
-        MemoryEditorContentType.allCases.map { type in
-            MemoryEditorAddContentMenu.Option(
-                id: type,
-                iconName: type.iconName,
-                title: type.title,
-                subtitle: type.subtitle,
-                isActive: isContentActive(type)
-            )
+    private var addChecklistButton: some View {
+        Button {
+            handleAddContentSelection(.checklist)
+        } label: {
+            Label("Add checklist", systemImage: MemoryEditorContentType.checklist.iconName)
         }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(shouldShowChecklistCard ? Color.accentColor : .primary)
+        .accessibilityLabel("Add checklist")
+    }
+
+    private var addPhotosButton: some View {
+        Button {
+            handleAddContentSelection(.photos)
+        } label: {
+            Label("Add photos", systemImage: MemoryEditorContentType.photos.iconName)
+        }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(shouldShowPhotosCard ? Color.accentColor : .primary)
+        .accessibilityLabel("Add photos")
     }
 
     private var shouldShowChecklistCard: Bool {
@@ -399,17 +395,6 @@ struct MemoryEditorView: View {
         case .photos:
             viewModel.attachments.removeAll()
             hasEnabledPhotosManually = false
-        }
-    }
-
-    private func isContentActive(_ type: MemoryEditorContentType) -> Bool {
-        switch type {
-        case .richText:
-            return shouldShowRichTextCard
-        case .checklist:
-            return shouldShowChecklistCard
-        case .photos:
-            return shouldShowPhotosCard
         }
     }
 

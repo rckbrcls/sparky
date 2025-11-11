@@ -76,12 +76,15 @@ struct SpaceRowView: View {
     private var canDeleteSpace: Bool {
         guard spaceService != nil else { return false }
         guard space.id != SpaceModel.inboxIdentifier else { return false }
+        guard !space.isAllSpaces else { return false }
         return !space.isDefault
     }
 
     private func deleteSpace() {
         guard let service = spaceService else { return }
-        guard space.id != SpaceModel.inboxIdentifier, !space.isDefault else { return }
+        guard space.id != SpaceModel.inboxIdentifier,
+              !space.isAllSpaces,
+              !space.isDefault else { return }
 
         Task { @MainActor in
             do {

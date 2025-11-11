@@ -20,7 +20,7 @@ struct SpacesRootView: View {
         NavigationStack(path: $navigationPath) {
             List {
                 Section {
-                    ForEach(rootSpaces) { space in
+                    ForEach(displaySpaces) { space in
                         NavigationLink(value: space) {
                             SpaceRowView(
                                 space: space,
@@ -63,17 +63,22 @@ struct SpacesRootView: View {
         }
     }
 
-    private var rootSpaces: [SpaceModel] {
-        spaceService.rootSpaces()
+    private var displaySpaces: [SpaceModel] {
+        let rootSpaces = spaceService.rootSpaces()
+            .filter { $0.id != SpaceModel.inboxIdentifier }
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
+        return [SpaceModel.allSpaces] + rootSpaces
     }
 
     private func memoryCount(for space: SpaceModel) -> Int {
+        if space.isAllSpaces {
+            return memoryService.memories.count
+        }
         let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { ids.contains($0.space.id) }.count
     }
