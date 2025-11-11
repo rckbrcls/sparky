@@ -27,7 +27,6 @@ struct MemoryEditorView: View {
     @State private var isPreferencesExpanded = false
     @State private var expandedHeaderHeight: CGFloat = 148
     @StateObject private var bodyEditorController = RichTextEditorController()
-    @State private var isAddContentMenuExpanded = false
     @State private var hasEnabledRichTextManually = false
     @State private var hasEnabledPhotosManually = false
     @State private var hasInitializedContentState = false
@@ -328,7 +327,7 @@ struct MemoryEditorView: View {
     private func titleHeaderView() -> some View {
         VStack(spacing: 12) {
             TextField("Memory", text: $viewModel.title, axis: .vertical)
-                .font(.title)
+                .font(.title3)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
@@ -352,7 +351,7 @@ struct MemoryEditorView: View {
                 }
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 10)
+        .padding(.vertical)
         .glassEffect(.regular.interactive())
         .contentShape(Rectangle())
         .allowsHitTesting(true)
@@ -374,14 +373,7 @@ struct MemoryEditorView: View {
 
     private var editorContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            addContentButton
-            if isAddContentMenuExpanded {
-                MemoryEditorAddContentMenu(
-                    options: contentMenuOptions,
-                    onSelect: handleAddContentSelection
-                )
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
+            addContentMenu
             VStack(alignment: .leading, spacing: 20) {
                 if shouldShowChecklistCard {
                     checklistCard
@@ -397,7 +389,7 @@ struct MemoryEditorView: View {
             .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
             .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
         }
-        
+
     }
 
     private var checklistCard: some View {
@@ -443,20 +435,21 @@ struct MemoryEditorView: View {
         )
     }
 
-    private var addContentButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                isAddContentMenuExpanded.toggle()
+    private var addContentMenu: some View {
+        Menu {
+            ForEach(contentMenuOptions) { option in
+                Button {
+                    handleAddContentSelection(option.id)
+                } label: {
+                    Label(option.title, systemImage: option.iconName)
+                }
             }
         } label: {
             Label("Add content", systemImage: "plus.circle.fill")
-                .font(.headline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .font(.headline.bold())
+                .padding()
+                .glassEffect()
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(isAddContentMenuExpanded ? "Hide content options" : "Show content options")
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private var contentMenuOptions: [MemoryEditorAddContentMenu.Option] {
@@ -490,10 +483,6 @@ struct MemoryEditorView: View {
     }
 
     private func handleAddContentSelection(_ type: MemoryEditorContentType) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-            isAddContentMenuExpanded = false
-        }
-
         switch type {
         case .richText:
             hasEnabledRichTextManually = true
