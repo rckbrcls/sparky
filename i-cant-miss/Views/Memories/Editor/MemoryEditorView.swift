@@ -106,10 +106,9 @@ struct MemoryEditorView: View {
                                 .id("scrollTop")
 
                             editorContent
-                                .padding(.top, 32)
                         }
-                        .padding(.bottom, 32)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 16)
+                        .padding()
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -374,34 +373,31 @@ struct MemoryEditorView: View {
     }
 
     private var editorContent: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            triggerButtonsBar
-            VStack(alignment: .leading, spacing: 20) {
-                addContentButton
-                if isAddContentMenuExpanded {
-                    MemoryEditorAddContentMenu(
-                        options: contentMenuOptions,
-                        onSelect: handleAddContentSelection
-                    )
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-                VStack(alignment: .leading, spacing: 20) {
-                    if shouldShowChecklistCard {
-                        checklistCard
-                    }
-                    if shouldShowRichTextCard {
-                        richTextCard
-                    }
-                    if shouldShowPhotosCard {
-                        photosCard
-                    }
-                }
-                .animation(.easeInOut(duration: 0.2), value: shouldShowChecklistCard)
-                .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
-                .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
+        VStack(alignment: .leading, spacing: 20) {
+            addContentButton
+            if isAddContentMenuExpanded {
+                MemoryEditorAddContentMenu(
+                    options: contentMenuOptions,
+                    onSelect: handleAddContentSelection
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            VStack(alignment: .leading, spacing: 20) {
+                if shouldShowChecklistCard {
+                    checklistCard
+                }
+                if shouldShowRichTextCard {
+                    richTextCard
+                }
+                if shouldShowPhotosCard {
+                    photosCard
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: shouldShowChecklistCard)
+            .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
+            .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        
     }
 
     private var checklistCard: some View {
@@ -554,19 +550,6 @@ struct MemoryEditorView: View {
         if !viewModel.attachments.isEmpty {
             hasEnabledPhotosManually = true
         }
-    }
-
-    private var triggerButtonsBar: some View {
-        MemoryEditorTriggerButtonsBar(
-            viewModel: viewModel,
-            showDueDateSheet: $showDueDateSheet,
-            showExactTimeSheet: $showExactTimeSheet,
-            showWeekdaySheet: $showWeekdaySheet,
-            showLocationPicker: $showLocationPicker,
-            showPersonSheet: $showPersonSheet,
-            showSequentialSheet: $showSequentialSheet,
-            memoryLookup: memoryLookup
-        )
     }
 
     private func binding(for item: CheckItemDraft) -> Binding<CheckItemDraft> {
