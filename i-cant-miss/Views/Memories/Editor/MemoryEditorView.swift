@@ -212,20 +212,20 @@ struct MemoryEditorView: View {
 
                 ToolbarItemGroup(placement: .bottomBar) {
                     if isEditingEnabled {
-                        ControlGroup {
-                            addRichTextButton
-                            addChecklistButton
-                            photoToolbarControls
-                            addLinkButton
-                        }
+                        editingToolbarControls
                     }
 
                     Spacer()
 
-                    MemoryTriggerAddBadge(
-                        isPresented: $showTriggerPickerSheet,
-                        displayStyle: .toolbar
-                    )
+                    triggerToolbarButton
+                }
+
+                ToolbarItemGroup(placement: .keyboard) {
+                    if isEditingEnabled {
+                        editingToolbarControls
+                    }
+
+                    triggerToolbarButton
                 }
             }
             .sheet(isPresented: $showDueDateSheet, content: dueDateSheet)
@@ -550,6 +550,22 @@ struct MemoryEditorView: View {
         .labelStyle(.iconOnly)
         .foregroundStyle(shouldShowLinksCard ? Color.accentColor : .primary)
         .accessibilityLabel("Add link")
+    }
+
+    private var triggerToolbarButton: some View {
+        MemoryTriggerAddBadge(
+            isPresented: $showTriggerPickerSheet,
+            displayStyle: .toolbar
+        )
+    }
+
+    private var editingToolbarControls: some View {
+        ControlGroup {
+            addRichTextButton
+            addChecklistButton
+            photoToolbarControls
+            addLinkButton
+        }
     }
 
     private var shouldShowChecklistCard: Bool {

@@ -131,9 +131,9 @@ final class SpaceService: ObservableObject {
         spaceIndex[id]
     }
 
-    func resolveSpace(for folder: FolderModel?) -> SpaceModel {
+    func resolveSpace(for folder: FolderModel?) -> SpaceModel? {
         guard let folder else {
-            return SpaceModel.allSpaces
+            return nil
         }
 
         if let cached = spaceIndex[folder.id] {
@@ -146,8 +146,8 @@ final class SpaceService: ObservableObject {
         return derived
     }
 
-    func defaultSpace() -> SpaceModel {
-        SpaceModel.allSpaces
+    func defaultSpace() -> SpaceModel? {
+        nil
     }
 
     func rootSpaces() -> [SpaceModel] {

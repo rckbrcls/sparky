@@ -81,7 +81,7 @@ struct MemorySequentialTriggerEditorScreen: View {
             } else {
                 ForEach(sections) { section in
                     if !section.memories.isEmpty {
-                        DisclosureGroup(section.space.name) {
+                        DisclosureGroup(section.displayName) {
                             ForEach(section.memories) { memory in
                                 selectableRow(for: memory, kind: kind)
                             }
@@ -103,7 +103,7 @@ struct MemorySequentialTriggerEditorScreen: View {
                     Image(systemName: "folder")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Text(memory.space.name)
+                    Text(memory.space?.name ?? "No Space")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     statusBadge(for: memory)
@@ -147,7 +147,7 @@ struct MemorySequentialTriggerEditorScreen: View {
                         .font(.subheadline.weight(isSelected ? .semibold : .regular))
                         .foregroundColor(isDisabled ? .secondary : .primary)
                     HStack(spacing: 6) {
-                        Text(memory.space.name)
+                        Text(memory.space?.name ?? "No Space")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         statusBadge(for: memory)
@@ -227,7 +227,7 @@ struct MemorySequentialTriggerEditorScreen: View {
         let grouped = Dictionary(grouping: candidates, by: \.space)
         return grouped
             .map { SpaceSection(space: $0.key, memories: $0.value.sorted(by: { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending })) }
-            .sorted { $0.space.name.localizedCaseInsensitiveCompare($1.space.name) == .orderedAscending }
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
     private func filteredCandidates(query: String) -> [MemoryModel] {
@@ -235,7 +235,7 @@ struct MemorySequentialTriggerEditorScreen: View {
         guard !trimmed.isEmpty else { return allCandidates }
         return allCandidates.filter { memory in
             memory.title.localizedCaseInsensitiveContains(trimmed) ||
-            memory.space.name.localizedCaseInsensitiveContains(trimmed)
+            (memory.space?.name ?? "No Space").localizedCaseInsensitiveContains(trimmed)
         }
     }
 
@@ -283,9 +283,12 @@ struct MemorySequentialTriggerEditorScreen: View {
     }
 
     private struct SpaceSection: Identifiable {
-        let space: SpaceModel
+        let space: SpaceModel?
         let memories: [MemoryModel]
 
-        var id: UUID { space.id }
+        var id: UUID { space?.id ?? Self.noSpaceIdentifier }
+        var displayName: String { space?.name ?? "No Space" }
+
+        private static let noSpaceIdentifier = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
     }
 }

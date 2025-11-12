@@ -38,8 +38,7 @@ struct MemoryTriggerAddBadge: View {
             isPresented = true
         } label: {
             Label("Add Trigger", systemImage: "bolt.fill")
-                .labelStyle(.titleAndIcon)
-                .font(.body.weight(.semibold))
+                .labelStyle(.iconOnly)
         }
         .accessibilityLabel("Add trigger")
     }

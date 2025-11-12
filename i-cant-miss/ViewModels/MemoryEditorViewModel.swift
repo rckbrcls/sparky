@@ -327,7 +327,7 @@ private extension MemoryEditorViewModel {
         if let memory = existingMemory {
             apply(memory: memory)
         } else {
-            selectedSpaceID = defaultSpace?.id ?? environment.spaceService.defaultSpace().id
+            selectedSpaceID = defaultSpace?.id ?? environment.spaceService.defaultSpace()?.id
             applyTemplate(template)
             attachments = []
             linkAttachments = []
@@ -338,7 +338,7 @@ private extension MemoryEditorViewModel {
     func apply(memory: MemoryModel) {
         title = memory.title
         body = memory.body ?? ""
-        selectedSpaceID = memory.space.id
+        selectedSpaceID = memory.space?.id
         status = memory.status
         priority = memory.priority ?? .medium
         isPinned = memory.isPinned
@@ -378,8 +378,11 @@ private extension MemoryEditorViewModel {
         status = reminder.status == .archived ? .archived : (reminder.status == .completed ? .completed : .active)
         triggers = reminder.triggers.map { draft(from: $0) }
         isPinned = false
-        if let folder = reminder.folder {
-            selectedSpaceID = environment.spaceService.resolveSpace(for: folder).id
+        if let folder = reminder.folder,
+           let space = environment.spaceService.resolveSpace(for: folder) {
+            selectedSpaceID = space.id
+        } else {
+            selectedSpaceID = nil
         }
         migrateLegacyAttachmentsIfNeeded()
     }
@@ -390,8 +393,11 @@ private extension MemoryEditorViewModel {
         }
         body = note.content
         isPinned = note.isPinned
-        if let folder = note.folder {
-            selectedSpaceID = environment.spaceService.resolveSpace(for: folder).id
+        if let folder = note.folder,
+           let space = environment.spaceService.resolveSpace(for: folder) {
+            selectedSpaceID = space.id
+        } else {
+            selectedSpaceID = nil
         }
         migrateLegacyAttachmentsIfNeeded()
     }
@@ -422,8 +428,11 @@ private extension MemoryEditorViewModel {
             }
         showChecklist = !checklistItems.isEmpty
         autoCompleteChecklist = existingMemory?.metadata.autoCompleteOnChecklistCompletion ?? autoCompleteChecklist
-        if let folder = todoList.folder {
-            selectedSpaceID = environment.spaceService.resolveSpace(for: folder).id
+        if let folder = todoList.folder,
+           let space = environment.spaceService.resolveSpace(for: folder) {
+            selectedSpaceID = space.id
+        } else {
+            selectedSpaceID = nil
         }
         migrateLegacyAttachmentsIfNeeded()
     }
@@ -616,7 +625,7 @@ private extension MemoryEditorViewModel {
 
     func folderForAudience(_ audience: FolderAudience) -> FolderModel? {
         guard let selectedSpaceID else {
-            return environment.folderService.defaultFolder(for: audience)
+            return nil
         }
 
         if selectedSpaceID == SpaceModel.allSpacesIdentifier || selectedSpaceID == SpaceModel.inboxIdentifier {
@@ -624,11 +633,12 @@ private extension MemoryEditorViewModel {
         }
 
         if let space = environment.spaceService.space(id: selectedSpaceID) ?? selectedSpace,
-           let folder = space.legacyFolder {
+           let folder = space.legacyFolder,
+           folder.audience == audience {
             return folder
         }
 
-        if let folder = environment.folderService.folders.first(where: { $0.id == selectedSpaceID }) {
+        if let folder = environment.folderService.folders.first(where: { $0.id == selectedSpaceID && $0.audience == audience }) {
             return folder
         }
 

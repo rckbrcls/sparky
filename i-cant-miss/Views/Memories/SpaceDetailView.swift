@@ -464,12 +464,15 @@ struct SpaceDetailView: View {
     }
 
     private func isInboxMemory(_ memory: MemoryModel) -> Bool {
-        memory.status == .active && !memory.hasTriggers
+        memory.status == .active && !memory.hasTriggers && memory.space == nil
     }
 
     private func memoryCount(for space: SpaceModel) -> Int {
         let ids = spaceService.descendantIDs(of: space)
-        return memoryService.memories.filter { ids.contains($0.space.id) }.count
+        return memoryService.memories.filter { memory in
+            guard let spaceID = memory.space?.id else { return false }
+            return ids.contains(spaceID)
+        }.count
     }
 
     private func sectionExpansionBinding(for kind: MemoryService.TimelineSection.Kind) -> Binding<Bool> {

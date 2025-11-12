@@ -167,7 +167,9 @@ final class MemoryService: ObservableObject {
                   sort: SortStrategy = .updatedAtDescending) -> [MemoryModel] {
         let spaceIDs: Set<UUID>
         if let space {
-            if includeDescendants {
+            if space.isAllSpaces {
+                spaceIDs = []
+            } else if includeDescendants {
                 spaceIDs = spaceService.descendantIDs(of: space)
             } else {
                 spaceIDs = [space.id]
@@ -193,7 +195,10 @@ final class MemoryService: ObservableObject {
         var filtered = memories
 
         if !spaceIDs.isEmpty {
-            filtered = filtered.filter { spaceIDs.contains($0.space.id) }
+            filtered = filtered.filter { memory in
+                guard let spaceID = memory.space?.id else { return false }
+                return spaceIDs.contains(spaceID)
+            }
         }
 
         if !statuses.isEmpty {
@@ -219,7 +224,7 @@ final class MemoryService: ObservableObject {
 
     func inboxMemories() -> [MemoryModel] {
         memories
-            .filter { !$0.hasTriggers && $0.status == .active }
+            .filter { !$0.hasTriggers && $0.space == nil && $0.status == .active }
             .sorted { lhs, rhs in
                 if lhs.isPinned != rhs.isPinned {
                     return lhs.isPinned && !rhs.isPinned
@@ -376,21 +381,21 @@ private extension MemoryService {
         unified.reserveCapacity(reminders.count + notes.count + todos.count)
 
         for reminder in reminders {
-            let space = reminder.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
+            let space = reminder.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
             var memory = reminder.toMemory(space: space)
             memory.attachments = await attachmentStore.attachments(for: memory.id)
             unified.append(memory)
         }
 
         for note in notes {
-            let space = note.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
+            let space = note.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
             var memory = note.toMemory(space: space)
             memory.attachments = await attachmentStore.attachments(for: memory.id)
             unified.append(memory)
         }
 
         for todo in todos {
-            let space = todo.folder.map { spaceService.resolveSpace(for: $0) } ?? defaultSpace
+            let space = todo.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
             var memory = todo.toMemory(space: space)
             memory.attachments = await attachmentStore.attachments(for: memory.id)
             unified.append(memory)
@@ -408,8 +413,10 @@ private extension MemoryService {
         switch strategy {
         case .manual:
             return memories.sorted { lhs, rhs in
-                if lhs.space.sortOrder != rhs.space.sortOrder {
-                    return lhs.space.sortOrder < rhs.space.sortOrder
+                let lhsOrder = lhs.space?.sortOrder ?? Int.max
+                let rhsOrder = rhs.space?.sortOrder ?? Int.max
+                if lhsOrder != rhsOrder {
+                    return lhsOrder < rhsOrder
                 }
                 return lhs.updatedAt > rhs.updatedAt
             }

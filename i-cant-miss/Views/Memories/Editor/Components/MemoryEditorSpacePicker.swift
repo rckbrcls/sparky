@@ -1,13 +1,15 @@
 import SwiftUI
 
 struct SpacePicker: View {
-    @Binding var selection: UUID
+    @Binding var selection: UUID?
     let spaces: [SpaceModel]
 
     var body: some View {
         Picker(selection: $selection) {
+            Text("No Space")
+                .tag(UUID?.none)
             ForEach(spaces) { space in
-                Text(space.name).tag(space.id)
+                Text(space.name).tag(Optional(space.id))
             }
         } label: {
             Label("Space", systemImage: "folder")

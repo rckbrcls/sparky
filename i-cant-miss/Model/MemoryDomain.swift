@@ -108,7 +108,7 @@ struct MemoryModel: Identifiable, Hashable {
     var isPinned: Bool
     var priority: MemoryPriority?
     var dueDate: Date?
-    var space: SpaceModel
+    var space: SpaceModel?
     var triggers: [MemoryTriggerModel]
     var checkItems: [CheckItemModel]
     var snoozeCount: Int
@@ -330,7 +330,7 @@ private extension Sequence where Element == TodoItemModel {
 
 extension ReminderModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
-        let space = space ?? folder?.toSpace() ?? SpaceModel.allSpaces
+        let space = space ?? folder?.toSpace()
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
         let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -363,7 +363,7 @@ extension ReminderModel {
 
 extension NoteModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
-        let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.allSpaces
+        let resolvedSpace = space ?? folder?.toSpace()
         let trimmedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = trimmedTitle ?? (trimmedContent.isEmpty ? "Untitled" : trimmedContent)
@@ -395,7 +395,7 @@ extension NoteModel {
 
 extension TodoListModel {
     func toMemory(space: SpaceModel?) -> MemoryModel {
-        let resolvedSpace = space ?? folder?.toSpace() ?? SpaceModel.allSpaces
+        let resolvedSpace = space ?? folder?.toSpace()
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
         let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)

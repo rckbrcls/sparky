@@ -86,7 +86,10 @@ struct SpacesRootView: View {
             return memoryService.memories.count
         }
         let ids = spaceService.descendantIDs(of: space)
-        return memoryService.memories.filter { ids.contains($0.space.id) }.count
+        return memoryService.memories.filter { memory in
+            guard let spaceID = memory.space?.id else { return false }
+            return ids.contains(spaceID)
+        }.count
     }
 
     private func refresh() async {

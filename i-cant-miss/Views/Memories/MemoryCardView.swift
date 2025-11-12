@@ -82,7 +82,7 @@ struct MemoryCardView: View {
     }
 
     private var spaceAccent: Color {
-        if let hex = memory.space.colorHex,
+        if let hex = memory.space?.colorHex,
            let color = Color(hex: hex) {
             return color
         }
@@ -94,14 +94,23 @@ struct MemoryCardView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
 
                 HStack(spacing: 8) {
-                    if let icon = memory.space.iconName {
-                        Image(systemName: icon)
+                    if let space = memory.space {
+                        if let icon = space.iconName {
+                            Image(systemName: icon)
+                                .font(.caption)
+                                .foregroundStyle(spaceAccent)
+                        }
+                        Text(space.name)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(spaceAccent)
+                    } else {
+                        Image(systemName: "slash.circle")
                             .font(.caption)
                             .foregroundStyle(spaceAccent)
+                        Text("No Space")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(spaceAccent)
                     }
-                    Text(memory.space.name)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(spaceAccent)
                 }
                 .padding(.vertical, 6)
                 .padding(.horizontal, 12)
