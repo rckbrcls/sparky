@@ -53,6 +53,7 @@ struct ContentView: View {
     @State private var settingsNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
     @State private var isMultiSelectionActive = false
+    @State private var currentSpaceContext: SpaceModel?
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -77,14 +78,14 @@ struct ContentView: View {
                         spaceService: environment.spaceService,
                         memoryService: environment.memoryService,
                         navigationPath: $spacesNavigationPath,
-                        onCreateMemory: { space in
-                            prepareMemoryCreation(for: space)
-                        },
                         onSelectMemory: handleMemorySelection,
                         onCreateSpace: { parent in
                             presentSpaceCreation(for: parent)
                         },
-                        onMultiSelectionChange: handleMultiSelectionChange
+                        onMultiSelectionChange: handleMultiSelectionChange,
+                        onSpaceContextChange: { space in
+                            currentSpaceContext = space
+                        }
                     )
                     .tabBarSpacer()
                 }
@@ -189,7 +190,7 @@ struct ContentView: View {
                     .onTapGesture {
                     }
 
-                Button(action: { prepareMemoryCreation(for: nil) }) {
+                Button(action: { prepareMemoryCreation(for: targetSpaceForCreation()) }) {
                     Image(systemName: "plus")
                         .font(.system(size: 22, weight: .medium))
                         .frame(width: 60, height: 60)
@@ -238,6 +239,11 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 0.2)) {
             isMultiSelectionActive = isSelecting
         }
+    }
+
+    private func targetSpaceForCreation() -> SpaceModel? {
+        guard activeTab == .spaces else { return nil }
+        return currentSpaceContext
     }
 }
 

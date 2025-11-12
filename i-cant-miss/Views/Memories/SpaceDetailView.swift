@@ -14,10 +14,10 @@ struct SpaceDetailView: View {
     @ObservedObject var spaceService: SpaceService
     @ObservedObject var memoryService: MemoryService
 
-    let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: (SpaceModel?) -> Void
     let onMultiSelectionChange: (Bool) -> Void
+    let onSpaceContextChange: (SpaceModel?) -> Void
 
     @State private var showingFilterSheet = false
     @State private var selectedMemoryTypes: Set<MemoryType> = []
@@ -237,9 +237,11 @@ struct SpaceDetailView: View {
         }
         .onAppear {
             onMultiSelectionChange(isMultiSelecting)
+            onSpaceContextChange(resolvedSpace)
         }
         .onDisappear {
             onMultiSelectionChange(false)
+            onSpaceContextChange(nil)
         }
     }
 
@@ -278,7 +280,6 @@ struct SpaceDetailView: View {
                 onShowFilters: presentFilterSheet,
                 onToggleMultiSelection: toggleMultiSelection,
                 onRequestDeletion: { showingDeleteConfirmation = true },
-                onCreateMemory: { onCreateMemory(isAllSpace ? nil : resolvedSpace) },
                 onCreateSpace: { onCreateSpace(isAllSpace ? nil : resolvedSpace) }
             )
         }

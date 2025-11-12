@@ -11,26 +11,17 @@ struct SpaceDetailToolbarContent: ToolbarContent {
     let onShowFilters: () -> Void
     let onToggleMultiSelection: () -> Void
     let onRequestDeletion: () -> Void
-    let onCreateMemory: () -> Void
     let onCreateSpace: () -> Void
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .navigationBarTrailing) {
-            Menu {
-                Button(action: onCreateMemory) {
-                    Label("Add Memory", systemImage: "plus")
+            if canCreateSubspace {
+                Button(action: onCreateSpace) {
+                    Image(systemName: "folder.badge.plus")
                 }
-
-                if canCreateSubspace {
-                    Button(action: onCreateSpace) {
-                        Label("Add Space", systemImage: "folder.badge.plus")
-                    }
-                }
-            } label: {
-                Image(systemName: "plus.circle")
+                .accessibilityLabel("Add Space")
+                .disabled(isMultiSelecting || isPerformingBulkAction)
             }
-            .accessibilityLabel("Add Item")
-            .disabled(isMultiSelecting || isPerformingBulkAction)
 
             MemoryFilterSummaryButton(
                 activeFilterCount: activeFilterCount,
