@@ -113,7 +113,7 @@ final class LinkPreviewLoader: ObservableObject {
         guard metadata == nil, !isLoading else { return }
         isLoading = true
         provider.startFetchingMetadata(for: url) { [weak self] metadata, error in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.metadata = metadata
                 self.error = error
