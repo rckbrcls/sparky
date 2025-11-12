@@ -15,6 +15,7 @@ struct SpacesRootView: View {
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: (SpaceModel?) -> Void
+    let onMultiSelectionChange: (Bool) -> Void
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -57,9 +58,13 @@ struct SpacesRootView: View {
                     memoryService: memoryService,
                     onCreateMemory: onCreateMemory,
                     onSelectMemory: onSelectMemory,
-                    onCreateSpace: onCreateSpace
+                    onCreateSpace: onCreateSpace,
+                    onMultiSelectionChange: onMultiSelectionChange
                 )
             }
+        }
+        .onAppear {
+            onMultiSelectionChange(false)
         }
     }
 
@@ -99,6 +104,7 @@ struct SpacesRootView: View {
         navigationPath: .constant(NavigationPath()),
         onCreateMemory: { _ in },
         onSelectMemory: { _ in },
-        onCreateSpace: { _ in }
+        onCreateSpace: { _ in },
+        onMultiSelectionChange: { _ in }
     )
 }

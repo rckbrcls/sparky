@@ -17,6 +17,7 @@ struct SpaceDetailView: View {
     let onCreateMemory: (SpaceModel?) -> Void
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: (SpaceModel?) -> Void
+    let onMultiSelectionChange: (Bool) -> Void
 
     @State private var showingFilterSheet = false
     @State private var selectedMemoryTypes: Set<MemoryType> = []
@@ -32,6 +33,7 @@ struct SpaceDetailView: View {
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
+    @State private var bulkActionErrorMessage: String?
 
     private var activeFilterCount: Int {
         var count = 0
@@ -155,6 +157,28 @@ struct SpaceDetailView: View {
         return resolvedSpace.name
     }
 
+    private var bulkActionSpaces: [SpaceModel] {
+        environment.spaceService.spaces.filter { $0.id != SpaceModel.allSpacesIdentifier }
+    }
+
+    private var selectedMemories: [MemoryModel] {
+        selectedMemoryIDs.compactMap { memoryService.memory(id: $0) }
+    }
+
+    private var canMoveSelection: Bool {
+        !selectedMemoryIDs.isEmpty
+    }
+
+    private var canChangeStatusForSelection: Bool {
+        guard canMoveSelection else { return false }
+        return selectedMemories.allSatisfy { memorySupportsStatusChange($0) }
+    }
+
+    private var canChangePriorityForSelection: Bool {
+        guard canMoveSelection else { return false }
+        return selectedMemories.allSatisfy { memorySupportsPriorityChange($0) }
+    }
+
     private var deleteConfirmationMessage: String {
         let count = selectedMemoryIDs.count
         if count == 1 {
@@ -174,17 +198,17 @@ struct SpaceDetailView: View {
         .toolbar { toolbarContent }
         .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
         .onAppear(perform: syncExpansionStates)
-        .onChange(of: timelineSectionsForSpace.count) {
+        .onChange(of: timelineSectionsForSpace.count) { _, _ in
             syncExpansionStates()
         }
-        .onChange(of: ungroupedMemories.count) {
+        .onChange(of: ungroupedMemories.count) { _, _ in
             syncExpansionStates()
         }
-        .onChange(of: inboxMemories.count) {
+        .onChange(of: inboxMemories.count) { _, _ in
             syncExpansionStates()
         }
-        .onChange(of: isInboxExpanded) {
-            autoCollapsedInbox = inboxMemories.isEmpty && !isInboxExpanded
+        .onChange(of: isInboxExpanded) { _, newValue in
+            autoCollapsedInbox = inboxMemories.isEmpty && !newValue
         }
         .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -195,6 +219,27 @@ struct SpaceDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(deleteConfirmationMessage)
+        }
+        .alert("Unable to complete action", isPresented: Binding(
+            get: { bulkActionErrorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    bulkActionErrorMessage = nil
+                }
+            }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(bulkActionErrorMessage ?? "")
+        }
+        .onChange(of: isMultiSelecting) { _, newValue in
+            onMultiSelectionChange(newValue)
+        }
+        .onAppear {
+            onMultiSelectionChange(isMultiSelecting)
+        }
+        .onDisappear {
+            onMultiSelectionChange(false)
         }
     }
 
@@ -207,20 +252,36 @@ struct SpaceDetailView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        SpaceDetailToolbarContent(
-            activeFilterCount: activeFilterCount,
-            filterDescription: filterDescription,
-            isFilterSheetPresented: showingFilterSheet,
-            isMultiSelecting: isMultiSelecting,
-            isPerformingBulkAction: isPerformingBulkAction,
-            hasSelectedMemories: !selectedMemoryIDs.isEmpty,
-            canCreateSubspace: canCreateSubspace,
-            onShowFilters: presentFilterSheet,
-            onToggleMultiSelection: toggleMultiSelection,
-            onRequestDeletion: { showingDeleteConfirmation = true },
-            onCreateMemory: { onCreateMemory(isAllSpace ? nil : resolvedSpace) },
-            onCreateSpace: { onCreateSpace(isAllSpace ? nil : resolvedSpace) }
-        )
+        if isMultiSelecting {
+            MemoryMultiSelectToolbarContent(
+                availableSpaces: bulkActionSpaces,
+                isPerformingBulkAction: isPerformingBulkAction,
+                canPerformDeletion: canMoveSelection,
+                isPriorityEnabled: canChangePriorityForSelection,
+                isStatusEnabled: canChangeStatusForSelection,
+                isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
+                onSelectSpace: { space in performMove(to: space) },
+                onSelectStatus: { status in performStatusUpdate(to: status) },
+                onSelectPriority: { priority in performPriorityUpdate(to: priority) },
+                onDelete: { showingDeleteConfirmation = true },
+                onDone: { toggleMultiSelection() }
+            )
+        } else {
+            SpaceDetailToolbarContent(
+                activeFilterCount: activeFilterCount,
+                filterDescription: filterDescription,
+                isFilterSheetPresented: showingFilterSheet,
+                isMultiSelecting: isMultiSelecting,
+                isPerformingBulkAction: isPerformingBulkAction,
+                hasSelectedMemories: !selectedMemoryIDs.isEmpty,
+                canCreateSubspace: canCreateSubspace,
+                onShowFilters: presentFilterSheet,
+                onToggleMultiSelection: toggleMultiSelection,
+                onRequestDeletion: { showingDeleteConfirmation = true },
+                onCreateMemory: { onCreateMemory(isAllSpace ? nil : resolvedSpace) },
+                onCreateSpace: { onCreateSpace(isAllSpace ? nil : resolvedSpace) }
+            )
+        }
     }
 
     @ViewBuilder
@@ -242,6 +303,7 @@ struct SpaceDetailView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 70)
@@ -469,6 +531,84 @@ struct SpaceDetailView: View {
         showingDeleteConfirmation = false
     }
 
+    private func performMove(to space: SpaceModel) {
+        performBulkAction { processor, ids in
+            await processor.moveMemories(ids, to: space)
+        }
+    }
+
+    private func performStatusUpdate(to status: MemoryStatus) {
+        performBulkAction { processor, ids in
+            await processor.updateStatus(of: ids, to: status)
+        }
+    }
+
+    private func performPriorityUpdate(to priority: MemoryPriority) {
+        performBulkAction { processor, ids in
+            await processor.updatePriority(of: ids, to: priority)
+        }
+    }
+
+    private func performBulkAction(
+        _ action: @escaping (MemoryBulkActionProcessor, Set<MemoryModel.ID>) async -> MemoryBulkActionProcessor.MemoryBulkActionResult
+    ) {
+        let ids = selectedMemoryIDs
+        guard !ids.isEmpty, !isPerformingBulkAction else { return }
+
+        isPerformingBulkAction = true
+        Task {
+            let processor = MemoryBulkActionProcessor(environment: environment)
+            let result = await action(processor, ids)
+            await MainActor.run {
+                handleBulkActionResult(result)
+            }
+        }
+    }
+
+    private func handleBulkActionResult(_ result: MemoryBulkActionProcessor.MemoryBulkActionResult) {
+        isPerformingBulkAction = false
+
+        if result.hasSuccesses {
+            selectedMemoryIDs.subtract(result.succeededIDs)
+        }
+
+        if result.hasFailures {
+            bulkActionErrorMessage = bulkActionFailureMessage(from: result.failedIDs)
+        }
+    }
+
+    private func bulkActionFailureMessage(from failures: [UUID: Error]) -> String {
+        guard let firstError = failures.values.first else {
+            return "Unable to complete the requested action."
+        }
+
+        if failures.count == 1 {
+            return firstError.localizedDescription
+        }
+
+        return "\(failures.count) memories failed to update. \(firstError.localizedDescription)"
+    }
+
+    private func memorySupportsStatusChange(_ memory: MemoryModel) -> Bool {
+        guard let origin = memory.metadata.origin else { return false }
+        switch origin {
+        case .reminder, .todoList:
+            return true
+        case .note:
+            return false
+        }
+    }
+
+    private func memorySupportsPriorityChange(_ memory: MemoryModel) -> Bool {
+        guard let origin = memory.metadata.origin else { return false }
+        switch origin {
+        case .reminder:
+            return true
+        case .note, .todoList:
+            return false
+        }
+    }
+
     private func performBulkDeletion() {
         let ids = selectedMemoryIDs
         guard !ids.isEmpty else { return }
@@ -506,18 +646,4 @@ struct SpaceDetailView: View {
 
         await memoryService.refresh(force: true)
     }
-}
-
-#Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
-    environment.bootstrap()
-    return SpacesRootView(
-        spaceService: environment.spaceService,
-        memoryService: environment.memoryService,
-        navigationPath: .constant(NavigationPath()),
-        onCreateMemory: { _ in },
-        onSelectMemory: { _ in },
-        onCreateSpace: { _ in }
-    )
-    .environmentObject(environment)
 }

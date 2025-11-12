@@ -10,6 +10,7 @@ import SwiftUI
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onSelectMemory: (MemoryModel) -> Void
+    let onMultiSelectionChange: (Bool) -> Void
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject private var environment: AppEnvironment
@@ -26,6 +27,7 @@ struct MemoryTimelineView: View {
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
+    @State private var bulkActionErrorMessage: String?
 
     private var isSearching: Bool {
         !searchText.isEmpty
@@ -107,6 +109,28 @@ struct MemoryTimelineView: View {
         return "Timeline"
     }
 
+    private var bulkActionSpaces: [SpaceModel] {
+        environment.spaceService.spaces.filter { $0.id != SpaceModel.allSpacesIdentifier }
+    }
+
+    private var selectedMemories: [MemoryModel] {
+        selectedMemoryIDs.compactMap { memoryService.memory(id: $0) }
+    }
+
+    private var canMoveSelection: Bool {
+        !selectedMemoryIDs.isEmpty
+    }
+
+    private var canChangeStatusForSelection: Bool {
+        guard canMoveSelection else { return false }
+        return selectedMemories.allSatisfy { memorySupportsStatusChange($0) }
+    }
+
+    private var canChangePriorityForSelection: Bool {
+        guard canMoveSelection else { return false }
+        return selectedMemories.allSatisfy { memorySupportsPriorityChange($0) }
+    }
+
     private var deleteConfirmationMessage: String {
         let count = selectedMemoryIDs.count
         if count == 1 {
@@ -121,40 +145,41 @@ struct MemoryTimelineView: View {
                 .navigationTitle(navigationTitleText)
                 .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
                 .toolbar {
-                    ToolbarItemGroup(placement: .navigationBarTrailing) {
-                        MemoryFilterSummaryButton(
-                            activeFilterCount: activeFilterCount,
-                            filterDescription: filterDescription,
-                            isSheetPresented: showingFilterSheet,
-                            isDisabled: isMultiSelecting || isPerformingBulkAction
-                        ) {
-                            filterSheetDetent = .large
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                showingFilterSheet = true
+                    if isMultiSelecting {
+                        MemoryMultiSelectToolbarContent(
+                            availableSpaces: bulkActionSpaces,
+                            isPerformingBulkAction: isPerformingBulkAction,
+                            canPerformDeletion: canMoveSelection,
+                            isPriorityEnabled: canChangePriorityForSelection,
+                            isStatusEnabled: canChangeStatusForSelection,
+                            isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
+                            onSelectSpace: { space in performMove(to: space) },
+                            onSelectStatus: { status in performStatusUpdate(to: status) },
+                            onSelectPriority: { priority in performPriorityUpdate(to: priority) },
+                            onDelete: { showingDeleteConfirmation = true },
+                            onDone: { toggleMultiSelection() }
+                        )
+                    } else {
+                        ToolbarItemGroup(placement: .navigationBarTrailing) {
+                            MemoryFilterSummaryButton(
+                                activeFilterCount: activeFilterCount,
+                                filterDescription: filterDescription,
+                                isSheetPresented: showingFilterSheet,
+                                isDisabled: isPerformingBulkAction
+                            ) {
+                                filterSheetDetent = .large
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    showingFilterSheet = true
+                                }
                             }
-                        }
 
-                        if isMultiSelecting {
-                            Button(role: .destructive) {
-                                showingDeleteConfirmation = true
+                            Button {
+                                toggleMultiSelection()
                             } label: {
-                                Image(systemName: "trash")
-                            }
-                            .disabled(selectedMemoryIDs.isEmpty || isPerformingBulkAction)
-                            .accessibilityLabel("Delete selected memories")
-                        }
-
-                        Button {
-                            toggleMultiSelection()
-                        } label: {
-                            if isMultiSelecting {
-                                Text("Done")
-                                    .fontWeight(.semibold)
-                            } else {
                                 Label("Select", systemImage: "checkmark.circle")
                             }
+                            .disabled(isPerformingBulkAction)
                         }
-                        .disabled(isPerformingBulkAction)
                     }
                 }
                 .sheet(isPresented: $showingFilterSheet) {
@@ -177,6 +202,18 @@ struct MemoryTimelineView: View {
                 } message: {
                     Text(deleteConfirmationMessage)
                 }
+                .alert("Unable to complete action", isPresented: Binding(
+                    get: { bulkActionErrorMessage != nil },
+                    set: { isPresented in
+                        if !isPresented {
+                            bulkActionErrorMessage = nil
+                        }
+                    }
+                )) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(bulkActionErrorMessage ?? "")
+                }
                 .onAppear(perform: syncExpansionStates)
                 .onChange(of: timelineSectionData.count) {
                     syncExpansionStates()
@@ -186,6 +223,15 @@ struct MemoryTimelineView: View {
                 }
                 .onChange(of: isInboxExpanded) {
                     autoCollapsedInbox = filteredInboxMemories.isEmpty && !isInboxExpanded
+                }
+                .onChange(of: isMultiSelecting) { _, newValue in
+                    onMultiSelectionChange(newValue)
+                }
+                .onAppear {
+                    onMultiSelectionChange(isMultiSelecting)
+                }
+                .onDisappear {
+                    onMultiSelectionChange(false)
                 }
         }
     }
@@ -203,6 +249,7 @@ struct MemoryTimelineView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 70)
@@ -411,6 +458,84 @@ struct MemoryTimelineView: View {
         showingDeleteConfirmation = false
     }
 
+    private func performMove(to space: SpaceModel) {
+        performBulkAction { processor, ids in
+            await processor.moveMemories(ids, to: space)
+        }
+    }
+
+    private func performStatusUpdate(to status: MemoryStatus) {
+        performBulkAction { processor, ids in
+            await processor.updateStatus(of: ids, to: status)
+        }
+    }
+
+    private func performPriorityUpdate(to priority: MemoryPriority) {
+        performBulkAction { processor, ids in
+            await processor.updatePriority(of: ids, to: priority)
+        }
+    }
+
+    private func performBulkAction(
+        _ action: @escaping (MemoryBulkActionProcessor, Set<MemoryModel.ID>) async -> MemoryBulkActionProcessor.MemoryBulkActionResult
+    ) {
+        let ids = selectedMemoryIDs
+        guard !ids.isEmpty, !isPerformingBulkAction else { return }
+
+        isPerformingBulkAction = true
+        Task {
+            let processor = MemoryBulkActionProcessor(environment: environment)
+            let result = await action(processor, ids)
+            await MainActor.run {
+                handleBulkActionResult(result)
+            }
+        }
+    }
+
+    private func handleBulkActionResult(_ result: MemoryBulkActionProcessor.MemoryBulkActionResult) {
+        isPerformingBulkAction = false
+
+        if result.hasSuccesses {
+            selectedMemoryIDs.subtract(result.succeededIDs)
+        }
+
+        if result.hasFailures {
+            bulkActionErrorMessage = bulkActionFailureMessage(from: result.failedIDs)
+        }
+    }
+
+    private func bulkActionFailureMessage(from failures: [UUID: Error]) -> String {
+        guard let firstError = failures.values.first else {
+            return "Unable to complete the requested action."
+        }
+
+        if failures.count == 1 {
+            return firstError.localizedDescription
+        }
+
+        return "\(failures.count) memories failed to update. \(firstError.localizedDescription)"
+    }
+
+    private func memorySupportsStatusChange(_ memory: MemoryModel) -> Bool {
+        guard let origin = memory.metadata.origin else { return false }
+        switch origin {
+        case .reminder, .todoList:
+            return true
+        case .note:
+            return false
+        }
+    }
+
+    private func memorySupportsPriorityChange(_ memory: MemoryModel) -> Bool {
+        guard let origin = memory.metadata.origin else { return false }
+        switch origin {
+        case .reminder:
+            return true
+        case .note, .todoList:
+            return false
+        }
+    }
+
     private func performBulkDeletion() {
         let ids = selectedMemoryIDs
         guard !ids.isEmpty else { return }
@@ -481,6 +606,7 @@ enum MemoryType: String, CaseIterable, Identifiable {
     return MemoryTimelineView(
         memoryService: environment.memoryService,
         onSelectMemory: { _ in },
+        onMultiSelectionChange: { _ in },
         navigationPath: .constant(NavigationPath())
     )
     .environmentObject(environment)

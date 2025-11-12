@@ -52,6 +52,7 @@ struct ContentView: View {
     @State private var spacesNavigationPath = NavigationPath()
     @State private var settingsNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
+    @State private var isMultiSelectionActive = false
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -65,6 +66,7 @@ struct ContentView: View {
                     MemoryTimelineView(
                         memoryService: environment.memoryService,
                         onSelectMemory: handleMemorySelection,
+                        onMultiSelectionChange: handleMultiSelectionChange,
                         navigationPath: $homeNavigationPath
                     )
                     .tabBarSpacer()
@@ -81,7 +83,8 @@ struct ContentView: View {
                         onSelectMemory: handleMemorySelection,
                         onCreateSpace: { parent in
                             presentSpaceCreation(for: parent)
-                        }
+                        },
+                        onMultiSelectionChange: handleMultiSelectionChange
                     )
                     .tabBarSpacer()
                 }
@@ -93,9 +96,17 @@ struct ContentView: View {
             }
             .toolbar(.hidden, for: .tabBar)
             .safeAreaBar(edge: .bottom, spacing: 0){
+                Group {
+                    if isMultiSelectionActive {
+                        Color.clear.frame(height: 0)
+                    } else {
                 CustomTabBarView()
                     .padding(.horizontal, 20)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: isMultiSelectionActive)
             .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .sheet(item: $viewerRoute) { route in
@@ -220,6 +231,12 @@ struct ContentView: View {
             spacesNavigationPath = NavigationPath()
         case .settings:
             settingsNavigationPath = NavigationPath()
+        }
+    }
+
+    private func handleMultiSelectionChange(_ isSelecting: Bool) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isMultiSelectionActive = isSelecting
         }
     }
 }
