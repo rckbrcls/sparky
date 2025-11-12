@@ -33,7 +33,6 @@ struct MemoryEditorView: View {
     @State private var isLoadingPhotos = false
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
-    @StateObject private var bodyEditorController = RichTextEditorController()
     @State private var hasEnabledRichTextManually = false
     @State private var hasEnabledPhotosManually = false
     @State private var hasEnabledLinksManually = false
@@ -218,14 +217,6 @@ struct MemoryEditorView: View {
                     }
 
                     Spacer()
-
-                    triggerToolbarButton
-                }
-
-                ToolbarItemGroup(placement: .keyboard) {
-                    if isEditingEnabled {
-                        editingToolbarControls
-                    }
 
                     triggerToolbarButton
                 }
@@ -473,7 +464,6 @@ struct MemoryEditorView: View {
     private var richTextCard: some View {
         MemoryEditorRichTextCard(
             text: $viewModel.body,
-            controller: bodyEditorController,
             isEditable: isEditingEnabled
         )
         .modifier(EditingSwipeActionModifier(
