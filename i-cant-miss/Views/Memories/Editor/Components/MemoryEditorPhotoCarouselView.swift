@@ -5,6 +5,7 @@ struct MemoryEditorPhotoCarouselView: View {
     let attachments: [MemoryModel.Attachment]
     let onDismiss: () -> Void
     @State private var selectedIndex: Int
+    @State private var scrollPosition: Int?
 
     init(
         attachments: [MemoryModel.Attachment],
@@ -13,7 +14,9 @@ struct MemoryEditorPhotoCarouselView: View {
     ) {
         self.attachments = attachments
         self.onDismiss = onDismiss
-        _selectedIndex = State(initialValue: min(max(initialIndex, 0), max(attachments.count - 1, 0)))
+        let clampedIndex = min(max(initialIndex, 0), max(attachments.count - 1, 0))
+        _selectedIndex = State(initialValue: clampedIndex)
+        _scrollPosition = State(initialValue: attachments.isEmpty ? nil : clampedIndex)
     }
 
     var body: some View {
@@ -26,6 +29,7 @@ struct MemoryEditorPhotoCarouselView: View {
                     emptyStateView
                 } else {
                     carouselView
+                        .transition(.opacity)
                 }
             }
             .toolbar {
@@ -53,32 +57,84 @@ struct MemoryEditorPhotoCarouselView: View {
     }
 
     private var carouselView: some View {
-        TabView(selection: $selectedIndex) {
-            ForEach(Array(attachments.enumerated()), id: \.element.id) { index, attachment in
-                ZStack {
-                    Color.black.opacity(0.95)
-                        .ignoresSafeArea()
-                    if let image = UIImage(data: attachment.data) {
-                        GeometryReader { geometry in
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(
-                                    width: geometry.size.width,
-                                    height: geometry.size.height
-                                )
-                                .clipped()
-                                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-                        }
-                    } else {
-                        placeholderView
+        GeometryReader { geometry in
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(attachments.enumerated()), id: \.element.id) { index, attachment in
+                        carouselItem(for: attachment)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .containerRelativeFrame(.horizontal)
+                            .id(index)
+                            .scrollTransition(.animated, axis: .horizontal) { content, phase in
+                                content
+                                    .opacity(phase.isIdentity ? 1.0 : 0.75)
+                                    .scaleEffect(phase.isIdentity ? 1.0 : 0.95)
+                            }
                     }
                 }
-                .tag(index)
+                .scrollTargetLayout()
+            }
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $scrollPosition)
+            .scrollDisabled(attachments.count <= 1)
+            .onAppear {
+                scrollPosition = attachments.isEmpty ? nil : selectedIndex
+            }
+            .onChange(of: attachments) { _, newAttachments in
+                let clampedIndex = min(max(selectedIndex, 0), max(newAttachments.count - 1, 0))
+                selectedIndex = clampedIndex
+                scrollPosition = newAttachments.isEmpty ? nil : clampedIndex
+            }
+            .onChange(of: selectedIndex) { _, newValue in
+                guard attachments.indices.contains(newValue) else { return }
+                if scrollPosition != newValue {
+                    scrollPosition = newValue
+                }
+            }
+            .onChange(of: scrollPosition) { _, newValue in
+                guard let newValue, attachments.indices.contains(newValue) else { return }
+                if selectedIndex != newValue {
+                    selectedIndex = newValue
+                }
+            }
+            .overlay(alignment: .bottom) {
+                pageIndicator
+                    .padding(.bottom, 32)
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: .always))
-        .indexViewStyle(.page(backgroundDisplayMode: .interactive))
+    }
+
+    private func carouselItem(for attachment: MemoryModel.Attachment) -> some View {
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
+            if let image = UIImage(data: attachment.data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else {
+                placeholderView
+            }
+        }
+    }
+
+    private var pageIndicator: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(attachments.enumerated()), id: \.offset) { index, _ in
+                Circle()
+                    .fill(index == selectedIndex ? Color.white : Color.white.opacity(0.35))
+                    .frame(width: index == selectedIndex ? 10 : 8, height: index == selectedIndex ? 10 : 8)
+                    .animation(.easeInOut(duration: 0.2), value: selectedIndex)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: Capsule())
+        .opacity(attachments.count > 1 ? 1 : 0)
+        .animation(.easeInOut(duration: 0.25), value: attachments.count)
     }
 
     private var placeholderView: some View {
