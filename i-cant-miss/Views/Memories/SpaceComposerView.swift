@@ -16,10 +16,12 @@ struct SpaceComposerView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     private let selectedParentID: UUID?
+    private let parentSpaceName: String?
 
     init(environment: AppEnvironment, defaultParent: SpaceModel? = nil) {
         self.environment = environment
         self.selectedParentID = defaultParent?.id
+        self.parentSpaceName = defaultParent?.name
     }
 
     var body: some View {
@@ -30,6 +32,17 @@ struct SpaceComposerView: View {
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
                         .accessibilityLabel("Space name")
+
+                    if let parentSpaceName {
+                        HStack {
+                            Label("Parent", systemImage: "folder")
+                            Spacer()
+                            Text(parentSpaceName)
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.subheadline)
+                        .accessibilityElement(children: .combine)
+                    }
 
                     if isSaving {
                         ProgressView()
@@ -161,6 +174,12 @@ struct SpaceComposerView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
             errorMessage = "Provide a name for the space."
+            return
+        }
+
+        if let parentID = selectedParentID,
+           environment.spaceService.space(id: parentID) == nil {
+            errorMessage = "Parent space is unavailable. Refresh and try again."
             return
         }
 

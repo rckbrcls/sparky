@@ -158,8 +158,11 @@ final class FolderService: ObservableObject {
                     folder.iconName = iconName
                     folder.isDefault = isDefault
                     folder.setAudience(audience)
-                    if let parentID,
-                       let parentFolder = try self.fetchFolder(by: parentID, context: context) {
+                    if let parentID {
+                        guard let parentFolder = try self.fetchFolder(by: parentID, context: context) else {
+                            throw FolderServiceError.folderNotFound
+                        }
+
                         folder.parentFolder = parentFolder
                         let siblingCount = parentFolder.childFolderSet.count
                         folder.sortOrder = Int16(siblingCount)
