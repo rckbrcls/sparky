@@ -40,6 +40,7 @@ struct MemoryTriggerAddBadge: View {
             Label("Add Trigger", systemImage: "bolt.fill")
                 .labelStyle(.iconOnly)
         }
+        .buttonStyle(.glassProminent)
         .accessibilityLabel("Add trigger")
     }
 }

@@ -40,6 +40,7 @@ struct MemoryEditorView: View {
     @State private var isEditingEnabled: Bool
     @State private var isPhotoViewerPresented = false
     @State private var selectedAttachmentIndex = 0
+    @State private var navigationPath = NavigationPath()
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -79,7 +80,7 @@ struct MemoryEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 baseBackground
                     .ignoresSafeArea()
@@ -102,124 +103,6 @@ struct MemoryEditorView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage ?? "")
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .cancel) {
-                        dismiss()
-                    } label: {
-                        Label("Cancel", systemImage: "xmark")
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    if isEditingEnabled {
-                        Button(role: .confirm) {
-                            commitChecklistDrafts()
-                            Task {
-                                let success = await viewModel.save()
-                                if success {
-                                    await MainActor.run {
-                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                        isTitleFocused = false
-                                        focusedDraftID = nil
-                                        withAnimation(.easeInOut(duration: 0.35)) {
-                                            isEditingEnabled = false
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            Label(saveButtonTitle, systemImage: "checkmark")
-                        }
-                        .disabled(isSaveDisabled)
-                    } else if canEnableEditing {
-                        Button {
-                            enableEditing()
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            viewModel.isPinned.toggle()
-                        } label: {
-                            Label(viewModel.isPinned ? "Unpin" : "Pin",
-                                  systemImage: viewModel.isPinned ? "pin.fill" : "pin")
-                                .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
-                        }
-                        .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
-
-                        Section("Details") {
-                            SpacePicker(selection: Binding(
-                                get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
-                                set: { viewModel.selectedSpaceID = $0 }
-                            ), spaces: spacesForPicker)
-
-                            Picker(selection: $viewModel.status) {
-                                ForEach(MemoryStatus.allCases) { status in
-                                    Text(status.rawValue.capitalized).tag(status)
-                                }
-                            } label: {
-                                Label("Status", systemImage: "circle.circle")
-                            }
-                            .pickerStyle(.menu)
-
-                            Picker(selection: $viewModel.priority) {
-                                ForEach(MemoryPriority.allCases) { priority in
-                                    Label(priorityLabel(for: priority), systemImage: priority.iconName)
-                                        .tag(priority)
-                                }
-                            } label: {
-                                Label("Priority", systemImage: "flag.fill")
-                            }
-                            .pickerStyle(.menu)
-                        }
-
-                        Menu("Preferences") {
-                            Toggle(isOn: $viewModel.autoCompleteChecklist) {
-                                Label("Auto-complete when checklist is done", systemImage: "checkmark.circle")
-                            }
-                            .disabled(!viewModel.canToggleAutoComplete)
-                            .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
-
-                            Toggle(isOn: $viewModel.isPinned) {
-                                Label("Show in Today view", systemImage: "calendar")
-                            }
-
-                            Toggle(isOn: Binding(
-                                get: { !viewModel.triggers.isEmpty },
-                                set: { _ in }
-                            )) {
-                                Label("Enable notifications", systemImage: "bell.badge")
-                            }
-                            .disabled(true)
-                            .foregroundStyle(.secondary)
-
-                            Toggle(isOn: .constant(false)) {
-                                Label("Archive when completed", systemImage: "archivebox")
-                            }
-                            .disabled(true)
-                            .foregroundStyle(.secondary)
-                        }
-
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
-                }
-
-                ToolbarItemGroup(placement: .bottomBar) {
-                    if isEditingEnabled {
-                        editingToolbarControls
-                    }
-
-                    Spacer()
-
-                    triggerToolbarButton
-                }
             }
             .sheet(isPresented: $showDueDateSheet, content: dueDateSheet)
             .sheet(isPresented: $showExactTimeSheet, content: exactTimeSheet)
@@ -281,6 +164,7 @@ struct MemoryEditorView: View {
                 }
             }
         }
+
     }
 
     private var memoryLookup: [UUID: MemoryModel] {
@@ -328,6 +212,141 @@ struct MemoryEditorView: View {
                 linksCardRow
                     .transition(cardBounceTransition)
             }
+        }
+        .toolbar{
+            ToolbarItem(placement: .cancellationAction) {
+                Button(role: .cancel) {
+                    dismiss()
+                } label: {
+                    Label("Cancel", systemImage: "xmark")
+                }
+            }
+
+            ToolbarItem(placement: .confirmationAction) {
+                if isEditingEnabled {
+                    Button(role: .confirm) {
+                        commitChecklistDrafts()
+                        Task {
+                            let success = await viewModel.save()
+                            if success {
+                                await MainActor.run {
+                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                    isTitleFocused = false
+                                    focusedDraftID = nil
+                                    withAnimation(.easeInOut(duration: 0.35)) {
+                                        isEditingEnabled = false
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Label(saveButtonTitle, systemImage: "checkmark")
+                    }
+                    .disabled(isSaveDisabled)
+                } else if canEnableEditing {
+                    Button {
+                        enableEditing()
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        viewModel.isPinned.toggle()
+                    } label: {
+                        Label(viewModel.isPinned ? "Unpin" : "Pin",
+                              systemImage: viewModel.isPinned ? "pin.fill" : "pin")
+                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
+                    }
+                    .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
+
+                    Section("Details") {
+                        SpacePicker(selection: Binding(
+                            get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
+                            set: { viewModel.selectedSpaceID = $0 }
+                        ), spaces: spacesForPicker)
+
+                        Picker(selection: $viewModel.status) {
+                            ForEach(MemoryStatus.allCases) { status in
+                                Text(status.rawValue.capitalized).tag(status)
+                            }
+                        } label: {
+                            Label("Status", systemImage: "circle.circle")
+                        }
+                        .pickerStyle(.menu)
+
+                        Picker(selection: $viewModel.priority) {
+                            ForEach(MemoryPriority.allCases) { priority in
+                                Label(priorityLabel(for: priority), systemImage: priority.iconName)
+                                    .tag(priority)
+                            }
+                        } label: {
+                            Label("Priority", systemImage: "flag.fill")
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    Menu("Preferences") {
+                        Toggle(isOn: $viewModel.autoCompleteChecklist) {
+                            Label("Auto-complete when checklist is done", systemImage: "checkmark.circle")
+                        }
+                        .disabled(!viewModel.canToggleAutoComplete)
+                        .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
+
+                        Toggle(isOn: $viewModel.isPinned) {
+                            Label("Show in Today view", systemImage: "calendar")
+                        }
+
+                        Toggle(isOn: Binding(
+                            get: { !viewModel.triggers.isEmpty },
+                            set: { _ in }
+                        )) {
+                            Label("Enable notifications", systemImage: "bell.badge")
+                        }
+                        .disabled(true)
+                        .foregroundStyle(.secondary)
+
+                        Toggle(isOn: .constant(false)) {
+                            Label("Archive when completed", systemImage: "archivebox")
+                        }
+                        .disabled(true)
+                        .foregroundStyle(.secondary)
+                    }
+
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            GlassEffectContainer(spacing: 20) {
+                HStack {
+                    if isEditingEnabled {
+                        HStack {
+                            addRichTextButton
+                            Spacer()
+                            addChecklistButton
+                            Spacer()
+                            addPhotoLibraryButton
+                            Spacer()
+                            capturePhotoButton
+                            Spacer()
+                            addLinkButton
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .glassEffect()
+                    }
+
+                    Spacer()
+
+                    triggerToolbarButton
+                }
+            }
+            .padding(20)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -535,15 +554,6 @@ struct MemoryEditorView: View {
         .accessibilityLabel("Add checklist")
     }
 
-    private var photoToolbarControls: some View {
-        MemoryEditorPhotoToolbarControls(
-            isHighlighted: shouldShowPhotosCard,
-            isEnabled: !viewModel.isSaving && !isLoadingPhotos,
-            onLibraryTap: handleLibraryToolbarTap,
-            onCameraTap: handleCameraToolbarTap
-        )
-    }
-
     private var addLinkButton: some View {
         Button {
             handleAddContentSelection(.links)
@@ -562,14 +572,39 @@ struct MemoryEditorView: View {
         )
     }
 
-    private var editingToolbarControls: some View {
-        ControlGroup {
-            addRichTextButton
-            addChecklistButton
-            photoToolbarControls
-            addLinkButton
+    private var addPhotoLibraryButton: some View {
+        Button {
+            handleLibraryToolbarTap()
+        } label: {
+            Label("Add from library", systemImage: "photo.stack")
         }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(photoToolbarForegroundColor)
+        .disabled(!isPhotoActionsEnabled)
+        .accessibilityLabel("Add from library")
     }
+
+    private var capturePhotoButton: some View {
+        Button {
+            handleCameraToolbarTap()
+        } label: {
+            Label("Capture photo", systemImage: "camera")
+        }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(photoToolbarForegroundColor)
+        .disabled(!isPhotoActionsEnabled)
+        .accessibilityLabel("Capture photo")
+    }
+
+    private var photoToolbarForegroundColor: Color {
+        guard isPhotoActionsEnabled else { return .secondary }
+        return shouldShowPhotosCard ? Color.accentColor : Color.primary
+    }
+
+    private var isPhotoActionsEnabled: Bool {
+        !viewModel.isSaving && !isLoadingPhotos
+    }
+
 
     private var shouldShowChecklistCard: Bool {
         viewModel.showChecklist || !viewModel.checklistItems.isEmpty
