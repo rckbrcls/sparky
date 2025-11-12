@@ -41,6 +41,7 @@ struct MemoryEditorView: View {
     @State private var isPhotoViewerPresented = false
     @State private var selectedAttachmentIndex = 0
     @State private var navigationPath = NavigationPath()
+    @Namespace private var toolbarGlassNamespace
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -322,9 +323,10 @@ struct MemoryEditorView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            GlassEffectContainer(spacing: 20) {
+            GlassEffectContainer(spacing: 10) {
                 HStack {
                     if isEditingEnabled {
+                        
                         HStack {
                             addRichTextButton
                             Spacer()
@@ -336,13 +338,9 @@ struct MemoryEditorView: View {
                             Spacer()
                             addLinkButton
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .glassEffect()
+                        
                     }
-
                     Spacer()
-
                     triggerToolbarButton
                 }
             }
@@ -538,6 +536,8 @@ struct MemoryEditorView: View {
         } label: {
             Label("Add rich text", systemImage: MemoryEditorContentType.richText.iconName)
         }
+        .buttonStyle(.glass)
+        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
         .labelStyle(.iconOnly)
         .foregroundStyle(shouldShowRichTextCard ? Color.accentColor : .primary)
         .accessibilityLabel("Add rich text")
@@ -549,6 +549,8 @@ struct MemoryEditorView: View {
         } label: {
             Label("Add checklist", systemImage: MemoryEditorContentType.checklist.iconName)
         }
+        .buttonStyle(.glass)
+        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
         .labelStyle(.iconOnly)
         .foregroundStyle(shouldShowChecklistCard ? Color.accentColor : .primary)
         .accessibilityLabel("Add checklist")
@@ -560,6 +562,8 @@ struct MemoryEditorView: View {
         } label: {
             Label("Add link", systemImage: MemoryEditorContentType.links.iconName)
         }
+        .buttonStyle(.glass)
+        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
         .labelStyle(.iconOnly)
         .foregroundStyle(shouldShowLinksCard ? Color.accentColor : .primary)
         .accessibilityLabel("Add link")
@@ -578,6 +582,8 @@ struct MemoryEditorView: View {
         } label: {
             Label("Add from library", systemImage: "photo.stack")
         }
+        .buttonStyle(.glass)
+        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
         .labelStyle(.iconOnly)
         .foregroundStyle(photoToolbarForegroundColor)
         .disabled(!isPhotoActionsEnabled)
@@ -589,7 +595,10 @@ struct MemoryEditorView: View {
             handleCameraToolbarTap()
         } label: {
             Label("Capture photo", systemImage: "camera")
+                .padding(.vertical, 6)
         }
+        .buttonStyle(.glass)
+        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
         .labelStyle(.iconOnly)
         .foregroundStyle(photoToolbarForegroundColor)
         .disabled(!isPhotoActionsEnabled)
