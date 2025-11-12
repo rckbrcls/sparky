@@ -6,6 +6,7 @@ struct MemoryEditorPhotosCard: View {
     var isLoading: Bool
     var isEditable: Bool = true
     var onRemoveAttachment: (UUID) -> Void
+    var onAttachmentTap: (Int, MemoryModel.Attachment) -> Void = { _, _ in }
 
     var body: some View {
         MemoryEditorContentCard {
@@ -41,8 +42,12 @@ struct MemoryEditorPhotosCard: View {
                                 .frame(width: 120, height: 120)
                                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         }
-                        ForEach(attachments) { attachment in
+                        ForEach(Array(attachments.enumerated()), id: \.element.id) { index, attachment in
                             attachmentThumbnail(for: attachment)
+                                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .onTapGesture {
+                                    onAttachmentTap(index, attachment)
+                                }
                         }
                     }
                     .padding(.vertical, 4)

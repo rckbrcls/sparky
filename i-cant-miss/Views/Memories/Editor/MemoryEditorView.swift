@@ -39,6 +39,8 @@ struct MemoryEditorView: View {
     @State private var hasEnabledLinksManually = false
     @State private var hasInitializedContentState = false
     @State private var isEditingEnabled: Bool
+    @State private var isPhotoViewerPresented = false
+    @State private var selectedAttachmentIndex = 0
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -253,6 +255,14 @@ struct MemoryEditorView: View {
             .photosPicker(isPresented: $isPresentingPhotoLibrary,
                           selection: $photoPickerItems,
                           matching: .images)
+            .fullScreenCover(isPresented: $isPhotoViewerPresented) {
+                MemoryEditorPhotoCarouselView(
+                    attachments: viewModel.attachments,
+                    initialIndex: selectedAttachmentIndex
+                ) {
+                    isPhotoViewerPresented = false
+                }
+            }
             .onChange(of: viewModel.body) { _, newValue in
                 guard !hasEnabledRichTextManually else { return }
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -482,6 +492,9 @@ struct MemoryEditorView: View {
             isEditable: isEditingEnabled,
             onRemoveAttachment: { id in
                 viewModel.removeAttachment(id: id)
+            },
+            onAttachmentTap: { index, _ in
+                presentPhotoViewer(at: index)
             }
         )
         .modifier(EditingSwipeActionModifier(
@@ -784,6 +797,12 @@ struct MemoryEditorView: View {
         }
         guard !alreadyExists else { return }
         _ = viewModel.createLinkAttachment(url: url)
+    }
+
+    private func presentPhotoViewer(at index: Int) {
+        guard viewModel.attachments.indices.contains(index) else { return }
+        selectedAttachmentIndex = index
+        isPhotoViewerPresented = true
     }
 
     private func loadSelectedPhotos(from items: [PhotosPickerItem]) async {
