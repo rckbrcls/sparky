@@ -34,8 +34,6 @@ struct MemoryEditorView: View {
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
     @State private var hasEnabledRichTextManually = false
-    @State private var hasEnabledPhotosManually = false
-    @State private var hasEnabledLinksManually = false
     @State private var hasInitializedContentState = false
     @State private var isEditingEnabled: Bool
     @State private var isPhotoViewerPresented = false
@@ -145,21 +143,8 @@ struct MemoryEditorView: View {
                     hasEnabledRichTextManually = true
                 }
             }
-            .onChange(of: viewModel.attachments) { _, newValue in
-                guard !hasEnabledPhotosManually else { return }
-                if !newValue.isEmpty {
-                    hasEnabledPhotosManually = true
-                }
-            }
-            .onChange(of: viewModel.linkAttachments) { _, newValue in
-                guard !hasEnabledLinksManually else { return }
-                if !newValue.isEmpty {
-                    hasEnabledLinksManually = true
-                }
-            }
             .onChange(of: photoPickerItems) { _, newItems in
                 guard !newItems.isEmpty else { return }
-                hasEnabledPhotosManually = true
                 Task {
                     await loadSelectedPhotos(from: newItems)
                 }
@@ -326,7 +311,7 @@ struct MemoryEditorView: View {
             GlassEffectContainer(spacing: 10) {
                 HStack {
                     if isEditingEnabled {
-                        
+
                         HStack {
                             addRichTextButton
                             Spacer()
@@ -338,7 +323,7 @@ struct MemoryEditorView: View {
                             Spacer()
                             addLinkButton
                         }
-                        
+
                     }
                     Spacer()
                     triggerToolbarButton
@@ -629,11 +614,11 @@ struct MemoryEditorView: View {
     }
 
     private var shouldShowPhotosCard: Bool {
-        hasEnabledPhotosManually || !viewModel.attachments.isEmpty
+        !viewModel.attachments.isEmpty
     }
 
     private var shouldShowLinksCard: Bool {
-        hasEnabledLinksManually || !viewModel.linkAttachments.isEmpty
+        !viewModel.linkAttachments.isEmpty
     }
 
     private var checklistSubtitle: String? {
@@ -654,9 +639,8 @@ struct MemoryEditorView: View {
                 checklistDraftRows = [ChecklistDraftRow()]
             }
         case .photos:
-            hasEnabledPhotosManually = true
+            break
         case .links:
-            hasEnabledLinksManually = true
             showAddLinkSheet = true
         }
     }
@@ -673,12 +657,10 @@ struct MemoryEditorView: View {
             focusedDraftID = nil
         case .photos:
             viewModel.attachments.removeAll()
-            hasEnabledPhotosManually = false
             isLoadingPhotos = false
             isPresentingPhotoLibrary = false
         case .links:
             viewModel.linkAttachments.removeAll()
-            hasEnabledLinksManually = false
             showAddLinkSheet = false
         }
     }
@@ -689,12 +671,6 @@ struct MemoryEditorView: View {
         let trimmedBody = viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedBody.isEmpty {
             hasEnabledRichTextManually = true
-        }
-        if !viewModel.attachments.isEmpty {
-            hasEnabledPhotosManually = true
-        }
-        if !viewModel.linkAttachments.isEmpty {
-            hasEnabledLinksManually = true
         }
     }
 
@@ -815,12 +791,10 @@ struct MemoryEditorView: View {
     }
 
     private func handleCameraToolbarTap() {
-        hasEnabledPhotosManually = true
         isPresentingCamera = true
     }
 
     private func handleLibraryToolbarTap() {
-        hasEnabledPhotosManually = true
         isPresentingPhotoLibrary = true
     }
 
@@ -830,7 +804,6 @@ struct MemoryEditorView: View {
     }
 
     private func handleLinkAdded(_ url: URL) {
-        hasEnabledLinksManually = true
         let alreadyExists = viewModel.linkAttachments.contains {
             $0.url?.absoluteString == url.absoluteString
         }
