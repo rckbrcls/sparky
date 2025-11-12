@@ -21,6 +21,7 @@ struct MemoryEditorView: View {
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
+    @State private var isPresentingPhotoLibrary = false
     @State private var photoPickerItems: [PhotosPickerItem] = []
     @State private var isPresentingCamera = false
     @State private var isLoadingPhotos = false
@@ -201,6 +202,9 @@ struct MemoryEditorView: View {
                     }
                 )
             }
+            .photosPicker(isPresented: $isPresentingPhotoLibrary,
+                          selection: $photoPickerItems,
+                          matching: .images)
             .onChange(of: viewModel.body) { _, newValue in
                 guard !hasEnabledRichTextManually else { return }
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -248,21 +252,25 @@ struct MemoryEditorView: View {
             VStack(alignment: .leading, spacing: 20) {
                 if shouldShowChecklistCard {
                     checklistCard
+                        .transition(cardBounceTransition)
                 }
                 if shouldShowRichTextCard {
                     richTextCard
+                        .transition(cardBounceTransition)
                 }
                 if shouldShowPhotosCard {
                     photosCard
+                        .transition(cardBounceTransition)
                 }
                 if shouldShowLinksCard {
                     linksCard
+                        .transition(cardBounceTransition)
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: shouldShowChecklistCard)
-            .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
-            .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
-            .animation(.easeInOut(duration: 0.2), value: shouldShowLinksCard)
+            .animation(cardBounceAnimation, value: shouldShowChecklistCard)
+            .animation(cardBounceAnimation, value: shouldShowRichTextCard)
+            .animation(cardBounceAnimation, value: shouldShowPhotosCard)
+            .animation(cardBounceAnimation, value: shouldShowLinksCard)
         }
 
     }
@@ -379,9 +387,9 @@ struct MemoryEditorView: View {
 
     private var photoToolbarControls: some View {
         MemoryEditorPhotoToolbarControls(
-            selectedItems: $photoPickerItems,
             isHighlighted: shouldShowPhotosCard,
             isEnabled: !viewModel.isSaving && !isLoadingPhotos,
+            onLibraryTap: handleLibraryToolbarTap,
             onCameraTap: handleCameraToolbarTap
         )
     }
@@ -428,11 +436,7 @@ struct MemoryEditorView: View {
                 viewModel.showChecklist = true
             }
             if viewModel.checklistItems.isEmpty && checklistDraftRows.isEmpty {
-                let placeholder = ChecklistDraftRow()
-                checklistDraftRows = [placeholder]
-                focusedDraftID = placeholder.id
-            } else if let firstDraft = checklistDraftRows.first {
-                focusedDraftID = firstDraft.id
+                checklistDraftRows = [ChecklistDraftRow()]
             }
         case .photos:
             hasEnabledPhotosManually = true
@@ -456,6 +460,7 @@ struct MemoryEditorView: View {
             viewModel.attachments.removeAll()
             hasEnabledPhotosManually = false
             isLoadingPhotos = false
+            isPresentingPhotoLibrary = false
         case .links:
             viewModel.linkAttachments.removeAll()
             hasEnabledLinksManually = false
@@ -599,6 +604,11 @@ struct MemoryEditorView: View {
         isPresentingCamera = true
     }
 
+    private func handleLibraryToolbarTap() {
+        hasEnabledPhotosManually = true
+        isPresentingPhotoLibrary = true
+    }
+
     private func handleCapturedImage(_ image: UIImage) {
         guard let data = image.jpegData(compressionQuality: 0.85) else { return }
         _ = viewModel.createAttachment(data: data)
@@ -631,6 +641,7 @@ struct MemoryEditorView: View {
         await MainActor.run {
             isLoadingPhotos = false
             photoPickerItems = []
+            isPresentingPhotoLibrary = false
         }
     }
 
@@ -645,6 +656,18 @@ struct MemoryEditorView: View {
     private var spacesForPicker: [SpaceModel] {
         let spaces = viewModel.availableSpaces
         return spaces.isEmpty ? [SpaceModel.inbox] : spaces
+    }
+
+    private var cardBounceAnimation: Animation {
+        .interpolatingSpring(stiffness: 280, damping: 20, initialVelocity: 0.35)
+    }
+
+    private var cardBounceTransition: AnyTransition {
+        .asymmetric(
+            insertion: .scale(scale: 0.9, anchor: .center)
+                .combined(with: .opacity),
+            removal: .opacity
+        )
     }
 
     @ViewBuilder

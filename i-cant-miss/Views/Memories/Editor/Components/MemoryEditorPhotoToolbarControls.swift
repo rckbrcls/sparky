@@ -1,27 +1,28 @@
-import PhotosUI
 import SwiftUI
 
 struct MemoryEditorPhotoToolbarControls: View {
-    @Binding var selectedItems: [PhotosPickerItem]
+    var onLibraryTap: () -> Void
     var onCameraTap: () -> Void
     var isHighlighted: Bool
     var isEnabled: Bool
 
     init(
-        selectedItems: Binding<[PhotosPickerItem]>,
         isHighlighted: Bool = false,
         isEnabled: Bool = true,
+        onLibraryTap: @escaping () -> Void,
         onCameraTap: @escaping () -> Void
     ) {
-        self._selectedItems = selectedItems
+        self.onLibraryTap = onLibraryTap
+        self.onCameraTap = onCameraTap
         self.isHighlighted = isHighlighted
         self.isEnabled = isEnabled
-        self.onCameraTap = onCameraTap
     }
 
     var body: some View {
         HStack(spacing: 12) {
-            PhotosPicker(selection: $selectedItems, matching: .images) {
+            Button {
+                onLibraryTap()
+            } label: {
                 Label("Add from library", systemImage: "photo.stack")
             }
             .labelStyle(.iconOnly)
