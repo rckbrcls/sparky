@@ -14,22 +14,19 @@ struct SpaceDetailTimelineContentView: View {
     let isMemorySelected: (MemoryModel) -> Bool
     let onSelectMemory: (MemoryModel) -> Void
     let onToggleSelection: (MemoryModel) -> Void
+    let shouldShowEmptyState: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if sections.isEmpty && ungroupedMemories.isEmpty {
-                DisclosureGroup(isExpanded: $isUpcomingExpanded) {
+            if shouldShowEmptyState {
+                VStack(alignment: .leading, spacing: 8) {
                     MemoryEmptyStateCard(
                         systemImage: "tray",
                         title: emptyStateTitle,
                         message: emptyStateMessage
                     )
                     .padding(.top)
-                } label: {
-                    Label("Upcoming", systemImage: "calendar")
-                        .foregroundStyle(.white)
                 }
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isUpcomingExpanded)
                 .padding(.top)
             } else {
                 ForEach(sections) { section in

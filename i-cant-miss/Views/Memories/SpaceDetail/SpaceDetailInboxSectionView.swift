@@ -10,36 +10,32 @@ struct SpaceDetailInboxSectionView: View {
     let onToggleSelection: (MemoryModel) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            DisclosureGroup(isExpanded: $isInboxExpanded) {
-                if inboxMemories.isEmpty {
-                    MemoryEmptyStateCard(
-                        systemImage: "checkmark.seal",
-                        title: "Inbox is clear",
-                        message: "Create a memory or capture a reminder to keep building your inbox."
-                    )
-                    .padding(.top)
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(inboxMemories) { memory in
-                            MemoryListItemButton(
-                                memory: memory,
-                                isMultiSelecting: isMultiSelecting,
-                                isSelected: selectedMemoryIDs.contains(memory.id),
-                                isDisabled: isPerformingBulkAction,
-                                onSelect: onSelectMemory,
-                                onToggleSelection: onToggleSelection
-                            )
+        Group {
+            if inboxMemories.isEmpty {
+                EmptyView()
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    DisclosureGroup(isExpanded: $isInboxExpanded) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(inboxMemories) { memory in
+                                MemoryListItemButton(
+                                    memory: memory,
+                                    isMultiSelecting: isMultiSelecting,
+                                    isSelected: selectedMemoryIDs.contains(memory.id),
+                                    isDisabled: isPerformingBulkAction,
+                                    onSelect: onSelectMemory,
+                                    onToggleSelection: onToggleSelection
+                                )
+                            }
                         }
+                        .padding(.top)
+                    } label: {
+                        Label("Inbox", systemImage: "tray.fill")
+                            .foregroundStyle(.white)
                     }
-                    .padding(.top)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
                 }
-            } label: {
-                Label("Inbox", systemImage: "tray.fill")
-                    .foregroundStyle(.white)
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
         }
-        .padding(.top)
     }
 }

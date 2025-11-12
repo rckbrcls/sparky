@@ -3,13 +3,9 @@ import SwiftUI
 struct MemoryEditorRichTextCard: View {
     @Binding var text: String
     @ObservedObject var controller: RichTextEditorController
-    var onRemove: (() -> Void)?
 
     var body: some View {
-        MemoryEditorContentCard(
-            removeLabel: "Remove rich text",
-            onRemove: onRemove
-        ) {
+        MemoryEditorContentCard {
             ZStack(alignment: .topLeading) {
                 RichTextEditor(
                     text: $text,

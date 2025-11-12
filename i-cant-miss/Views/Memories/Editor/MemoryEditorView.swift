@@ -52,18 +52,13 @@ struct MemoryEditorView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    editorContent
+            editorContent
+                .scrollDismissesKeyboard(.interactively)
+                .onAppear {
+                    viewModel.loadLatestDataIfNeeded()
+                    initializeContentStateIfNeeded()
                 }
-                .padding()
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .onAppear {
-                viewModel.loadLatestDataIfNeeded()
-                initializeContentStateIfNeeded()
-            }
-            .alert("Unable to save", isPresented: Binding(
+                .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { _ in viewModel.errorMessage = nil }
             )) {
@@ -247,32 +242,75 @@ struct MemoryEditorView: View {
     }
 
     private var editorContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            titleSection
-            VStack(alignment: .leading, spacing: 20) {
-                if shouldShowChecklistCard {
-                    checklistCard
-                        .transition(cardBounceTransition)
-                }
-                if shouldShowRichTextCard {
-                    richTextCard
-                        .transition(cardBounceTransition)
-                }
-                if shouldShowPhotosCard {
-                    photosCard
-                        .transition(cardBounceTransition)
-                }
-                if shouldShowLinksCard {
-                    linksCard
-                        .transition(cardBounceTransition)
-                }
+        List {
+            titleSectionRow
+            if shouldShowChecklistCard {
+                checklistCardRow
+                    .transition(cardBounceTransition)
             }
-            .animation(cardBounceAnimation, value: shouldShowChecklistCard)
-            .animation(cardBounceAnimation, value: shouldShowRichTextCard)
-            .animation(cardBounceAnimation, value: shouldShowPhotosCard)
-            .animation(cardBounceAnimation, value: shouldShowLinksCard)
+            if shouldShowRichTextCard {
+                richTextCardRow
+                    .transition(cardBounceTransition)
+            }
+            if shouldShowPhotosCard {
+                photosCardRow
+                    .transition(cardBounceTransition)
+            }
+            if shouldShowLinksCard {
+                linksCardRow
+                    .transition(cardBounceTransition)
+            }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+        .listSectionSpacing(0)
+        .listRowSeparator(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+        .animation(cardBounceAnimation, value: shouldShowChecklistCard)
+        .animation(cardBounceAnimation, value: shouldShowRichTextCard)
+        .animation(cardBounceAnimation, value: shouldShowPhotosCard)
+        .animation(cardBounceAnimation, value: shouldShowLinksCard)
+    }
 
+    private var titleSectionRow: some View {
+        titleSection
+            .padding(.horizontal, 20)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: 20, leading: 0, bottom: 12, trailing: 0))
+            .listRowBackground(Color.clear)
+    }
+
+    private var checklistCardRow: some View {
+        checklistCard
+            .padding(.horizontal, 20)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
+            .listRowBackground(Color.clear)
+    }
+
+    private var richTextCardRow: some View {
+        richTextCard
+            .padding(.horizontal, 20)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
+            .listRowBackground(Color.clear)
+    }
+
+    private var photosCardRow: some View {
+        photosCard
+            .padding(.horizontal, 20)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
+            .listRowBackground(Color.clear)
+    }
+
+    private var linksCardRow: some View {
+        linksCard
+            .padding(.horizontal, 20)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: 0, leading: 0, bottom: 24, trailing: 0))
+            .listRowBackground(Color.clear)
     }
 
     private var titleSection: some View {
@@ -308,7 +346,7 @@ struct MemoryEditorView: View {
     }
 
     private var checklistCard: some View {
-        MemoryEditorChecklistCard(onRemove: { disableContent(.checklist) }) {
+        MemoryEditorChecklistCard {
             VStack(alignment: .leading, spacing: 12) {
                 if let subtitle = checklistSubtitle {
                     Text(subtitle)
@@ -332,14 +370,29 @@ struct MemoryEditorView: View {
                 }
             }
         }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                disableContent(.checklist)
+            } label: {
+                Label("Delete Checklist", systemImage: "trash")
+            }
+            .accessibilityLabel("Delete checklist content")
+        }
     }
 
     private var richTextCard: some View {
         MemoryEditorRichTextCard(
             text: $viewModel.body,
-            controller: bodyEditorController,
-            onRemove: { disableContent(.richText) }
+            controller: bodyEditorController
         )
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                disableContent(.richText)
+            } label: {
+                Label("Delete Text", systemImage: "trash")
+            }
+            .accessibilityLabel("Delete rich text content")
+        }
     }
 
     private var photosCard: some View {
@@ -348,9 +401,16 @@ struct MemoryEditorView: View {
             isLoading: isLoadingPhotos,
             onRemoveAttachment: { id in
                 viewModel.removeAttachment(id: id)
-            },
-            onRemove: { disableContent(.photos) }
+            }
         )
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                disableContent(.photos)
+            } label: {
+                Label("Delete Photos", systemImage: "trash")
+            }
+            .accessibilityLabel("Delete photos content")
+        }
     }
 
     private var linksCard: some View {
@@ -358,9 +418,16 @@ struct MemoryEditorView: View {
             links: $viewModel.linkAttachments,
             onRemoveLink: { id in
                 viewModel.removeLinkAttachment(id: id)
-            },
-            onRemove: { disableContent(.links) }
+            }
         )
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                disableContent(.links)
+            } label: {
+                Label("Delete Links", systemImage: "trash")
+            }
+            .accessibilityLabel("Delete links content")
+        }
     }
 
     private var addRichTextButton: some View {

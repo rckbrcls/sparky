@@ -107,6 +107,12 @@ struct SpaceDetailView: View {
         return nonInboxMemories.filter { !sectionIDs.contains($0.id) }
     }
 
+    private var shouldShowEmptyStateCard: Bool {
+        timelineSectionsForSpace.isEmpty &&
+        ungroupedMemories.isEmpty &&
+        (!showInbox || inboxMemories.isEmpty)
+    }
+
     private var filterDescription: String {
         var parts: [String] = []
 
@@ -289,7 +295,8 @@ struct SpaceDetailView: View {
             sectionExpansionProvider: sectionExpansionBinding(for:),
             isMemorySelected: isMemorySelected(_:),
             onSelectMemory: onSelectMemory,
-            onToggleSelection: toggleMemorySelection(_:)
+            onToggleSelection: toggleMemorySelection(_:),
+            shouldShowEmptyState: shouldShowEmptyStateCard
         )
 
         if showInbox {

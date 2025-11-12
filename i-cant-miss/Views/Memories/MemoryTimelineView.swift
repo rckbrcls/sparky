@@ -235,22 +235,17 @@ struct MemoryTimelineView: View {
 
     private var timelineSections: some View {
         let sections = timelineSectionData
+        let hasInboxContent = showInbox && !filteredInboxMemories.isEmpty
 
         return Group {
-            if sections.isEmpty {
+            if sections.isEmpty && !hasInboxContent {
                 VStack(alignment: .leading, spacing: 8) {
-                    DisclosureGroup(isExpanded: $isUpcomingExpanded) {
-                        MemoryEmptyStateCard(
-                            systemImage: "tray",
-                            title: "No memories with active triggers",
-                            message: "Create or activate reminders to see them organized on your timeline."
-                        )
-                        .padding(.top)
-                    } label: {
-                        Label("Upcoming", systemImage: "calendar")
-                            .foregroundStyle(.white)
-                    }
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isUpcomingExpanded)
+                    MemoryEmptyStateCard(
+                        systemImage: "tray",
+                        title: "No memories with active triggers",
+                        message: "Create or activate reminders to see them organized on your timeline."
+                    )
+                    .padding(.top)
                 }
                 .padding(.top)
             } else {
@@ -271,36 +266,47 @@ struct MemoryTimelineView: View {
     }
 
     private var inboxSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            DisclosureGroup(isExpanded: $isInboxExpanded) {
-                if filteredInboxMemories.isEmpty {
-                    MemoryEmptyStateCard(
-                        systemImage: "checkmark.seal",
-                        title: "Inbox is clear",
-                        message: "Create a memory or capture a reminder to keep building your inbox."
-                    )
-                    .padding(.top)
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(filteredInboxMemories) { memory in
-                            MemoryListItemButton(
-                                memory: memory,
-                                isMultiSelecting: isMultiSelecting,
-                                isSelected: isMemorySelected(memory),
-                                isDisabled: isPerformingBulkAction,
-                                onSelect: onSelectMemory,
-                                onToggleSelection: toggleMemorySelection(_:))
-                        }
+        let inboxMemories = filteredInboxMemories
+        let hasTimelineContent = !timelineSectionData.isEmpty
+        let shouldShowEmptyState = inboxMemories.isEmpty && !hasTimelineContent
+
+        return Group {
+            if inboxMemories.isEmpty {
+                if shouldShowEmptyState {
+                    VStack(alignment: .leading, spacing: 8) {
+                        MemoryEmptyStateCard(
+                            systemImage: "checkmark.seal",
+                            title: "Inbox is clear",
+                            message: "Create a memory or capture a reminder to keep building your inbox."
+                        )
+                        .padding(.top)
                     }
                     .padding(.top)
                 }
-            } label: {
-                Label("Inbox", systemImage: "tray.fill")
-                    .foregroundStyle(.white)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    DisclosureGroup(isExpanded: $isInboxExpanded) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(inboxMemories) { memory in
+                                MemoryListItemButton(
+                                    memory: memory,
+                                    isMultiSelecting: isMultiSelecting,
+                                    isSelected: isMemorySelected(memory),
+                                    isDisabled: isPerformingBulkAction,
+                                    onSelect: onSelectMemory,
+                                    onToggleSelection: toggleMemorySelection(_:))
+                            }
+                        }
+                        .padding(.top)
+                    } label: {
+                        Label("Inbox", systemImage: "tray.fill")
+                            .foregroundStyle(.white)
+                    }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
+                }
+                .padding(.top)
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
         }
-        .padding(.top)
     }
 
     private func isMemoryTypeSelected(_ memory: MemoryModel) -> Bool {

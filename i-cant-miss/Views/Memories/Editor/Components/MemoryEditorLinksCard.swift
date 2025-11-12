@@ -3,13 +3,9 @@ import SwiftUI
 struct MemoryEditorLinksCard: View {
     @Binding var links: [MemoryModel.Attachment]
     var onRemoveLink: (UUID) -> Void
-    var onRemove: (() -> Void)?
 
     var body: some View {
-        MemoryEditorContentCard(
-            removeLabel: "Remove links",
-            onRemove: onRemove
-        ) {
+        MemoryEditorContentCard {
             VStack(alignment: .leading, spacing: 16) {
                 if links.isEmpty {
                     placeholder

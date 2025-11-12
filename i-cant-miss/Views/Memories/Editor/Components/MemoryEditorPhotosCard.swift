@@ -5,13 +5,9 @@ struct MemoryEditorPhotosCard: View {
     @Binding var attachments: [MemoryModel.Attachment]
     var isLoading: Bool
     var onRemoveAttachment: (UUID) -> Void
-    var onRemove: (() -> Void)?
 
     var body: some View {
-        MemoryEditorContentCard(
-            removeLabel: "Remove photos",
-            onRemove: onRemove
-        ) {
+        MemoryEditorContentCard {
             VStack(alignment: .leading, spacing: 16) {
                 attachmentsGallery
             }
