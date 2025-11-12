@@ -38,8 +38,8 @@ struct MemoryTriggerAddBadge: View {
             isPresented = true
         } label: {
             Image(systemName: "bolt.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
                 .tint(.white)
                 .glassEffect(.regular.tint(.accent).interactive())
         }

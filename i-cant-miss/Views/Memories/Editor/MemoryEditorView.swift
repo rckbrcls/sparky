@@ -344,7 +344,7 @@ struct MemoryEditorView: View {
                     triggerToolbarButton
                 }
             }
-            .padding(20)
+            .padding(24)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -535,8 +535,8 @@ struct MemoryEditorView: View {
             handleAddContentSelection(.richText)
         } label: {
             Image(systemName: MemoryEditorContentType.richText.iconName)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
                 .foregroundStyle(shouldShowRichTextCard ? Color.accentColor : .primary)
@@ -549,8 +549,8 @@ struct MemoryEditorView: View {
             handleAddContentSelection(.checklist)
         } label: {
             Image(systemName:  MemoryEditorContentType.checklist.iconName)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
                 .foregroundStyle(shouldShowChecklistCard ? Color.accentColor : .primary)
@@ -563,8 +563,8 @@ struct MemoryEditorView: View {
             handleAddContentSelection(.links)
         } label: {
             Image(systemName:  MemoryEditorContentType.links.iconName)
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
                 .foregroundStyle(shouldShowLinksCard ? Color.accentColor : .primary)
@@ -584,8 +584,8 @@ struct MemoryEditorView: View {
             handleLibraryToolbarTap()
         } label: {
             Image(systemName:  "photo.stack")
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
                 .foregroundStyle(photoToolbarForegroundColor)
@@ -599,8 +599,8 @@ struct MemoryEditorView: View {
             handleCameraToolbarTap()
         } label: {
             Image(systemName:  "camera")
-                .font(.system(size: 16, weight: .semibold))
-                .frame(width: 44, height: 44)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
                 .foregroundStyle(photoToolbarForegroundColor)
