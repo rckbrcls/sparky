@@ -534,12 +534,13 @@ struct MemoryEditorView: View {
         Button {
             handleAddContentSelection(.richText)
         } label: {
-            Label("Add rich text", systemImage: MemoryEditorContentType.richText.iconName)
+            Image(systemName: MemoryEditorContentType.richText.iconName)
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(shouldShowRichTextCard ? Color.accentColor : .primary)
         }
-        .buttonStyle(.glass)
-        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-        .labelStyle(.iconOnly)
-        .foregroundStyle(shouldShowRichTextCard ? Color.accentColor : .primary)
         .accessibilityLabel("Add rich text")
     }
 
@@ -547,12 +548,13 @@ struct MemoryEditorView: View {
         Button {
             handleAddContentSelection(.checklist)
         } label: {
-            Label("Add checklist", systemImage: MemoryEditorContentType.checklist.iconName)
+            Image(systemName:  MemoryEditorContentType.checklist.iconName)
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(shouldShowChecklistCard ? Color.accentColor : .primary)
         }
-        .buttonStyle(.glass)
-        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-        .labelStyle(.iconOnly)
-        .foregroundStyle(shouldShowChecklistCard ? Color.accentColor : .primary)
         .accessibilityLabel("Add checklist")
     }
 
@@ -560,12 +562,13 @@ struct MemoryEditorView: View {
         Button {
             handleAddContentSelection(.links)
         } label: {
-            Label("Add link", systemImage: MemoryEditorContentType.links.iconName)
+            Image(systemName:  MemoryEditorContentType.links.iconName)
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(shouldShowLinksCard ? Color.accentColor : .primary)
         }
-        .buttonStyle(.glass)
-        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-        .labelStyle(.iconOnly)
-        .foregroundStyle(shouldShowLinksCard ? Color.accentColor : .primary)
         .accessibilityLabel("Add link")
     }
 
@@ -580,12 +583,13 @@ struct MemoryEditorView: View {
         Button {
             handleLibraryToolbarTap()
         } label: {
-            Label("Add from library", systemImage: "photo.stack")
+            Image(systemName:  "photo.stack")
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(photoToolbarForegroundColor)
         }
-        .buttonStyle(.glass)
-        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-        .labelStyle(.iconOnly)
-        .foregroundStyle(photoToolbarForegroundColor)
         .disabled(!isPhotoActionsEnabled)
         .accessibilityLabel("Add from library")
     }
@@ -594,13 +598,13 @@ struct MemoryEditorView: View {
         Button {
             handleCameraToolbarTap()
         } label: {
-            Label("Capture photo", systemImage: "camera")
-                .padding(.vertical, 6)
+            Image(systemName:  "camera")
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(photoToolbarForegroundColor)
         }
-        .buttonStyle(.glass)
-        .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-        .labelStyle(.iconOnly)
-        .foregroundStyle(photoToolbarForegroundColor)
         .disabled(!isPhotoActionsEnabled)
         .accessibilityLabel("Capture photo")
     }
