@@ -91,58 +91,61 @@ struct MemoryCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            let hasMetaIndicators = memory.priority != nil || memory.isPinned || statusBadge != nil
+            let hasSpaceBadge = memory.space != nil
 
-                HStack(spacing: 8) {
+            if hasSpaceBadge || hasMetaIndicators {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     if let space = memory.space {
-                        if let icon = space.iconName {
-                            Image(systemName: icon)
-                                .font(.caption)
+                        HStack(spacing: 8) {
+                            if let icon = space.iconName {
+                                Image(systemName: icon)
+                                    .font(.caption)
+                                    .foregroundStyle(spaceAccent)
+                            }
+                            Text(space.name)
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(spaceAccent)
                         }
-                        Text(space.name)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(spaceAccent)
-                    } else {
-                        Image(systemName: "slash.circle")
-                            .font(.caption)
-                            .foregroundStyle(spaceAccent)
-                        Text("No Space")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(spaceAccent)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .glassEffect(in: .rect(cornerRadius: 8.0))
+                        .glassEffect(.regular.tint(spaceAccent.opacity(0.15)))
                     }
-                }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .glassEffect(in: .rect(cornerRadius: 8.0))
-                .glassEffect(.regular.tint(spaceAccent.opacity(0.15)))
 
-                Spacer()
-
-                if let priority = memory.priority {
-                    Image(systemName: priority.iconName)
-                        .font(.subheadline)
-                        .foregroundStyle(priorityColor(for: priority))
-                }
-
-                if memory.isPinned {
-                    Image(systemName: "pin.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(45))
-                        .accessibilityLabel("Pinned")
-                }
-
-                if let statusBadge {
-                    Label {
-                        Text(statusBadge.text)
-                    } icon: {
-                        Image(systemName: statusBadge.systemImage)
+                    if hasSpaceBadge && hasMetaIndicators {
+                        Spacer()
                     }
-                    .font(.caption)
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(statusBadge.color)
-                    .padding(.leading, 4)
+
+                    if hasMetaIndicators {
+                        HStack(spacing: 12) {
+                            if let priority = memory.priority {
+                                Image(systemName: priority.iconName)
+                                    .font(.subheadline)
+                                    .foregroundStyle(priorityColor(for: priority))
+                            }
+
+                            if memory.isPinned {
+                                Image(systemName: "pin.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .rotationEffect(.degrees(45))
+                                    .accessibilityLabel("Pinned")
+                            }
+
+                            if let statusBadge {
+                                Label {
+                                    Text(statusBadge.text)
+                                } icon: {
+                                    Image(systemName: statusBadge.systemImage)
+                                }
+                                .font(.caption)
+                                .labelStyle(.iconOnly)
+                                .foregroundStyle(statusBadge.color)
+                                .padding(.leading, 4)
+                            }
+                        }
+                    }
                 }
             }
 
