@@ -319,8 +319,7 @@ struct SpaceDetailView: View {
             SpaceDetailSubspacesSection(
                 childSpaces: childSpaces,
                 spaceService: spaceService,
-                memoryCountProvider: memoryCount(for:),
-                parentLookup: { id in spaceService.space(id: id) }
+                memoryCountProvider: memoryCount(for:)
             )
         }
     }

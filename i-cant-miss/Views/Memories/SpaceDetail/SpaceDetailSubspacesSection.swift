@@ -4,7 +4,6 @@ struct SpaceDetailSubspacesSection: View {
     let childSpaces: [SpaceModel]
     let spaceService: SpaceService
     let memoryCountProvider: (SpaceModel) -> Int
-    let parentLookup: (UUID) -> SpaceModel?
 
     var body: some View {
         if childSpaces.isEmpty {
@@ -16,8 +15,7 @@ struct SpaceDetailSubspacesSection: View {
                         SpaceRowView(
                             space: child,
                             count: memoryCountProvider(child),
-                            spaceService: spaceService,
-                            parentLookup: parentLookup
+                            spaceService: spaceService
                         )
                     }
                     .listRowInsets(.init(top: 12, leading: 20, bottom: 12, trailing: 20))

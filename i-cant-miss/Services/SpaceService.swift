@@ -98,10 +98,22 @@ final class SpaceService: ObservableObject {
                     return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
                 }
 
-            spaces = orderedSpaces
+            var childRelationships: [UUID: [UUID]] = [:]
+            for space in orderedSpaces {
+                guard let parentID = space.parentID else { continue }
+                childRelationships[parentID, default: []].append(space.id)
+            }
+
+            let resolvedSpaces = orderedSpaces.map { space -> SpaceModel in
+                var mutableSpace = space
+                mutableSpace.childIDs = childRelationships[space.id] ?? []
+                return mutableSpace
+            }
+
+            spaces = resolvedSpaces
             lastRefreshed = Date()
             rebuildIndex()
-            return orderedSpaces
+            return resolvedSpaces
         } catch {
             logger.error("Failed to refresh spaces: \(error.localizedDescription)")
             return spaces
