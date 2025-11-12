@@ -29,7 +29,7 @@ struct SpaceDetailSearchResultsView: View {
                     onSelect: onSelectMemory,
                     onToggleSelection: onToggleSelection
                 )
-                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }

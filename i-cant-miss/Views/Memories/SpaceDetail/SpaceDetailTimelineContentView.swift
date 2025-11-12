@@ -67,7 +67,7 @@ struct SpaceDetailTimelineContentView: View {
                 .padding(.vertical, 12)
             }
             .buttonStyle(.plain)
-            .listRowInsets(.init(top: 24, leading: 20, bottom: isOtherExpanded && !ungroupedMemories.isEmpty ? 0 : 12, trailing: 20))
+            .listRowInsets(.init(top: 24, leading: 20, bottom: isOtherExpanded && !ungroupedMemories.isEmpty ? 0 : 8, trailing: 20))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 
@@ -81,7 +81,7 @@ struct SpaceDetailTimelineContentView: View {
                         onSelect: onSelectMemory,
                         onToggleSelection: onToggleSelection
                     )
-                    .listRowInsets(.init(top: 12, leading: 20, bottom: 12, trailing: 20))
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
