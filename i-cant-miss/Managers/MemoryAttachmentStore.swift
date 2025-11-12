@@ -10,6 +10,12 @@ import Foundation
 actor MemoryAttachmentStore {
     private let fileManager: FileManager
     private let rootDirectory: URL
+    private let jsonEncoder = JSONEncoder()
+    private let jsonDecoder = JSONDecoder()
+
+    private struct LinkAttachmentPayload: Codable {
+        let url: URL
+    }
 
     init(fileManager: FileManager = .default) {
         self.fileManager = fileManager
@@ -37,21 +43,43 @@ actor MemoryAttachmentStore {
 
         struct AttachmentResource: Sendable {
             let id: UUID
+            let kind: MemoryModel.AttachmentKind
             let data: Data
+            let url: URL?
             let createdAt: Date
         }
 
         let resources: [AttachmentResource] = contents.compactMap { url in
-            guard url.pathExtension.lowercased() == "jpg" || url.pathExtension.lowercased() == "jpeg" else {
-                return nil
-            }
-
-            guard let data = try? Data(contentsOf: url) else { return nil }
+            let fileExtension = url.pathExtension.lowercased()
             let metadata = try? url.resourceValues(forKeys: resourceKeys)
             let createdAt = metadata?.creationDate ?? Date()
             let identifier = UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID()
 
-            return AttachmentResource(id: identifier, data: data, createdAt: createdAt)
+            switch fileExtension {
+            case "jpg", "jpeg":
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                return AttachmentResource(
+                    id: identifier,
+                    kind: .photo,
+                    data: data,
+                    url: nil,
+                    createdAt: createdAt
+                )
+            case "json":
+                guard let data = try? Data(contentsOf: url),
+                      let payload = try? jsonDecoder.decode(LinkAttachmentPayload.self, from: data) else {
+                    return nil
+                }
+                return AttachmentResource(
+                    id: identifier,
+                    kind: .link,
+                    data: Data(),
+                    url: payload.url,
+                    createdAt: createdAt
+                )
+            default:
+                return nil
+            }
         }
 
         guard !resources.isEmpty else { return [] }
@@ -67,9 +95,10 @@ actor MemoryAttachmentStore {
             sortedResources.map { resource in
                 MemoryModel.Attachment(
                     id: resource.id,
-                    kind: .photo,
+                    kind: resource.kind,
                     data: resource.data,
-                    createdAt: resource.createdAt
+                    createdAt: resource.createdAt,
+                    url: resource.url
                 )
             }
         }
@@ -88,9 +117,20 @@ actor MemoryAttachmentStore {
         try Self.ensureDirectoryExists(fileManager: fileManager, at: directory)
 
         for attachment in attachments {
-            let filename = "\(attachment.id.uuidString).jpg"
-            let url = directory.appendingPathComponent(filename, isDirectory: false)
-            try attachment.data.write(to: url, options: .atomic)
+            if attachment.kind == .photo {
+                let filename = "\(attachment.id.uuidString).jpg"
+                let url = directory.appendingPathComponent(filename, isDirectory: false)
+                try attachment.data.write(to: url, options: .atomic)
+            } else if attachment.kind == .link {
+                guard let linkURL = attachment.url else { continue }
+                let filename = "\(attachment.id.uuidString).json"
+                let url = directory.appendingPathComponent(filename, isDirectory: false)
+                let payload = LinkAttachmentPayload(url: linkURL)
+                let data = try jsonEncoder.encode(payload)
+                try data.write(to: url, options: .atomic)
+            } else {
+                continue
+            }
         }
     }
 

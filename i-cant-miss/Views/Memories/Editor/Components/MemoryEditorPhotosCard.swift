@@ -1,16 +1,11 @@
-import PhotosUI
 import SwiftUI
 import UIKit
 
 struct MemoryEditorPhotosCard: View {
     @Binding var attachments: [MemoryModel.Attachment]
-    var onAddAttachment: (Data) -> Void
+    var isLoading: Bool
     var onRemoveAttachment: (UUID) -> Void
     var onRemove: (() -> Void)?
-
-    @State private var selectedItems: [PhotosPickerItem] = []
-    @State private var isPresentingCamera = false
-    @State private var isLoadingSelection = false
 
     var body: some View {
         MemoryEditorContentCard(
@@ -19,31 +14,13 @@ struct MemoryEditorPhotosCard: View {
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 attachmentsGallery
-                actionButtons
-            }
-        }
-        .sheet(isPresented: $isPresentingCamera) {
-            CameraCaptureView(
-                onCapture: { image in
-                    handleCapturedImage(image)
-                    isPresentingCamera = false
-                },
-                onCancel: {
-                    isPresentingCamera = false
-                }
-            )
-        }
-        .onChange(of: selectedItems) { _, newItems in
-            guard !newItems.isEmpty else { return }
-            Task {
-                await loadSelectedPhotos(from: newItems)
             }
         }
     }
 
     private var attachmentsGallery: some View {
         Group {
-            if attachments.isEmpty && !isLoadingSelection {
+            if attachments.isEmpty && !isLoading {
                 VStack(alignment: .center, spacing: 8) {
                     Image(systemName: "photo.on.rectangle")
                         .font(.system(size: 28, weight: .medium))
@@ -61,7 +38,7 @@ struct MemoryEditorPhotosCard: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 12) {
-                        if isLoadingSelection {
+                        if isLoading {
                             ProgressView()
                                 .progressViewStyle(.circular)
                                 .frame(width: 120, height: 120)
@@ -74,32 +51,6 @@ struct MemoryEditorPhotosCard: View {
                     .padding(.vertical, 4)
                 }
             }
-        }
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: 12) {
-            PhotosPicker(selection: $selectedItems, matching: .images) {
-                Label("Import from library", systemImage: "photo.stack")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Capsule().strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                isPresentingCamera = true
-            } label: {
-                Label("Capture photo", systemImage: "camera")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Capsule().strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
         }
     }
 
@@ -142,29 +93,4 @@ struct MemoryEditorPhotosCard: View {
         }
     }
 
-    private func handleCapturedImage(_ image: UIImage) {
-        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
-        onAddAttachment(data)
-    }
-
-    private func loadSelectedPhotos(from items: [PhotosPickerItem]) async {
-        await MainActor.run {
-            isLoadingSelection = true
-        }
-        for item in items {
-            do {
-                if let data = try await item.loadTransferable(type: Data.self) {
-                    await MainActor.run {
-                        onAddAttachment(data)
-                    }
-                }
-            } catch {
-                continue
-            }
-        }
-        await MainActor.run {
-            isLoadingSelection = false
-            selectedItems = []
-        }
-    }
 }

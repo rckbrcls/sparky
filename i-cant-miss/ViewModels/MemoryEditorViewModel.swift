@@ -31,6 +31,7 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
     @Published var attachments: [MemoryModel.Attachment] = []
+    @Published var linkAttachments: [MemoryModel.Attachment] = []
 
     let environment: AppEnvironment
     private let attachmentStore: MemoryAttachmentStore
@@ -63,7 +64,16 @@ final class MemoryEditorViewModel: ObservableObject {
 
     var selectedSpace: SpaceModel? {
         guard let id = selectedSpaceID else { return nil }
-        return environment.spaceService.space(id: id)
+        if let space = environment.spaceService.space(id: id) {
+            return space
+        }
+        if id == SpaceModel.allSpacesIdentifier {
+            return SpaceModel.allSpaces
+        }
+        if id == SpaceModel.inboxIdentifier {
+            return SpaceModel.inbox
+        }
+        return nil
     }
 
     var canToggleAutoComplete: Bool {
@@ -150,17 +160,37 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     @MainActor
+    func createLinkAttachment(url: URL) -> MemoryModel.Attachment {
+        let attachment = MemoryModel.Attachment(
+            id: UUID(),
+            kind: .link,
+            data: Data(),
+            createdAt: Date(),
+            url: url
+        )
+        linkAttachments.append(attachment)
+        return attachment
+    }
+
+    @MainActor
     func removeAttachment(id: UUID) {
         attachments.removeAll { $0.id == id }
+    }
+
+    @MainActor
+    func removeLinkAttachment(id: UUID) {
+        linkAttachments.removeAll { $0.id == id }
     }
 
     @MainActor
     func syncAttachments(withReferencedIDs ids: Set<UUID>) {
         guard !ids.isEmpty else {
             attachments.removeAll()
+            linkAttachments.removeAll()
             return
         }
         attachments.removeAll { !ids.contains($0.id) }
+        linkAttachments.removeAll { !ids.contains($0.id) }
     }
 
     func updateSchedule(
@@ -279,7 +309,8 @@ final class MemoryEditorViewModel: ObservableObject {
                                                      sanitizedChecklist: sanitizedChecklist)
             }
 
-            try await attachmentStore.replaceAttachments(for: memoryID, with: attachments)
+            let allAttachments = attachments + linkAttachments
+            try await attachmentStore.replaceAttachments(for: memoryID, with: allAttachments)
             await environment.memoryService.refresh(force: true)
             return true
         } catch {
@@ -299,6 +330,7 @@ private extension MemoryEditorViewModel {
             selectedSpaceID = defaultSpace?.id ?? environment.spaceService.defaultSpace().id
             applyTemplate(template)
             attachments = []
+            linkAttachments = []
             hasMigratedLegacyAttachments = true
         }
     }
@@ -329,7 +361,10 @@ private extension MemoryEditorViewModel {
             }
         showChecklist = !checklistItems.isEmpty
         autoCompleteChecklist = memory.metadata.autoCompleteOnChecklistCompletion
-        attachments = memory.attachments
+        let photoAttachments = memory.attachments.filter { $0.kind == .photo }
+        let linkAttachments = memory.attachments.filter { $0.kind == .link }
+        attachments = photoAttachments
+        self.linkAttachments = linkAttachments
         migrateLegacyAttachmentsIfNeeded()
     }
 
@@ -438,6 +473,7 @@ private extension MemoryEditorViewModel {
         defer { hasMigratedLegacyAttachments = true }
 
         attachments.removeAll()
+        linkAttachments.removeAll()
     }
 
     func updateExistingMemory(_ memory: MemoryModel,
@@ -579,11 +615,23 @@ private extension MemoryEditorViewModel {
     }
 
     func folderForAudience(_ audience: FolderAudience) -> FolderModel? {
-        if let space = selectedSpace,
-           let folder = space.legacyFolder,
-           folder.audience == audience {
+        guard let selectedSpaceID else {
+            return environment.folderService.defaultFolder(for: audience)
+        }
+
+        if selectedSpaceID == SpaceModel.allSpacesIdentifier || selectedSpaceID == SpaceModel.inboxIdentifier {
+            return environment.folderService.defaultFolder(for: audience)
+        }
+
+        if let space = environment.spaceService.space(id: selectedSpaceID) ?? selectedSpace,
+           let folder = space.legacyFolder {
             return folder
         }
+
+        if let folder = environment.folderService.folders.first(where: { $0.id == selectedSpaceID }) {
+            return folder
+        }
+
         return environment.folderService.defaultFolder(for: audience)
     }
 

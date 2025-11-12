@@ -45,6 +45,7 @@ struct MemoryModel: Identifiable, Hashable {
         }
 
         static let photo = AttachmentKind(rawValue: "photo")
+        static let link = AttachmentKind(rawValue: "link")
     }
 
     struct Attachment: Identifiable, Hashable {
@@ -52,15 +53,18 @@ struct MemoryModel: Identifiable, Hashable {
         var kind: AttachmentKind
         var data: Data
         var createdAt: Date
+        var url: URL?
 
         init(id: UUID = UUID(),
              kind: AttachmentKind,
              data: Data,
-             createdAt: Date) {
+             createdAt: Date,
+             url: URL? = nil) {
             self.id = id
             self.kind = kind
             self.data = data
             self.createdAt = createdAt
+            self.url = url
         }
 
         static func == (lhs: Attachment, rhs: Attachment) -> Bool {

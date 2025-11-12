@@ -4,6 +4,7 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
     case richText
     case checklist
     case photos
+    case links
 
     var id: Self { self }
 
@@ -15,6 +16,8 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
             return "checklist"
         case .photos:
             return "photo.on.rectangle.angled"
+        case .links:
+            return "link"
         }
     }
 
@@ -26,6 +29,8 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
             return "Checklist"
         case .photos:
             return "Photos"
+        case .links:
+            return "Links"
         }
     }
 
@@ -37,6 +42,8 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
             return "Track actionable items"
         case .photos:
             return "Attach reference images"
+        case .links:
+            return "Reference relevant webpages"
         }
     }
 }

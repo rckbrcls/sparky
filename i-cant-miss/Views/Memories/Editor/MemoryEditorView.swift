@@ -5,6 +5,7 @@
 //  Created by Codex on 09/03/24.
 //
 
+import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -15,15 +16,20 @@ struct MemoryEditorView: View {
     @State private var showExactTimeSheet = false
     @State private var showWeekdaySheet = false
     @State private var showTriggerPickerSheet = false
+    @State private var showAddLinkSheet = false
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
     @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
+    @State private var photoPickerItems: [PhotosPickerItem] = []
+    @State private var isPresentingCamera = false
+    @State private var isLoadingPhotos = false
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
     @StateObject private var bodyEditorController = RichTextEditorController()
     @State private var hasEnabledRichTextManually = false
     @State private var hasEnabledPhotosManually = false
+    @State private var hasEnabledLinksManually = false
     @State private var hasInitializedContentState = false
 
     private let isEditing: Bool
@@ -161,7 +167,8 @@ struct MemoryEditorView: View {
                     ControlGroup {
                         addRichTextButton
                         addChecklistButton
-                        addPhotosButton
+                        photoToolbarControls
+                        addLinkButton
                     }
 
                     Spacer()
@@ -179,9 +186,21 @@ struct MemoryEditorView: View {
                 MemoryTriggerPickerSheet(viewModel: viewModel)
                 .presentationDetents([.large])
             }
+            .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
+            .sheet(isPresented: $isPresentingCamera) {
+                CameraCaptureView(
+                    onCapture: { image in
+                        handleCapturedImage(image)
+                        isPresentingCamera = false
+                    },
+                    onCancel: {
+                        isPresentingCamera = false
+                    }
+                )
+            }
             .onChange(of: viewModel.body) { _, newValue in
                 guard !hasEnabledRichTextManually else { return }
                 let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -193,6 +212,19 @@ struct MemoryEditorView: View {
                 guard !hasEnabledPhotosManually else { return }
                 if !newValue.isEmpty {
                     hasEnabledPhotosManually = true
+                }
+            }
+            .onChange(of: viewModel.linkAttachments) { _, newValue in
+                guard !hasEnabledLinksManually else { return }
+                if !newValue.isEmpty {
+                    hasEnabledLinksManually = true
+                }
+            }
+            .onChange(of: photoPickerItems) { _, newItems in
+                guard !newItems.isEmpty else { return }
+                hasEnabledPhotosManually = true
+                Task {
+                    await loadSelectedPhotos(from: newItems)
                 }
             }
         }
@@ -223,10 +255,14 @@ struct MemoryEditorView: View {
                 if shouldShowPhotosCard {
                     photosCard
                 }
+                if shouldShowLinksCard {
+                    linksCard
+                }
             }
             .animation(.easeInOut(duration: 0.2), value: shouldShowChecklistCard)
             .animation(.easeInOut(duration: 0.2), value: shouldShowRichTextCard)
             .animation(.easeInOut(duration: 0.2), value: shouldShowPhotosCard)
+            .animation(.easeInOut(duration: 0.2), value: shouldShowLinksCard)
         }
 
     }
@@ -301,13 +337,21 @@ struct MemoryEditorView: View {
     private var photosCard: some View {
         MemoryEditorPhotosCard(
             attachments: $viewModel.attachments,
-            onAddAttachment: { data in
-                _ = viewModel.createAttachment(data: data)
-            },
+            isLoading: isLoadingPhotos,
             onRemoveAttachment: { id in
                 viewModel.removeAttachment(id: id)
             },
             onRemove: { disableContent(.photos) }
+        )
+    }
+
+    private var linksCard: some View {
+        MemoryEditorLinksCard(
+            links: $viewModel.linkAttachments,
+            onRemoveLink: { id in
+                viewModel.removeLinkAttachment(id: id)
+            },
+            onRemove: { disableContent(.links) }
         )
     }
 
@@ -333,15 +377,24 @@ struct MemoryEditorView: View {
         .accessibilityLabel("Add checklist")
     }
 
-    private var addPhotosButton: some View {
+    private var photoToolbarControls: some View {
+        MemoryEditorPhotoToolbarControls(
+            selectedItems: $photoPickerItems,
+            isHighlighted: shouldShowPhotosCard,
+            isEnabled: !viewModel.isSaving && !isLoadingPhotos,
+            onCameraTap: handleCameraToolbarTap
+        )
+    }
+
+    private var addLinkButton: some View {
         Button {
-            handleAddContentSelection(.photos)
+            handleAddContentSelection(.links)
         } label: {
-            Label("Add photos", systemImage: MemoryEditorContentType.photos.iconName)
+            Label("Add link", systemImage: MemoryEditorContentType.links.iconName)
         }
         .labelStyle(.iconOnly)
-        .foregroundStyle(shouldShowPhotosCard ? Color.accentColor : .primary)
-        .accessibilityLabel("Add photos")
+        .foregroundStyle(shouldShowLinksCard ? Color.accentColor : .primary)
+        .accessibilityLabel("Add link")
     }
 
     private var shouldShowChecklistCard: Bool {
@@ -354,6 +407,10 @@ struct MemoryEditorView: View {
 
     private var shouldShowPhotosCard: Bool {
         hasEnabledPhotosManually || !viewModel.attachments.isEmpty
+    }
+
+    private var shouldShowLinksCard: Bool {
+        hasEnabledLinksManually || !viewModel.linkAttachments.isEmpty
     }
 
     private var checklistSubtitle: String? {
@@ -379,6 +436,9 @@ struct MemoryEditorView: View {
             }
         case .photos:
             hasEnabledPhotosManually = true
+        case .links:
+            hasEnabledLinksManually = true
+            showAddLinkSheet = true
         }
     }
 
@@ -395,6 +455,11 @@ struct MemoryEditorView: View {
         case .photos:
             viewModel.attachments.removeAll()
             hasEnabledPhotosManually = false
+            isLoadingPhotos = false
+        case .links:
+            viewModel.linkAttachments.removeAll()
+            hasEnabledLinksManually = false
+            showAddLinkSheet = false
         }
     }
 
@@ -407,6 +472,9 @@ struct MemoryEditorView: View {
         }
         if !viewModel.attachments.isEmpty {
             hasEnabledPhotosManually = true
+        }
+        if !viewModel.linkAttachments.isEmpty {
+            hasEnabledLinksManually = true
         }
     }
 
@@ -526,6 +594,46 @@ struct MemoryEditorView: View {
         }
     }
 
+    private func handleCameraToolbarTap() {
+        hasEnabledPhotosManually = true
+        isPresentingCamera = true
+    }
+
+    private func handleCapturedImage(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+        _ = viewModel.createAttachment(data: data)
+    }
+
+    private func handleLinkAdded(_ url: URL) {
+        hasEnabledLinksManually = true
+        let alreadyExists = viewModel.linkAttachments.contains {
+            $0.url?.absoluteString == url.absoluteString
+        }
+        guard !alreadyExists else { return }
+        _ = viewModel.createLinkAttachment(url: url)
+    }
+
+    private func loadSelectedPhotos(from items: [PhotosPickerItem]) async {
+        await MainActor.run {
+            isLoadingPhotos = true
+        }
+        for item in items {
+            do {
+                if let data = try await item.loadTransferable(type: Data.self) {
+                    await MainActor.run {
+                        _ = viewModel.createAttachment(data: data)
+                    }
+                }
+            } catch {
+                continue
+            }
+        }
+        await MainActor.run {
+            isLoadingPhotos = false
+            photoPickerItems = []
+        }
+    }
+
     private func priorityLabel(for priority: MemoryPriority) -> String {
         switch priority {
         case .low: return "Low"
@@ -565,6 +673,14 @@ struct MemoryEditorView: View {
         NavigationStack {
             MemoryLocationTriggerEditorScreen(viewModel: viewModel)
         }
+    }
+
+    @ViewBuilder
+    private func linkSheet() -> some View {
+        MemoryEditorAddLinkSheet { url in
+            handleLinkAdded(url)
+        }
+        .presentationDetents([.medium])
     }
 
     @ViewBuilder
