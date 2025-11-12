@@ -44,7 +44,6 @@ enum CustomTab: String, CaseIterable {
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @State private var editorRoute: MemoryEditorRoute?
-    @State private var viewerRoute: MemoryViewerRoute?
     @State private var showSpaceComposer = false
     @State private var pendingParentSpace: SpaceModel?
     @State private var activeTab: CustomTab = .home
@@ -110,27 +109,22 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.2), value: isMultiSelectionActive)
             .ignoresSafeArea(.keyboard, edges: .bottom)
         }
-        .sheet(item: $viewerRoute) { route in
-            MemoryDetailView(
-                memory: route.memory,
-                onClose: { viewerRoute = nil },
-                onEdit: handleMemoryEditRequest
-            )
-        }
         .fullScreenCover(item: $editorRoute) { route in
             switch route.mode {
             case let .create(space, template):
                 MemoryEditorView(
                     environment: environment,
-                    defaultSpace: space,
-                    template: template
+                    mode: .create(space: space, template: template)
                 )
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,
-                    memory: memory,
-                    defaultSpace: memory.space,
-                    template: .blank
+                    mode: .edit(memory: memory)
+                )
+            case let .view(memory):
+                MemoryEditorView(
+                    environment: environment,
+                    mode: .view(memory: memory)
                 )
             }
         }
@@ -209,19 +203,12 @@ struct ContentView: View {
     }
 
     private func handleMemorySelection(_ memory: MemoryModel) {
-        viewerRoute = MemoryViewerRoute(memory: memory)
+        editorRoute = MemoryEditorRoute(mode: .view(memory: memory))
     }
 
     private func presentSpaceCreation(for parent: SpaceModel?) {
         pendingParentSpace = parent
         showSpaceComposer = true
-    }
-
-    private func handleMemoryEditRequest(_ memory: MemoryModel) {
-        viewerRoute = nil
-        DispatchQueue.main.async {
-            editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
-        }
     }
 
     private func handleTabReselection(_ tab: CustomTab) {
@@ -251,15 +238,11 @@ private struct MemoryEditorRoute: Identifiable {
     enum Mode {
         case create(space: SpaceModel?, template: MemoryEditorTemplate)
         case edit(memory: MemoryModel)
+        case view(memory: MemoryModel)
     }
 
     let id = UUID()
     let mode: Mode
-}
-
-private struct MemoryViewerRoute: Identifiable {
-    let id = UUID()
-    let memory: MemoryModel
 }
 
 extension View{

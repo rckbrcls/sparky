@@ -2,10 +2,19 @@ import SwiftUI
 
 struct ChecklistItemEditor: View {
     @Binding var item: CheckItemDraft
+    let isEditable: Bool
     let onToggle: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
+        if isEditable {
+            editableBody
+        } else {
+            readOnlyBody
+        }
+    }
+
+    private var editableBody: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Button(action: onToggle) {
@@ -35,11 +44,42 @@ struct ChecklistItemEditor: View {
         .padding(.vertical, 4)
     }
 
+    private var readOnlyBody: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+                Text(readOnlyTitle)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .strikethrough(item.isCompleted, color: item.isCompleted ? .secondary : nil)
+            }
+
+            if let detail = readOnlyDetail {
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
     private var shouldShowDelete: Bool {
         let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let detail = item.detail.trimmingCharacters(in: .whitespacesAndNewlines)
         return !title.isEmpty || !detail.isEmpty
     }
+
+    private var readOnlyTitle: String {
+        let trimmed = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Untitled Item" : trimmed
+    }
+
+    private var readOnlyDetail: String? {
+        let trimmed = item.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
-
-

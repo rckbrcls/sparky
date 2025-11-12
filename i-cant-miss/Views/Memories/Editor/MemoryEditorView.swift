@@ -10,6 +10,12 @@ import SwiftUI
 import UIKit
 
 struct MemoryEditorView: View {
+    enum Mode {
+        case create(space: SpaceModel?, template: MemoryEditorTemplate)
+        case edit(memory: MemoryModel)
+        case view(memory: MemoryModel)
+    }
+
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: MemoryEditorViewModel
     @State private var showDueDateSheet = false
@@ -32,33 +38,63 @@ struct MemoryEditorView: View {
     @State private var hasEnabledPhotosManually = false
     @State private var hasEnabledLinksManually = false
     @State private var hasInitializedContentState = false
+    @State private var isEditingEnabled: Bool
 
-    private let isEditing: Bool
+    private let mode: Mode
+    private let environment: AppEnvironment
 
-
-    init(environment: AppEnvironment,
-         memory: MemoryModel? = nil,
-         defaultSpace: SpaceModel? = nil,
-         template: MemoryEditorTemplate = .blank) {
-        _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
-            environment: environment,
-            attachmentStore: environment.attachmentStore,
-            memory: memory,
-            defaultSpace: defaultSpace,
-            template: template
-        ))
-        self.isEditing = memory != nil
+    init(environment: AppEnvironment, mode: Mode) {
+        self.mode = mode
+        self.environment = environment
+        switch mode {
+        case let .create(space, template):
+            _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
+                environment: environment,
+                attachmentStore: environment.attachmentStore,
+                memory: nil,
+                defaultSpace: space,
+                template: template
+            ))
+            _isEditingEnabled = State(initialValue: true)
+        case let .edit(memory):
+            _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
+                environment: environment,
+                attachmentStore: environment.attachmentStore,
+                memory: memory,
+                defaultSpace: memory.space,
+                template: .blank
+            ))
+            _isEditingEnabled = State(initialValue: true)
+        case let .view(memory):
+            _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
+                environment: environment,
+                attachmentStore: environment.attachmentStore,
+                memory: memory,
+                defaultSpace: memory.space,
+                template: .blank
+            ))
+            _isEditingEnabled = State(initialValue: false)
+        }
     }
 
     var body: some View {
         NavigationStack {
-            editorContent
-                .scrollDismissesKeyboard(.interactively)
-                .onAppear {
-                    viewModel.loadLatestDataIfNeeded()
-                    initializeContentStateIfNeeded()
-                }
-                .alert("Unable to save", isPresented: Binding(
+            ZStack {
+                baseBackground
+                    .ignoresSafeArea()
+                readOnlyGradient
+                    .opacity(isReadOnly ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.35), value: isReadOnly)
+                    .allowsHitTesting(false)
+
+                editorContent
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                viewModel.loadLatestDataIfNeeded()
+                initializeContentStateIfNeeded()
+            }
+            .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { _ in viewModel.errorMessage = nil }
             )) {
@@ -76,16 +112,33 @@ struct MemoryEditorView: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(role: .confirm) {
-                        commitChecklistDrafts()
-                        Task {
-                            let success = await viewModel.save()
-                            if success { dismiss() }
+                    if isEditingEnabled {
+                        Button(role: .confirm) {
+                            commitChecklistDrafts()
+                            Task {
+                                let success = await viewModel.save()
+                                if success {
+                                    await MainActor.run {
+                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                        isTitleFocused = false
+                                        focusedDraftID = nil
+                                        withAnimation(.easeInOut(duration: 0.35)) {
+                                            isEditingEnabled = false
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label(saveButtonTitle, systemImage: "checkmark")
                         }
-                    } label: {
-                        Label(saveButtonTitle, systemImage: "checkmark")
+                        .disabled(isSaveDisabled)
+                    } else if canEnableEditing {
+                        Button {
+                            enableEditing()
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
                     }
-                    .disabled(isSaveDisabled)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -158,13 +211,13 @@ struct MemoryEditorView: View {
                 }
 
                 ToolbarItemGroup(placement: .bottomBar) {
-
-
-                    ControlGroup {
-                        addRichTextButton
-                        addChecklistButton
-                        photoToolbarControls
-                        addLinkButton
+                    if isEditingEnabled {
+                        ControlGroup {
+                            addRichTextButton
+                            addChecklistButton
+                            photoToolbarControls
+                            addLinkButton
+                        }
                     }
 
                     Spacer()
@@ -180,7 +233,7 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showWeekdaySheet, content: weekdaySheet)
             .sheet(isPresented: $showTriggerPickerSheet) {
                 MemoryTriggerPickerSheet(viewModel: viewModel)
-                .presentationDetents([.large])
+                    .presentationDetents([.large])
             }
             .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
@@ -233,9 +286,23 @@ struct MemoryEditorView: View {
         Dictionary(uniqueKeysWithValues: viewModel.environment.memoryService.memories.map { ($0.id, $0) })
     }
 
-    private var navigationTitle: String { isEditing ? "Edit Memory" : "New Memory" }
+    private var navigationTitle: String {
+        switch mode {
+        case .create:
+            return "New Memory"
+        case .edit, .view:
+            return isEditingEnabled ? "Edit Memory" : "Memory"
+        }
+    }
 
-    private var saveButtonTitle: String { isEditing ? "Save" : "Create" }
+    private var saveButtonTitle: String {
+        switch mode {
+        case .create:
+            return "Create"
+        case .edit, .view:
+            return "Save"
+        }
+    }
 
     private var isSaveDisabled: Bool {
         viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -316,29 +383,39 @@ struct MemoryEditorView: View {
 
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Memory", text: $viewModel.title, axis: .vertical)
-                .font(.title3)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.leading)
-                .submitLabel(.done)
-                .lineLimit(2)
-                .focused($isTitleFocused)
-                .onSubmit {
-                    isTitleFocused = false
-                }
-                .onChange(of: viewModel.title) { _, newValue in
-                    guard newValue.contains(where: { $0.isNewline }) else { return }
-                    let sanitized = newValue
-                        .split(whereSeparator: \.isNewline)
-                        .joined(separator: " ")
-                    if sanitized != newValue {
-                        viewModel.title = sanitized
-                    }
-                    DispatchQueue.main.async {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            if isEditingEnabled {
+                TextField("Memory", text: $viewModel.title, axis: .vertical)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .multilineTextAlignment(.leading)
+                    .submitLabel(.done)
+                    .lineLimit(2)
+                    .focused($isTitleFocused)
+                    .onSubmit {
                         isTitleFocused = false
                     }
-                }
+                    .onChange(of: viewModel.title) { _, newValue in
+                        guard newValue.contains(where: { $0.isNewline }) else { return }
+                        let sanitized = newValue
+                            .split(whereSeparator: \.isNewline)
+                            .joined(separator: " ")
+                        if sanitized != newValue {
+                            viewModel.title = sanitized
+                        }
+                        DispatchQueue.main.async {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            isTitleFocused = false
+                        }
+                    }
+            } else {
+                Text(displayTitle)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(3)
+                    .foregroundStyle(isTitlePlaceholder ? Color.secondary : Color.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.horizontal, 24)
         .padding(.vertical)
@@ -357,78 +434,80 @@ struct MemoryEditorView: View {
                 ForEach(viewModel.checklistItems) { item in
                     ChecklistItemEditor(
                         item: binding(for: item),
+                        isEditable: isEditingEnabled,
                         onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
                         onDelete: { removeChecklist(item) }
                     )
                 }
-                ForEach(checklistDraftRows) { draft in
-                    ChecklistNewItemRow(
-                        draft: draftBinding(for: draft),
-                        focus: $focusedDraftID,
-                        onSubmit: handleDraftSubmit,
-                        onTitleChange: handleDraftTitleChange
-                    )
+                if isEditingEnabled {
+                    ForEach(checklistDraftRows) { draft in
+                        ChecklistNewItemRow(
+                            draft: draftBinding(for: draft),
+                            focus: $focusedDraftID,
+                            onSubmit: handleDraftSubmit,
+                            onTitleChange: handleDraftTitleChange
+                        )
+                    }
                 }
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                disableContent(.checklist)
-            } label: {
-                Label("Delete Checklist", systemImage: "trash")
-            }
-            .accessibilityLabel("Delete checklist content")
-        }
+        .modifier(EditingSwipeActionModifier(
+            isEnabled: isEditingEnabled,
+            title: "Delete Checklist",
+            systemImage: "trash",
+            accessibilityLabel: "Delete checklist content",
+            action: { disableContent(.checklist) }
+        ))
     }
 
     private var richTextCard: some View {
         MemoryEditorRichTextCard(
             text: $viewModel.body,
-            controller: bodyEditorController
+            controller: bodyEditorController,
+            isEditable: isEditingEnabled
         )
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                disableContent(.richText)
-            } label: {
-                Label("Delete Text", systemImage: "trash")
-            }
-            .accessibilityLabel("Delete rich text content")
-        }
+        .modifier(EditingSwipeActionModifier(
+            isEnabled: isEditingEnabled,
+            title: "Delete Text",
+            systemImage: "trash",
+            accessibilityLabel: "Delete rich text content",
+            action: { disableContent(.richText) }
+        ))
     }
 
     private var photosCard: some View {
         MemoryEditorPhotosCard(
             attachments: $viewModel.attachments,
             isLoading: isLoadingPhotos,
+            isEditable: isEditingEnabled,
             onRemoveAttachment: { id in
                 viewModel.removeAttachment(id: id)
             }
         )
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                disableContent(.photos)
-            } label: {
-                Label("Delete Photos", systemImage: "trash")
-            }
-            .accessibilityLabel("Delete photos content")
-        }
+        .modifier(EditingSwipeActionModifier(
+            isEnabled: isEditingEnabled,
+            title: "Delete Photos",
+            systemImage: "trash",
+            accessibilityLabel: "Delete photos content",
+            action: { disableContent(.photos) }
+        ))
     }
 
     private var linksCard: some View {
         MemoryEditorLinksCard(
             links: $viewModel.linkAttachments,
+            isEditable: isEditingEnabled,
             onRemoveLink: { id in
                 viewModel.removeLinkAttachment(id: id)
             }
         )
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                disableContent(.links)
-            } label: {
-                Label("Delete Links", systemImage: "trash")
-            }
-            .accessibilityLabel("Delete links content")
-        }
+        .modifier(EditingSwipeActionModifier(
+            isEnabled: isEditingEnabled,
+            title: "Delete Links",
+            systemImage: "trash",
+            accessibilityLabel: "Delete links content",
+            action: { disableContent(.links) }
+        ))
     }
 
     private var addRichTextButton: some View {
@@ -726,6 +805,52 @@ struct MemoryEditorView: View {
         return spaces.isEmpty ? [SpaceModel.inbox] : spaces
     }
 
+    private var baseBackground: Color {
+        Color(.systemBackground)
+    }
+
+    private var readOnlyGradient: some View {
+        let accent = currentSpaceAccent
+        return LinearGradient(
+            colors: [
+                accent.opacity(0.45),
+                accent.opacity(0.2),
+                Color.clear
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.08),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .ignoresSafeArea()
+    }
+
+    private var currentSpaceAccent: Color {
+        if let hex = viewModel.selectedSpace?.colorHex,
+           let color = Color(hex: hex) {
+            return color
+        }
+        return .accentColor
+    }
+
+    private var canEnableEditing: Bool {
+        !isEditingEnabled && !viewModel.isSaving
+    }
+
+    private func enableEditing() {
+        withAnimation(.easeInOut(duration: 0.35)) {
+            isEditingEnabled = true
+        }
+    }
+
     private var cardBounceAnimation: Animation {
         .interpolatingSpring(stiffness: 240, damping: 18, initialVelocity: 0.35)
     }
@@ -737,6 +862,20 @@ struct MemoryEditorView: View {
             removal: .scale(scale: 0.75, anchor: .center)
                 .combined(with: .opacity)
         )
+    }
+
+    private var isReadOnly: Bool {
+        !isEditingEnabled
+    }
+
+    private var displayTitle: String {
+        let trimmed = viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "Untitled Memory" }
+        return trimmed
+    }
+
+    private var isTitlePlaceholder: Bool {
+        viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     @ViewBuilder
@@ -795,8 +934,31 @@ struct MemoryEditorView: View {
     }
 }
 
+private struct EditingSwipeActionModifier: ViewModifier {
+    let isEnabled: Bool
+    let title: String
+    let systemImage: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive, action: action) {
+                        Label(title, systemImage: systemImage)
+                    }
+                    .accessibilityLabel(accessibilityLabel)
+                }
+        } else {
+            content
+        }
+    }
+}
+
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
-    return MemoryEditorView(environment: environment)
+    return MemoryEditorView(environment: environment, mode: .create(space: nil, template: .blank))
 }

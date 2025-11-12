@@ -4,6 +4,7 @@ import UIKit
 struct MemoryEditorPhotosCard: View {
     @Binding var attachments: [MemoryModel.Attachment]
     var isLoading: Bool
+    var isEditable: Bool = true
     var onRemoveAttachment: (UUID) -> Void
 
     var body: some View {
@@ -21,7 +22,7 @@ struct MemoryEditorPhotosCard: View {
                     Image(systemName: "photo.on.rectangle")
                         .font(.system(size: 28, weight: .medium))
                         .foregroundStyle(.secondary)
-                    Text("Add photos to enrich this memory.")
+                    Text(isEditable ? "Add photos to enrich this memory." : "No photos attached to this memory.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -64,17 +65,19 @@ struct MemoryEditorPhotosCard: View {
                                 .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                         )
 
-                    Button {
-                        onRemoveAttachment(attachment.id)
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 18, weight: .bold))
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(Color.white, Color.black.opacity(0.6))
+                    if isEditable {
+                        Button {
+                            onRemoveAttachment(attachment.id)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(Color.white, Color.black.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(8)
+                        .accessibilityLabel("Remove photo")
                     }
-                    .buttonStyle(.plain)
-                    .padding(8)
-                    .accessibilityLabel("Remove photo")
                 }
             } else {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)

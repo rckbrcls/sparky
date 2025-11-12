@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MemoryEditorLinksCard: View {
     @Binding var links: [MemoryModel.Attachment]
+    var isEditable: Bool = true
     var onRemoveLink: (UUID) -> Void
 
     var body: some View {
@@ -21,7 +22,7 @@ struct MemoryEditorLinksCard: View {
             Image(systemName: "link")
                 .font(.system(size: 28, weight: .medium))
                 .foregroundStyle(.secondary)
-            Text("Add links to reference helpful resources.")
+            Text(isEditable ? "Add links to reference helpful resources." : "No links attached to this memory.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
@@ -52,17 +53,19 @@ struct MemoryEditorLinksCard: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    onRemoveLink(attachment.id)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(Color.white, Color.black.opacity(0.6))
+                if isEditable {
+                    Button {
+                        onRemoveLink(attachment.id)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18, weight: .bold))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(Color.white, Color.black.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(8)
+                    .accessibilityLabel("Remove link")
                 }
-                .buttonStyle(.plain)
-                .padding(8)
-                .accessibilityLabel("Remove link")
             }
         } else {
             RoundedRectangle(cornerRadius: 18, style: .continuous)

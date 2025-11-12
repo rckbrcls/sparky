@@ -13,6 +13,7 @@ import UIKit
 struct RichTextEditor: UIViewRepresentable {
     @Binding var text: String
     @ObservedObject var controller: RichTextEditorController
+    var isEditable: Bool = true
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -26,6 +27,8 @@ struct RichTextEditor: UIViewRepresentable {
         textView.backgroundColor = .clear
         textView.keyboardDismissMode = .interactive
         textView.isScrollEnabled = false
+        textView.isEditable = isEditable
+        textView.isSelectable = true
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         textView.baseFont = UIFont.preferredFont(forTextStyle: .body)
         textView.typingAttributes = textView.defaultTextAttributes
@@ -37,6 +40,8 @@ struct RichTextEditor: UIViewRepresentable {
     func updateUIView(_ uiView: RichTextView, context: Context) {
         context.coordinator.parent = self
         uiView.baseFont = UIFont.preferredFont(forTextStyle: .body)
+        uiView.isEditable = isEditable
+        uiView.isSelectable = true
 
         context.coordinator.isProgrammaticChange = true
         _ = uiView.updateIfNeeded(text: text,
