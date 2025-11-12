@@ -344,7 +344,8 @@ struct MemoryEditorView: View {
                     triggerToolbarButton
                 }
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 10)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
