@@ -37,10 +37,12 @@ struct MemoryTriggerAddBadge: View {
         Button {
             isPresented = true
         } label: {
-            Label("Add Trigger", systemImage: "bolt.fill")
-                .labelStyle(.iconOnly)
+            Image(systemName: "bolt.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .tint(.white)
+                .glassEffect(.regular.tint(.accent).interactive())
         }
-        .buttonStyle(.glassProminent)
         .accessibilityLabel("Add trigger")
     }
 }
