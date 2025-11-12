@@ -21,9 +21,7 @@ struct MemoryTimelineView: View {
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
-    @State private var isUpcomingExpanded = true
     @State private var autoCollapsedInbox = false
-    @State private var autoCollapsedUpcoming = false
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -119,194 +117,225 @@ struct MemoryTimelineView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if isSearching {
-                        searchResultsSection
-                    } else {
-                        timelineSections
-                        if showInbox {
-                            inboxSection
+            timelineList
+                .navigationTitle(navigationTitleText)
+                .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
+                .toolbar {
+                    ToolbarItemGroup(placement: .navigationBarTrailing) {
+                        MemoryFilterSummaryButton(
+                            activeFilterCount: activeFilterCount,
+                            filterDescription: filterDescription,
+                            isSheetPresented: showingFilterSheet,
+                            isDisabled: isMultiSelecting || isPerformingBulkAction
+                        ) {
+                            filterSheetDetent = .large
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                showingFilterSheet = true
+                            }
                         }
+
+                        if isMultiSelecting {
+                            Button(role: .destructive) {
+                                showingDeleteConfirmation = true
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .disabled(selectedMemoryIDs.isEmpty || isPerformingBulkAction)
+                            .accessibilityLabel("Delete selected memories")
+                        }
+
+                        Button {
+                            toggleMultiSelection()
+                        } label: {
+                            if isMultiSelecting {
+                                Text("Done")
+                                    .fontWeight(.semibold)
+                            } else {
+                                Label("Select", systemImage: "checkmark.circle")
+                            }
+                        }
+                        .disabled(isPerformingBulkAction)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 70)
-            }
-            .navigationTitle(navigationTitleText)
-            .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
-            .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    MemoryFilterSummaryButton(
-                        activeFilterCount: activeFilterCount,
-                        filterDescription: filterDescription,
-                        isSheetPresented: showingFilterSheet,
-                        isDisabled: isMultiSelecting || isPerformingBulkAction
-                    ) {
-                        filterSheetDetent = .large
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            showingFilterSheet = true
-                        }
-                    }
-
-                    if isMultiSelecting {
-                        Button(role: .destructive) {
-                            showingDeleteConfirmation = true
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .disabled(selectedMemoryIDs.isEmpty || isPerformingBulkAction)
-                        .accessibilityLabel("Delete selected memories")
-                    }
-
-                    Button {
-                        toggleMultiSelection()
-                    } label: {
-                        if isMultiSelecting {
-                            Text("Done")
-                                .fontWeight(.semibold)
-                        } else {
-                            Label("Select", systemImage: "checkmark.circle")
-                        }
+                .sheet(isPresented: $showingFilterSheet) {
+                    FilterSheetView(
+                        selectedMemoryTypes: $selectedMemoryTypes,
+                        selectedSections: $selectedSections,
+                        showInbox: $showInbox,
+                        detentSelection: $filterSheetDetent
+                    )
+                    .onAppear { filterSheetDetent = .large }
+                    .presentationDetents([.large], selection: $filterSheetDetent)
+                }
+                .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
+                    Button("Delete", role: .destructive) {
+                        performBulkDeletion()
                     }
                     .disabled(isPerformingBulkAction)
-                }
-            }
-            .sheet(isPresented: $showingFilterSheet) {
-                FilterSheetView(
-                    selectedMemoryTypes: $selectedMemoryTypes,
-                    selectedSections: $selectedSections,
-                    showInbox: $showInbox,
-                    detentSelection: $filterSheetDetent
-                )
-                .onAppear { filterSheetDetent = .large }
-                .presentationDetents([.large], selection: $filterSheetDetent)
-            }
-            .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
-                Button("Delete", role: .destructive) {
-                    performBulkDeletion()
-                }
-                .disabled(isPerformingBulkAction)
 
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(deleteConfirmationMessage)
-            }
-            .onAppear(perform: syncExpansionStates)
-            .onChange(of: timelineSectionData.count) {
-                syncExpansionStates()
-            }
-            .onChange(of: filteredInboxMemories.count) {
-                syncExpansionStates()
-            }
-            .onChange(of: isUpcomingExpanded) {
-                autoCollapsedUpcoming = timelineSectionData.isEmpty && !isUpcomingExpanded
-            }
-            .onChange(of: isInboxExpanded) {
-                autoCollapsedInbox = filteredInboxMemories.isEmpty && !isInboxExpanded
-            }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(deleteConfirmationMessage)
+                }
+                .onAppear(perform: syncExpansionStates)
+                .onChange(of: timelineSectionData.count) {
+                    syncExpansionStates()
+                }
+                .onChange(of: filteredInboxMemories.count) {
+                    syncExpansionStates()
+                }
+                .onChange(of: isInboxExpanded) {
+                    autoCollapsedInbox = filteredInboxMemories.isEmpty && !isInboxExpanded
+                }
         }
     }
 
-    private var searchResultsSection: some View {
-        Section {
-            if filteredMemories.isEmpty {
-                MemoryEmptyStateCard(
-                    systemImage: "magnifyingglass",
-                    title: "No memories match your search",
-                    message: "Try different keywords or reset filters to discover more memories."
-                )
+    private var timelineList: some View {
+        List {
+            if isSearching {
+                searchResultsList
             } else {
-                ForEach(filteredMemories) { memory in
-                    MemoryListItemButton(
-                        memory: memory,
-                        isMultiSelecting: isMultiSelecting,
-                        isSelected: isMemorySelected(memory),
-                        isDisabled: isPerformingBulkAction,
-                        onSelect: onSelectMemory,
-                        onToggleSelection: toggleMemorySelection(_:))
+                timelineSectionsList
+                if showInbox {
+                    inboxListContent
                 }
             }
-        } header: {
-            Divider()
-                .padding(.top, 16)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 70)
+        }
+        .listRowSeparator(.hidden)
+        .background(Color.clear)
+    }
+
+    @ViewBuilder
+    private var searchResultsList: some View {
+        if filteredMemories.isEmpty {
+            MemoryEmptyStateCard(
+                systemImage: "magnifyingglass",
+                title: "No memories match your search",
+                message: "Try different keywords or reset filters to discover more memories."
+            )
+            .padding(.top, 16)
+            .listRowInsets(.init(top: 16, leading: 20, bottom: 24, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        } else {
+            ForEach(filteredMemories) { memory in
+                memoryRow(for: memory)
+            }
         }
     }
 
-    private var timelineSections: some View {
+    @ViewBuilder
+    private var timelineSectionsList: some View {
         let sections = timelineSectionData
         let hasInboxContent = showInbox && !filteredInboxMemories.isEmpty
 
-        return Group {
-            if sections.isEmpty && !hasInboxContent {
-                VStack(alignment: .leading, spacing: 8) {
-                    MemoryEmptyStateCard(
-                        systemImage: "tray",
-                        title: "No memories with active triggers",
-                        message: "Create or activate reminders to see them organized on your timeline."
-                    )
-                    .padding(.top)
-                }
-                .padding(.top)
-            } else {
-                ForEach(sections) { section in
-                    MemoryDisclosureListSection(
-                        title: section.kind.title,
-                        systemImage: section.kind.systemImage,
-                        isExpanded: sectionExpansionBinding(for: section.kind),
-                        memories: section.memories,
-                        isMultiSelecting: isMultiSelecting,
-                        selectedMemoryIDs: selectedMemoryIDs,
-                        isDisabled: isPerformingBulkAction,
-                        onSelect: onSelectMemory,
-                        onToggleSelection: toggleMemorySelection(_:))
-                }
+        if sections.isEmpty && !hasInboxContent {
+            MemoryEmptyStateCard(
+                systemImage: "tray",
+                title: "No memories with active triggers",
+                message: "Create or activate reminders to see them organized on your timeline."
+            )
+            .padding(.top, 16)
+            .listRowInsets(.init(top: 24, leading: 20, bottom: 8, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        } else {
+            ForEach(sections) { section in
+                MemoryDisclosureListSection(
+                    title: section.kind.title,
+                    systemImage: section.kind.systemImage,
+                    isExpanded: sectionExpansionBinding(for: section.kind),
+                    memories: section.memories,
+                    isMultiSelecting: isMultiSelecting,
+                    selectedMemoryIDs: selectedMemoryIDs,
+                    isDisabled: isPerformingBulkAction,
+                    onSelect: onSelectMemory,
+                    onToggleSelection: toggleMemorySelection(_:))
             }
         }
     }
 
-    private var inboxSection: some View {
+    @ViewBuilder
+    private var inboxListContent: some View {
         let inboxMemories = filteredInboxMemories
         let hasTimelineContent = !timelineSectionData.isEmpty
         let shouldShowEmptyState = inboxMemories.isEmpty && !hasTimelineContent
 
-        return Group {
-            if inboxMemories.isEmpty {
-                if shouldShowEmptyState {
-                    VStack(alignment: .leading, spacing: 8) {
-                        MemoryEmptyStateCard(
-                            systemImage: "checkmark.seal",
-                            title: "Inbox is clear",
-                            message: "Create a memory or capture a reminder to keep building your inbox."
-                        )
-                        .padding(.top)
-                    }
-                    .padding(.top)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    DisclosureGroup(isExpanded: $isInboxExpanded) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(inboxMemories) { memory in
-                                MemoryListItemButton(
-                                    memory: memory,
-                                    isMultiSelecting: isMultiSelecting,
-                                    isSelected: isMemorySelected(memory),
-                                    isDisabled: isPerformingBulkAction,
-                                    onSelect: onSelectMemory,
-                                    onToggleSelection: toggleMemorySelection(_:))
-                            }
-                        }
-                        .padding(.top)
-                    } label: {
-                        Label("Inbox", systemImage: "tray.fill")
-                            .foregroundStyle(.white)
-                    }
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInboxExpanded)
-                }
-                .padding(.top)
+        if inboxMemories.isEmpty {
+            if shouldShowEmptyState {
+                MemoryEmptyStateCard(
+                    systemImage: "checkmark.seal",
+                    title: "Inbox is clear",
+                    message: "Create a memory or capture a reminder to keep building your inbox."
+                )
+                .padding(.top, 16)
+                .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
+        } else {
+            Section {
+                inboxHeaderRow(memories: inboxMemories)
+
+                if isInboxExpanded {
+                    ForEach(inboxMemories) { memory in
+                        MemoryListItemButton(
+                            memory: memory,
+                            isMultiSelecting: isMultiSelecting,
+                            isSelected: isMemorySelected(memory),
+                            isDisabled: isPerformingBulkAction,
+                            onSelect: onSelectMemory,
+                            onToggleSelection: toggleMemorySelection(_:))
+                        .listRowInsets(.init(top: 12, leading: 20, bottom: 12, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                }
+            }
+            .listSectionSeparator(.hidden)
         }
+    }
+
+    private func inboxHeaderRow(memories: [MemoryModel]) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isInboxExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Label("Inbox", systemImage: "tray.fill")
+                    .foregroundStyle(.white)
+                Spacer()
+                Image(systemName: isInboxExpanded ? "chevron.down" : "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(.init(top: 24, leading: 20, bottom: isInboxExpanded && !memories.isEmpty ? 0 : 12, trailing: 20))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .disabled(memories.isEmpty)
+    }
+
+    private func memoryRow(for memory: MemoryModel) -> some View {
+        MemoryListItemButton(
+            memory: memory,
+            isMultiSelecting: isMultiSelecting,
+            isSelected: isMemorySelected(memory),
+            isDisabled: isPerformingBulkAction,
+            onSelect: onSelectMemory,
+            onToggleSelection: toggleMemorySelection(_:))
+        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private func isMemoryTypeSelected(_ memory: MemoryModel) -> Bool {
@@ -350,16 +379,6 @@ struct MemoryTimelineView: View {
     }
 
     private func syncExpansionStates() {
-        if timelineSectionData.isEmpty {
-            if isUpcomingExpanded {
-                isUpcomingExpanded = false
-                autoCollapsedUpcoming = true
-            }
-        } else if autoCollapsedUpcoming && !isUpcomingExpanded {
-            isUpcomingExpanded = true
-            autoCollapsedUpcoming = false
-        }
-
         if filteredInboxMemories.isEmpty {
             if isInboxExpanded {
                 isInboxExpanded = false

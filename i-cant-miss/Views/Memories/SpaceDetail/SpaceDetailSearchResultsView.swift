@@ -9,24 +9,29 @@ struct SpaceDetailSearchResultsView: View {
     let onToggleSelection: (MemoryModel) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if memories.isEmpty {
-                MemoryEmptyStateCard(
-                    systemImage: "magnifyingglass",
-                    title: "No memories match your search",
-                    message: "Try different keywords or reset filters to discover more memories."
+        if memories.isEmpty {
+            MemoryEmptyStateCard(
+                systemImage: "magnifyingglass",
+                title: "No memories match your search",
+                message: "Try different keywords or reset filters to discover more memories."
+            )
+            .padding(.top, 16)
+            .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        } else {
+            ForEach(memories) { memory in
+                MemoryListItemButton(
+                    memory: memory,
+                    isMultiSelecting: isMultiSelecting,
+                    isSelected: isMemorySelected(memory),
+                    isDisabled: isPerformingBulkAction,
+                    onSelect: onSelectMemory,
+                    onToggleSelection: onToggleSelection
                 )
-            } else {
-                ForEach(memories) { memory in
-                    MemoryListItemButton(
-                        memory: memory,
-                        isMultiSelecting: isMultiSelecting,
-                        isSelected: isMemorySelected(memory),
-                        isDisabled: isPerformingBulkAction,
-                        onSelect: onSelectMemory,
-                        onToggleSelection: onToggleSelection
-                    )
-                }
+                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         }
     }

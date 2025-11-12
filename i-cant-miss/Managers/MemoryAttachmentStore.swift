@@ -12,6 +12,8 @@ actor MemoryAttachmentStore {
     private let rootDirectory: URL
     private let jsonEncoder = JSONEncoder()
     private let jsonDecoder = JSONDecoder()
+    private let photoKindRawValue = "photo"
+    private let linkKindRawValue = "link"
 
     private struct LinkAttachmentPayload: Codable {
         let url: URL
@@ -43,7 +45,7 @@ actor MemoryAttachmentStore {
 
         struct AttachmentResource: Sendable {
             let id: UUID
-            let kind: MemoryModel.AttachmentKind
+            let kindRawValue: String
             let data: Data
             let url: URL?
             let createdAt: Date
@@ -60,7 +62,7 @@ actor MemoryAttachmentStore {
                 guard let data = try? Data(contentsOf: url) else { return nil }
                 return AttachmentResource(
                     id: identifier,
-                    kind: .photo,
+                    kindRawValue: photoKindRawValue,
                     data: data,
                     url: nil,
                     createdAt: createdAt
@@ -72,7 +74,7 @@ actor MemoryAttachmentStore {
                 }
                 return AttachmentResource(
                     id: identifier,
-                    kind: .link,
+                    kindRawValue: linkKindRawValue,
                     data: Data(),
                     url: payload.url,
                     createdAt: createdAt
@@ -95,7 +97,7 @@ actor MemoryAttachmentStore {
             sortedResources.map { resource in
                 MemoryModel.Attachment(
                     id: resource.id,
-                    kind: resource.kind,
+                    kind: MemoryModel.AttachmentKind(rawValue: resource.kindRawValue),
                     data: resource.data,
                     createdAt: resource.createdAt,
                     url: resource.url
@@ -115,13 +117,13 @@ actor MemoryAttachmentStore {
         guard !attachments.isEmpty else { return }
 
         try Self.ensureDirectoryExists(fileManager: fileManager, at: directory)
-
         for attachment in attachments {
-            if attachment.kind == .photo {
+            let kindRawValue = attachment.kind.rawValue
+            if kindRawValue == photoKindRawValue {
                 let filename = "\(attachment.id.uuidString).jpg"
                 let url = directory.appendingPathComponent(filename, isDirectory: false)
                 try attachment.data.write(to: url, options: .atomic)
-            } else if attachment.kind == .link {
+            } else if kindRawValue == linkKindRawValue {
                 guard let linkURL = attachment.url else { continue }
                 let filename = "\(attachment.id.uuidString).json"
                 let url = directory.appendingPathComponent(filename, isDirectory: false)

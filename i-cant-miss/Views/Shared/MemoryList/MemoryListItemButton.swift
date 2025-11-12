@@ -8,22 +8,20 @@ struct MemoryListItemButton: View {
     let onSelect: (MemoryModel) -> Void
     let onToggleSelection: ((MemoryModel) -> Void)?
 
+    @EnvironmentObject private var environment: AppEnvironment
+
     var body: some View {
-        Button {
-            if isMultiSelecting, let toggleSelection = onToggleSelection {
-                toggleSelection(memory)
-            } else {
-                onSelect(memory)
-            }
-        } label: {
-            MemoryCardView(memory: memory)
-                .overlay(selectionOverlay)
-                .overlay(alignment: .topTrailing) {
-                    selectionBadge
+        if isMultiSelecting || isDisabled {
+            listButton
+        } else {
+            listButton
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    trailingSwipeActions()
+                }
+                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                    leadingSwipeActions()
                 }
         }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
     }
 
     @ViewBuilder
@@ -51,6 +49,204 @@ struct MemoryListItemButton: View {
                 .animation(.easeInOut(duration: 0.2), value: isSelected)
         }
     }
+
+    private var listButton: some View {
+        Button {
+            if isMultiSelecting, let toggleSelection = onToggleSelection {
+                toggleSelection(memory)
+            } else {
+                onSelect(memory)
+            }
+        } label: {
+            MemoryCardView(memory: memory)
+                .overlay(selectionOverlay)
+                .overlay(alignment: .topTrailing) {
+                    selectionBadge
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+    }
+
+    @ViewBuilder
+    private func trailingSwipeActions() -> some View {
+        switch memory.metadata.origin {
+        case .reminder(let id):
+            Button {
+                Task { await toggleReminderCompletion(id: id) }
+            } label: {
+                Label(memory.status == .completed ? "Mark Active" : "Mark Completed",
+                      systemImage: memory.status == .completed ? "arrow.uturn.backward.circle" : "checkmark.circle")
+            }
+            .tint(.green)
+
+            Button {
+                Task { await toggleReminderArchived(id: id) }
+            } label: {
+                Label(memory.status == .archived ? "Unarchive" : "Archive",
+                      systemImage: memory.status == .archived ? "arrow.uturn.backward.square" : "archivebox")
+            }
+            .tint(.blue)
+
+            Button(role: .destructive) {
+                Task { await deleteReminder(id: id) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+
+        case .note(let id):
+            Button {
+                Task { await toggleNotePin(id: id) }
+            } label: {
+                Label(memory.isPinned ? "Unpin" : "Pin", systemImage: "pin")
+            }
+            .tint(.yellow)
+
+            Button(role: .destructive) {
+                Task { await deleteNote(id: id) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+
+        case .todoList(let id):
+            Button {
+                Task { await toggleTodoPin(id: id) }
+            } label: {
+                Label(memory.isPinned ? "Unpin" : "Pin", systemImage: "pin")
+            }
+            .tint(.yellow)
+
+            Button {
+                Task { await toggleTodoArchived(id: id) }
+            } label: {
+                Label(memory.status == .archived ? "Unarchive" : "Archive",
+                      systemImage: memory.status == .archived ? "arrow.uturn.backward.square" : "archivebox")
+            }
+            .tint(.blue)
+
+            Button(role: .destructive) {
+                Task { await deleteTodoList(id: id) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+
+        case .none:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func leadingSwipeActions() -> some View {
+        if case .reminder(let id) = memory.metadata.origin {
+            Button {
+                Task { await snoozeReminder(id: id, by: 15 * 60) }
+            } label: {
+                Label("Snooze 15 min", systemImage: "zzz")
+            }
+            .tint(.orange)
+
+            Button {
+                Task { await snoozeReminder(id: id, by: 60 * 60) }
+            } label: {
+                Label("Snooze 1 hour", systemImage: "zzz")
+            }
+            .tint(.orange)
+        } else {
+            EmptyView()
+        }
+    }
+
+    private func refreshAll() async {
+        _ = await environment.memoryService.refresh(force: true)
+    }
+
+    private func toggleReminderCompletion(id: UUID) async {
+        do {
+            if memory.status == .completed {
+                _ = try await environment.reminderService.restoreReminder(id: id)
+            } else {
+                _ = try await environment.reminderService.completeReminder(id: id)
+            }
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func toggleReminderArchived(id: UUID) async {
+        do {
+            if memory.status == .archived {
+                _ = try await environment.reminderService.restoreReminder(id: id)
+            } else {
+                _ = try await environment.reminderService.archiveReminder(id: id)
+            }
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func snoozeReminder(id: UUID, by interval: TimeInterval) async {
+        do {
+            _ = try await environment.reminderService.snoozeReminder(id: id, by: interval)
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func deleteReminder(id: UUID) async {
+        do {
+            try await environment.reminderService.deleteReminder(id: id)
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func toggleNotePin(id: UUID) async {
+        do {
+            _ = try await environment.noteService.togglePin(noteID: id)
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func deleteNote(id: UUID) async {
+        do {
+            try await environment.noteService.deleteNote(id: id)
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func toggleTodoPin(id: UUID) async {
+        do {
+            _ = try await environment.todoService.togglePin(listID: id)
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func toggleTodoArchived(id: UUID) async {
+        do {
+            let archived = memory.status != .archived
+            _ = try await environment.todoService.setArchived(archived, listID: id)
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func deleteTodoList(id: UUID) async {
+        do {
+            try await environment.todoService.deleteList(id: id)
+            await refreshAll()
+        } catch {
+            // Handle error silently for now
+        }
+    }
 }
-
-

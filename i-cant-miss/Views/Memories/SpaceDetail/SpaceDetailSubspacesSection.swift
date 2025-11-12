@@ -6,15 +6,11 @@ struct SpaceDetailSubspacesSection: View {
     let memoryCountProvider: (SpaceModel) -> Int
     let parentLookup: (UUID) -> SpaceModel?
 
-    private var listHeight: CGFloat {
-        let rowHeight: CGFloat = 68
-        let headerHeight: CGFloat = 48
-        return (CGFloat(childSpaces.count) * rowHeight) + headerHeight
-    }
-
     var body: some View {
-        List {
-            Section("Subspaces") {
+        if childSpaces.isEmpty {
+            EmptyView()
+        } else {
+            Section {
                 ForEach(childSpaces) { child in
                     NavigationLink(value: child) {
                         SpaceRowView(
@@ -24,15 +20,18 @@ struct SpaceDetailSubspacesSection: View {
                             parentLookup: parentLookup
                         )
                     }
+                    .listRowInsets(.init(top: 12, leading: 20, bottom: 12, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
+            } header: {
+                Text("Subspaces")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 20)
             }
+            .listSectionSeparator(.hidden)
+            .textCase(nil)
         }
-        .listStyle(.insetGrouped)
-        .listRowSeparator(.hidden)
-        .listSectionSeparator(.hidden)
-        .scrollContentBackground(.hidden)
-        .scrollDisabled(true)
-        .frame(height: listHeight)
-        .padding(.horizontal, -16)
     }
 }

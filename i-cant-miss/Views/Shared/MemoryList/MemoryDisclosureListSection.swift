@@ -12,28 +12,49 @@ struct MemoryDisclosureListSection: View {
     let onToggleSelection: ((MemoryModel) -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            DisclosureGroup(isExpanded: $isExpanded) {
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(memories) { memory in
-                        MemoryListItemButton(
-                            memory: memory,
-                            isMultiSelecting: isMultiSelecting,
-                            isSelected: selectedMemoryIDs.contains(memory.id),
-                            isDisabled: isDisabled,
-                            onSelect: onSelect,
-                            onToggleSelection: onToggleSelection
-                        )
-                    }
+        Section {
+            headerRow
+
+            if isExpanded {
+                ForEach(memories) { memory in
+                    MemoryListItemButton(
+                        memory: memory,
+                        isMultiSelecting: isMultiSelecting,
+                        isSelected: selectedMemoryIDs.contains(memory.id),
+                        isDisabled: isDisabled,
+                        onSelect: onSelect,
+                        onToggleSelection: onToggleSelection
+                    )
+                    .listRowInsets(.init(top: 12, leading: 20, bottom: 12, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
-                .padding(.top)
-            } label: {
-                Label(title, systemImage: systemImage)
-                    .foregroundStyle(.white)
             }
         }
-        .padding(.top)
+        .listSectionSeparator(.hidden)
+        .background(Color.clear)
+    }
+
+    private var headerRow: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Label(title, systemImage: systemImage)
+                    .foregroundStyle(.white)
+                Spacer()
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(.init(top: 24, leading: 20, bottom: isExpanded && !memories.isEmpty ? 0 : 12, trailing: 20))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .disabled(memories.isEmpty)
     }
 }
-
-

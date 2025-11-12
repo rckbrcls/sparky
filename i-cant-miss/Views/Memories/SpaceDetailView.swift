@@ -26,10 +26,8 @@ struct SpaceDetailView: View {
     @State private var searchText = ""
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
-    @State private var isUpcomingExpanded = true
     @State private var isOtherExpanded = true
     @State private var autoCollapsedInbox = false
-    @State private var autoCollapsedUpcoming = false
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -170,9 +168,7 @@ struct SpaceDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            content
-        }
+        spaceDetailList
         .navigationTitle(navigationTitleText)
         .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
         .toolbar { toolbarContent }
@@ -186,9 +182,6 @@ struct SpaceDetailView: View {
         }
         .onChange(of: inboxMemories.count) {
             syncExpansionStates()
-        }
-        .onChange(of: isUpcomingExpanded) {
-            autoCollapsedUpcoming = timelineSectionsForSpace.isEmpty && ungroupedMemories.isEmpty && !isUpcomingExpanded
         }
         .onChange(of: isInboxExpanded) {
             autoCollapsedInbox = inboxMemories.isEmpty && !isInboxExpanded
@@ -242,14 +235,19 @@ struct SpaceDetailView: View {
         .presentationDetents([.large], selection: $filterSheetDetent)
     }
 
-    @ViewBuilder
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 22) {
+    private var spaceDetailList: some View {
+        List {
             subspacesSection
-            mainSection
+            mainListSection
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 70)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 70)
+        }
+        .listRowSeparator(.hidden)
+        .background(Color.clear)
     }
 
     @ViewBuilder
@@ -265,7 +263,7 @@ struct SpaceDetailView: View {
     }
 
     @ViewBuilder
-    private var mainSection: some View {
+    private var mainListSection: some View {
         if isSearching {
             SpaceDetailSearchResultsView(
                 memories: filteredMemories,
@@ -290,7 +288,6 @@ struct SpaceDetailView: View {
             isMultiSelecting: isMultiSelecting,
             selectedMemoryIDs: selectedMemoryIDs,
             isPerformingBulkAction: isPerformingBulkAction,
-            isUpcomingExpanded: $isUpcomingExpanded,
             isOtherExpanded: $isOtherExpanded,
             sectionExpansionProvider: sectionExpansionBinding(for:),
             isMemorySelected: isMemorySelected(_:),
@@ -320,17 +317,6 @@ struct SpaceDetailView: View {
     }
 
     private func syncExpansionStates() {
-        let timelineIsEmpty = timelineSectionsForSpace.isEmpty && ungroupedMemories.isEmpty
-        if timelineIsEmpty {
-            if isUpcomingExpanded {
-                isUpcomingExpanded = false
-                autoCollapsedUpcoming = true
-            }
-        } else if autoCollapsedUpcoming && !isUpcomingExpanded {
-            isUpcomingExpanded = true
-            autoCollapsedUpcoming = false
-        }
-
         let inboxIsEmpty = inboxMemories.isEmpty
         if inboxIsEmpty {
             if isInboxExpanded {
