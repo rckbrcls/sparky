@@ -659,14 +659,15 @@ struct MemoryEditorView: View {
     }
 
     private var cardBounceAnimation: Animation {
-        .interpolatingSpring(stiffness: 280, damping: 20, initialVelocity: 0.35)
+        .interpolatingSpring(stiffness: 240, damping: 18, initialVelocity: 0.35)
     }
 
     private var cardBounceTransition: AnyTransition {
         .asymmetric(
             insertion: .scale(scale: 0.9, anchor: .center)
                 .combined(with: .opacity),
-            removal: .opacity
+            removal: .scale(scale: 0.75, anchor: .center)
+                .combined(with: .opacity)
         )
     }
 
