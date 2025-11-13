@@ -284,9 +284,9 @@ struct MemoryEditorView: View {
                 }
             }
             .onChange(of: photoPickerItems) { _, newItems in
-                guard !newItems.isEmpty, let targetID = pendingPhotoContentID else { return }
+                guard !newItems.isEmpty else { return }
                 Task {
-                    await loadSelectedPhotos(from: newItems, into: targetID)
+                    await loadSelectedPhotos(from: newItems)
                 }
             }
             .onChange(of: viewModel.contentQueue) { _, _ in
@@ -294,12 +294,26 @@ struct MemoryEditorView: View {
                 cleanupPendingContentTargets()
             }
             .onChange(of: isPresentingPhotoLibrary) { _, isPresented in
-                if !isPresented && photoPickerItems.isEmpty {
+                if !isPresented {
+                    if photoPickerItems.isEmpty {
+                        if pendingPhotoContentID != nil {
+                            let cardExists = viewModel.contentQueue.contains(where: { $0.id == pendingPhotoContentID && $0.contentType == .photos })
+                            if !cardExists {
+                                pendingPhotoContentID = nil
+                            }
+                        }
+                    }
                     cleanupPendingContentTargets()
                 }
             }
             .onChange(of: isPresentingCamera) { _, isPresented in
                 if !isPresented {
+                    if pendingPhotoContentID != nil {
+                        let cardExists = viewModel.contentQueue.contains(where: { $0.id == pendingPhotoContentID && $0.contentType == .photos })
+                        if !cardExists {
+                            pendingPhotoContentID = nil
+                        }
+                    }
                     cleanupPendingContentTargets()
                 }
             }
@@ -763,17 +777,18 @@ struct MemoryEditorView: View {
 
     private func handleAddContentSelection(_ type: MemoryEditorContentType) {
         guard isEditingEnabled else { return }
-        let contentID = viewModel.appendContent(type)
         switch type {
         case .richText:
-            break
+            _ = viewModel.appendContent(type)
         case .checklist:
+            let contentID = viewModel.appendContent(type)
             ensureDraftContainer(for: contentID)
             focusedDraftID = checklistDraftRows[contentID]?.first?.id
         case .photos:
-            pendingPhotoContentID = contentID
+            pendingPhotoContentID = nil
             isPresentingPhotoLibrary = true
         case .links:
+            let contentID = viewModel.appendContent(type)
             pendingLinkContentID = contentID
             showAddLinkSheet = true
         }
@@ -782,15 +797,13 @@ struct MemoryEditorView: View {
 
     private func handleCameraToolbarTap() {
         guard isEditingEnabled else { return }
-        let contentID = viewModel.appendContent(.photos)
-        pendingPhotoContentID = contentID
+        pendingPhotoContentID = nil
         isPresentingCamera = true
     }
 
     private func handleLibraryToolbarTap() {
         guard isEditingEnabled else { return }
-        let contentID = viewModel.appendContent(.photos)
-        pendingPhotoContentID = contentID
+        pendingPhotoContentID = nil
         isPresentingPhotoLibrary = true
     }
 
@@ -808,7 +821,12 @@ struct MemoryEditorView: View {
 
     private func handleCapturedImage(_ image: UIImage) {
         guard let data = image.jpegData(compressionQuality: 0.85) else { return }
-        let targetID = pendingPhotoContentID ?? viewModel.appendContent(.photos)
+        let targetID: UUID
+        if let existingID = pendingPhotoContentID {
+            targetID = existingID
+        } else {
+            targetID = viewModel.appendContent(.photos)
+        }
         photoLoadingContentIDs.insert(targetID)
         if viewModel.addPhotoAttachment(data: data, to: targetID) == nil {
             viewModel.removeContent(id: targetID)
@@ -833,9 +851,17 @@ struct MemoryEditorView: View {
         isPhotoViewerPresented = true
     }
 
-    private func loadSelectedPhotos(from items: [PhotosPickerItem], into contentID: UUID) async {
-        _ = await MainActor.run {
-            photoLoadingContentIDs.insert(contentID)
+    private func loadSelectedPhotos(from items: [PhotosPickerItem]) async {
+        let targetID: UUID = await MainActor.run {
+            let id: UUID
+            if let existingID = pendingPhotoContentID,
+               viewModel.contentQueue.contains(where: { $0.id == existingID && $0.contentType == .photos }) {
+                id = existingID
+            } else {
+                id = viewModel.appendContent(.photos)
+            }
+            photoLoadingContentIDs.insert(id)
+            return id
         }
 
         var didAddAttachment = false
@@ -843,7 +869,7 @@ struct MemoryEditorView: View {
             do {
                 if let image = try await item.loadTransferable(type: PhotoPickerLoadedImage.self) {
                     _ = await MainActor.run {
-                        if viewModel.addPhotoAttachment(data: image.data, to: contentID) != nil {
+                        if viewModel.addPhotoAttachment(data: image.data, to: targetID) != nil {
                             didAddAttachment = true
                         }
                     }
@@ -854,16 +880,16 @@ struct MemoryEditorView: View {
         }
 
         _ = await MainActor.run {
-            photoLoadingContentIDs.remove(contentID)
+            photoLoadingContentIDs.remove(targetID)
             photoPickerItems = []
             isPresentingPhotoLibrary = false
             if !didAddAttachment {
-                viewModel.removeContent(id: contentID)
+                viewModel.removeContent(id: targetID)
             }
-            if pendingPhotoContentID == contentID {
+            if pendingPhotoContentID == targetID {
                 pendingPhotoContentID = nil
             }
-            cleanupPendingContentTargetsAfterAttachment(for: contentID, didAddAttachment: didAddAttachment)
+            cleanupPendingContentTargetsAfterAttachment(for: targetID, didAddAttachment: didAddAttachment)
         }
     }
 
@@ -965,16 +991,11 @@ struct MemoryEditorView: View {
            !isPresentingPhotoLibrary,
            !isPresentingCamera,
            !photoLoadingContentIDs.contains(pendingPhotoID),
-           photoPickerItems.isEmpty,
-           (photoAttachments(for: pendingPhotoID)?.isEmpty ?? true) {
-            viewModel.removeContent(id: pendingPhotoID)
-            photoLoadingContentIDs.remove(pendingPhotoID)
-            checklistDraftRows.removeValue(forKey: pendingPhotoID)
-            if selectedPhotoContentID == pendingPhotoID {
-                selectedPhotoContentID = nil
-                isPhotoViewerPresented = false
+           photoPickerItems.isEmpty {
+            let cardExists = viewModel.contentQueue.contains(where: { $0.id == pendingPhotoID && $0.contentType == .photos })
+            if !cardExists {
+                pendingPhotoContentID = nil
             }
-            pendingPhotoContentID = nil
         }
 
         if let pendingLinkID = pendingLinkContentID,
@@ -992,8 +1013,6 @@ struct MemoryEditorView: View {
 
         if !didAddAttachment {
             viewModel.removeContent(id: contentID)
-        } else {
-            ensureDraftContainer(for: contentID)
         }
 
         if pendingPhotoContentID == contentID {
