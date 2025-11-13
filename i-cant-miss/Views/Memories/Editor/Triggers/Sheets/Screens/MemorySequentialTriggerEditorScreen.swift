@@ -44,7 +44,7 @@ struct MemorySequentialTriggerEditorScreen: View {
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(action: confirmChanges) {
+                Button(role: .confirm, action: confirmChanges) {
                     Image(systemName: "checkmark")
                 }
                 .accessibilityLabel("Save")

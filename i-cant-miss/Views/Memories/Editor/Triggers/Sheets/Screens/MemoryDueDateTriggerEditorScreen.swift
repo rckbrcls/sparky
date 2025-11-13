@@ -31,7 +31,7 @@ struct MemoryDueDateTriggerEditorScreen: View {
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(action: applyChanges) {
+                Button(role: .confirm, action: applyChanges) {
                     Image(systemName: "checkmark")
                 }
                 .accessibilityLabel("Save")

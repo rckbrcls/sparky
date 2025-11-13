@@ -63,7 +63,7 @@ struct MemoryPersonTriggerEditorScreen: View {
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(action: commitChanges) {
+                Button(role: .confirm, action: commitChanges) {
                     Image(systemName: confirmationIconName)
                 }
                 .accessibilityLabel(confirmationAccessibilityLabel)

@@ -52,7 +52,7 @@ struct MemoryWeekdayTriggerEditorScreen: View {
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(action: applyChanges) {
+                Button(role: .confirm, action: applyChanges) {
                     Image(systemName: confirmationIconName)
                 }
                 .disabled(selectedDays.isEmpty)

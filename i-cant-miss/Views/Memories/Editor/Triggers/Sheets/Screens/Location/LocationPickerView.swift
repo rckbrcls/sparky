@@ -83,8 +83,8 @@ struct LocationPickerView: View {
                     .accessibilityLabel("Close")
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(role: .confirm) {
                     guard let coordinate = selectedCoordinate else { return }
                     let name = resolvedLocationName
                     onAdd(name, coordinate.latitude, coordinate.longitude, defaultRadius, event)
