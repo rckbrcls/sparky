@@ -7,11 +7,19 @@ struct MemoryEditorPhotosCard: View {
     var isEditable: Bool = true
     var onRemoveAttachment: (UUID) -> Void
     var onAttachmentTap: (Int, MemoryModel.Attachment) -> Void = { _, _ in }
+    var onAddFromLibrary: () -> Void = {}
+    var onAddFromCamera: () -> Void = {}
+    var isAddMenuEnabled: Bool = true
 
     var body: some View {
         MemoryEditorContentCard {
             VStack(alignment: .leading, spacing: 16) {
                 attachmentsGallery
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if isEditable {
+                addMenu
             }
         }
     }
@@ -54,6 +62,23 @@ struct MemoryEditorPhotosCard: View {
                 }
             }
         }
+    }
+
+    private var addMenu: some View {
+        Menu {
+            Button("Add From Library", action: onAddFromLibrary)
+            Button("Capture Photo", action: onAddFromCamera)
+        } label: {
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .padding(10)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .accessibilityLabel("Add photos")
+        .disabled(!isAddMenuEnabled || isLoading)
+        .opacity((isAddMenuEnabled && !isLoading) ? 1 : 0.6)
+        .padding(8)
     }
 
     private func attachmentThumbnail(for attachment: MemoryModel.Attachment) -> some View {
