@@ -269,6 +269,7 @@ struct MemoryEditorView: View {
                         isPresentingCamera = false
                     }
                 )
+                .ignoresSafeArea(.all)
             }
             .photosPicker(isPresented: $isPresentingPhotoLibrary,
                           selection: $photoPickerItems,

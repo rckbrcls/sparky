@@ -16,10 +16,17 @@ struct CameraCaptureView: UIViewControllerRepresentable {
         picker.cameraCaptureMode = .photo
         picker.allowsEditing = false
         picker.modalPresentationStyle = .fullScreen
+        picker.modalTransitionStyle = .coverVertical
+        picker.edgesForExtendedLayout = .all
+        picker.extendedLayoutIncludesOpaqueBars = true
         return picker
     }
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
+        uiViewController.edgesForExtendedLayout = .all
+        uiViewController.extendedLayoutIncludesOpaqueBars = true
+        uiViewController.modalPresentationStyle = .fullScreen
+    }
 
     final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
         private let onCapture: (UIImage) -> Void
