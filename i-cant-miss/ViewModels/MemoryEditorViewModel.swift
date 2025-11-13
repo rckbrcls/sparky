@@ -607,9 +607,9 @@ private extension MemoryEditorViewModel {
         return sanitized
     }
 
-    func persistMemory(trimmedTitle: String,
-                       trimmedBody: String,
-                       sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
+    private func persistMemory(trimmedTitle: String,
+                               trimmedBody: String,
+                               sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
         if let id = persistenceIdentity.id {
             return try await updateExistingMemory(
                 id: id,
@@ -625,9 +625,9 @@ private extension MemoryEditorViewModel {
         }
     }
 
-    func updateExistingMemory(id: UUID,
-                              origin: MemoryModel.Metadata.Origin?,
-                              sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
+    private func updateExistingMemory(id: UUID,
+                                      origin: MemoryModel.Metadata.Origin?,
+                                      sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
         if let origin {
             switch origin {
             case .reminder:
@@ -664,9 +664,9 @@ private extension MemoryEditorViewModel {
         )
     }
 
-    func createNewMemory(trimmedTitle: String,
-                         trimmedBody: String,
-                         sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
+    private func createNewMemory(trimmedTitle: String,
+                                 trimmedBody: String,
+                                 sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
         if !triggers.isEmpty {
             let reminderID = try await createReminder(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
             return MemoryPersistenceIdentity(id: reminderID, origin: .reminder(reminderID))

@@ -839,7 +839,7 @@ struct MemoryEditorView: View {
             if pendingPhotoContentID == contentID {
                 pendingPhotoContentID = nil
             }
-            cleanupPendingContentTargets()
+            cleanupPendingContentTargetsAfterAttachment(for: contentID, didAddAttachment: didAddAttachment)
         }
     }
 
@@ -958,6 +958,24 @@ struct MemoryEditorView: View {
             viewModel.removeContent(id: pendingLinkID)
             pendingLinkContentID = nil
         }
+    }
+
+    private func cleanupPendingContentTargetsAfterAttachment(for contentID: UUID, didAddAttachment: Bool) {
+        photoLoadingContentIDs.remove(contentID)
+        photoPickerItems = []
+        isPresentingPhotoLibrary = false
+
+        if !didAddAttachment {
+            viewModel.removeContent(id: contentID)
+        } else {
+            ensureDraftContainer(for: contentID)
+        }
+
+        if pendingPhotoContentID == contentID {
+            pendingPhotoContentID = nil
+        }
+
+        cleanupPendingContentTargets()
     }
 
     private func priorityLabel(for priority: MemoryPriority) -> String {
