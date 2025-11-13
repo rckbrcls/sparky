@@ -2,12 +2,14 @@ import SwiftUI
 
 struct SpaceDetailTimelineContentView: View {
     let sections: [MemoryService.TimelineSection]
+    let pinnedMemories: [MemoryModel]
     let ungroupedMemories: [MemoryModel]
     let emptyStateTitle: String
     let emptyStateMessage: String
     let isMultiSelecting: Bool
     let selectedMemoryIDs: Set<MemoryModel.ID>
     let isPerformingBulkAction: Bool
+    @Binding var isPinnedExpanded: Bool
     @Binding var isOtherExpanded: Bool
     let sectionExpansionProvider: (MemoryService.TimelineSection.Kind) -> Binding<Bool>
     let isMemorySelected: (MemoryModel) -> Bool
@@ -28,6 +30,10 @@ struct SpaceDetailTimelineContentView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
+                if !pinnedMemories.isEmpty {
+                    pinnedMemoriesSection
+                }
+
                 ForEach(sections) { section in
                     MemoryDisclosureListSection(
                         title: section.kind.title,
@@ -47,6 +53,21 @@ struct SpaceDetailTimelineContentView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var pinnedMemoriesSection: some View {
+        MemoryDisclosureListSection(
+            title: "Pinned Memories",
+            systemImage: "pin.fill",
+            isExpanded: $isPinnedExpanded,
+            memories: pinnedMemories,
+            isMultiSelecting: isMultiSelecting,
+            selectedMemoryIDs: selectedMemoryIDs,
+            isDisabled: isPerformingBulkAction,
+            onSelect: onSelectMemory,
+            onToggleSelection: onToggleSelection
+        )
     }
 
     private var otherMemoriesSection: some View {

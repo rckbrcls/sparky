@@ -23,6 +23,7 @@ struct MemoryTimelineView: View {
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
     @State private var autoCollapsedInbox = false
+    @State private var isPinnedExpanded = true
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -49,16 +50,49 @@ struct MemoryTimelineView: View {
                 MemoryService.TimelineSection(
                     kind: section.kind,
                     memories: section.memories.filter { memory in
-                        isMemoryTypeSelected(memory)
+                        !memory.isPinned && isMemoryTypeSelected(memory)
                     }
                 )
             }
             .filter { !$0.memories.isEmpty }
     }
 
+    private var filteredPinnedMemories: [MemoryModel] {
+        let referenceDate = Date()
+        let isSectionFilterActive = !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count
+
+        return memoryService.memories
+            .filter { memory in
+                guard memory.status == .active, memory.isPinned else { return false }
+                guard isMemoryTypeSelected(memory) else { return false }
+                if !showInbox && isInboxMemory(memory) {
+                    return false
+                }
+
+                guard isSectionFilterActive else {
+                    return true
+                }
+
+                if memory.hasRecurringTriggers && selectedSections.contains(.recurring) {
+                    return true
+                }
+
+                guard let kind = sectionKind(for: memory, referenceDate: referenceDate) else {
+                    return false
+                }
+
+                return selectedSections.contains(kind)
+            }
+            .sorted { lhs, rhs in
+                sortPinned(lhs, rhs, referenceDate: referenceDate)
+            }
+    }
+
     private var filteredInboxMemories: [MemoryModel] {
         memoryService.inboxMemories()
-            .filter { isMemoryTypeSelected($0) }
+            .filter { memory in
+                !memory.isPinned && isMemoryTypeSelected(memory)
+            }
     }
 
     private var activeFilterCount: Int {
@@ -241,6 +275,7 @@ struct MemoryTimelineView: View {
             if isSearching {
                 searchResultsList
             } else {
+                pinnedSection
                 timelineSectionsList
                 if showInbox {
                     inboxListContent
@@ -256,6 +291,22 @@ struct MemoryTimelineView: View {
         }
         .listRowSeparator(.hidden)
         .background(Color.clear)
+    }
+
+    @ViewBuilder
+    private var pinnedSection: some View {
+        if !filteredPinnedMemories.isEmpty {
+            MemoryDisclosureListSection(
+                title: "Pinned Memories",
+                systemImage: "pin.fill",
+                isExpanded: $isPinnedExpanded,
+                memories: filteredPinnedMemories,
+                isMultiSelecting: isMultiSelecting,
+                selectedMemoryIDs: selectedMemoryIDs,
+                isDisabled: isPerformingBulkAction,
+                onSelect: onSelectMemory,
+                onToggleSelection: toggleMemorySelection(_:))
+        }
     }
 
     @ViewBuilder
@@ -414,6 +465,66 @@ struct MemoryTimelineView: View {
                 }
             }
         )
+    }
+
+    private func isInboxMemory(_ memory: MemoryModel) -> Bool {
+        memory.status == .active && !memory.hasTriggers && memory.space == nil
+    }
+
+    private func sectionKind(for memory: MemoryModel, referenceDate: Date = Date()) -> MemoryService.TimelineSection.Kind? {
+        guard let fireDate = memory.nextFireDate(referenceDate: referenceDate) else { return nil }
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: referenceDate)
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
+        let sevenDaysOut = calendar.date(byAdding: .day, value: 7, to: startOfTomorrow) ?? referenceDate
+
+        if calendar.isDate(fireDate, inSameDayAs: referenceDate) {
+            return .today
+        } else if fireDate < sevenDaysOut {
+            return .nextSevenDays
+        } else {
+            return .later
+        }
+    }
+
+    private func sortPinned(_ lhs: MemoryModel, _ rhs: MemoryModel, referenceDate: Date = Date()) -> Bool {
+        let lhsFire = lhs.nextFireDate(referenceDate: referenceDate)
+        let rhsFire = rhs.nextFireDate(referenceDate: referenceDate)
+
+        if lhsFire != rhsFire {
+            switch (lhsFire, rhsFire) {
+            case let (lhsDate?, rhsDate?):
+                return lhsDate < rhsDate
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                break
+            }
+        }
+
+        if lhs.dueDate != rhs.dueDate {
+            switch (lhs.dueDate, rhs.dueDate) {
+            case let (lhsDate?, rhsDate?):
+                return lhsDate < rhsDate
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                break
+            }
+        }
+
+        if lhs.priority != rhs.priority {
+            let lhsPriority = lhs.priority?.rawValue ?? -1
+            let rhsPriority = rhs.priority?.rawValue ?? -1
+            return lhsPriority > rhsPriority
+        }
+
+        return lhs.updatedAt > rhs.updatedAt
     }
 
     private func toggleMemorySelection(_ memory: MemoryModel) {

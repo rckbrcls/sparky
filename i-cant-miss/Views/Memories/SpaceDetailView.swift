@@ -28,6 +28,7 @@ struct SpaceDetailView: View {
     @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
     @State private var isOtherExpanded = true
+    @State private var isPinnedExpanded = true
     @State private var autoCollapsedInbox = false
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
@@ -70,11 +71,20 @@ struct SpaceDetailView: View {
     }
 
     private var nonInboxMemories: [MemoryModel] {
-        filteredMemories.filter { !isInboxMemory($0) }
+        filteredMemories.filter { !isInboxMemory($0) && !$0.isPinned }
     }
 
     private var inboxMemories: [MemoryModel] {
-        filteredMemories.filter { isInboxMemory($0) }
+        filteredMemories.filter { isInboxMemory($0) && !$0.isPinned }
+    }
+
+    private var pinnedMemories: [MemoryModel] {
+        let referenceDate = Date()
+        return filteredMemories
+            .filter(\.isPinned)
+            .sorted { lhs, rhs in
+                sortPinned(lhs, rhs, referenceDate: referenceDate)
+            }
     }
 
     private var timelineSectionsForSpace: [MemoryService.TimelineSection] {
@@ -110,6 +120,7 @@ struct SpaceDetailView: View {
     private var shouldShowEmptyStateCard: Bool {
         timelineSectionsForSpace.isEmpty &&
         ungroupedMemories.isEmpty &&
+        pinnedMemories.isEmpty &&
         (!showInbox || inboxMemories.isEmpty)
     }
 
@@ -344,12 +355,14 @@ struct SpaceDetailView: View {
     private var timelineAndInboxSection: some View {
         SpaceDetailTimelineContentView(
             sections: timelineSectionsForSpace,
+            pinnedMemories: pinnedMemories,
             ungroupedMemories: ungroupedMemories,
             emptyStateTitle: emptyStateTitle,
             emptyStateMessage: emptyStateMessage,
             isMultiSelecting: isMultiSelecting,
             selectedMemoryIDs: selectedMemoryIDs,
             isPerformingBulkAction: isPerformingBulkAction,
+            isPinnedExpanded: $isPinnedExpanded,
             isOtherExpanded: $isOtherExpanded,
             sectionExpansionProvider: sectionExpansionBinding(for:),
             isMemorySelected: isMemorySelected(_:),
@@ -647,5 +660,44 @@ struct SpaceDetailView: View {
         }
 
         await memoryService.refresh(force: true)
+    }
+
+    private func sortPinned(_ lhs: MemoryModel, _ rhs: MemoryModel, referenceDate: Date = Date()) -> Bool {
+        let lhsFire = lhs.nextFireDate(referenceDate: referenceDate)
+        let rhsFire = rhs.nextFireDate(referenceDate: referenceDate)
+
+        if lhsFire != rhsFire {
+            switch (lhsFire, rhsFire) {
+            case let (lhsDate?, rhsDate?):
+                return lhsDate < rhsDate
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                break
+            }
+        }
+
+        if lhs.dueDate != rhs.dueDate {
+            switch (lhs.dueDate, rhs.dueDate) {
+            case let (lhsDate?, rhsDate?):
+                return lhsDate < rhsDate
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                break
+            }
+        }
+
+        if lhs.priority != rhs.priority {
+            let lhsPriority = lhs.priority?.rawValue ?? -1
+            let rhsPriority = rhs.priority?.rawValue ?? -1
+            return lhsPriority > rhsPriority
+        }
+
+        return lhs.updatedAt > rhs.updatedAt
     }
 }

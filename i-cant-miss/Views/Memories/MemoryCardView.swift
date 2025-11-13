@@ -89,7 +89,7 @@ struct MemoryCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            let hasMetaIndicators = memory.priority != nil || memory.isPinned || statusBadge != nil
+            let hasMetaIndicators = memory.priority != nil || statusBadge != nil
             let hasSpaceBadge = memory.space != nil
 
             if hasSpaceBadge || hasMetaIndicators {
@@ -121,14 +121,6 @@ struct MemoryCardView: View {
                                 Image(systemName: priority.iconName)
                                     .font(.subheadline)
                                     .foregroundStyle(priorityColor(for: priority))
-                            }
-
-                            if memory.isPinned {
-                                Image(systemName: "pin.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .rotationEffect(.degrees(45))
-                                    .accessibilityLabel("Pinned")
                             }
 
                             if let statusBadge {
