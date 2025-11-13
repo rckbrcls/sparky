@@ -46,6 +46,7 @@ struct MemoryModel: Identifiable, Hashable {
 
         static let photo = AttachmentKind(rawValue: "photo")
         static let link = AttachmentKind(rawValue: "link")
+        static let contentBundle = AttachmentKind(rawValue: "content-bundle")
     }
 
     struct Attachment: Identifiable, Hashable {
@@ -114,6 +115,7 @@ struct MemoryModel: Identifiable, Hashable {
     var snoozeCount: Int
     var lastCompletionDate: Date?
     var metadata: Metadata
+    var contents: [MemoryContent]
     var attachments: [Attachment]
 
     var hasChecklist: Bool {
@@ -356,6 +358,12 @@ extension ReminderModel {
                 legacyAudience: folder?.audience,
                 autoCompleteOnChecklistCompletion: false
             ),
+            contents: MemoryContent.legacyContents(
+                body: notes,
+                checkItems: [],
+                photoAttachments: [],
+                linkAttachments: []
+            ),
             attachments: []
         )
     }
@@ -388,6 +396,12 @@ extension NoteModel {
                 legacyAudience: folder?.audience,
                 autoCompleteOnChecklistCompletion: false
             ),
+            contents: MemoryContent.legacyContents(
+                body: content,
+                checkItems: [],
+                photoAttachments: [],
+                linkAttachments: []
+            ),
             attachments: []
         )
     }
@@ -419,6 +433,12 @@ extension TodoListModel {
                 origin: .todoList(id),
                 legacyAudience: folder?.audience,
                 autoCompleteOnChecklistCompletion: true
+            ),
+            contents: MemoryContent.legacyContents(
+                body: notes,
+                checkItems: items.toCheckItems(),
+                photoAttachments: [],
+                linkAttachments: []
             ),
             attachments: []
         )

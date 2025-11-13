@@ -14,6 +14,7 @@ actor MemoryAttachmentStore {
     private let jsonDecoder = JSONDecoder()
     private let photoKindRawValue = "photo"
     private let linkKindRawValue = "link"
+    private let contentBundleKindRawValue = "content-bundle"
 
     private struct LinkAttachmentPayload: Codable {
         let url: URL
@@ -79,6 +80,15 @@ actor MemoryAttachmentStore {
                     url: payload.url,
                     createdAt: createdAt
                 )
+            case "bundle":
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                return AttachmentResource(
+                    id: identifier,
+                    kindRawValue: contentBundleKindRawValue,
+                    data: data,
+                    url: nil,
+                    createdAt: createdAt
+                )
             default:
                 return nil
             }
@@ -130,6 +140,10 @@ actor MemoryAttachmentStore {
                 let payload = LinkAttachmentPayload(url: linkURL)
                 let data = try jsonEncoder.encode(payload)
                 try data.write(to: url, options: .atomic)
+            } else if kindRawValue == contentBundleKindRawValue {
+                let filename = "\(attachment.id.uuidString).bundle"
+                let url = directory.appendingPathComponent(filename, isDirectory: false)
+                try attachment.data.write(to: url, options: .atomic)
             } else {
                 continue
             }

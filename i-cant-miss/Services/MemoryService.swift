@@ -383,21 +383,24 @@ private extension MemoryService {
         for reminder in reminders {
             let space = reminder.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
             var memory = reminder.toMemory(space: space)
-            memory.attachments = await attachmentStore.attachments(for: memory.id)
+            let attachments = await attachmentStore.attachments(for: memory.id)
+            populateContents(for: &memory, attachments: attachments)
             unified.append(memory)
         }
 
         for note in notes {
             let space = note.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
             var memory = note.toMemory(space: space)
-            memory.attachments = await attachmentStore.attachments(for: memory.id)
+            let attachments = await attachmentStore.attachments(for: memory.id)
+            populateContents(for: &memory, attachments: attachments)
             unified.append(memory)
         }
 
         for todo in todos {
             let space = todo.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
             var memory = todo.toMemory(space: space)
-            memory.attachments = await attachmentStore.attachments(for: memory.id)
+            let attachments = await attachmentStore.attachments(for: memory.id)
+            populateContents(for: &memory, attachments: attachments)
             unified.append(memory)
         }
 
@@ -457,5 +460,33 @@ private extension MemoryService {
                 return lhs.updatedAt > rhs.updatedAt
             }
         }
+    }
+
+    func populateContents(for memory: inout MemoryModel,
+                          attachments: [MemoryModel.Attachment]) {
+        let decodeResult = MemoryContentCodec.extractContents(from: attachments)
+
+        let photoAttachments = decodeResult.remainingAttachments.filter { $0.kind == .photo }
+        let linkAttachments = decodeResult.remainingAttachments.filter { $0.kind == .link }
+
+        if decodeResult.contents.isEmpty {
+            memory.contents = MemoryContent.legacyContents(
+                body: memory.body,
+                checkItems: memory.checkItems,
+                photoAttachments: photoAttachments,
+                linkAttachments: linkAttachments
+            )
+        } else {
+            memory.contents = decodeResult.contents
+        }
+
+        let referencedAttachmentIDs = Set(memory.contents.referencedAttachmentIDs())
+        if referencedAttachmentIDs.isEmpty {
+            memory.attachments = decodeResult.remainingAttachments
+        } else {
+            memory.attachments = decodeResult.remainingAttachments.filter { referencedAttachmentIDs.contains($0.id) }
+        }
+        memory.body = memory.contents.aggregatedBodyText()
+        memory.checkItems = memory.contents.flattenedChecklistItems()
     }
 }

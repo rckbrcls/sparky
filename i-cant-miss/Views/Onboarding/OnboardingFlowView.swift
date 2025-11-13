@@ -440,6 +440,12 @@ private enum OnboardingSampleData {
             snoozeCount: 1,
             lastCompletionDate: nil,
             metadata: MemoryModel.Metadata(origin: .reminder(UUID())),
+            contents: MemoryContent.legacyContents(
+                body: "Checklist done. Trigger fires as soon as you arrive at GRU.",
+                checkItems: travelChecklist,
+                photoAttachments: [],
+                linkAttachments: []
+            ),
             attachments: []
         )
 
@@ -459,6 +465,12 @@ private enum OnboardingSampleData {
             snoozeCount: 0,
             lastCompletionDate: nil,
             metadata: MemoryModel.Metadata(origin: .note(UUID())),
+            contents: MemoryContent.legacyContents(
+                body: "Share growth metrics and highlight the new trigger-first onboarding.",
+                checkItems: [],
+                photoAttachments: [],
+                linkAttachments: []
+            ),
             attachments: []
         )
 

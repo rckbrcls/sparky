@@ -17,7 +17,6 @@ enum MemoryEditorTemplate {
 @MainActor
 final class MemoryEditorViewModel: ObservableObject {
     @Published var title: String = ""
-    @Published var body: String = ""
     @Published var selectedSpaceID: UUID?
     @Published var status: MemoryStatus = .active
     @Published var priority: MemoryPriority = .medium
@@ -26,19 +25,20 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var dueDate: Date = Date().addingTimeInterval(3600)
     @Published var autoCompleteChecklist: Bool
     @Published var triggers: [MemoryTriggerDraft] = []
-    @Published var checklistItems: [CheckItemDraft] = []
-    @Published var showChecklist: Bool = false
+    @Published var contentQueue: [MemoryEditorContentItem] = []
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
-    @Published var attachments: [MemoryModel.Attachment] = []
-    @Published var linkAttachments: [MemoryModel.Attachment] = []
 
     let environment: AppEnvironment
     private let attachmentStore: MemoryAttachmentStore
-    private let existingMemory: MemoryModel?
+    private var existingMemory: MemoryModel?
+    private struct MemoryPersistenceIdentity {
+        var id: UUID?
+        var origin: MemoryModel.Metadata.Origin?
+    }
+    private var persistenceIdentity: MemoryPersistenceIdentity
     private let template: MemoryEditorTemplate
     private let defaultSpace: SpaceModel?
-    private var hasMigratedLegacyAttachments = false
 
     init(environment: AppEnvironment,
          attachmentStore: MemoryAttachmentStore,
@@ -51,6 +51,10 @@ final class MemoryEditorViewModel: ObservableObject {
         self.template = template
         self.defaultSpace = defaultSpace
         self.autoCompleteChecklist = memory?.metadata.autoCompleteOnChecklistCompletion ?? false
+        self.persistenceIdentity = MemoryPersistenceIdentity(
+            id: memory?.id,
+            origin: memory?.metadata.origin
+        )
         configureInitialState()
     }
 
@@ -59,7 +63,7 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     var editingMemoryID: UUID? {
-        existingMemory?.id
+        persistenceIdentity.id ?? existingMemory?.id
     }
 
     var selectedSpace: SpaceModel? {
@@ -77,120 +81,228 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     var canToggleAutoComplete: Bool {
-        !checklistItems.isEmpty
+        !allChecklistItems.isEmpty
     }
 
     var sequentialTrigger: MemoryTriggerDraft? {
         triggers.first(where: { $0.type == .sequential })
     }
 
-    func loadLatestDataIfNeeded() {
+    var aggregatedBody: String {
+        contentQueue.compactMap { item -> String? in
+            guard let richText = item.richTextContent else { return nil }
+            let trimmed = richText.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        .joined(separator: "\n\n")
+    }
+
+    var allChecklistItems: [CheckItemDraft] {
+        contentQueue.flatMap { $0.checklistContent?.items ?? [] }
+    }
+
+    var allPhotoAttachments: [MemoryModel.Attachment] {
+        contentQueue.flatMap { $0.photosContent?.attachments ?? [] }
+    }
+
+    var allLinkAttachments: [MemoryModel.Attachment] {
+        contentQueue.flatMap { $0.linksContent?.links ?? [] }
+    }
+
+    func loadLatestDataIfNeeded() async {
+        if let origin = persistenceIdentity.origin, let id = persistenceIdentity.id {
+            switch origin {
+            case .reminder:
+                if let reminder = environment.reminderService.fetchReminderWithRelationships(id: id) {
+                    let attachments = await attachmentStore.attachments(for: reminder.id)
+                    apply(reminder: reminder, attachments: attachments)
+                }
+            case .note:
+                if let note = environment.noteService.fetchNoteWithRelationships(id: id) {
+                    let attachments = await attachmentStore.attachments(for: note.id)
+                    apply(note: note, attachments: attachments)
+                }
+            case .todoList:
+                if let list = environment.todoService.fetchListWithItems(id: id) {
+                    let attachments = await attachmentStore.attachments(for: list.id)
+                    apply(todoList: list, attachments: attachments)
+                }
+            }
+            return
+        }
+
         guard let memory = existingMemory else { return }
         switch memory.metadata.origin {
         case .reminder(let id):
             if let reminder = environment.reminderService.fetchReminderWithRelationships(id: id) {
-                apply(reminder: reminder)
+                let attachments = await attachmentStore.attachments(for: reminder.id)
+                apply(reminder: reminder, attachments: attachments)
+                persistenceIdentity = MemoryPersistenceIdentity(id: reminder.id, origin: .reminder(id))
             }
         case .note(let id):
             if let note = environment.noteService.fetchNoteWithRelationships(id: id) {
-                apply(note: note)
+                let attachments = await attachmentStore.attachments(for: note.id)
+                apply(note: note, attachments: attachments)
+                persistenceIdentity = MemoryPersistenceIdentity(id: note.id, origin: .note(id))
             }
         case .todoList(let id):
             if let list = environment.todoService.fetchListWithItems(id: id) {
-                apply(todoList: list)
+                let attachments = await attachmentStore.attachments(for: list.id)
+                apply(todoList: list, attachments: attachments)
+                persistenceIdentity = MemoryPersistenceIdentity(id: list.id, origin: .todoList(id))
             }
         case .none:
             break
         }
     }
 
-    func addChecklistItem() {
-        showChecklist = true
-        let nextOrder = (checklistItems.map(\.sortOrder).max() ?? -1) + 1
-        checklistItems.append(CheckItemDraft(sortOrder: nextOrder))
+    @discardableResult
+    func appendContent(_ type: MemoryEditorContentType) -> UUID {
+        let item: MemoryEditorContentItem
+        switch type {
+        case .richText:
+            item = .richText(MemoryEditorRichTextContent())
+        case .checklist:
+            item = .checklist(MemoryEditorChecklistContent())
+        case .photos:
+            item = .photos(MemoryEditorPhotosContent())
+        case .links:
+            item = .links(MemoryEditorLinksContent())
+        }
+        contentQueue.append(item)
+        return item.id
     }
 
-    func addChecklistItem(title: String, detail: String = "") {
+    func removeContent(id: UUID) {
+        contentQueue.removeAll { $0.id == id }
+    }
+
+    func updateRichText(id: UUID, text: String) {
+        guard let index = contentQueue.firstIndex(where: { $0.id == id }) else { return }
+        contentQueue[index].mutateRichText { richText in
+            richText.text = text
+        }
+    }
+
+    func addChecklistItem(to contentID: UUID, title: String, detail: String = "") {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
         let trimmedDetail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        showChecklist = true
-        let nextOrder = (checklistItems.map(\.sortOrder).max() ?? -1) + 1
-        checklistItems.append(CheckItemDraft(title: trimmedTitle,
-                                             detail: trimmedDetail,
-                                             sortOrder: nextOrder))
-    }
-
-    func removeChecklistItems(at offsets: IndexSet) {
-        let sorted = offsets.sorted(by: >)
-        for index in sorted where checklistItems.indices.contains(index) {
-            checklistItems.remove(at: index)
-        }
-        reindexChecklist()
-        if checklistItems.isEmpty {
-            showChecklist = false
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
+        contentQueue[index].mutateChecklist { checklist in
+            let nextOrder = (checklist.items.map(\.sortOrder).max() ?? -1) + 1
+            let item = CheckItemDraft(
+                title: trimmedTitle,
+                detail: trimmedDetail,
+                sortOrder: nextOrder
+            )
+            checklist.items.append(item)
         }
     }
 
-    func moveChecklistItems(from source: IndexSet, to destination: Int) {
-        var items = checklistItems
-        let moving = source.sorted(by: >).map { items.remove(at: $0) }.reversed()
-        let adjustedDestination = max(0, min(destination - source.filter { $0 < destination }.count, items.count))
-        items.insert(contentsOf: moving, at: adjustedDestination)
-        checklistItems = items
-        reindexChecklist()
+    func removeChecklistItem(contentID: UUID, itemID: UUID) {
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
+        contentQueue[index].mutateChecklist { checklist in
+            checklist.items.removeAll { $0.id == itemID }
+            reindexChecklist(in: &checklist)
+        }
     }
 
     func toggleChecklistCompletion(for itemID: UUID) {
-        guard let index = checklistItems.firstIndex(where: { $0.id == itemID }) else { return }
-        checklistItems[index].isCompleted.toggle()
-        checklistItems[index].completedAt = checklistItems[index].isCompleted ? (checklistItems[index].completedAt ?? Date()) : nil
+        guard let index = contentQueue.firstIndex(where: { item in
+            item.checklistContent?.items.contains(where: { $0.id == itemID }) ?? false
+        }) else { return }
+        contentQueue[index].mutateChecklist { checklist in
+            guard let itemIndex = checklist.items.firstIndex(where: { $0.id == itemID }) else { return }
+            checklist.items[itemIndex].isCompleted.toggle()
+            checklist.items[itemIndex].completedAt = checklist.items[itemIndex].isCompleted
+                ? (checklist.items[itemIndex].completedAt ?? Date())
+                : nil
+        }
     }
 
     @MainActor
-    func createAttachment(data: Data) -> MemoryModel.Attachment {
-        let attachment = MemoryModel.Attachment(
-            id: UUID(),
-            kind: .photo,
-            data: data,
-            createdAt: Date()
-        )
-        attachments.append(attachment)
-        return attachment
+    func addPhotoAttachment(data: Data, to contentID: UUID) -> MemoryModel.Attachment? {
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return nil }
+        var addedAttachment: MemoryModel.Attachment?
+        contentQueue[index].mutatePhotos { photos in
+            let attachment = MemoryModel.Attachment(
+                id: UUID(),
+                kind: .photo,
+                data: data,
+                createdAt: Date()
+            )
+            photos.attachments.append(attachment)
+            addedAttachment = attachment
+        }
+        return addedAttachment
     }
 
     @MainActor
-    func createLinkAttachment(url: URL) -> MemoryModel.Attachment {
-        let attachment = MemoryModel.Attachment(
-            id: UUID(),
-            kind: .link,
-            data: Data(),
-            createdAt: Date(),
-            url: url
-        )
-        linkAttachments.append(attachment)
-        return attachment
+    func addLinkAttachment(url: URL, to contentID: UUID) -> MemoryModel.Attachment? {
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return nil }
+        var addedAttachment: MemoryModel.Attachment?
+        contentQueue[index].mutateLinks { linksContent in
+            let alreadyExists = linksContent.links.contains { $0.url?.absoluteString == url.absoluteString }
+            guard !alreadyExists else { return }
+
+            let attachment = MemoryModel.Attachment(
+                id: UUID(),
+                kind: .link,
+                data: Data(),
+                createdAt: Date(),
+                url: url
+            )
+            linksContent.links.append(attachment)
+            addedAttachment = attachment
+        }
+        return addedAttachment
     }
 
     @MainActor
-    func removeAttachment(id: UUID) {
-        attachments.removeAll { $0.id == id }
+    func removePhotoAttachment(id: UUID, from contentID: UUID) {
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
+        contentQueue[index].mutatePhotos { photos in
+            photos.attachments.removeAll { $0.id == id }
+        }
     }
 
     @MainActor
-    func removeLinkAttachment(id: UUID) {
-        linkAttachments.removeAll { $0.id == id }
+    func removeLinkAttachment(id: UUID, from contentID: UUID) {
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
+        contentQueue[index].mutateLinks { linksContent in
+            linksContent.links.removeAll { $0.id == id }
+        }
     }
 
     @MainActor
     func syncAttachments(withReferencedIDs ids: Set<UUID>) {
         guard !ids.isEmpty else {
-            attachments.removeAll()
-            linkAttachments.removeAll()
+            contentQueue = contentQueue.map { item in
+                switch item {
+                case .photos:
+                    return .photos(MemoryEditorPhotosContent(id: item.id, attachments: []))
+                case .links:
+                    return .links(MemoryEditorLinksContent(id: item.id, links: []))
+                default:
+                    return item
+                }
+            }
             return
         }
-        attachments.removeAll { !ids.contains($0.id) }
-        linkAttachments.removeAll { !ids.contains($0.id) }
+
+        contentQueue = contentQueue.map { item in
+            switch item {
+            case .photos(var content):
+                content.attachments.removeAll { !ids.contains($0.id) }
+                return .photos(content)
+            case .links(var content):
+                content.links.removeAll { !ids.contains($0.id) }
+                return .links(content)
+            default:
+                return item
+            }
+        }
     }
 
     func updateSchedule(
@@ -290,27 +402,33 @@ final class MemoryEditorViewModel: ObservableObject {
             errorMessage = "Provide a title for the memory."
             return false
         }
-        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedBody = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines)
         let sanitizedChecklist = sanitizedChecklistItems()
-        if showChecklist && sanitizedChecklist.isEmpty {
-            showChecklist = false
-        }
+        let memoryContents = contentsRepresentation()
 
         isSaving = true
         defer { isSaving = false }
 
         do {
-            let memoryID: UUID
-            if let memory = existingMemory {
-                memoryID = try await updateExistingMemory(memory, sanitizedChecklist: sanitizedChecklist)
-            } else {
-                memoryID = try await createNewMemory(trimmedTitle: trimmedTitle,
-                                                     trimmedBody: trimmedBody,
-                                                     sanitizedChecklist: sanitizedChecklist)
-            }
+            let persistenceOutcome = try await persistMemory(
+                trimmedTitle: trimmedTitle,
+                trimmedBody: trimmedBody,
+                sanitizedChecklist: sanitizedChecklist
+            )
+            persistenceIdentity = persistenceOutcome
 
-            let allAttachments = attachments + linkAttachments
-            try await attachmentStore.replaceAttachments(for: memoryID, with: allAttachments)
+            let attachments = allPhotoAttachments
+            let links = allLinkAttachments
+            let bundleAttachment = try MemoryContentCodec.attachment(from: memoryContents)
+            var allAttachments: [MemoryModel.Attachment] = []
+            if let bundleAttachment {
+                allAttachments.append(bundleAttachment)
+            }
+            allAttachments.append(contentsOf: attachments)
+            allAttachments.append(contentsOf: links)
+            if let targetID = persistenceOutcome.id {
+                try await attachmentStore.replaceAttachments(for: targetID, with: allAttachments)
+            }
             await environment.memoryService.refresh(force: true)
             return true
         } catch {
@@ -328,16 +446,14 @@ private extension MemoryEditorViewModel {
             apply(memory: memory)
         } else {
             selectedSpaceID = defaultSpace?.id ?? environment.spaceService.defaultSpace()?.id
+            contentQueue = []
             applyTemplate(template)
-            attachments = []
-            linkAttachments = []
-            hasMigratedLegacyAttachments = true
         }
     }
 
     func apply(memory: MemoryModel) {
+        persistenceIdentity = MemoryPersistenceIdentity(id: memory.id, origin: memory.metadata.origin)
         title = memory.title
-        body = memory.body ?? ""
         selectedSpaceID = memory.space?.id
         status = memory.status
         priority = memory.priority ?? .medium
@@ -345,35 +461,26 @@ private extension MemoryEditorViewModel {
         dueDateEnabled = memory.dueDate != nil
         dueDate = memory.dueDate ?? Date().addingTimeInterval(3600)
         triggers = memory.triggers.map { draft(from: $0) }
-        checklistItems = memory.checkItems
-            .sorted(by: { $0.sortOrder < $1.sortOrder })
-            .enumerated()
-            .map { index, item in
-                CheckItemDraft(
-                    id: item.id,
-                    title: item.title,
-                    detail: item.detail ?? "",
-                    isCompleted: item.isCompleted,
-                    sortOrder: index,
-                    createdAt: item.createdAt,
-                    completedAt: item.completedAt
-                )
-            }
-        showChecklist = !checklistItems.isEmpty
         autoCompleteChecklist = memory.metadata.autoCompleteOnChecklistCompletion
-        let photoAttachments = memory.attachments.filter { $0.kind == .photo }
-        let linkAttachments = memory.attachments.filter { $0.kind == .link }
-        attachments = photoAttachments
-        self.linkAttachments = linkAttachments
-        migrateLegacyAttachmentsIfNeeded()
+
+        let attachments = memory.attachments
+        let contents = memory.contents.isEmpty
+        ? MemoryContent.legacyContents(
+            body: memory.body,
+            checkItems: memory.checkItems,
+            photoAttachments: attachments.filter { $0.kind == .photo },
+            linkAttachments: attachments.filter { $0.kind == .link }
+        )
+        : memory.contents
+
+        rebuildContentQueue(from: contents, attachments: attachments)
     }
 
-    func apply(reminder: ReminderModel) {
+    func apply(reminder: ReminderModel, attachments: [MemoryModel.Attachment]) {
         let trimmedTitle = reminder.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedTitle.isEmpty {
             title = trimmedTitle
         }
-        body = reminder.notes ?? ""
         priority = MemoryPriority(rawValue: reminder.priority.rawValue) ?? .medium
         status = reminder.status == .archived ? .archived : (reminder.status == .completed ? .completed : .active)
         triggers = reminder.triggers.map { draft(from: $0) }
@@ -384,14 +491,18 @@ private extension MemoryEditorViewModel {
         } else {
             selectedSpaceID = nil
         }
-        migrateLegacyAttachmentsIfNeeded()
+
+        rebuildContentQueueUsingAttachments(
+            attachments,
+            fallbackBody: reminder.notes,
+            fallbackChecklist: []
+        )
     }
 
-    func apply(note: NoteModel) {
+    func apply(note: NoteModel, attachments: [MemoryModel.Attachment]) {
         if let trimmedTitle = note.title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty {
             title = trimmedTitle
         }
-        body = note.content
         isPinned = note.isPinned
         if let folder = note.folder,
            let space = environment.spaceService.resolveSpace(for: folder) {
@@ -399,34 +510,23 @@ private extension MemoryEditorViewModel {
         } else {
             selectedSpaceID = nil
         }
-        migrateLegacyAttachmentsIfNeeded()
+
+        rebuildContentQueueUsingAttachments(
+            attachments,
+            fallbackBody: note.content,
+            fallbackChecklist: []
+        )
     }
 
-    func apply(todoList: TodoListModel) {
+    func apply(todoList: TodoListModel, attachments: [MemoryModel.Attachment]) {
         let trimmedTitle = todoList.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedTitle.isEmpty {
             title = trimmedTitle
         }
-        body = todoList.notes ?? ""
         isPinned = todoList.isPinned
         status = todoList.isArchived ? .archived : (todoList.isCompleted ? .completed : .active)
         dueDateEnabled = todoList.dueDate != nil
         dueDate = todoList.dueDate ?? Date().addingTimeInterval(3600)
-        checklistItems = todoList.items
-            .sorted(by: { $0.sortOrder < $1.sortOrder })
-            .enumerated()
-            .map { index, item in
-                CheckItemDraft(
-                    id: item.id,
-                    title: item.title,
-                    detail: item.detail ?? "",
-                    isCompleted: item.isCompleted,
-                    sortOrder: index,
-                    createdAt: item.createdAt,
-                    completedAt: item.completedAt
-                )
-            }
-        showChecklist = !checklistItems.isEmpty
         autoCompleteChecklist = existingMemory?.metadata.autoCompleteOnChecklistCompletion ?? autoCompleteChecklist
         if let folder = todoList.folder,
            let space = environment.spaceService.resolveSpace(for: folder) {
@@ -434,7 +534,32 @@ private extension MemoryEditorViewModel {
         } else {
             selectedSpaceID = nil
         }
-        migrateLegacyAttachmentsIfNeeded()
+
+        let checklistModels: [CheckItemModel] = todoList.items
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder {
+                    return lhs.sortOrder < rhs.sortOrder
+                }
+                return lhs.createdAt < rhs.createdAt
+            }
+            .map { item in
+                CheckItemModel(
+                    id: item.id,
+                    title: item.title,
+                    detail: item.detail,
+                    isCompleted: item.isCompleted,
+                    sortOrder: item.sortOrder,
+                    createdAt: item.createdAt,
+                    updatedAt: item.completedAt ?? item.createdAt,
+                    completedAt: item.completedAt
+                )
+            }
+
+        rebuildContentQueueUsingAttachments(
+            attachments,
+            fallbackBody: todoList.notes,
+            fallbackChecklist: checklistModels
+        )
     }
 
     func applyTemplate(_ template: MemoryEditorTemplate) {
@@ -442,9 +567,9 @@ private extension MemoryEditorViewModel {
         case .blank:
             break
         case .checklist:
-            // Start with an empty checklist and show the inline new-item row.
-            showChecklist = true
-            checklistItems = []
+            if !contentQueue.contains(where: { $0.contentType == .checklist }) {
+                contentQueue.append(.checklist(MemoryEditorChecklistContent()))
+            }
         case .quickReminder:
             let fireDate = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date()) ?? Date().addingTimeInterval(3600)
             let trigger = MemoryTriggerDraft(
@@ -459,59 +584,100 @@ private extension MemoryEditorViewModel {
         }
     }
 
-    func reindexChecklist() {
-        for index in checklistItems.indices {
-            checklistItems[index].sortOrder = index
+    func reindexChecklist(in content: inout MemoryEditorChecklistContent) {
+        for index in content.items.indices {
+            content.items[index].sortOrder = index
         }
     }
 
     func sanitizedChecklistItems() -> [CheckItemDraft] {
-        checklistItems.enumerated().compactMap { index, item in
-            let trimmed = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
-            var sanitized = item
-            sanitized.title = trimmed
-            sanitized.sortOrder = index
-            sanitized.detail = item.detail.trimmingCharacters(in: .whitespacesAndNewlines)
-            return sanitized
+        var sanitized: [CheckItemDraft] = []
+        for item in contentQueue {
+            guard let checklist = item.checklistContent else { continue }
+            for draft in checklist.items {
+                let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                var normalized = draft
+                normalized.title = trimmed
+                normalized.detail = draft.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+                normalized.sortOrder = sanitized.count
+                sanitized.append(normalized)
+            }
+        }
+        return sanitized
+    }
+
+    func persistMemory(trimmedTitle: String,
+                       trimmedBody: String,
+                       sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
+        if let id = persistenceIdentity.id {
+            return try await updateExistingMemory(
+                id: id,
+                origin: persistenceIdentity.origin,
+                sanitizedChecklist: sanitizedChecklist
+            )
+        } else {
+            return try await createNewMemory(
+                trimmedTitle: trimmedTitle,
+                trimmedBody: trimmedBody,
+                sanitizedChecklist: sanitizedChecklist
+            )
         }
     }
 
-    func migrateLegacyAttachmentsIfNeeded() {
-        guard !hasMigratedLegacyAttachments else { return }
-        defer { hasMigratedLegacyAttachments = true }
-
-        attachments.removeAll()
-        linkAttachments.removeAll()
-    }
-
-    func updateExistingMemory(_ memory: MemoryModel,
-                              sanitizedChecklist: [CheckItemDraft]) async throws -> UUID {
-        switch memory.metadata.origin {
-        case .reminder(let id):
-            return try await updateReminder(id: id)
-        case .note(let id):
-            return try await updateNote(id: id)
-        case .todoList(let id):
-            return try await updateTodoList(id: id, sanitizedChecklist: sanitizedChecklist)
-        case .none:
-            return try await createNewMemory(trimmedTitle: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                                             trimmedBody: body.trimmingCharacters(in: .whitespacesAndNewlines),
-                                             sanitizedChecklist: sanitizedChecklist)
+    func updateExistingMemory(id: UUID,
+                              origin: MemoryModel.Metadata.Origin?,
+                              sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
+        if let origin {
+            switch origin {
+            case .reminder:
+                let identifier = try await updateReminder(id: id)
+                return MemoryPersistenceIdentity(id: identifier, origin: .reminder(identifier))
+            case .note:
+                let identifier = try await updateNote(id: id)
+                return MemoryPersistenceIdentity(id: identifier, origin: .note(identifier))
+            case .todoList:
+                let identifier = try await updateTodoList(id: id, sanitizedChecklist: sanitizedChecklist)
+                return MemoryPersistenceIdentity(id: identifier, origin: .todoList(identifier))
+            }
         }
+
+        if environment.reminderService.fetchReminderWithRelationships(id: id) != nil {
+            let identifier = try await updateReminder(id: id)
+            return MemoryPersistenceIdentity(id: identifier, origin: .reminder(identifier))
+        }
+
+        if environment.noteService.fetchNoteWithRelationships(id: id) != nil {
+            let identifier = try await updateNote(id: id)
+            return MemoryPersistenceIdentity(id: identifier, origin: .note(identifier))
+        }
+
+        if environment.todoService.fetchListWithItems(id: id) != nil {
+            let identifier = try await updateTodoList(id: id, sanitizedChecklist: sanitizedChecklist)
+            return MemoryPersistenceIdentity(id: identifier, origin: .todoList(identifier))
+        }
+
+        return try await createNewMemory(
+            trimmedTitle: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            trimmedBody: aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines),
+            sanitizedChecklist: sanitizedChecklist
+        )
     }
 
     func createNewMemory(trimmedTitle: String,
                          trimmedBody: String,
-                         sanitizedChecklist: [CheckItemDraft]) async throws -> UUID {
+                         sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
         if !triggers.isEmpty {
-            return try await createReminder(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
+            let reminderID = try await createReminder(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
+            return MemoryPersistenceIdentity(id: reminderID, origin: .reminder(reminderID))
         } else if !sanitizedChecklist.isEmpty || dueDateEnabled {
-            return try await createTodoList(trimmedTitle: trimmedTitle,
-                                            trimmedBody: trimmedBody,
-                                            sanitizedChecklist: sanitizedChecklist)
+            let listID = try await createTodoList(trimmedTitle: trimmedTitle,
+                                                  trimmedBody: trimmedBody,
+                                                  sanitizedChecklist: sanitizedChecklist)
+            return MemoryPersistenceIdentity(id: listID, origin: .todoList(listID))
         } else {
-            return try await createNote(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
+            let noteID = try await createNote(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
+            return MemoryPersistenceIdentity(id: noteID, origin: .note(noteID))
         }
     }
 
@@ -522,7 +688,7 @@ private extension MemoryEditorViewModel {
         }
 
         reminder.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        reminder.notes = body.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        reminder.notes = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         reminder.priority = ReminderPriority(rawValue: priority.rawValue) ?? .medium
         reminder.status = reminderStatus(for: status)
         reminder.folder = folderForAudience(.reminders)
@@ -541,7 +707,7 @@ private extension MemoryEditorViewModel {
         }
 
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedContent = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedContent = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines)
 
         note.title = trimmedTitle
         note.content = trimmedContent
@@ -560,7 +726,7 @@ private extension MemoryEditorViewModel {
         }
 
         list.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        list.notes = body.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        list.notes = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         list.dueDate = dueDateEnabled ? dueDate : nil
         list.isPinned = isPinned
         list.isArchived = status == .archived
@@ -739,5 +905,97 @@ private extension MemoryEditorViewModel {
         } else {
             triggers.append(draft)
         }
+    }
+
+    func rebuildContentQueue(from contents: [MemoryContent],
+                             attachments: [MemoryModel.Attachment]) {
+        let attachmentLookup = Dictionary(uniqueKeysWithValues: attachments.map { ($0.id, $0) })
+        var queue: [MemoryEditorContentItem] = []
+        queue.reserveCapacity(contents.count)
+
+        for content in contents {
+            switch content {
+            case .richText(let payload):
+                queue.append(.richText(MemoryEditorRichTextContent(id: payload.id, text: payload.text)))
+            case .checklist(let payload):
+                let drafts = payload.items.sorted(by: { $0.sortOrder < $1.sortOrder }).map { item in
+                    CheckItemDraft(
+                        id: item.id,
+                        title: item.title,
+                        detail: item.detail,
+                        isCompleted: item.isCompleted,
+                        sortOrder: item.sortOrder,
+                        createdAt: item.createdAt,
+                        completedAt: item.completedAt
+                    )
+                }
+                queue.append(.checklist(MemoryEditorChecklistContent(id: payload.id, items: drafts)))
+            case .photos(let payload):
+                let attachmentsForContent = payload.attachmentIDs.compactMap { attachmentLookup[$0] }
+                queue.append(.photos(MemoryEditorPhotosContent(id: payload.id, attachments: attachmentsForContent)))
+            case .links(let payload):
+                let attachmentsForContent = payload.attachmentIDs.compactMap { attachmentLookup[$0] }
+                queue.append(.links(MemoryEditorLinksContent(id: payload.id, links: attachmentsForContent)))
+            }
+        }
+
+        contentQueue = queue
+    }
+
+    func contentsRepresentation() -> [MemoryContent] {
+        contentQueue.map { item in
+            switch item {
+            case .richText(let content):
+                return .richText(MemoryContent.RichTextContent(id: content.id, text: content.text))
+            case .checklist(let content):
+                let items = content.items.enumerated().map { index, draft in
+                    MemoryContent.ChecklistContent.Item(
+                        id: draft.id,
+                        title: draft.title,
+                        detail: draft.detail,
+                        isCompleted: draft.isCompleted,
+                        sortOrder: index,
+                        createdAt: draft.createdAt,
+                        updatedAt: draft.completedAt ?? draft.createdAt,
+                        completedAt: draft.completedAt
+                    )
+                }
+                return .checklist(MemoryContent.ChecklistContent(id: content.id, items: items))
+            case .photos(let content):
+                return .photos(MemoryContent.PhotosContent(id: content.id, attachmentIDs: content.attachments.map(\.id)))
+            case .links(let content):
+                return .links(MemoryContent.LinksContent(id: content.id, attachmentIDs: content.links.map(\.id)))
+            }
+        }
+    }
+
+    func rebuildContentQueueUsingAttachments(_ attachments: [MemoryModel.Attachment],
+                                             fallbackBody: String?,
+                                             fallbackChecklist: [CheckItemModel]) {
+        let decodeResult = MemoryContentCodec.extractContents(from: attachments)
+        let photoAttachments = decodeResult.remainingAttachments.filter { $0.kind == .photo }
+        let linkAttachments = decodeResult.remainingAttachments.filter { $0.kind == .link }
+
+        let contents: [MemoryContent]
+        if decodeResult.contents.isEmpty {
+            contents = MemoryContent.legacyContents(
+                body: fallbackBody,
+                checkItems: fallbackChecklist,
+                photoAttachments: photoAttachments,
+                linkAttachments: linkAttachments
+            )
+        } else {
+            contents = decodeResult.contents
+        }
+
+        let referencedIDs = Set(contents.referencedAttachmentIDs())
+        let filteredAttachments: [MemoryModel.Attachment]
+        if referencedIDs.isEmpty {
+            filteredAttachments = decodeResult.remainingAttachments
+        } else {
+            filteredAttachments = decodeResult.remainingAttachments.filter { referencedIDs.contains($0.id) }
+        }
+
+        rebuildContentQueue(from: contents, attachments: filteredAttachments)
     }
 }

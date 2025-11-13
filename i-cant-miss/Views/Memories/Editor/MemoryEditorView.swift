@@ -1,3 +1,143 @@
+extension MemoryEditorView {
+    private func ensureDraftContainer(for contentID: UUID) {
+        if let drafts = checklistDraftRows[contentID], !drafts.isEmpty {
+            return
+        }
+        checklistDraftRows[contentID] = [ChecklistDraftRow()]
+    }
+
+    private func draftsBinding(for contentID: UUID) -> Binding<[ChecklistDraftRow]> {
+        Binding(
+            get: { checklistDraftRows[contentID] ?? [ChecklistDraftRow()] },
+            set: { checklistDraftRows[contentID] = $0 }
+        )
+    }
+
+    private func binding(for checklistItem: CheckItemDraft, in contentBinding: Binding<MemoryEditorContentItem>) -> Binding<CheckItemDraft> {
+        Binding(
+            get: {
+                guard case .checklist(let content) = contentBinding.wrappedValue,
+                      let index = content.items.firstIndex(where: { $0.id == checklistItem.id }) else {
+                    return checklistItem
+                }
+                return content.items[index]
+            },
+            set: { newValue in
+                guard case .checklist(var content) = contentBinding.wrappedValue,
+                      let index = content.items.firstIndex(where: { $0.id == checklistItem.id }) else {
+                    return
+                }
+                content.items[index] = newValue
+                contentBinding.wrappedValue = .checklist(content)
+            }
+        )
+    }
+
+    private func handleDraftSubmit(_ draftID: UUID, in contentID: UUID) {
+        guard var drafts = checklistDraftRows[contentID],
+              let index = drafts.firstIndex(where: { $0.id == draftID }) else { return }
+        let trimmedTitle = drafts[index].title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else {
+            DispatchQueue.main.async {
+                focusedDraftID = draftID
+            }
+            return
+        }
+
+        let trimmedDetail = drafts[index].detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.addChecklistItem(to: contentID, title: trimmedTitle, detail: trimmedDetail)
+
+        drafts.remove(at: index)
+        if drafts.isEmpty {
+            drafts = [ChecklistDraftRow()]
+        } else {
+            cleanupTrailingPlaceholders(for: contentID, drafts: &drafts)
+        }
+
+        checklistDraftRows[contentID] = drafts
+        focusedDraftID = drafts.last?.id
+    }
+
+    private func handleDraftTitleChange(_ contentID: UUID, _ draftID: UUID, _ text: String) {
+        guard var drafts = checklistDraftRows[contentID],
+              let index = drafts.firstIndex(where: { $0.id == draftID }) else { return }
+
+        drafts[index].title = text
+
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lastIndex = drafts.count - 1
+
+        if trimmed.isEmpty {
+            if drafts.count > 1 && index != lastIndex {
+                drafts.remove(at: index)
+            }
+            cleanupTrailingPlaceholders(for: contentID, drafts: &drafts)
+        } else if index == lastIndex {
+            drafts.append(ChecklistDraftRow())
+        }
+
+        checklistDraftRows[contentID] = drafts
+    }
+
+    private func cleanupTrailingPlaceholders(for contentID: UUID, drafts: inout [ChecklistDraftRow]) {
+        while drafts.count > 1 {
+            guard let last = drafts.last else { break }
+            let beforeLast = drafts[drafts.count - 2]
+            if last.isEffectivelyEmpty && beforeLast.isEffectivelyEmpty {
+                drafts.removeLast()
+            } else {
+                break
+            }
+        }
+
+        if drafts.isEmpty {
+            drafts = [ChecklistDraftRow()]
+        }
+        checklistDraftRows[contentID] = drafts
+    }
+
+    private func commitChecklistDrafts() {
+        for (contentID, drafts) in checklistDraftRows {
+            let draftsToCommit = drafts.filter {
+                !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            guard !draftsToCommit.isEmpty else { continue }
+
+            for draft in draftsToCommit {
+                let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedTitle.isEmpty else { continue }
+                let trimmedDetail = draft.detail.trimmingCharacters(in: .whitespacesAndNewlines)
+                viewModel.addChecklistItem(to: contentID, title: trimmedTitle, detail: trimmedDetail)
+            }
+
+            checklistDraftRows[contentID] = [ChecklistDraftRow()]
+        }
+
+        focusedDraftID = nil
+    }
+
+    private func removeChecklist(_ item: CheckItemDraft, in contentID: UUID) {
+        viewModel.removeChecklistItem(contentID: contentID, itemID: item.id)
+    }
+
+    private func removeContent(with id: UUID) {
+        viewModel.removeContent(id: id)
+        checklistDraftRows.removeValue(forKey: id)
+        photoLoadingContentIDs.remove(id)
+        if pendingPhotoContentID == id {
+            pendingPhotoContentID = nil
+        }
+        if pendingLinkContentID == id {
+            pendingLinkContentID = nil
+        }
+        if selectedPhotoContentID == id {
+            selectedPhotoContentID = nil
+            isPhotoViewerPresented = false
+        }
+        cleanupPendingContentTargets()
+    }
+}
+
 //
 //  MemoryEditorView.swift
 //  i-cant-miss
@@ -26,18 +166,19 @@ struct MemoryEditorView: View {
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
-    @State private var checklistDraftRows: [ChecklistDraftRow] = [ChecklistDraftRow()]
+    @State private var checklistDraftRows: [UUID: [ChecklistDraftRow]] = [:]
     @State private var isPresentingPhotoLibrary = false
     @State private var photoPickerItems: [PhotosPickerItem] = []
     @State private var isPresentingCamera = false
-    @State private var isLoadingPhotos = false
+    @State private var photoLoadingContentIDs: Set<UUID> = []
+    @State private var pendingPhotoContentID: UUID?
+    @State private var pendingLinkContentID: UUID?
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
-    @State private var hasEnabledRichTextManually = false
-    @State private var hasInitializedContentState = false
     @State private var isEditingEnabled: Bool
     @State private var isPhotoViewerPresented = false
     @State private var selectedAttachmentIndex = 0
+    @State private var selectedPhotoContentID: UUID?
     @State private var navigationPath = NavigationPath()
     @Namespace private var toolbarGlassNamespace
 
@@ -92,8 +233,11 @@ struct MemoryEditorView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .onAppear {
-                viewModel.loadLatestDataIfNeeded()
-                initializeContentStateIfNeeded()
+                syncChecklistDraftRowsWithContent()
+                Task {
+                    await viewModel.loadLatestDataIfNeeded()
+                    syncChecklistDraftRowsWithContent()
+                }
             }
             .alert("Unable to save", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
@@ -129,24 +273,39 @@ struct MemoryEditorView: View {
                           selection: $photoPickerItems,
                           matching: .images)
             .fullScreenCover(isPresented: $isPhotoViewerPresented) {
+                if let contentID = selectedPhotoContentID,
+                   let attachments = photoAttachments(for: contentID) {
                 MemoryEditorPhotoCarouselView(
-                    attachments: viewModel.attachments,
+                        attachments: attachments,
                     initialIndex: selectedAttachmentIndex
                 ) {
                     isPhotoViewerPresented = false
                 }
-            }
-            .onChange(of: viewModel.body) { _, newValue in
-                guard !hasEnabledRichTextManually else { return }
-                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    hasEnabledRichTextManually = true
                 }
             }
             .onChange(of: photoPickerItems) { _, newItems in
-                guard !newItems.isEmpty else { return }
+                guard !newItems.isEmpty, let targetID = pendingPhotoContentID else { return }
                 Task {
-                    await loadSelectedPhotos(from: newItems)
+                    await loadSelectedPhotos(from: newItems, into: targetID)
+                }
+            }
+            .onChange(of: viewModel.contentQueue) { _, _ in
+                syncChecklistDraftRowsWithContent()
+                cleanupPendingContentTargets()
+            }
+            .onChange(of: isPresentingPhotoLibrary) { _, isPresented in
+                if !isPresented {
+                    cleanupPendingContentTargets()
+                }
+            }
+            .onChange(of: isPresentingCamera) { _, isPresented in
+                if !isPresented {
+                    cleanupPendingContentTargets()
+                }
+            }
+            .onChange(of: showAddLinkSheet) { _, isPresented in
+                if !isPresented {
+                    cleanupPendingContentTargets()
                 }
             }
         }
@@ -182,20 +341,8 @@ struct MemoryEditorView: View {
     private var editorContent: some View {
         List {
             titleSectionRow
-            if shouldShowChecklistCard {
-                checklistCardRow
-                    .transition(cardBounceTransition)
-            }
-            if shouldShowRichTextCard {
-                richTextCardRow
-                    .transition(cardBounceTransition)
-            }
-            if shouldShowPhotosCard {
-                photosCardRow
-                    .transition(cardBounceTransition)
-            }
-            if shouldShowLinksCard {
-                linksCardRow
+            ForEach($viewModel.contentQueue) { $item in
+                contentRow(for: $item)
                     .transition(cardBounceTransition)
             }
         }
@@ -353,36 +500,34 @@ struct MemoryEditorView: View {
             .listRowBackground(Color.clear)
     }
 
-    private var checklistCardRow: some View {
-        checklistCard
+    @ViewBuilder
+    private func contentRow(for item: Binding<MemoryEditorContentItem>) -> some View {
+        switch item.wrappedValue {
+        case .richText(let content):
+            richTextCard(for: item, content: content)
             .padding(.horizontal, 20)
             .listRowSeparator(.hidden)
             .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
             .listRowBackground(Color.clear)
-    }
-
-    private var richTextCardRow: some View {
-        richTextCard
+        case .checklist(let content):
+            checklistCard(for: item, content: content)
             .padding(.horizontal, 20)
             .listRowSeparator(.hidden)
             .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
             .listRowBackground(Color.clear)
-    }
-
-    private var photosCardRow: some View {
-        photosCard
+        case .photos(let content):
+            photosCard(for: item, content: content)
             .padding(.horizontal, 20)
             .listRowSeparator(.hidden)
             .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
             .listRowBackground(Color.clear)
-    }
-
-    private var linksCardRow: some View {
-        linksCard
+        case .links(let content):
+            linksCard(for: item, content: content)
             .padding(.horizontal, 20)
             .listRowSeparator(.hidden)
             .listRowInsets(.init(top: 0, leading: 0, bottom: 24, trailing: 0))
             .listRowBackground(Color.clear)
+        }
     }
 
     private var titleSection: some View {
@@ -427,29 +572,29 @@ struct MemoryEditorView: View {
         .contentShape(Rectangle())
     }
 
-    private var checklistCard: some View {
+    private func checklistCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorChecklistContent) -> some View {
         MemoryEditorChecklistCard {
             VStack(alignment: .leading, spacing: 12) {
-                if let subtitle = checklistSubtitle {
+                if let subtitle = checklistSubtitle(for: content) {
                     Text(subtitle)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                ForEach(viewModel.checklistItems) { item in
+                ForEach(content.items) { checklistItem in
                     ChecklistItemEditor(
-                        item: binding(for: item),
+                        item: binding(for: checklistItem, in: item),
                         isEditable: isEditingEnabled,
-                        onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
-                        onDelete: { removeChecklist(item) }
+                        onToggle: { viewModel.toggleChecklistCompletion(for: checklistItem.id) },
+                        onDelete: { removeChecklist(checklistItem, in: content.id) }
                     )
                 }
                 if isEditingEnabled {
-                    ForEach(checklistDraftRows) { draft in
+                    ForEach(draftsBinding(for: content.id)) { $draft in
                         ChecklistNewItemRow(
-                            draft: draftBinding(for: draft),
+                            draft: $draft,
                             focus: $focusedDraftID,
-                            onSubmit: handleDraftSubmit,
-                            onTitleChange: handleDraftTitleChange
+                            onSubmit: { handleDraftSubmit($0, in: content.id) },
+                            onTitleChange: { draftID, text in handleDraftTitleChange(content.id, draftID, text) }
                         )
                     }
                 }
@@ -460,13 +605,13 @@ struct MemoryEditorView: View {
             title: "Delete Checklist",
             systemImage: "trash",
             accessibilityLabel: "Delete checklist content",
-            action: { disableContent(.checklist) }
+            action: { removeContent(with: content.id) }
         ))
     }
 
-    private var richTextCard: some View {
+    private func richTextCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorRichTextContent) -> some View {
         MemoryEditorRichTextCard(
-            text: $viewModel.body,
+            text: richTextBinding(for: item),
             isEditable: isEditingEnabled
         )
         .modifier(EditingSwipeActionModifier(
@@ -474,20 +619,20 @@ struct MemoryEditorView: View {
             title: "Delete Text",
             systemImage: "trash",
             accessibilityLabel: "Delete rich text content",
-            action: { disableContent(.richText) }
+            action: { removeContent(with: content.id) }
         ))
     }
 
-    private var photosCard: some View {
+    private func photosCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorPhotosContent) -> some View {
         MemoryEditorPhotosCard(
-            attachments: $viewModel.attachments,
-            isLoading: isLoadingPhotos,
+            attachments: photosBinding(for: item),
+            isLoading: photoLoadingContentIDs.contains(content.id),
             isEditable: isEditingEnabled,
             onRemoveAttachment: { id in
-                viewModel.removeAttachment(id: id)
+                viewModel.removePhotoAttachment(id: id, from: content.id)
             },
             onAttachmentTap: { index, _ in
-                presentPhotoViewer(at: index)
+                presentPhotoViewer(at: index, for: content.id)
             }
         )
         .modifier(EditingSwipeActionModifier(
@@ -495,16 +640,16 @@ struct MemoryEditorView: View {
             title: "Delete Photos",
             systemImage: "trash",
             accessibilityLabel: "Delete photos content",
-            action: { disableContent(.photos) }
+            action: { removeContent(with: content.id) }
         ))
     }
 
-    private var linksCard: some View {
+    private func linksCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorLinksContent) -> some View {
         MemoryEditorLinksCard(
-            links: $viewModel.linkAttachments,
+            links: linksBinding(for: item),
             isEditable: isEditingEnabled,
             onRemoveLink: { id in
-                viewModel.removeLinkAttachment(id: id)
+                viewModel.removeLinkAttachment(id: id, from: content.id)
             }
         )
         .modifier(EditingSwipeActionModifier(
@@ -512,7 +657,7 @@ struct MemoryEditorView: View {
             title: "Delete Links",
             systemImage: "trash",
             accessibilityLabel: "Delete links content",
-            action: { disableContent(.links) }
+            action: { removeContent(with: content.id) }
         ))
     }
 
@@ -525,7 +670,7 @@ struct MemoryEditorView: View {
                 .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(shouldShowRichTextCard ? Color.accentColor : .primary)
+                .foregroundStyle(hasContent(of: .richText) ? Color.accentColor : .primary)
         }
         .accessibilityLabel("Add rich text")
     }
@@ -539,7 +684,7 @@ struct MemoryEditorView: View {
                 .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(shouldShowChecklistCard ? Color.accentColor : .primary)
+                .foregroundStyle(hasContent(of: .checklist) ? Color.accentColor : .primary)
         }
         .accessibilityLabel("Add checklist")
     }
@@ -553,7 +698,7 @@ struct MemoryEditorView: View {
                 .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(shouldShowLinksCard ? Color.accentColor : .primary)
+                .foregroundStyle(hasContent(of: .links) ? Color.accentColor : .primary)
         }
         .accessibilityLabel("Add link")
     }
@@ -597,245 +742,221 @@ struct MemoryEditorView: View {
 
     private var photoToolbarForegroundColor: Color {
         guard isPhotoActionsEnabled else { return .secondary }
-        return shouldShowPhotosCard ? Color.accentColor : Color.primary
+        return hasContent(of: .photos) ? Color.accentColor : Color.primary
     }
 
     private var isPhotoActionsEnabled: Bool {
-        !viewModel.isSaving && !isLoadingPhotos
-    }
-
-
-    private var shouldShowChecklistCard: Bool {
-        viewModel.showChecklist || !viewModel.checklistItems.isEmpty
-    }
-
-    private var shouldShowRichTextCard: Bool {
-        hasEnabledRichTextManually || !viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var shouldShowPhotosCard: Bool {
-        !viewModel.attachments.isEmpty
-    }
-
-    private var shouldShowLinksCard: Bool {
-        !viewModel.linkAttachments.isEmpty
-    }
-
-    private var checklistSubtitle: String? {
-        guard !viewModel.checklistItems.isEmpty else { return nil }
-        let completed = viewModel.checklistItems.filter(\.isCompleted).count
-        return "\(completed) of \(viewModel.checklistItems.count) completed"
+        !viewModel.isSaving && pendingPhotoContentID == nil && photoLoadingContentIDs.isEmpty
     }
 
     private func handleAddContentSelection(_ type: MemoryEditorContentType) {
+        guard isEditingEnabled else { return }
+        let contentID = viewModel.appendContent(type)
         switch type {
         case .richText:
-            hasEnabledRichTextManually = true
-        case .checklist:
-            if !viewModel.showChecklist {
-                viewModel.showChecklist = true
-            }
-            if viewModel.checklistItems.isEmpty && checklistDraftRows.isEmpty {
-                checklistDraftRows = [ChecklistDraftRow()]
-            }
-        case .photos:
             break
+        case .checklist:
+            ensureDraftContainer(for: contentID)
+            focusedDraftID = checklistDraftRows[contentID]?.first?.id
+        case .photos:
+            pendingPhotoContentID = contentID
+            isPresentingPhotoLibrary = true
         case .links:
+            pendingLinkContentID = contentID
             showAddLinkSheet = true
         }
     }
 
-    private func disableContent(_ type: MemoryEditorContentType) {
-        switch type {
-        case .richText:
-            viewModel.body = ""
-            hasEnabledRichTextManually = false
-        case .checklist:
-            viewModel.checklistItems.removeAll()
-            viewModel.showChecklist = false
-            checklistDraftRows = [ChecklistDraftRow()]
-            focusedDraftID = nil
-        case .photos:
-            viewModel.attachments.removeAll()
-            isLoadingPhotos = false
-            isPresentingPhotoLibrary = false
-        case .links:
-            viewModel.linkAttachments.removeAll()
-            showAddLinkSheet = false
-        }
-    }
-
-    private func initializeContentStateIfNeeded() {
-        guard !hasInitializedContentState else { return }
-        hasInitializedContentState = true
-        let trimmedBody = viewModel.body.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedBody.isEmpty {
-            hasEnabledRichTextManually = true
-        }
-    }
-
-    private func binding(for item: CheckItemDraft) -> Binding<CheckItemDraft> {
-        guard let index = viewModel.checklistItems.firstIndex(where: { $0.id == item.id }) else {
-            return .constant(item)
-        }
-        return $viewModel.checklistItems[index]
-    }
-
-    private func draftBinding(for draft: ChecklistDraftRow) -> Binding<ChecklistDraftRow> {
-        guard let index = checklistDraftRows.firstIndex(where: { $0.id == draft.id }) else {
-            return .constant(draft)
-        }
-        return $checklistDraftRows[index]
-    }
-
-    private func handleDraftSubmit(_ draftID: UUID) {
-        guard let index = checklistDraftRows.firstIndex(where: { $0.id == draftID }) else { return }
-        let trimmedTitle = checklistDraftRows[index].title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty else {
-            DispatchQueue.main.async {
-                focusedDraftID = draftID
-            }
-            return
-        }
-
-        let trimmedDetail = checklistDraftRows[index].detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        viewModel.addChecklistItem(title: trimmedTitle, detail: trimmedDetail)
-
-        let nextID: UUID
-        if index + 1 < checklistDraftRows.count {
-            nextID = checklistDraftRows[index + 1].id
-        } else {
-            let placeholder = ChecklistDraftRow()
-            checklistDraftRows.append(placeholder)
-            nextID = placeholder.id
-        }
-
-        focusedDraftID = nextID
-        checklistDraftRows.remove(at: index)
-
-        if checklistDraftRows.isEmpty {
-            let placeholder = ChecklistDraftRow()
-            checklistDraftRows = [placeholder]
-            focusedDraftID = placeholder.id
-            return
-        }
-
-        cleanupTrailingPlaceholders()
-    }
-
-    private func handleDraftTitleChange(_ draftID: UUID, _ text: String) {
-        guard let index = checklistDraftRows.firstIndex(where: { $0.id == draftID }) else { return }
-        guard !checklistDraftRows.isEmpty else { return }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let lastIndex = checklistDraftRows.count - 1
-
-        if trimmed.isEmpty {
-            if checklistDraftRows.count > 1 && index != lastIndex {
-                checklistDraftRows.remove(at: index)
-            }
-            cleanupTrailingPlaceholders()
-        } else if index == lastIndex {
-            checklistDraftRows.append(ChecklistDraftRow())
-        }
-    }
-
-    private func cleanupTrailingPlaceholders() {
-        while checklistDraftRows.count > 1 {
-            guard let last = checklistDraftRows.last else { break }
-            let beforeLast = checklistDraftRows[checklistDraftRows.count - 2]
-            if last.isEffectivelyEmpty && beforeLast.isEffectivelyEmpty {
-                checklistDraftRows.removeLast()
-            } else {
-                break
-            }
-        }
-
-        if checklistDraftRows.isEmpty {
-            checklistDraftRows = [ChecklistDraftRow()]
-        }
-    }
-
-    private func commitChecklistDrafts() {
-        let draftsToCommit = checklistDraftRows.filter {
-            !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        }
-        guard !draftsToCommit.isEmpty else { return }
-
-        for draft in draftsToCommit {
-            let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedTitle.isEmpty else { continue }
-            let trimmedDetail = draft.detail.trimmingCharacters(in: .whitespacesAndNewlines)
-            viewModel.addChecklistItem(title: trimmedTitle, detail: trimmedDetail)
-        }
-
-        let committedIDs = Set(draftsToCommit.map(\.id))
-        checklistDraftRows.removeAll { committedIDs.contains($0.id) }
-        focusedDraftID = nil
-
-        if checklistDraftRows.isEmpty {
-            let placeholder = ChecklistDraftRow()
-            checklistDraftRows = [placeholder]
-            focusedDraftID = placeholder.id
-        } else {
-            cleanupTrailingPlaceholders()
-        }
-    }
-
-    private func removeChecklist(_ item: CheckItemDraft) {
-        if let index = viewModel.checklistItems.firstIndex(where: { $0.id == item.id }) {
-            viewModel.checklistItems.remove(at: index)
-            if viewModel.checklistItems.isEmpty {
-                viewModel.showChecklist = false
-            }
-        }
-    }
 
     private func handleCameraToolbarTap() {
+        guard isEditingEnabled else { return }
+        let contentID = viewModel.appendContent(.photos)
+        pendingPhotoContentID = contentID
         isPresentingCamera = true
     }
 
     private func handleLibraryToolbarTap() {
+        guard isEditingEnabled else { return }
+        let contentID = viewModel.appendContent(.photos)
+        pendingPhotoContentID = contentID
         isPresentingPhotoLibrary = true
     }
 
     private func handleCapturedImage(_ image: UIImage) {
         guard let data = image.jpegData(compressionQuality: 0.85) else { return }
-        _ = viewModel.createAttachment(data: data)
+        let targetID = pendingPhotoContentID ?? viewModel.appendContent(.photos)
+        photoLoadingContentIDs.insert(targetID)
+        if viewModel.addPhotoAttachment(data: data, to: targetID) == nil {
+            viewModel.removeContent(id: targetID)
+        }
+        photoLoadingContentIDs.remove(targetID)
+        pendingPhotoContentID = nil
+        cleanupPendingContentTargets()
     }
 
     private func handleLinkAdded(_ url: URL) {
-        let alreadyExists = viewModel.linkAttachments.contains {
-            $0.url?.absoluteString == url.absoluteString
+        guard let contentID = pendingLinkContentID else { return }
+        if viewModel.addLinkAttachment(url: url, to: contentID) != nil {
+            pendingLinkContentID = nil
         }
-        guard !alreadyExists else { return }
-        _ = viewModel.createLinkAttachment(url: url)
+        cleanupPendingContentTargets()
     }
 
-    private func presentPhotoViewer(at index: Int) {
-        guard viewModel.attachments.indices.contains(index) else { return }
+    private func presentPhotoViewer(at index: Int, for contentID: UUID) {
+        guard let attachments = photoAttachments(for: contentID), attachments.indices.contains(index) else { return }
+        selectedPhotoContentID = contentID
         selectedAttachmentIndex = index
         isPhotoViewerPresented = true
     }
 
-    private func loadSelectedPhotos(from items: [PhotosPickerItem]) async {
-        await MainActor.run {
-            isLoadingPhotos = true
+    private func loadSelectedPhotos(from items: [PhotosPickerItem], into contentID: UUID) async {
+        _ = await MainActor.run {
+            photoLoadingContentIDs.insert(contentID)
         }
+
+        var didAddAttachment = false
         for item in items {
             do {
                 if let data = try await item.loadTransferable(type: Data.self) {
-                    await MainActor.run {
-                        _ = viewModel.createAttachment(data: data)
+                    _ = await MainActor.run {
+                        if viewModel.addPhotoAttachment(data: data, to: contentID) != nil {
+                            didAddAttachment = true
+                        }
                     }
                 }
             } catch {
                 continue
             }
         }
-        await MainActor.run {
-            isLoadingPhotos = false
+
+        _ = await MainActor.run {
+            photoLoadingContentIDs.remove(contentID)
             photoPickerItems = []
             isPresentingPhotoLibrary = false
+            if !didAddAttachment {
+                viewModel.removeContent(id: contentID)
+            }
+            if pendingPhotoContentID == contentID {
+                pendingPhotoContentID = nil
+            }
+            cleanupPendingContentTargets()
+        }
+    }
+
+    private func richTextBinding(for item: Binding<MemoryEditorContentItem>) -> Binding<String> {
+        Binding(
+            get: {
+                if case .richText(let content) = item.wrappedValue {
+                    return content.text
+                }
+                return ""
+            },
+            set: { newValue in
+                if case .richText(var content) = item.wrappedValue {
+                    content.text = newValue
+                    item.wrappedValue = .richText(content)
+                }
+            }
+        )
+    }
+
+    private func photosBinding(for item: Binding<MemoryEditorContentItem>) -> Binding<[MemoryModel.Attachment]> {
+        Binding(
+            get: {
+                if case .photos(let content) = item.wrappedValue {
+                    return content.attachments
+                }
+                return []
+            },
+            set: { newValue in
+                if case .photos(var content) = item.wrappedValue {
+                    content.attachments = newValue
+                    item.wrappedValue = .photos(content)
+                }
+            }
+        )
+    }
+
+    private func linksBinding(for item: Binding<MemoryEditorContentItem>) -> Binding<[MemoryModel.Attachment]> {
+        Binding(
+            get: {
+                if case .links(let content) = item.wrappedValue {
+                    return content.links
+                }
+                return []
+            },
+            set: { newValue in
+                if case .links(var content) = item.wrappedValue {
+                    content.links = newValue
+                    item.wrappedValue = .links(content)
+                }
+            }
+        )
+    }
+
+    private func photoAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
+        viewModel.contentQueue.first { $0.id == contentID && $0.contentType == .photos }?.photosContent?.attachments
+    }
+
+    private func linkAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
+        viewModel.contentQueue.first { $0.id == contentID && $0.contentType == .links }?.linksContent?.links
+    }
+
+    private func hasContent(of type: MemoryEditorContentType) -> Bool {
+        viewModel.contentQueue.contains { $0.contentType == type }
+    }
+
+    private func checklistSubtitle(for content: MemoryEditorChecklistContent) -> String? {
+        let total = content.items.count
+        guard total > 0 else { return nil }
+        let completed = content.items.filter(\.isCompleted).count
+        if completed == 0 {
+            return total == 1 ? "1 item" : "\(total) items"
+        }
+        return "\(completed) of \(total) completed"
+    }
+
+    private func syncChecklistDraftRowsWithContent() {
+        let checklistIDs = viewModel.contentQueue.compactMap { item -> UUID? in
+            item.checklistContent?.id
+        }
+
+        let validIDs = Set(checklistIDs)
+        for key in checklistDraftRows.keys where !validIDs.contains(key) {
+            checklistDraftRows.removeValue(forKey: key)
+        }
+
+        for id in checklistIDs {
+            ensureDraftContainer(for: id)
+        }
+    }
+
+    private func cleanupPendingContentTargets() {
+        let existingIDs = Set(viewModel.contentQueue.map(\.id))
+        for key in checklistDraftRows.keys where !existingIDs.contains(key) {
+            checklistDraftRows.removeValue(forKey: key)
+        }
+
+        if let pendingPhotoID = pendingPhotoContentID,
+           !isPresentingPhotoLibrary,
+           !isPresentingCamera,
+           !photoLoadingContentIDs.contains(pendingPhotoID),
+           (photoAttachments(for: pendingPhotoID)?.isEmpty ?? true) {
+            viewModel.removeContent(id: pendingPhotoID)
+            photoLoadingContentIDs.remove(pendingPhotoID)
+            checklistDraftRows.removeValue(forKey: pendingPhotoID)
+            if selectedPhotoContentID == pendingPhotoID {
+                selectedPhotoContentID = nil
+                isPhotoViewerPresented = false
+            }
+            pendingPhotoContentID = nil
+        }
+
+        if let pendingLinkID = pendingLinkContentID,
+           !showAddLinkSheet,
+           (linkAttachments(for: pendingLinkID)?.isEmpty ?? true) {
+            viewModel.removeContent(id: pendingLinkID)
+            pendingLinkContentID = nil
         }
     }
 
@@ -886,6 +1007,22 @@ struct MemoryEditorView: View {
             return color
         }
         return .accentColor
+    }
+
+    private var shouldShowRichTextCard: Bool {
+        hasContent(of: .richText)
+    }
+
+    private var shouldShowChecklistCard: Bool {
+        hasContent(of: .checklist)
+    }
+
+    private var shouldShowPhotosCard: Bool {
+        hasContent(of: .photos)
+    }
+
+    private var shouldShowLinksCard: Bool {
+        hasContent(of: .links)
     }
 
     private var canEnableEditing: Bool {
