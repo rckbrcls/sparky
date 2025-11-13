@@ -461,12 +461,6 @@ struct MemoryEditorView: View {
                         }
                         .disabled(true)
                         .foregroundStyle(.secondary)
-
-                        Toggle(isOn: .constant(false)) {
-                            Label("Archive when completed", systemImage: "archivebox")
-                        }
-                        .disabled(true)
-                        .foregroundStyle(.secondary)
                     }
 
                 } label: {

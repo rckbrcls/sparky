@@ -397,7 +397,6 @@ struct SpaceDetailView: View {
             includeDescendants: false,
             statuses: [],
             includeCompleted: true,
-            includeArchived: true,
             sort: .updatedAtDescending
         )
 

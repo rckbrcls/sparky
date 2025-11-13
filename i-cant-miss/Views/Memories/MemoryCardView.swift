@@ -76,8 +76,6 @@ struct MemoryCardView: View {
             return nil
         case .completed:
             return ("Completed", "checkmark.circle.fill", .green)
-        case .archived:
-            return ("Archived", "archivebox.fill", .gray)
         }
     }
 

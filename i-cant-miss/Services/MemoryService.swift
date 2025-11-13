@@ -28,18 +28,15 @@ final class MemoryService: ObservableObject {
         let spaceIDs: Set<UUID>
         let statuses: Set<MemoryStatus>
         let includeCompleted: Bool
-        let includeArchived: Bool
         let sort: SortStrategy
 
         init(spaceIDs: Set<UUID>,
              statuses: Set<MemoryStatus>,
              includeCompleted: Bool,
-             includeArchived: Bool,
              sort: SortStrategy) {
             self.spaceIDs = spaceIDs
             self.statuses = statuses
             self.includeCompleted = includeCompleted
-            self.includeArchived = includeArchived
             self.sort = sort
         }
     }
@@ -163,7 +160,6 @@ final class MemoryService: ObservableObject {
                   includeDescendants: Bool = true,
                   statuses: Set<MemoryStatus> = [],
                   includeCompleted: Bool = true,
-                  includeArchived: Bool = false,
                   sort: SortStrategy = .updatedAtDescending) -> [MemoryModel] {
         let spaceIDs: Set<UUID>
         if let space {
@@ -182,7 +178,6 @@ final class MemoryService: ObservableObject {
             spaceIDs: spaceIDs,
             statuses: statuses,
             includeCompleted: includeCompleted,
-            includeArchived: includeArchived,
             sort: sort
         )
 
@@ -210,8 +205,6 @@ final class MemoryService: ObservableObject {
                     return true
                 case .completed:
                     return includeCompleted
-                case .archived:
-                    return includeArchived
                 }
             }
         }

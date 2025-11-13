@@ -482,7 +482,12 @@ private extension MemoryEditorViewModel {
             title = trimmedTitle
         }
         priority = MemoryPriority(rawValue: reminder.priority.rawValue) ?? .medium
-        status = reminder.status == .archived ? .archived : (reminder.status == .completed ? .completed : .active)
+        switch reminder.status {
+        case .completed, .archived:
+            status = .completed
+        default:
+            status = .active
+        }
         triggers = reminder.triggers.map { draft(from: $0) }
         isPinned = false
         if let folder = reminder.folder,
@@ -524,7 +529,7 @@ private extension MemoryEditorViewModel {
             title = trimmedTitle
         }
         isPinned = todoList.isPinned
-        status = todoList.isArchived ? .archived : (todoList.isCompleted ? .completed : .active)
+        status = (todoList.isArchived || todoList.isCompleted) ? .completed : .active
         dueDateEnabled = todoList.dueDate != nil
         dueDate = todoList.dueDate ?? Date().addingTimeInterval(3600)
         autoCompleteChecklist = existingMemory?.metadata.autoCompleteOnChecklistCompletion ?? autoCompleteChecklist
@@ -729,7 +734,7 @@ private extension MemoryEditorViewModel {
         list.notes = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         list.dueDate = dueDateEnabled ? dueDate : nil
         list.isPinned = isPinned
-        list.isArchived = status == .archived
+        list.isArchived = false
         list.updatedAt = Date()
         list.folder = folderForAudience(.todos)
         list.items = sanitizedChecklist.enumerated().map { index, draft in
@@ -815,7 +820,6 @@ private extension MemoryEditorViewModel {
         switch memoryStatus {
         case .active: return .active
         case .completed: return .completed
-        case .archived: return .archived
         }
     }
 

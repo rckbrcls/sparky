@@ -80,14 +80,6 @@ struct MemoryListItemButton: View {
             }
             .tint(.green)
 
-            Button {
-                Task { await toggleReminderArchived(id: id) }
-            } label: {
-                Label(memory.status == .archived ? "Unarchive" : "Archive",
-                      systemImage: memory.status == .archived ? "arrow.uturn.backward.square" : "archivebox")
-            }
-            .tint(.blue)
-
             Button(role: .destructive) {
                 Task { await deleteReminder(id: id) }
             } label: {
@@ -115,14 +107,6 @@ struct MemoryListItemButton: View {
                 Label(memory.isPinned ? "Unpin" : "Pin", systemImage: "pin")
             }
             .tint(.yellow)
-
-            Button {
-                Task { await toggleTodoArchived(id: id) }
-            } label: {
-                Label(memory.status == .archived ? "Unarchive" : "Archive",
-                      systemImage: memory.status == .archived ? "arrow.uturn.backward.square" : "archivebox")
-            }
-            .tint(.blue)
 
             Button(role: .destructive) {
                 Task { await deleteTodoList(id: id) }
@@ -173,19 +157,6 @@ struct MemoryListItemButton: View {
         }
     }
 
-    private func toggleReminderArchived(id: UUID) async {
-        do {
-            if memory.status == .archived {
-                _ = try await environment.reminderService.restoreReminder(id: id)
-            } else {
-                _ = try await environment.reminderService.archiveReminder(id: id)
-            }
-            await refreshAll()
-        } catch {
-            // Handle error silently for now
-        }
-    }
-
     private func snoozeReminder(id: UUID, by interval: TimeInterval) async {
         do {
             _ = try await environment.reminderService.snoozeReminder(id: id, by: interval)
@@ -225,16 +196,6 @@ struct MemoryListItemButton: View {
     private func toggleTodoPin(id: UUID) async {
         do {
             _ = try await environment.todoService.togglePin(listID: id)
-            await refreshAll()
-        } catch {
-            // Handle error silently for now
-        }
-    }
-
-    private func toggleTodoArchived(id: UUID) async {
-        do {
-            let archived = memory.status != .archived
-            _ = try await environment.todoService.setArchived(archived, listID: id)
             await refreshAll()
         } catch {
             // Handle error silently for now

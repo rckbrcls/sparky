@@ -92,7 +92,6 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
         switch status {
         case .active: return "Active"
         case .completed: return "Completed"
-        case .archived: return "Archived"
         }
     }
 
@@ -100,7 +99,6 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
         switch status {
         case .active: return "play.circle"
         case .completed: return "checkmark.circle"
-        case .archived: return "archivebox"
         }
     }
 

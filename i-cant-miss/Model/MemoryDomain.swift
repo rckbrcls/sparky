@@ -13,11 +13,8 @@ typealias MemoryTriggerDraft = ReminderTriggerDraft
 enum MemoryStatus: String, CaseIterable, Identifiable, Codable {
     case active
     case completed
-    case archived
 
     var id: String { rawValue }
-
-    var isTerminal: Bool { self == .archived }
 }
 
 enum MemoryPriority: Int16, CaseIterable, Identifiable, Codable {
@@ -337,13 +334,21 @@ extension ReminderModel {
         let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
         let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasNotes = !(trimmedNotes?.isEmpty ?? true)
+        let memoryStatus: MemoryStatus
+        switch status {
+        case .completed, .archived:
+            memoryStatus = .completed
+        default:
+            memoryStatus = .active
+        }
+
         return MemoryModel(
             id: id,
             title: resolvedTitle,
             body: hasNotes ? notes : nil,
             createdAt: createdAt,
             updatedAt: updatedAt,
-            status: status == .archived ? .archived : (status == .completed ? .completed : .active),
+            status: memoryStatus,
             isPinned: false,
             priority: MemoryPriority(rawValue: priority.rawValue),
             dueDate: nil,
@@ -414,13 +419,15 @@ extension TodoListModel {
         let resolvedTitle = trimmedTitle.isEmpty ? "Untitled" : trimmedTitle
         let trimmedNotes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasNotes = !(trimmedNotes?.isEmpty ?? true)
+        let memoryStatus: MemoryStatus = (isCompleted || isArchived) ? .completed : .active
+
         return MemoryModel(
             id: id,
             title: resolvedTitle,
             body: hasNotes ? notes : nil,
             createdAt: createdAt,
             updatedAt: updatedAt,
-            status: isArchived ? .archived : (isCompleted ? .completed : .active),
+            status: memoryStatus,
             isPinned: isPinned,
             priority: nil,
             dueDate: dueDate,

@@ -177,10 +177,6 @@ struct MemorySequentialTriggerEditorScreen: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.caption2)
                 .foregroundStyle(.green)
-        case .archived:
-            Image(systemName: "archivebox.fill")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
         }
     }
 

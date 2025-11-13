@@ -181,8 +181,6 @@ final class MemoryBulkActionProcessor {
                         updated.completedAt = updated.completedAt ?? Date()
                         return updated
                     }
-                case .archived:
-                    list.isArchived = true
                 }
                 list.updatedAt = Date()
             }
@@ -237,7 +235,6 @@ final class MemoryBulkActionProcessor {
         switch memoryStatus {
         case .active: return .active
         case .completed: return .completed
-        case .archived: return .archived
         }
     }
 
