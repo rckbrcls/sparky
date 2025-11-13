@@ -259,7 +259,7 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
-            .sheet(isPresented: $isPresentingCamera) {
+            .fullScreenCover(isPresented: $isPresentingCamera) {
                 CameraCaptureView(
                     onCapture: { image in
                         handleCapturedImage(image)
