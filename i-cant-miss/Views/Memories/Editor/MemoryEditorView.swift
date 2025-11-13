@@ -132,6 +132,7 @@ extension MemoryEditorView {
         }
         if selectedPhotoContentID == id {
             selectedPhotoContentID = nil
+            selectedAttachmentIndex = 0
             isPhotoViewerPresented = false
         }
         cleanupPendingContentTargets()
@@ -273,14 +274,12 @@ struct MemoryEditorView: View {
                           selection: $photoPickerItems,
                           matching: .images)
             .fullScreenCover(isPresented: $isPhotoViewerPresented) {
-                if let contentID = selectedPhotoContentID,
-                   let attachments = photoAttachments(for: contentID) {
-                MemoryEditorPhotoCarouselView(
-                        attachments: attachments,
-                    initialIndex: selectedAttachmentIndex
-                ) {
-                    isPhotoViewerPresented = false
-                }
+                photoViewerContent
+            }
+            .onChange(of: isPhotoViewerPresented) { _, isPresented in
+                if !isPresented {
+                    selectedPhotoContentID = nil
+                    selectedAttachmentIndex = 0
                 }
             }
             .onChange(of: photoPickerItems) { _, newItems in
@@ -292,6 +291,12 @@ struct MemoryEditorView: View {
             .onChange(of: viewModel.contentQueue) { _, _ in
                 syncChecklistDraftRowsWithContent()
                 cleanupPendingContentTargets()
+                if let contentID = selectedPhotoContentID,
+                   !viewModel.contentQueue.contains(where: { $0.id == contentID && $0.contentType == .photos }) {
+                    selectedPhotoContentID = nil
+                    selectedAttachmentIndex = 0
+                    isPhotoViewerPresented = false
+                }
             }
             .onChange(of: isPresentingPhotoLibrary) { _, isPresented in
                 if !isPresented {
@@ -645,8 +650,8 @@ struct MemoryEditorView: View {
             onRemoveAttachment: { id in
                 viewModel.removePhotoAttachment(id: id, from: content.id)
             },
-            onAttachmentTap: { index, _ in
-                presentPhotoViewer(at: index, for: content.id)
+            onAttachmentTap: { index, attachment in
+                presentPhotoViewer(at: index, for: content.id, clickedAttachment: attachment)
             },
             onAddFromLibrary: { addPhotosFromLibrary(to: content.id) },
             onAddFromCamera: { addPhotosFromCamera(to: content.id) },
@@ -844,10 +849,43 @@ struct MemoryEditorView: View {
         cleanupPendingContentTargets()
     }
 
-    private func presentPhotoViewer(at index: Int, for contentID: UUID) {
-        guard let attachments = photoAttachments(for: contentID), attachments.indices.contains(index) else { return }
+    private func presentPhotoViewer(at index: Int, for contentID: UUID, clickedAttachment: MemoryModel.Attachment) {
+        guard index >= 0 else {
+            return
+        }
+
+        isPhotoViewerPresented = false
+        selectedPhotoContentID = nil
+        selectedAttachmentIndex = 0
+
+        guard let rawAttachments = photoAttachments(for: contentID),
+              !rawAttachments.isEmpty else {
+            return
+        }
+
+        guard rawAttachments.indices.contains(index) else {
+            return
+        }
+
+        let flattenedAttachments = flattenAttachments(rawAttachments)
+
+        guard !flattenedAttachments.isEmpty else {
+            return
+        }
+
+        let safeIndex: Int
+        if let flattenedIndex = flattenedAttachments.firstIndex(where: { $0.id == clickedAttachment.id }) {
+            safeIndex = flattenedIndex
+        } else {
+            safeIndex = min(max(0, index), flattenedAttachments.count - 1)
+        }
+
+        guard flattenedAttachments.indices.contains(safeIndex) else {
+            return
+        }
+
         selectedPhotoContentID = contentID
-        selectedAttachmentIndex = index
+        selectedAttachmentIndex = safeIndex
         isPhotoViewerPresented = true
     }
 
@@ -945,7 +983,11 @@ struct MemoryEditorView: View {
     }
 
     private func photoAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
-        viewModel.contentQueue.first { $0.id == contentID && $0.contentType == .photos }?.photosContent?.attachments
+        guard let item = viewModel.contentQueue.first(where: { $0.id == contentID && $0.contentType == .photos }),
+              let photosContent = item.photosContent else {
+            return nil
+        }
+        return photosContent.attachments
     }
 
     private func linkAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
@@ -1122,6 +1164,133 @@ struct MemoryEditorView: View {
 
     private var isTitlePlaceholder: Bool {
         viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    @ViewBuilder
+    private var photoViewerContent: some View {
+        Group {
+            if let contentID = selectedPhotoContentID,
+               viewModel.contentQueue.contains(where: { $0.id == contentID && $0.contentType == .photos }) {
+                let attachments = getPhotoAttachmentsForViewer(contentID: contentID)
+                if !attachments.isEmpty {
+                    let safeIndex = min(max(selectedAttachmentIndex, 0), attachments.count - 1)
+                    MemoryEditorPhotoCarouselView(
+                        attachments: attachments,
+                        initialIndex: safeIndex
+                    ) {
+                        isPhotoViewerPresented = false
+                        selectedPhotoContentID = nil
+                        selectedAttachmentIndex = 0
+                    }
+                } else {
+                    photoViewerErrorView
+                }
+            } else {
+                photoViewerErrorView
+            }
+        }
+        .onAppear {
+            if let contentID = selectedPhotoContentID {
+                let attachments = getPhotoAttachmentsForViewer(contentID: contentID)
+                if attachments.isEmpty {
+                    isPhotoViewerPresented = false
+                    selectedPhotoContentID = nil
+                    selectedAttachmentIndex = 0
+                } else {
+                    let safeIndex = min(max(selectedAttachmentIndex, 0), attachments.count - 1)
+                    if safeIndex != selectedAttachmentIndex {
+                        selectedAttachmentIndex = safeIndex
+                    }
+                }
+            }
+        }
+    }
+
+    private func getPhotoAttachmentsForViewer(contentID: UUID) -> [MemoryModel.Attachment] {
+        guard contentID == selectedPhotoContentID else {
+            return []
+        }
+
+        guard viewModel.contentQueue.contains(where: { $0.id == contentID && $0.contentType == .photos }) else {
+            return []
+        }
+
+        guard let rawAttachments = photoAttachments(for: contentID),
+              !rawAttachments.isEmpty else {
+            return []
+        }
+
+        let flattened = flattenAttachments(rawAttachments)
+        guard !flattened.isEmpty else {
+            return []
+        }
+
+        return flattened
+    }
+
+    private func flattenAttachments(_ attachments: [MemoryModel.Attachment]) -> [MemoryModel.Attachment] {
+        var flattened: [MemoryModel.Attachment] = []
+        for attachment in attachments {
+            if attachment.kind == .contentBundle {
+                if let bundleAttachments = extractAttachmentsFromBundle(attachment.data) {
+                    flattened.append(contentsOf: bundleAttachments)
+                }
+            } else if attachment.kind == .photo {
+                if !attachment.data.isEmpty {
+                    flattened.append(attachment)
+                }
+            }
+        }
+        return flattened
+    }
+
+    private func extractAttachmentsFromBundle(_ bundleData: Data) -> [MemoryModel.Attachment]? {
+        let decoder = JSONDecoder()
+        guard let bundle = try? decoder.decode(MemoryContentBundle.self, from: bundleData) else {
+            return nil
+        }
+        var extracted: [MemoryModel.Attachment] = []
+        for content in bundle.contents {
+            if case .photos(let photosContent) = content {
+                let attachmentIDs = photosContent.attachmentIDs
+                let allAttachments = viewModel.allPhotoAttachments
+                let attachmentLookup = Dictionary(uniqueKeysWithValues: allAttachments.map { ($0.id, $0) })
+                let matchedAttachments = attachmentIDs.compactMap { attachmentLookup[$0] }
+                    .filter { $0.kind == .photo && !$0.data.isEmpty }
+                extracted.append(contentsOf: matchedAttachments)
+            }
+        }
+        return extracted.isEmpty ? nil : extracted
+    }
+
+    private var photoViewerErrorView: some View {
+        NavigationStack {
+            ZStack {
+                Color.black
+                    .ignoresSafeArea()
+
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 48, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text("Unable to load photos")
+                        .font(.headline)
+                        .foregroundStyle(.white.opacity(0.8))
+                    Text("The photos are no longer available.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .cancel) {
+                        isPhotoViewerPresented = false
+                    } label: {
+                        Label("Close", systemImage: "xmark")
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
