@@ -397,6 +397,47 @@ final class MemoryEditorViewModel: ObservableObject {
             return false
         }
     }
+
+    func saveMetadataOnly() async -> Bool {
+        guard let memoryID = editingMemoryID else {
+            return false
+        }
+
+        guard let existingMemory = existingMemory else {
+            return false
+        }
+
+        let contents = contentsRepresentation()
+        let attachments = allPhotoAttachments + allLinkAttachments
+        let triggerModels = triggers.map { $0.toModel() }
+
+        let draft = MemoryDraft(
+            id: memoryID,
+            title: existingMemory.title,
+            status: status,
+            priority: priority,
+            isPinned: isPinned,
+            dueDate: nil,
+            spaceID: selectedSpaceID,
+            triggers: triggerModels,
+            contents: contents,
+            attachments: attachments,
+            autoCompleteOnChecklistCompletion: autoCompleteChecklist
+        )
+
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            let savedMemory = try await environment.memoryService.updateMemory(from: draft)
+            self.existingMemory = savedMemory
+            persistedMemoryID = savedMemory.id
+            return true
+        } catch {
+            errorMessage = "Unable to save memory."
+            return false
+        }
+    }
 }
 
 // MARK: - Private helpers

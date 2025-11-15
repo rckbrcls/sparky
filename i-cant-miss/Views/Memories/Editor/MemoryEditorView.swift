@@ -331,6 +331,41 @@ struct MemoryEditorView: View {
                     cleanupPendingContentTargets()
                 }
             }
+            .onChange(of: viewModel.isPinned) { _, _ in
+                if !isEditingEnabled {
+                    Task {
+                        await viewModel.saveMetadataOnly()
+                    }
+                }
+            }
+            .onChange(of: viewModel.selectedSpaceID) { _, _ in
+                if !isEditingEnabled {
+                    Task {
+                        await viewModel.saveMetadataOnly()
+                    }
+                }
+            }
+            .onChange(of: viewModel.status) { _, _ in
+                if !isEditingEnabled {
+                    Task {
+                        await viewModel.saveMetadataOnly()
+                    }
+                }
+            }
+            .onChange(of: viewModel.priority) { _, _ in
+                if !isEditingEnabled {
+                    Task {
+                        await viewModel.saveMetadataOnly()
+                    }
+                }
+            }
+            .onChange(of: viewModel.autoCompleteChecklist) { _, _ in
+                if !isEditingEnabled {
+                    Task {
+                        await viewModel.saveMetadataOnly()
+                    }
+                }
+            }
         }
 
     }
