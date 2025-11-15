@@ -580,7 +580,7 @@ struct MemoryEditorView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical)
-        .glassEffect(.regular.interactive())
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .contentShape(Rectangle())
     }
 

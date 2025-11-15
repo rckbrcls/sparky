@@ -158,12 +158,11 @@ final class MemoryBulkActionProcessor {
 
         switch origin {
         case .reminder(let reminderID):
-            try await updateReminder(reminderID) { reminder in
-                reminder.status = self.reminderStatus(for: status)
-                if status == .completed {
-                    reminder.lastCompletionDate = Date()
-                }
-                reminder.updatedAt = Date()
+            switch status {
+            case .active:
+                _ = try await environment.reminderService.restoreReminder(id: reminderID)
+            case .completed:
+                _ = try await environment.reminderService.completeReminder(id: reminderID)
             }
             return [.reminders]
         case .note:
