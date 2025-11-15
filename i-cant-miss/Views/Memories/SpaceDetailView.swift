@@ -75,11 +75,11 @@ struct SpaceDetailView: View {
     }
 
     private var nonInboxMemories: [MemoryModel] {
-        filteredMemories.filter { !isInboxMemory($0) && !$0.isPinned }
+        filteredMemories.filter { !$0.isInbox && !$0.isPinned }
     }
 
     private var inboxMemories: [MemoryModel] {
-        filteredMemories.filter { isInboxMemory($0) && !$0.isPinned }
+        filteredMemories.filter { $0.isInbox && !$0.isPinned }
     }
 
     private var pinnedMemories: [MemoryModel] {
@@ -205,7 +205,7 @@ struct SpaceDetailView: View {
     }
 
     private var canCreateSubspace: Bool {
-        !resolvedSpace.isAllSpaces && resolvedSpace.id != SpaceModel.inboxIdentifier
+        !resolvedSpace.isAllSpaces
     }
 
     var body: some View {
@@ -433,7 +433,7 @@ struct SpaceDetailView: View {
         return base.filter { memory in
             matchesSelectedContentAndTrigger(memory) &&
             matchesSelectedSection(memory, referenceDate: referenceDate) &&
-            (showInbox || !isInboxMemory(memory)) &&
+            (showInbox || !memory.isInbox) &&
             matchesSearch(memory, query: query)
         }
     }
@@ -513,10 +513,6 @@ struct SpaceDetailView: View {
         } else {
             return .later
         }
-    }
-
-    private func isInboxMemory(_ memory: MemoryModel) -> Bool {
-        memory.status == .active && !memory.hasTriggers && memory.space == nil
     }
 
     private func memoryCount(for space: SpaceModel) -> Int {

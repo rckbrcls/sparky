@@ -422,7 +422,7 @@ struct MemoryEditorView: View {
 
                     Section("Details") {
                         SpacePicker(selection: Binding(
-                            get: { viewModel.selectedSpaceID ?? spacesForPicker.first?.id ?? SpaceModel.inbox.id },
+                            get: { viewModel.selectedSpaceID },
                             set: { viewModel.selectedSpaceID = $0 }
                         ), spaces: spacesForPicker)
 
@@ -431,7 +431,7 @@ struct MemoryEditorView: View {
                                 Text(status.rawValue.capitalized).tag(status)
                             }
                         } label: {
-                            Label("Status", systemImage: "circle.circle")
+                            Label(viewModel.status.rawValue.capitalized, systemImage: "circle.circle")
                         }
                         .pickerStyle(.menu)
 
@@ -441,7 +441,7 @@ struct MemoryEditorView: View {
                                     .tag(priority)
                             }
                         } label: {
-                            Label("Priority", systemImage: "flag.fill")
+                            Label(viewModel.priority.displayName, systemImage: "flag.fill")
                         }
                         .pickerStyle(.menu)
                     }
@@ -1072,8 +1072,7 @@ struct MemoryEditorView: View {
     }
 
     private var spacesForPicker: [SpaceModel] {
-        let spaces = viewModel.availableSpaces
-        return spaces.isEmpty ? [SpaceModel.inbox] : spaces
+        viewModel.availableSpaces
     }
 
     private var baseBackground: Color {

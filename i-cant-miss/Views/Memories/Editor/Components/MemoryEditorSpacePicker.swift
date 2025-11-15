@@ -4,6 +4,13 @@ struct SpacePicker: View {
     @Binding var selection: UUID?
     let spaces: [SpaceModel]
 
+    private var selectedSpaceName: String {
+        guard let selection = selection else {
+            return "No Space"
+        }
+        return spaces.first(where: { $0.id == selection })?.name ?? "No Space"
+    }
+
     var body: some View {
         Picker(selection: $selection) {
             Text("No Space")
@@ -12,7 +19,7 @@ struct SpacePicker: View {
                 Text(space.name).tag(Optional(space.id))
             }
         } label: {
-            Label("Space", systemImage: "folder")
+            Label(selectedSpaceName, systemImage: "folder")
         }
         .pickerStyle(.menu)
     }

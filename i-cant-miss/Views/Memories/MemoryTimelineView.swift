@@ -66,7 +66,7 @@ struct MemoryTimelineView: View {
             .filter { memory in
                 guard memory.status == .active, memory.isPinned else { return false }
                 guard isMemoryContentAndTriggerSelected(memory) else { return false }
-                if !showInbox && isInboxMemory(memory) {
+                if !showInbox && memory.isInbox {
                     return false
                 }
 
@@ -488,10 +488,6 @@ struct MemoryTimelineView: View {
                 }
             }
         )
-    }
-
-    private func isInboxMemory(_ memory: MemoryModel) -> Bool {
-        memory.status == .active && !memory.hasTriggers && memory.space == nil
     }
 
     private func sectionKind(for memory: MemoryModel, referenceDate: Date = Date()) -> MemoryService.TimelineSection.Kind? {

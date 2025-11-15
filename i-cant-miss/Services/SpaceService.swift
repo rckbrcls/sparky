@@ -58,7 +58,7 @@ final class SpaceService: ObservableObject {
     private func loadInitialData() {
         let context = persistence.container.viewContext
 
-        var spaceModels: [SpaceModel] = [SpaceModel.inbox]
+        var spaceModels: [SpaceModel] = []
         var tagModels: [TagModel]
 
         do {
@@ -89,7 +89,7 @@ final class SpaceService: ObservableObject {
             tagModels = []
         }
 
-        // Deduplicate spaces by id to avoid duplicates when inbox exists in Core Data
+        // Deduplicate spaces by id to avoid duplicates
         var deduplicated: [UUID: SpaceModel] = [:]
         for space in spaceModels {
             deduplicated[space.id] = space
@@ -155,14 +155,14 @@ final class SpaceService: ObservableObject {
 
         do {
             let spaces = try context.fetch(request)
-            var nextSpaces: [SpaceModel] = [SpaceModel.inbox]
+            var nextSpaces: [SpaceModel] = []
 
             for space in spaces {
                 let spaceModel = space.toModel()
                 nextSpaces.append(spaceModel)
             }
 
-            // Deduplicate by id to avoid duplicates when inbox exists in Core Data.
+            // Deduplicate by id to avoid duplicates.
             var deduplicated: [UUID: SpaceModel] = [:]
             for space in nextSpaces {
                 deduplicated[space.id] = space
@@ -389,7 +389,7 @@ final class SpaceService: ObservableObject {
     }
 
     func deleteSpace(_ space: SpaceModel) async throws {
-        guard space.id != SpaceModel.inboxIdentifier, !space.isDefault else {
+        guard !space.isDefault else {
             throw SpaceServiceError.cannotDeleteDefaultSpace
         }
 

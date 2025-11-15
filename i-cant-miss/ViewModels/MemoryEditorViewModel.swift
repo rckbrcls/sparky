@@ -65,9 +65,6 @@ final class MemoryEditorViewModel: ObservableObject {
         if id == SpaceModel.allSpacesIdentifier {
             return SpaceModel.allSpaces
         }
-        if id == SpaceModel.inboxIdentifier {
-            return SpaceModel.inbox
-        }
         return nil
     }
 
@@ -409,7 +406,7 @@ private extension MemoryEditorViewModel {
         if let memory = existingMemory {
             apply(memory: memory)
         } else {
-            selectedSpaceID = defaultSpace?.id ?? environment.spaceService.defaultSpace()?.id
+            selectedSpaceID = nil
             contentQueue = []
             applyTemplate(template)
         }

@@ -71,7 +71,6 @@ struct SpacesRootView: View {
 
     private var displaySpaces: [SpaceModel] {
         let rootSpaces = spaceService.rootSpaces()
-            .filter { $0.id != SpaceModel.inboxIdentifier }
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder

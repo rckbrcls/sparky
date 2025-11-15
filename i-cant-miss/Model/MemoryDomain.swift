@@ -681,6 +681,10 @@ struct MemoryModel: Identifiable, Hashable {
         status == .completed
     }
 
+    var isInbox: Bool {
+        status == .active && !hasTriggers && space == nil
+    }
+
     func nextFireDate(referenceDate: Date = Date()) -> Date? {
         let activeTriggers = triggers.filter { $0.isActive }
         guard !activeTriggers.isEmpty else { return nil }
@@ -790,7 +794,6 @@ struct SpaceModel: Identifiable, Hashable {
 
 extension SpaceModel {
     static let allSpacesIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
-    static let inboxIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
     static var allSpaces: SpaceModel {
         SpaceModel(
@@ -798,19 +801,6 @@ extension SpaceModel {
             name: "All",
             colorHex: nil,
             iconName: "square.grid.2x2",
-            sortOrder: Int.min,
-            parentID: nil,
-            childIDs: [],
-            isDefault: true
-        )
-    }
-
-    static var inbox: SpaceModel {
-        SpaceModel(
-            id: inboxIdentifier,
-            name: "Inbox",
-            colorHex: nil,
-            iconName: "tray",
             sortOrder: Int.min,
             parentID: nil,
             childIDs: [],
