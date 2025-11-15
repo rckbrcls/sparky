@@ -155,45 +155,45 @@ struct MemoryCardView: View {
                 }
 
             }
-
-            if nextTriggerText != nil || dueDateText != nil || checklistProgressText != nil {
+            
+            if sequentialSummary != nil || nextTriggerText != nil || dueDateText != nil || checklistProgressText != nil {
                 Divider()
-            }
-
-            HStack(spacing: 12) {
-                if let sequentialSummary {
-                    Label(sequentialSummary, systemImage: "arrowshape.turn.up.right.circle")
-                        .font(.caption)
-                        .lineLimit(1)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .glassEffect()
+                
+                HStack(spacing: 12) {
+                    if let sequentialSummary {
+                        Label(sequentialSummary, systemImage: "arrowshape.turn.up.right.circle")
+                            .font(.caption)
+                            .lineLimit(1)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .glassEffect()
+                    }
+                    
+                    if let nextTriggerText {
+                        Label(nextTriggerText, systemImage: "alarm")
+                            .font(.caption)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .glassEffect()
+                    }
+                    
+                    if let dueDateText {
+                        Label(dueDateText, systemImage: "calendar")
+                            .font(.caption)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .glassEffect()
+                    }
+                    
+                    if let checklistProgressText {
+                        Label(checklistProgressText, systemImage: "checklist")
+                            .font(.caption)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .glassEffect()
+                    }
                 }
-
-                if let nextTriggerText {
-                    Label(nextTriggerText, systemImage: "alarm")
-                        .font(.caption)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .glassEffect()
-                }
-
-                if let dueDateText {
-                    Label(dueDateText, systemImage: "calendar")
-                        .font(.caption)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .glassEffect()
-                }
-
-                if let checklistProgressText {
-                    Label(checklistProgressText, systemImage: "checklist")
-                        .font(.caption)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .glassEffect()
-                }
-            }
+            }            
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)

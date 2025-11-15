@@ -21,8 +21,6 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var status: MemoryStatus = .active
     @Published var priority: MemoryPriority = .medium
     @Published var isPinned: Bool = false
-    @Published var dueDateEnabled: Bool = false
-    @Published var dueDate: Date = Date().addingTimeInterval(3600)
     @Published var autoCompleteChecklist: Bool
     @Published var triggers: [MemoryTriggerDraft] = []
     @Published var contentQueue: [MemoryEditorContentItem] = []
@@ -458,8 +456,6 @@ private extension MemoryEditorViewModel {
         status = memory.status
         priority = memory.priority ?? .medium
         isPinned = memory.isPinned
-        dueDateEnabled = memory.dueDate != nil
-        dueDate = memory.dueDate ?? Date().addingTimeInterval(3600)
         triggers = memory.triggers.map { draft(from: $0) }
         autoCompleteChecklist = memory.metadata.autoCompleteOnChecklistCompletion
 
@@ -530,8 +526,6 @@ private extension MemoryEditorViewModel {
         }
         isPinned = todoList.isPinned
         status = (todoList.isArchived || todoList.isCompleted) ? .completed : .active
-        dueDateEnabled = todoList.dueDate != nil
-        dueDate = todoList.dueDate ?? Date().addingTimeInterval(3600)
         autoCompleteChecklist = existingMemory?.metadata.autoCompleteOnChecklistCompletion ?? autoCompleteChecklist
         if let folder = todoList.folder,
            let space = environment.spaceService.resolveSpace(for: folder) {
@@ -675,7 +669,7 @@ private extension MemoryEditorViewModel {
         if !triggers.isEmpty {
             let reminderID = try await createReminder(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
             return MemoryPersistenceIdentity(id: reminderID, origin: .reminder(reminderID))
-        } else if !sanitizedChecklist.isEmpty || dueDateEnabled {
+        } else if !sanitizedChecklist.isEmpty {
             let listID = try await createTodoList(trimmedTitle: trimmedTitle,
                                                   trimmedBody: trimmedBody,
                                                   sanitizedChecklist: sanitizedChecklist)
@@ -732,7 +726,6 @@ private extension MemoryEditorViewModel {
 
         list.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         list.notes = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        list.dueDate = dueDateEnabled ? dueDate : nil
         list.isPinned = isPinned
         list.isArchived = false
         list.updatedAt = Date()
@@ -785,7 +778,7 @@ private extension MemoryEditorViewModel {
         let list = try await environment.todoService.createList(
             title: trimmedTitle.isEmpty ? "Checklist" : trimmedTitle,
             notes: trimmedBody.nilIfEmpty,
-            dueDate: dueDateEnabled ? dueDate : nil,
+            dueDate: nil,
             isPinned: isPinned,
             folderID: folderForAudience(.todos)?.id,
             items: items

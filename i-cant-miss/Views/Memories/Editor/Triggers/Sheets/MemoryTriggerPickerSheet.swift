@@ -10,14 +10,6 @@ struct MemoryTriggerPickerSheet: View {
             List {
                 Section("Date & Time") {
                     TriggerPickerRow(
-                        title: "Due date",
-                        subtitle: dueDateSubtitle,
-                        systemImage: "calendar",
-                        isActive: isDueDateActive
-                    ) {
-                        select(.dueDate)
-                    }
-                    TriggerPickerRow(
                         title: "Exact time",
                         subtitle: exactTimeSubtitle,
                         systemImage: "alarm",
@@ -83,8 +75,6 @@ struct MemoryTriggerPickerSheet: View {
             }
             .navigationDestination(item: $selectedDestination) { destination in
                 switch destination {
-                case .dueDate:
-                    MemoryDueDateTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .exactTime:
                     MemoryExactTimeTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .weekdayRoutine:
@@ -102,10 +92,6 @@ struct MemoryTriggerPickerSheet: View {
                 }
             }
         }
-    }
-
-    private var isDueDateActive: Bool {
-        viewModel.dueDateEnabled
     }
 
     private var isExactTimeActive: Bool {
@@ -126,13 +112,6 @@ struct MemoryTriggerPickerSheet: View {
 
     private var isSequentialActive: Bool {
         viewModel.sequentialTrigger != nil
-    }
-
-    private var dueDateSubtitle: String {
-        if viewModel.dueDateEnabled {
-            return "Edit the due date for this memory."
-        }
-        return "Convert this memory into a dated checklist."
     }
 
     private var exactTimeSubtitle: String {

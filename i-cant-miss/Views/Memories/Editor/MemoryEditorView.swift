@@ -159,7 +159,6 @@ struct MemoryEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: MemoryEditorViewModel
-    @State private var showDueDateSheet = false
     @State private var showExactTimeSheet = false
     @State private var showWeekdaySheet = false
     @State private var showTriggerPickerSheet = false
@@ -248,7 +247,6 @@ struct MemoryEditorView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
-            .sheet(isPresented: $showDueDateSheet, content: dueDateSheet)
             .sheet(isPresented: $showExactTimeSheet, content: exactTimeSheet)
             .sheet(isPresented: $showWeekdaySheet, content: weekdaySheet)
             .sheet(isPresented: $showTriggerPickerSheet) {
@@ -1285,13 +1283,6 @@ struct MemoryEditorView: View {
                     }
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func dueDateSheet() -> some View {
-        NavigationStack {
-            MemoryDueDateTriggerEditorScreen(viewModel: viewModel)
         }
     }
 
