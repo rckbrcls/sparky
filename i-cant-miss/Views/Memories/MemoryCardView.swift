@@ -141,7 +141,7 @@ struct MemoryCardView: View {
 
             VStack (alignment: .leading, spacing: 6){
                 Text(title)
-                    .font(.title2)
+                    .font(.title3)
                     .fontWeight(.bold)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -151,7 +151,7 @@ struct MemoryCardView: View {
                     Text(bodyPreview)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
 
             }
