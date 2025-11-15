@@ -11,28 +11,31 @@ struct MemoryDisclosureListSection: View {
     let onSelect: (MemoryModel) -> Void
     let onToggleSelection: ((MemoryModel) -> Void)?
 
+    @ViewBuilder
     var body: some View {
-        Section {
-            headerRow
+        if !memories.isEmpty {
+            Section {
+                headerRow
 
-            if isExpanded {
-                ForEach(memories) { memory in
-                    MemoryListItemButton(
-                        memory: memory,
-                        isMultiSelecting: isMultiSelecting,
-                        isSelected: selectedMemoryIDs.contains(memory.id),
-                        isDisabled: isDisabled,
-                        onSelect: onSelect,
-                        onToggleSelection: onToggleSelection
-                    )
-                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                if isExpanded {
+                    ForEach(memories) { memory in
+                        MemoryListItemButton(
+                            memory: memory,
+                            isMultiSelecting: isMultiSelecting,
+                            isSelected: selectedMemoryIDs.contains(memory.id),
+                            isDisabled: isDisabled,
+                            onSelect: onSelect,
+                            onToggleSelection: onToggleSelection
+                        )
+                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
                 }
             }
+            .listSectionSeparator(.hidden)
+            .background(Color.clear)
         }
-        .listSectionSeparator(.hidden)
-        .background(Color.clear)
     }
 
     private var headerRow: some View {

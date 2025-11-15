@@ -95,6 +95,12 @@ struct MemoryTimelineView: View {
             }
     }
 
+    private var hasAnyContent: Bool {
+        !filteredPinnedMemories.isEmpty ||
+        !timelineSectionData.isEmpty ||
+        (showInbox && !filteredInboxMemories.isEmpty)
+    }
+
     private var activeFilterCount: Int {
         var count = 0
         if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
@@ -270,10 +276,22 @@ struct MemoryTimelineView: View {
             if isSearching {
                 searchResultsList
             } else {
-                pinnedSection
-                timelineSectionsList
-                if showInbox {
-                    inboxListContent
+                if hasAnyContent {
+                    pinnedSection
+                    timelineSectionsList
+                    if showInbox {
+                        inboxListContent
+                    }
+                } else {
+                    MemoryEmptyStateCard(
+                        systemImage: "tray",
+                        title: "No memories yet",
+                        message: "Create a memory or capture a reminder to get started."
+                    )
+                    .padding(.top, 16)
+                    .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
         }
@@ -326,53 +344,25 @@ struct MemoryTimelineView: View {
     @ViewBuilder
     private var timelineSectionsList: some View {
         let sections = timelineSectionData
-        let hasInboxContent = showInbox && !filteredInboxMemories.isEmpty
-
-        if sections.isEmpty && !hasInboxContent {
-            MemoryEmptyStateCard(
-                systemImage: "tray",
-                title: "No memories with active triggers",
-                message: "Create or activate reminders to see them organized on your timeline."
-            )
-            .padding(.top, 16)
-            .listRowInsets(.init(top: 24, leading: 20, bottom: 8, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        } else {
-            ForEach(sections) { section in
-                MemoryDisclosureListSection(
-                    title: section.kind.title,
-                    systemImage: section.kind.systemImage,
-                    isExpanded: sectionExpansionBinding(for: section.kind),
-                    memories: section.memories,
-                    isMultiSelecting: isMultiSelecting,
-                    selectedMemoryIDs: selectedMemoryIDs,
-                    isDisabled: isPerformingBulkAction,
-                    onSelect: onSelectMemory,
-                    onToggleSelection: toggleMemorySelection(_:))
-            }
+        ForEach(sections) { section in
+            MemoryDisclosureListSection(
+                title: section.kind.title,
+                systemImage: section.kind.systemImage,
+                isExpanded: sectionExpansionBinding(for: section.kind),
+                memories: section.memories,
+                isMultiSelecting: isMultiSelecting,
+                selectedMemoryIDs: selectedMemoryIDs,
+                isDisabled: isPerformingBulkAction,
+                onSelect: onSelectMemory,
+                onToggleSelection: toggleMemorySelection(_:))
         }
     }
 
     @ViewBuilder
     private var inboxListContent: some View {
         let inboxMemories = filteredInboxMemories
-        let hasTimelineContent = !timelineSectionData.isEmpty
-        let shouldShowEmptyState = inboxMemories.isEmpty && !hasTimelineContent
 
-        if inboxMemories.isEmpty {
-            if shouldShowEmptyState {
-                MemoryEmptyStateCard(
-                    systemImage: "checkmark.seal",
-                    title: "Inbox is clear",
-                    message: "Create a memory or capture a reminder to keep building your inbox."
-                )
-                .padding(.top, 16)
-                .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-        } else {
+        if !inboxMemories.isEmpty {
             Section {
                 inboxHeaderRow(memories: inboxMemories)
 
