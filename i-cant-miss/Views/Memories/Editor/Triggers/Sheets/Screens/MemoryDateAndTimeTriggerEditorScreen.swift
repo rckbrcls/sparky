@@ -2,7 +2,7 @@ import SwiftUI
 
 enum ScheduleType: String, CaseIterable {
     case weekdays = "Weekdays"
-    case exactDate = "Exact Date"
+    case exactDate = "Date"
 }
 
 struct MemoryDateAndTimeTriggerEditorScreen: View {
@@ -28,7 +28,9 @@ struct MemoryDateAndTimeTriggerEditorScreen: View {
 
         // Detect schedule type based on existing trigger
         let hasWeekdayMask = (scheduledTrigger?.weekdayMask ?? 0) != 0
-        let detectedType: ScheduleType = hasWeekdayMask ? .weekdays : .exactDate
+        let detectedType: ScheduleType = scheduledTrigger != nil
+            ? (hasWeekdayMask ? .weekdays : .exactDate)
+            : .weekdays
         _scheduleType = State(initialValue: detectedType)
 
         // Initialize frequency and interval
