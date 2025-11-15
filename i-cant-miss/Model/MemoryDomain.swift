@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Recurrence Types
+
 enum RecurrenceFrequency: String, CaseIterable, Identifiable, Codable {
     case daily
     case weekly
@@ -28,6 +30,8 @@ struct RecurrenceRule: Codable, Hashable {
     }
 }
 
+// MARK: - Location Types
+
 enum LocationEvent: String, CaseIterable, Identifiable, Codable {
     case onEntry
     case onExit
@@ -41,6 +45,8 @@ enum LocationEvent: String, CaseIterable, Identifiable, Codable {
         }
     }
 }
+
+// MARK: - Memory Trigger Types
 
 enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
     case time
@@ -156,6 +162,64 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
     }
 }
 
+extension MemoryTriggerDraft {
+    func toModel() -> MemoryTriggerModel {
+        MemoryTriggerModel(
+            id: id,
+            type: type,
+            fireDate: fireDate,
+            startDate: startDate,
+            recurrenceRule: recurrenceRule,
+            timeZoneIdentifier: timeZoneIdentifier,
+            weekdayMask: weekdayMask,
+            isActive: isActive,
+            location: location,
+            person: person,
+            sequential: sequential,
+            spacedStage: spacedStage,
+            lastReviewDate: lastReviewDate,
+            ignoreCount: ignoreCount
+        )
+    }
+}
+
+extension MemoryTriggerModel {
+    func nextFireDate(after reference: Date = Date()) -> Date? {
+        switch type {
+        case .time:
+            return fireDate
+        case .dayOfWeek:
+            return nextWeekdayOccurrence(from: reference)
+        case .location, .person, .sequential:
+            return startDate ?? fireDate
+        }
+    }
+
+    private func nextWeekdayOccurrence(from reference: Date) -> Date? {
+        guard weekdayMask != 0 else { return fireDate ?? startDate }
+        let calendar = Calendar.current
+        let targetDays = (1...7).compactMap { day -> Int? in
+            let bit = 1 << day
+            return (weekdayMask & Int16(bit)) != 0 ? day : nil
+        }
+
+        guard !targetDays.isEmpty else { return fireDate ?? startDate }
+
+        for dayOffset in 0..<7 {
+            let candidate = calendar.date(byAdding: .day, value: dayOffset, to: reference) ?? reference
+            let weekday = calendar.component(.weekday, from: candidate)
+            if targetDays.contains(weekday) {
+                let start = startDate ?? candidate
+                return candidate < start ? start : candidate
+            }
+        }
+
+        return fireDate ?? startDate
+    }
+}
+
+// MARK: - Memory Status and Priority
+
 enum MemoryStatus: String, CaseIterable, Identifiable, Codable {
     case active
     case completed
@@ -186,6 +250,8 @@ enum MemoryPriority: Int16, CaseIterable, Identifiable, Codable {
         }
     }
 }
+
+// MARK: - Memory Types and Filters
 
 enum MemoryType: String, CaseIterable, Identifiable {
     case text
@@ -285,6 +351,177 @@ enum MemoryTimelineFilter: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Check Items
+
+struct CheckItemModel: Identifiable, Hashable, Codable {
+    let id: UUID
+    var title: String
+    var detail: String?
+    var isCompleted: Bool
+    var sortOrder: Int
+    var createdAt: Date
+    var updatedAt: Date
+    var completedAt: Date?
+}
+
+struct CheckItemDraft: Identifiable, Hashable {
+    let id: UUID
+    var title: String
+    var detail: String
+    var isCompleted: Bool
+    var sortOrder: Int
+    var createdAt: Date
+    var completedAt: Date?
+
+    init(id: UUID = UUID(),
+         title: String = "",
+         detail: String = "",
+         isCompleted: Bool = false,
+         sortOrder: Int = 0,
+         createdAt: Date = Date(),
+         completedAt: Date? = nil) {
+        self.id = id
+        self.title = title
+        self.detail = detail
+        self.isCompleted = isCompleted
+        self.sortOrder = sortOrder
+        self.createdAt = createdAt
+        self.completedAt = completedAt
+    }
+}
+
+// MARK: - Memory Content Types
+
+enum MemoryContent: Codable, Hashable {
+    case richText(String)
+    case checklist([CheckItemModel])
+    case photos([UUID])
+    case links([UUID])
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case text
+        case items
+        case attachmentIDs
+    }
+
+    private enum ContentType: String, Codable {
+        case richText
+        case checklist
+        case photos
+        case links
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(ContentType.self, forKey: .type)
+
+        switch type {
+        case .richText:
+            let text = try container.decode(String.self, forKey: .text)
+            self = .richText(text)
+        case .checklist:
+            let items = try container.decode([CheckItemModel].self, forKey: .items)
+            self = .checklist(items)
+        case .photos:
+            let ids = try container.decode([UUID].self, forKey: .attachmentIDs)
+            self = .photos(ids)
+        case .links:
+            let ids = try container.decode([UUID].self, forKey: .attachmentIDs)
+            self = .links(ids)
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case .richText(let text):
+            try container.encode(ContentType.richText, forKey: .type)
+            try container.encode(text, forKey: .text)
+        case .checklist(let items):
+            try container.encode(ContentType.checklist, forKey: .type)
+            try container.encode(items, forKey: .items)
+        case .photos(let ids):
+            try container.encode(ContentType.photos, forKey: .type)
+            try container.encode(ids, forKey: .attachmentIDs)
+        case .links(let ids):
+            try container.encode(ContentType.links, forKey: .type)
+            try container.encode(ids, forKey: .attachmentIDs)
+        }
+    }
+}
+
+// MARK: - Content Extensions
+
+extension Array where Element == MemoryContent {
+    func aggregatedBodyText() -> String? {
+        let textContents = self.compactMap { content -> String? in
+            switch content {
+            case .richText(let text):
+                return text
+            default:
+                return nil
+            }
+        }
+        let combined = textContents.joined(separator: "\n\n")
+        return combined.isEmpty ? nil : combined
+    }
+
+    func referencedAttachmentIDs() -> [UUID] {
+        return self.flatMap { content -> [UUID] in
+            switch content {
+            case .photos(let attachmentIDs):
+                return attachmentIDs
+            case .links(let attachmentIDs):
+                return attachmentIDs
+            default:
+                return []
+            }
+        }
+    }
+
+    func flattenedChecklistItems() -> [CheckItemModel] {
+        return self.compactMap { content -> [CheckItemModel]? in
+            if case .checklist(let items) = content {
+                return items
+            }
+            return nil
+        }.flatMap { $0 }
+    }
+}
+
+// MARK: - Content Helpers
+
+struct MemoryDomain {
+    struct MemoryContentBundle: Codable {
+        let contents: [MemoryContent]
+    }
+
+    struct MemoryContentCodec {
+        private static let decoder = JSONDecoder()
+
+        static func extractContents(from attachments: [MemoryModel.Attachment]) -> (contents: [MemoryContent], remainingAttachments: [MemoryModel.Attachment]) {
+            guard let index = attachments.firstIndex(where: { $0.kind == .contentBundle }) else {
+                return (contents: [], remainingAttachments: attachments)
+            }
+
+            let bundleAttachment = attachments[index]
+            let remaining = attachments.enumerated()
+                .filter { $0.offset != index }
+                .map(\.element)
+
+            guard let bundle = try? decoder.decode(MemoryContentBundle.self, from: bundleAttachment.data) else {
+                return (contents: [], remainingAttachments: remaining)
+            }
+
+            return (contents: bundle.contents, remainingAttachments: remaining)
+        }
+    }
+}
+
+// MARK: - Memory Models
+
 struct MemoryModel: Identifiable, Hashable {
     struct AttachmentKind: RawRepresentable, Hashable, Codable {
         let rawValue: String
@@ -379,42 +616,13 @@ struct MemoryModel: Identifiable, Hashable {
     func shouldAutoCompleteChecklist(autoCompleteEnabled: Bool) -> Bool {
         autoCompleteOnChecklistCompletion || autoCompleteEnabled
     }
-}
 
-struct CheckItemModel: Identifiable, Hashable {
-    let id: UUID
-    var title: String
-    var detail: String?
-    var isCompleted: Bool
-    var sortOrder: Int
-    var createdAt: Date
-    var updatedAt: Date
-    var completedAt: Date?
-}
+    static func == (lhs: MemoryModel, rhs: MemoryModel) -> Bool {
+        lhs.id == rhs.id
+    }
 
-struct CheckItemDraft: Identifiable, Hashable {
-    let id: UUID
-    var title: String
-    var detail: String
-    var isCompleted: Bool
-    var sortOrder: Int
-    var createdAt: Date
-    var completedAt: Date?
-
-    init(id: UUID = UUID(),
-         title: String = "",
-         detail: String = "",
-         isCompleted: Bool = false,
-         sortOrder: Int = 0,
-         createdAt: Date = Date(),
-         completedAt: Date? = nil) {
-        self.id = id
-        self.title = title
-        self.detail = detail
-        self.isCompleted = isCompleted
-        self.sortOrder = sortOrder
-        self.createdAt = createdAt
-        self.completedAt = completedAt
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 
@@ -454,7 +662,17 @@ struct MemoryDraft: Identifiable, Hashable {
         self.attachments = attachments
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
     }
+
+    static func == (lhs: MemoryDraft, rhs: MemoryDraft) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
+
+// MARK: - Space Models
 
 struct SpaceModel: Identifiable, Hashable {
     let id: UUID
@@ -530,42 +748,7 @@ extension SpaceModel {
     }
 }
 
-extension MemoryTriggerModel {
-    func nextFireDate(after reference: Date = Date()) -> Date? {
-        switch type {
-        case .time:
-            return fireDate
-        case .dayOfWeek:
-            return nextWeekdayOccurrence(from: reference)
-        case .location, .person, .sequential:
-            return startDate ?? fireDate
-        }
-    }
-
-    private func nextWeekdayOccurrence(from reference: Date) -> Date? {
-        guard weekdayMask != 0 else { return fireDate ?? startDate }
-        let calendar = Calendar.current
-        let targetDays = (1...7).compactMap { day -> Int? in
-            let bit = 1 << day
-            return (weekdayMask & Int16(bit)) != 0 ? day : nil
-        }
-
-        guard !targetDays.isEmpty else { return fireDate ?? startDate }
-
-        for dayOffset in 0..<7 {
-            let candidate = calendar.date(byAdding: .day, value: dayOffset, to: reference) ?? reference
-            let weekday = calendar.component(.weekday, from: candidate)
-            if targetDays.contains(weekday) {
-                let start = startDate ?? candidate
-                return candidate < start ? start : candidate
-            }
-        }
-
-        return fireDate ?? startDate
-    }
-}
-
-// MARK: - Tag Model
+// MARK: - Tag Models
 
 struct TagModel: Identifiable, Hashable, Codable {
     let id: UUID
@@ -576,165 +759,5 @@ struct TagModel: Identifiable, Hashable, Codable {
         self.id = id
         self.name = name
         self.colorHex = colorHex
-    }
-}
-
-// MARK: - Content handling
-
-struct MemoryContentBundle: Codable {
-    let contents: [MemoryContent]
-}
-
-extension Array where Element == MemoryContent {
-    func aggregatedBodyText() -> String? {
-        let textContents = self.compactMap { content -> String? in
-            switch content {
-            case .richText(let text):
-                return text
-            default:
-                return nil
-            }
-        }
-        let combined = textContents.joined(separator: "\n\n")
-        return combined.isEmpty ? nil : combined
-    }
-
-    func referencedAttachmentIDs() -> [UUID] {
-        return self.flatMap { content -> [UUID] in
-            switch content {
-            case .photos(let attachmentIDs):
-                return attachmentIDs
-            case .links(let attachmentIDs):
-                return attachmentIDs
-            default:
-                return []
-            }
-        }
-    }
-
-    func flattenedChecklistItems() -> [CheckItemModel] {
-        return self.compactMap { content -> [CheckItemModel]? in
-            if case .checklist(let items) = content {
-                return items
-            }
-            return nil
-        }.flatMap { $0 }
-    }
-
-    static func legacyContents(body: String?,
-                              checkItems: [CheckItemModel],
-                              photoAttachments: [MemoryModel.Attachment],
-                              linkAttachments: [MemoryModel.Attachment]) -> [MemoryContent] {
-        var contents: [MemoryContent] = []
-
-        if let body = body, !body.isEmpty {
-            contents.append(.richText(body))
-        }
-
-        if !checkItems.isEmpty {
-            contents.append(.checklist(checkItems))
-        }
-
-        if !photoAttachments.isEmpty {
-            contents.append(.photos(photoAttachments.map { $0.id }))
-        }
-
-        if !linkAttachments.isEmpty {
-            contents.append(.links(linkAttachments.map { $0.id }))
-        }
-
-        return contents
-    }
-}
-
-// MARK: - Memory Content Types
-
-enum MemoryContent: Codable, Hashable {
-    case richText(String)
-    case checklist([CheckItemModel])
-    case photos([UUID])
-    case links([UUID])
-
-    private enum CodingKeys: String, CodingKey {
-        case type
-        case text
-        case items
-        case attachmentIDs
-    }
-
-    private enum ContentType: String, Codable {
-        case richText
-        case checklist
-        case photos
-        case links
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let type = try container.decode(ContentType.self, forKey: .type)
-
-        switch type {
-        case .richText:
-            let text = try container.decode(String.self, forKey: .text)
-            self = .richText(text)
-        case .checklist:
-            let items = try container.decode([CheckItemModel].self, forKey: .items)
-            self = .checklist(items)
-        case .photos:
-            let ids = try container.decode([UUID].self, forKey: .attachmentIDs)
-            self = .photos(ids)
-        case .links:
-            let ids = try container.decode([UUID].self, forKey: .attachmentIDs)
-            self = .links(ids)
-        }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-
-        switch self {
-        case .richText(let text):
-            try container.encode(ContentType.richText, forKey: .type)
-            try container.encode(text, forKey: .text)
-        case .checklist(let items):
-            try container.encode(ContentType.checklist, forKey: .type)
-            try container.encode(items, forKey: .items)
-        case .photos(let ids):
-            try container.encode(ContentType.photos, forKey: .type)
-            try container.encode(ids, forKey: .attachmentIDs)
-        case .links(let ids):
-            try container.encode(ContentType.links, forKey: .type)
-            try container.encode(ids, forKey: .attachmentIDs)
-        }
-    }
-}
-
-// MARK: - Memory Content Codec
-
-struct MemoryContentCodec {
-    static func extractContents(from attachments: [MemoryModel.Attachment]) -> (contents: [MemoryContent], remainingAttachments: [MemoryModel.Attachment]) {
-        // This is a simplified implementation - you may need to enhance based on your specific needs
-        return (contents: [], remainingAttachments: attachments)
-    }
-}
-
-extension MemoryTriggerDraft {
-    func toModel() -> MemoryTriggerModel {
-        MemoryTriggerModel(
-            id: id,
-            type: type,
-            fireDate: fireDate,
-            startDate: startDate,
-            recurrenceRule: recurrenceRule,
-            timeZoneIdentifier: timeZoneIdentifier,
-            weekdayMask: weekdayMask,
-            isActive: isActive,
-            location: location,
-            person: person,
-            sequential: sequential,
-            spacedStage: spacedStage,
-            lastReviewDate: lastReviewDate,
-            ignoreCount: ignoreCount
-        )
     }
 }

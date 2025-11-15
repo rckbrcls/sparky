@@ -155,11 +155,6 @@ struct MemoryTimelineView: View {
         !selectedMemoryIDs.isEmpty
     }
 
-    private var canChangeStatusForSelection: Bool {
-        guard canMoveSelection else { return false }
-        return selectedMemories.allSatisfy { memorySupportsStatusChange($0) }
-    }
-
     private var canChangePriorityForSelection: Bool {
         guard canMoveSelection else { return false }
         return selectedMemories.allSatisfy { memorySupportsPriorityChange($0) }
@@ -185,7 +180,7 @@ struct MemoryTimelineView: View {
                             isPerformingBulkAction: isPerformingBulkAction,
                             canPerformDeletion: canMoveSelection,
                             isPriorityEnabled: canChangePriorityForSelection,
-                            isStatusEnabled: canChangeStatusForSelection,
+                            isStatusEnabled: canMoveSelection,
                             isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
                             onSelectSpace: { space in performMove(to: space) },
                             onSelectStatus: { status in performStatusUpdate(to: status) },
@@ -633,16 +628,6 @@ struct MemoryTimelineView: View {
         }
 
         return "\(failures.count) memories failed to update. \(firstError.localizedDescription)"
-    }
-
-    private func memorySupportsStatusChange(_ memory: MemoryModel) -> Bool {
-        guard let origin = memory.metadata.origin else { return false }
-        switch origin {
-        case .reminder, .todoList:
-            return true
-        case .note:
-            return false
-        }
     }
 
     private func memorySupportsPriorityChange(_ memory: MemoryModel) -> Bool {

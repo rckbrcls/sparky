@@ -11,8 +11,8 @@ extension LocationPickerView {
                     .font(.headline)
 
                 Picker("Event", selection: $event) {
-                    ForEach(LocationEvent.allCases) { option in
-                        Text(option.label).tag(option)
+                    ForEach(LocationEvent.allCases, id: \.self) { option in
+                        Text(option.displayName).tag(option)
                     }
                 }
                 .pickerStyle(.segmented)

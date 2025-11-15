@@ -39,19 +39,19 @@ final class MemoryBulkActionProcessor {
 
     func moveMemories(_ ids: Set<UUID>, to space: SpaceModel) async -> MemoryBulkActionResult {
         await process(ids: ids) { memory in
-            try await environment.memoryService.moveMemory(memory.id, to: space)
+            try await self.environment.memoryService.moveMemory(memory.id, to: space)
         }
     }
 
     func updateStatus(of ids: Set<UUID>, to status: MemoryStatus) async -> MemoryBulkActionResult {
         await process(ids: ids) { memory in
-            try await environment.memoryService.setStatus(memoryID: memory.id, status: status)
+            try await self.environment.memoryService.setStatus(memoryID: memory.id, status: status)
         }
     }
 
     func updatePriority(of ids: Set<UUID>, to priority: MemoryPriority) async -> MemoryBulkActionResult {
         await process(ids: ids) { memory in
-            try await environment.memoryService.setPriority(memoryID: memory.id, priority: priority)
+            try await self.environment.memoryService.setPriority(memoryID: memory.id, priority: priority)
         }
     }
 

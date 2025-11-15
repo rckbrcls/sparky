@@ -352,7 +352,7 @@ final class MemoryService: ObservableObject {
                 }
             }
         }
-        try attachmentStore.deleteAllAttachments(for: id)
+        try await attachmentStore.deleteAllAttachments(for: id)
         await refresh(force: true)
     }
 
@@ -365,9 +365,6 @@ final class MemoryService: ObservableObject {
     }
 
     func togglePin(memoryID: UUID) async throws {
-        guard let current = memory(id: memoryID) else {
-            throw MemoryServiceError.memoryNotFound
-        }
         try await mutateMemory(memoryID: memoryID) { memory in
             memory.isPinned.toggle()
         }
@@ -440,7 +437,7 @@ private extension MemoryService {
             }
         }
 
-        try attachmentStore.replaceAttachments(for: draft.id, with: draft.attachments)
+        try await attachmentStore.replaceAttachments(for: draft.id, with: draft.attachments)
         let model = try await fetchMemoryFromViewContext(objectID: objectID)
         await refresh(force: true)
         return model
@@ -459,7 +456,7 @@ private extension MemoryService {
         entity.updatedAt = Date()
 
         entity.triggersData = try jsonEncoder.encode(draft.triggers)
-        let bundle = MemoryContentBundle(contents: draft.contents)
+        let bundle = MemoryDomain.MemoryContentBundle(contents: draft.contents)
         entity.contentsData = try jsonEncoder.encode(bundle)
         entity.body = draft.contents.aggregatedBodyText()
 
@@ -494,7 +491,7 @@ private extension MemoryService {
                 let model = try makeMemoryModel(from: entity, attachments: attachments)
                 unified.append(model)
             } catch {
-                logger.error("Failed to decode memory \(entity.id?.uuidString ?? \"<unknown>\"): \(error.localizedDescription)")
+                logger.error("Failed to decode memory \(entity.id?.uuidString ?? "<unknown>"): \(error.localizedDescription)")
             }
         }
 
@@ -511,7 +508,7 @@ private extension MemoryService {
         let triggers = decodeTriggers(from: entity.triggersData)
         let decoded = decodeContents(for: entity, attachments: attachments)
 
-        var memory = MemoryModel(
+        let memory = MemoryModel(
             id: entity.id ?? UUID(),
             title: entity.title ?? "Untitled",
             body: decoded.body,
@@ -535,7 +532,7 @@ private extension MemoryService {
     func decodeContents(for entity: Memory,
                         attachments: [MemoryModel.Attachment]) -> (contents: [MemoryContent], attachments: [MemoryModel.Attachment], checkItems: [CheckItemModel], body: String?) {
         if let data = entity.contentsData,
-           let bundle = try? jsonDecoder.decode(MemoryContentBundle.self, from: data) {
+           let bundle = try? jsonDecoder.decode(MemoryDomain.MemoryContentBundle.self, from: data) {
             let contents = bundle.contents
             let referencedIDs = Set(contents.referencedAttachmentIDs())
             let filteredAttachments = referencedIDs.isEmpty ? attachments : attachments.filter { referencedIDs.contains($0.id) }
@@ -543,16 +540,8 @@ private extension MemoryService {
             let checkItems = contents.flattenedChecklistItems()
             return (contents, filteredAttachments, checkItems, body)
         } else {
-            let decodeResult = MemoryContentCodec.extractContents(from: attachments)
-            var contents = decodeResult.contents
-            if contents.isEmpty {
-                contents = MemoryContent.legacyContents(
-                    body: entity.body,
-                    checkItems: [],
-                    photoAttachments: attachments.filter { $0.kind == .photo },
-                    linkAttachments: attachments.filter { $0.kind == .link }
-                )
-            }
+            let decodeResult = MemoryDomain.MemoryContentCodec.extractContents(from: attachments)
+            let contents = decodeResult.contents
             let referencedIDs = Set(contents.referencedAttachmentIDs())
             let filteredAttachments = referencedIDs.isEmpty
                 ? decodeResult.remainingAttachments

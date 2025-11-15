@@ -5,7 +5,7 @@ struct MemoryExactTimeTriggerEditorScreen: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     private let showsCloseButton: Bool
     @State private var fireDate: Date
-    @State private var selectedFrequency: RecurrenceRule.Frequency?
+    @State private var selectedFrequency: RecurrenceFrequency?
     @State private var repeatInterval: Int
 
     private var existingTrigger: MemoryTriggerDraft? {
@@ -30,9 +30,9 @@ struct MemoryExactTimeTriggerEditorScreen: View {
                 DatePicker("Time", selection: $fireDate, displayedComponents: [.hourAndMinute])
 
                 Picker("Repeat", selection: $selectedFrequency) {
-                    Text("Never").tag(nil as RecurrenceRule.Frequency?)
-                    ForEach(RecurrenceRule.Frequency.allCases, id: \.self) { frequency in
-                        Text(frequency.title).tag(Optional(frequency))
+                    Text("Never").tag(nil as RecurrenceFrequency?)
+                    ForEach(RecurrenceFrequency.allCases, id: \.self) { frequency in
+                        Text(frequency.rawValue.capitalized).tag(Optional(frequency))
                     }
                 }
 

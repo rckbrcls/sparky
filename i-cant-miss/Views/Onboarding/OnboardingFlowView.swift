@@ -438,12 +438,14 @@ private enum OnboardingSampleData {
             triggers: [travelTrigger],
             checkItems: travelChecklist,
             autoCompleteOnChecklistCompletion: false,
-            contents: MemoryContent.legacyContents(
-                body: "Checklist done. Trigger fires as soon as you arrive at GRU.",
-                checkItems: travelChecklist,
-                photoAttachments: [],
-                linkAttachments: []
-            ),
+            contents: {
+                var contents: [MemoryContent] = []
+                contents.append(.richText("Checklist done. Trigger fires as soon as you arrive at GRU."))
+                if !travelChecklist.isEmpty {
+                    contents.append(.checklist(travelChecklist))
+                }
+                return contents
+            }(),
             attachments: []
         )
 
@@ -461,12 +463,7 @@ private enum OnboardingSampleData {
             triggers: [investorTrigger],
             checkItems: [],
             autoCompleteOnChecklistCompletion: false,
-            contents: MemoryContent.legacyContents(
-                body: "Share growth metrics and highlight the new trigger-first onboarding.",
-                checkItems: [],
-                photoAttachments: [],
-                linkAttachments: []
-            ),
+            contents: [.richText("Share growth metrics and highlight the new trigger-first onboarding.")],
             attachments: []
         )
 

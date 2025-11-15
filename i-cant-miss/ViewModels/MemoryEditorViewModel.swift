@@ -357,7 +357,7 @@ final class MemoryEditorViewModel: ObservableObject {
         let attachments = allPhotoAttachments + allLinkAttachments
         let triggerModels = triggers.map { $0.toModel() }
 
-        var draft = MemoryDraft(
+        let draft = MemoryDraft(
             id: editingMemoryID ?? UUID(),
             title: trimmedTitle,
             status: status,
@@ -415,14 +415,7 @@ private extension MemoryEditorViewModel {
         autoCompleteChecklist = memory.autoCompleteOnChecklistCompletion
 
         let attachments = memory.attachments
-        let contents = memory.contents.isEmpty
-        ? MemoryContent.legacyContents(
-            body: memory.body,
-            checkItems: memory.checkItems,
-            photoAttachments: attachments.filter { $0.kind == .photo },
-            linkAttachments: attachments.filter { $0.kind == .link }
-        )
-        : memory.contents
+        let contents = memory.contents
 
         rebuildContentQueue(from: contents, attachments: attachments)
     }
@@ -551,27 +544,27 @@ private extension MemoryEditorViewModel {
 
         for content in contents {
             switch content {
-            case .richText(let payload):
-                queue.append(.richText(MemoryEditorRichTextContent(id: payload.id, text: payload.text)))
-            case .checklist(let payload):
-                let drafts = payload.items.sorted(by: { $0.sortOrder < $1.sortOrder }).map { item in
+            case .richText(let text):
+                queue.append(.richText(MemoryEditorRichTextContent(id: UUID(), text: text)))
+            case .checklist(let items):
+                let drafts = items.sorted(by: { $0.sortOrder < $1.sortOrder }).map { item in
                     CheckItemDraft(
                         id: item.id,
                         title: item.title,
-                        detail: item.detail,
+                        detail: item.detail ?? "",
                         isCompleted: item.isCompleted,
                         sortOrder: item.sortOrder,
                         createdAt: item.createdAt,
                         completedAt: item.completedAt
                     )
                 }
-                queue.append(.checklist(MemoryEditorChecklistContent(id: payload.id, items: drafts)))
-            case .photos(let payload):
-                let attachmentsForContent = payload.attachmentIDs.compactMap { attachmentLookup[$0] }
-                queue.append(.photos(MemoryEditorPhotosContent(id: payload.id, attachments: attachmentsForContent)))
-            case .links(let payload):
-                let attachmentsForContent = payload.attachmentIDs.compactMap { attachmentLookup[$0] }
-                queue.append(.links(MemoryEditorLinksContent(id: payload.id, links: attachmentsForContent)))
+                queue.append(.checklist(MemoryEditorChecklistContent(id: UUID(), items: drafts)))
+            case .photos(let attachmentIDs):
+                let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
+                queue.append(.photos(MemoryEditorPhotosContent(id: UUID(), attachments: attachmentsForContent)))
+            case .links(let attachmentIDs):
+                let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
+                queue.append(.links(MemoryEditorLinksContent(id: UUID(), links: attachmentsForContent)))
             }
         }
 
@@ -582,13 +575,13 @@ private extension MemoryEditorViewModel {
         contentQueue.map { item in
             switch item {
             case .richText(let content):
-                return .richText(MemoryContent.RichTextContent(id: content.id, text: content.text))
+                return .richText(content.text)
             case .checklist(let content):
                 let items = content.items.enumerated().map { index, draft in
-                    MemoryContent.ChecklistContent.Item(
+                    CheckItemModel(
                         id: draft.id,
                         title: draft.title,
-                        detail: draft.detail,
+                        detail: draft.detail.isEmpty ? nil : draft.detail,
                         isCompleted: draft.isCompleted,
                         sortOrder: index,
                         createdAt: draft.createdAt,
@@ -596,11 +589,11 @@ private extension MemoryEditorViewModel {
                         completedAt: draft.completedAt
                     )
                 }
-                return .checklist(MemoryContent.ChecklistContent(id: content.id, items: items))
+                return .checklist(items)
             case .photos(let content):
-                return .photos(MemoryContent.PhotosContent(id: content.id, attachmentIDs: content.attachments.map(\.id)))
+                return .photos(content.attachments.map(\.id))
             case .links(let content):
-                return .links(MemoryContent.LinksContent(id: content.id, attachmentIDs: content.links.map(\.id)))
+                return .links(content.links.map(\.id))
             }
         }
     }

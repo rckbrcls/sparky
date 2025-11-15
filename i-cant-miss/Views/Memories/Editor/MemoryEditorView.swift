@@ -1237,13 +1237,12 @@ struct MemoryEditorView: View {
 
     private func extractAttachmentsFromBundle(_ bundleData: Data) -> [MemoryModel.Attachment]? {
         let decoder = JSONDecoder()
-        guard let bundle = try? decoder.decode(MemoryContentBundle.self, from: bundleData) else {
+        guard let bundle = try? decoder.decode(MemoryDomain.MemoryContentBundle.self, from: bundleData) else {
             return nil
         }
         var extracted: [MemoryModel.Attachment] = []
         for content in bundle.contents {
-            if case .photos(let photosContent) = content {
-                let attachmentIDs = photosContent.attachmentIDs
+            if case .photos(let attachmentIDs) = content {
                 let allAttachments = viewModel.allPhotoAttachments
                 let attachmentLookup = Dictionary(uniqueKeysWithValues: allAttachments.map { ($0.id, $0) })
                 let matchedAttachments = attachmentIDs.compactMap { attachmentLookup[$0] }
