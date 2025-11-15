@@ -401,7 +401,7 @@ struct MemoryEditorView: View {
                     Button {
                         enableEditing()
                     } label: {
-                        Label("Edit", systemImage: "pencil")
+                        Text("Edit")
                     }
                 }
             }

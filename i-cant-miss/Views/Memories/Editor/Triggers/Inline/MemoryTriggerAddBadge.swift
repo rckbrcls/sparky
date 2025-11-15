@@ -41,7 +41,7 @@ struct MemoryTriggerAddBadge: View {
                 .font(.system(size: 20, weight: .semibold))
                 .frame(width: 48, height: 48)
                 .tint(.white)
-                .glassEffect(.regular.tint(.accent).interactive())
+                .glassEffect(.regular.interactive())
         }
         .accessibilityLabel("Add trigger")
     }
