@@ -165,6 +165,7 @@ struct MemoryEditorView: View {
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
+    @State private var showPhotoOptionsSheet = false
     @State private var showErrorAlert = false
     @State private var checklistDraftRows: [UUID: [ChecklistDraftRow]] = [:]
     @State private var isPresentingPhotoLibrary = false
@@ -260,6 +261,7 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
+            .sheet(isPresented: $showPhotoOptionsSheet, content: photoOptionsSheet)
             .fullScreenCover(isPresented: $isPresentingCamera) {
                 CameraCaptureView(
                     onCapture: { image in
@@ -478,9 +480,7 @@ struct MemoryEditorView: View {
                             Spacer()
                             addChecklistButton
                             Spacer()
-                            addPhotoLibraryButton
-                            Spacer()
-                            capturePhotoButton
+                            addPhotoMenuButton
                             Spacer()
                             addLinkButton
                             Spacer()
@@ -726,15 +726,16 @@ struct MemoryEditorView: View {
                 .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
                 .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(!viewModel.triggers.isEmpty ? Color.accentColor : .primary)
         }
         .accessibilityLabel("Add trigger")
     }
 
-    private var addPhotoLibraryButton: some View {
+    private var addPhotoMenuButton: some View {
         Button {
-            handleLibraryToolbarTap()
+            showPhotoOptionsSheet = true
         } label: {
-            Image(systemName:  "photo.stack")
+            Image(systemName: "photo")
                 .font(.system(size: 20, weight: .semibold))
                 .frame(width: 48, height: 48)
                 .glassEffect(.regular.interactive())
@@ -742,22 +743,7 @@ struct MemoryEditorView: View {
                 .foregroundStyle(photoToolbarForegroundColor)
         }
         .disabled(!isPhotoActionsEnabled)
-        .accessibilityLabel("Add from library")
-    }
-
-    private var capturePhotoButton: some View {
-        Button {
-            handleCameraToolbarTap()
-        } label: {
-            Image(systemName:  "camera")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(photoToolbarForegroundColor)
-        }
-        .disabled(!isPhotoActionsEnabled)
-        .accessibilityLabel("Capture photo")
+        .accessibilityLabel("Add photo")
     }
 
     private var photoToolbarForegroundColor: Color {
@@ -1299,6 +1285,58 @@ struct MemoryEditorView: View {
             )
         }
         .presentationDetents([.large])
+    }
+
+    @ViewBuilder
+    private func photoOptionsSheet() -> some View {
+        NavigationStack {
+            HStack(spacing: 16) {
+                Button {
+                    showPhotoOptionsSheet = false
+                    handleLibraryToolbarTap()
+                } label: {
+                    VStack(spacing: 8) {
+                        Image(systemName: "photo.stack")
+                            .font(.system(size: 24, weight: .semibold))
+                        Text("Library")
+                            .font(.subheadline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .glassEffect(in: .rect(cornerRadius: 24.0))
+                }
+                .disabled(!isPhotoActionsEnabled)
+
+                Button {
+                    showPhotoOptionsSheet = false
+                    handleCameraToolbarTap()
+                } label: {
+                    VStack(spacing: 8) {
+                        Image(systemName: "camera")
+                            .font(.system(size: 24, weight: .semibold))
+                        Text("Camera")
+                            .font(.subheadline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .glassEffect(in: .rect(cornerRadius: 24.0))
+                }
+                .disabled(!isPhotoActionsEnabled)
+            }
+            .padding()
+            .navigationTitle("Add Photo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        showPhotoOptionsSheet = false
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                }
+            }
+        }
+        .presentationDetents([.height(200)])
     }
 }
 
