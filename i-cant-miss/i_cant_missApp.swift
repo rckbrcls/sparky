@@ -25,11 +25,9 @@ struct i_cant_missApp: App {
                     if newPhase == .active {
                         // Refresh data when app becomes active
                         Task {
-                            await appEnvironment.noteService.refresh(force: false)
-                            await appEnvironment.reminderService.refresh(force: false)
-                            await appEnvironment.folderService.refreshFolders(force: false)
-                            await appEnvironment.folderService.refreshTags(force: false)
-                            await appEnvironment.todoService.refresh(force: false)
+                            await appEnvironment.spaceService.refresh(force: false)
+                            await appEnvironment.spaceService.refreshTags(force: false)
+                            await appEnvironment.memoryService.refresh(force: false)
                         }
                     }
                 }

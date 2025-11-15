@@ -435,15 +435,23 @@ struct SpaceDetailView: View {
         if selectedMemoryTypes.isEmpty {
             return true
         }
-        guard let origin = memory.metadata.origin else { return true }
-
-        switch origin {
-        case .reminder:
-            return selectedMemoryTypes.contains(.reminder)
-        case .note:
-            return selectedMemoryTypes.contains(.note)
-        case .todoList:
-            return selectedMemoryTypes.contains(.todo)
+        return selectedMemoryTypes.contains { type in
+            switch type {
+            case .text:
+                return memory.contents.contains {
+                    if case .richText = $0 { return true }
+                    return false
+                }
+            case .checklist:
+                return memory.hasChecklist
+            case .photos:
+                return memory.contents.contains {
+                    if case .photos = $0 { return true }
+                    return false
+                }
+            case .triggered:
+                return memory.hasTriggers
+            }
         }
     }
 
@@ -612,23 +620,11 @@ struct SpaceDetailView: View {
     }
 
     private func memorySupportsStatusChange(_ memory: MemoryModel) -> Bool {
-        guard let origin = memory.metadata.origin else { return false }
-        switch origin {
-        case .reminder, .todoList:
-            return true
-        case .note:
-            return false
-        }
+        true
     }
 
     private func memorySupportsPriorityChange(_ memory: MemoryModel) -> Bool {
-        guard let origin = memory.metadata.origin else { return false }
-        switch origin {
-        case .reminder:
-            return true
-        case .note, .todoList:
-            return false
-        }
+        true
     }
 
     private func performBulkDeletion() {
@@ -647,26 +643,12 @@ struct SpaceDetailView: View {
 
     private func deleteMemories(withIDs ids: Set<MemoryModel.ID>) async {
         for id in ids {
-            guard let memory = memoryService.memory(id: id),
-                  let origin = memory.metadata.origin else {
-                continue
-            }
-
             do {
-                switch origin {
-                case .reminder(let reminderID):
-                    try await environment.reminderService.deleteReminder(id: reminderID)
-                case .note(let noteID):
-                    try await environment.noteService.deleteNote(id: noteID)
-                case .todoList(let listID):
-                    try await environment.todoService.deleteList(id: listID)
-                }
+                try await environment.memoryService.deleteMemory(id: id)
             } catch {
-                // Failures are handled individually by each service.
+                // Failures handled individually.
             }
         }
-
-        await memoryService.refresh(force: true)
     }
 
     private func sortPinned(_ lhs: MemoryModel, _ rhs: MemoryModel, referenceDate: Date = Date()) -> Bool {

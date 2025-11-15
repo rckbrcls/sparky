@@ -24,7 +24,7 @@ final class GeofenceManager: NSObject, ObservableObject {
 
     private let locationManager = CLLocationManager()
     private var monitoredIdentifiers: Set<String> = []
-    private var reminderLookup: [String: UUID] = [:]
+    private var memoryLookup: [String: UUID] = [:]
     private let maxGeofences = 20
 
     override init() {
@@ -43,17 +43,17 @@ final class GeofenceManager: NSObject, ObservableObject {
         }
     }
 
-    func sync(reminders: [ReminderModel]) {
+    func sync(memories: [MemoryModel]) {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
-        let locationTriggers = reminders
+        let locationTriggers = memories
             .filter { $0.status == .active }
-            .flatMap { reminder in
-                reminder.triggers
+            .flatMap { memory in
+                memory.triggers
                     .filter { $0.type == .location }
-                    .compactMap { trigger -> (ReminderModel, ReminderTriggerModel)? in
+                    .compactMap { trigger -> (MemoryModel, MemoryTriggerModel)? in
                         guard let location = trigger.location else { return nil }
                         guard location.radius > 0 else { return nil }
-                        return (reminder, trigger)
+                        return (memory, trigger)
                     }
             }
             .sorted { lhs, rhs in
@@ -61,7 +61,7 @@ final class GeofenceManager: NSObject, ObservableObject {
             }
             .prefix(maxGeofences)
 
-        let desiredIdentifiers = Set(locationTriggers.map { identifier(reminderID: $0.0.id, triggerID: $0.1.id) })
+        let desiredIdentifiers = Set(locationTriggers.map { identifier(memoryID: $0.0.id, triggerID: $0.1.id) })
 
         // Remove stale regions
         for identifier in monitoredIdentifiers.subtracting(desiredIdentifiers) {
@@ -69,12 +69,12 @@ final class GeofenceManager: NSObject, ObservableObject {
                 locationManager.stopMonitoring(for: region)
             }
             monitoredIdentifiers.remove(identifier)
-            reminderLookup.removeValue(forKey: identifier)
+            memoryLookup.removeValue(forKey: identifier)
         }
 
         // Add new regions
-        for (reminder, trigger) in locationTriggers {
-            let identifier = identifier(reminderID: reminder.id, triggerID: trigger.id)
+        for (memory, trigger) in locationTriggers {
+            let identifier = identifier(memoryID: memory.id, triggerID: trigger.id)
             if monitoredIdentifiers.contains(identifier) { continue }
             guard let location = trigger.location else { continue }
 
@@ -87,27 +87,27 @@ final class GeofenceManager: NSObject, ObservableObject {
 
             locationManager.startMonitoring(for: region)
             monitoredIdentifiers.insert(identifier)
-            reminderLookup[identifier] = reminder.id
+            memoryLookup[identifier] = memory.id
         }
     }
 
-    func removeGeofences(for reminderID: UUID) {
-        for identifier in monitoredIdentifiers where identifier.contains(reminderID.uuidString) {
+    func removeGeofences(for memoryID: UUID) {
+        for identifier in monitoredIdentifiers where identifier.contains(memoryID.uuidString) {
             if let region = locationManager.monitoredRegions.first(where: { $0.identifier == identifier }) {
                 locationManager.stopMonitoring(for: region)
             }
             monitoredIdentifiers.remove(identifier)
-            reminderLookup.removeValue(forKey: identifier)
+            memoryLookup.removeValue(forKey: identifier)
         }
     }
 
-    private func identifier(reminderID: UUID, triggerID: UUID) -> String {
-        "reminder-\(reminderID.uuidString)-location-\(triggerID.uuidString)"
+    private func identifier(memoryID: UUID, triggerID: UUID) -> String {
+        "memory-\(memoryID.uuidString)-location-\(triggerID.uuidString)"
     }
 
     private func handle(region: CLRegion, didEnter: Bool) {
-        guard let reminderID = reminderLookup[region.identifier] else { return }
-        lastEvent = didEnter ? .didEnter(reminderID) : .didExit(reminderID)
+        guard let memoryID = memoryLookup[region.identifier] else { return }
+        lastEvent = didEnter ? .didEnter(memoryID) : .didExit(memoryID)
         Task {
             let content = UNMutableNotificationContent()
             content.title = didEnter ? "You're at the right place" : "Leaving the area"

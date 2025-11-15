@@ -188,18 +188,15 @@ struct SpaceComposerView: View {
 
         Task {
             do {
-                _ = try await environment.folderService.createFolder(
+                _ = try await environment.spaceService.createSpace(
                     name: trimmedName,
                     colorHex: selectedColorHex,
                     iconName: selectedIcon,
                     isDefault: false,
-                    audience: .reminders,
                     parentID: selectedParentID
                 )
 
-                async let refreshFolders = environment.folderService.refreshFolders(force: true)
-                async let refreshSpaces = environment.spaceService.refresh(force: true)
-                _ = await (refreshFolders, refreshSpaces)
+                _ = await environment.spaceService.refresh(force: true)
 
                 await MainActor.run {
                     isSaving = false

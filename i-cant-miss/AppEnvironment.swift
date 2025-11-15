@@ -12,11 +12,7 @@ import Combine
 @MainActor
 final class AppEnvironment: ObservableObject {
     let persistence: PersistenceController
-    let folderService: FolderService
     let spaceService: SpaceService
-    let reminderService: ReminderService
-    let noteService: NoteService
-    let todoService: TodoService
     let memoryService: MemoryService
     let notificationScheduler: NotificationScheduler
     let geofenceManager: GeofenceManager
@@ -35,11 +31,7 @@ final class AppEnvironment: ObservableObject {
         self.attachmentStore = MemoryAttachmentStore()
 
         // Initialize services - they will load data synchronously in their init
-        self.folderService = FolderService(persistence: persistence)
         self.spaceService = SpaceService(persistence: persistence)
-        self.reminderService = ReminderService(persistence: persistence, folderService: folderService)
-        self.noteService = NoteService(persistence: persistence, folderService: folderService)
-        self.todoService = TodoService(persistence: persistence, folderService: folderService)
         self.memoryService = MemoryService(persistence: persistence,
                                            spaceService: spaceService,
                                            attachmentStore: attachmentStore)
@@ -48,8 +40,6 @@ final class AppEnvironment: ObservableObject {
 
         self.hasCompletedOnboarding = settings.hasCompletedOnboarding
 
-        reminderService.notificationScheduler = notificationScheduler
-        reminderService.geofenceManager = geofenceManager
         memoryService.notificationScheduler = notificationScheduler
         memoryService.geofenceManager = geofenceManager
         geofenceManager.notificationScheduler = notificationScheduler
@@ -72,15 +62,11 @@ final class AppEnvironment: ObservableObject {
             isBootstrapping = true
 
             // Perform a force refresh to ensure data is up-to-date
-            async let foldersTask = folderService.refreshFolders(force: true)
-            async let tagsTask = folderService.refreshTags(force: true)
             async let spacesTask = spaceService.refresh(force: true)
-            async let remindersTask = reminderService.refresh(force: true)
-            async let notesTask = noteService.refresh(force: true)
-            async let todosTask = todoService.refresh(force: true)
+            async let tagsTask = spaceService.refreshTags(force: true)
             async let memoriesTask = memoryService.refresh(force: true)
 
-            _ = await (foldersTask, tagsTask, spacesTask, remindersTask, notesTask, todosTask, memoriesTask)
+            _ = await (spacesTask, tagsTask, memoriesTask)
 
             await notificationScheduler.requestAuthorizationIfNeeded()
 

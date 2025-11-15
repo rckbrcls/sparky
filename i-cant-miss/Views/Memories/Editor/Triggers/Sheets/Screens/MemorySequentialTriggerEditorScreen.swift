@@ -237,7 +237,6 @@ struct MemorySequentialTriggerEditorScreen: View {
 
     private var allCandidates: [MemoryModel] {
         viewModel.environment.memoryService.memories.filter { memory in
-            guard matchesOrigin(memory: memory) else { return false }
             if let excludedMemoryID, memory.id == excludedMemoryID {
                 return false
             }
@@ -247,16 +246,6 @@ struct MemorySequentialTriggerEditorScreen: View {
 
     private var memoryLookup: [UUID: MemoryModel] {
         Dictionary(uniqueKeysWithValues: viewModel.environment.memoryService.memories.map { ($0.id, $0) })
-    }
-
-    private func matchesOrigin(memory: MemoryModel) -> Bool {
-        guard let origin = memory.metadata.origin else { return false }
-        switch origin {
-        case .reminder:
-            return true
-        case .note, .todoList:
-            return false
-        }
     }
 
     private enum SelectionKind {

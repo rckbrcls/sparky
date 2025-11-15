@@ -437,9 +437,7 @@ private enum OnboardingSampleData {
             space: adventureSpace,
             triggers: [travelTrigger],
             checkItems: travelChecklist,
-            snoozeCount: 1,
-            lastCompletionDate: nil,
-            metadata: MemoryModel.Metadata(origin: .reminder(UUID())),
+            autoCompleteOnChecklistCompletion: false,
             contents: MemoryContent.legacyContents(
                 body: "Checklist done. Trigger fires as soon as you arrive at GRU.",
                 checkItems: travelChecklist,
@@ -462,9 +460,7 @@ private enum OnboardingSampleData {
             space: workSpace,
             triggers: [investorTrigger],
             checkItems: [],
-            snoozeCount: 0,
-            lastCompletionDate: nil,
-            metadata: MemoryModel.Metadata(origin: .note(UUID())),
+            autoCompleteOnChecklistCompletion: false,
             contents: MemoryContent.legacyContents(
                 body: "Share growth metrics and highlight the new trigger-first onboarding.",
                 checkItems: [],

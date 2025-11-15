@@ -440,15 +440,23 @@ struct MemoryTimelineView: View {
         if selectedMemoryTypes.isEmpty {
             return true
         }
-        guard let origin = memory.metadata.origin else { return true }
-
-        switch origin {
-        case .reminder:
-            return selectedMemoryTypes.contains(.reminder)
-        case .note:
-            return selectedMemoryTypes.contains(.note)
-        case .todoList:
-            return selectedMemoryTypes.contains(.todo)
+        return selectedMemoryTypes.contains { type in
+            switch type {
+            case .text:
+                return memory.contents.contains {
+                    if case .richText = $0 { return true }
+                    return false
+                }
+            case .checklist:
+                return memory.hasChecklist
+            case .photos:
+                return memory.contents.contains {
+                    if case .photos = $0 { return true }
+                    return false
+                }
+            case .triggered:
+                return memory.hasTriggers
+            }
         }
     }
 
@@ -638,13 +646,7 @@ struct MemoryTimelineView: View {
     }
 
     private func memorySupportsPriorityChange(_ memory: MemoryModel) -> Bool {
-        guard let origin = memory.metadata.origin else { return false }
-        switch origin {
-        case .reminder:
-            return true
-        case .note, .todoList:
-            return false
-        }
+        true
     }
 
     private func performBulkDeletion() {
@@ -663,52 +665,14 @@ struct MemoryTimelineView: View {
 
     private func deleteMemories(withIDs ids: Set<MemoryModel.ID>) async {
         for id in ids {
-            guard let memory = memoryService.memory(id: id),
-                  let origin = memory.metadata.origin else {
-                continue
-            }
-
             do {
-                switch origin {
-                case .reminder(let reminderID):
-                    try await environment.reminderService.deleteReminder(id: reminderID)
-                case .note(let noteID):
-                    try await environment.noteService.deleteNote(id: noteID)
-                case .todoList(let listID):
-                    try await environment.todoService.deleteList(id: listID)
-                }
+                try await environment.memoryService.deleteMemory(id: id)
             } catch {
-                // Silently ignore failures for now; individual services surface errors independently.
+                // Silently ignore failures for now.
             }
         }
-
-        await memoryService.refresh(force: true)
     }
 
-}
-
-enum MemoryType: String, CaseIterable, Identifiable {
-    case reminder
-    case note
-    case todo
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .reminder: return "Reminders"
-        case .note: return "Notes"
-        case .todo: return "Todos"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .reminder: return "bell.fill"
-        case .note: return "note.text"
-        case .todo: return "checklist"
-        }
-    }
 }
 
 #Preview {

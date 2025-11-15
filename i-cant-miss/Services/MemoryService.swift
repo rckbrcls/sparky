@@ -86,6 +86,8 @@ final class MemoryService: ObservableObject {
     private var cache: [SpaceFilterKey: [MemoryModel]] = [:]
     private var cacheTimestamps: [SpaceFilterKey: Date] = [:]
     private let logger = Logger(subsystem: "i-cant-miss", category: "MemoryService")
+    private let jsonEncoder = JSONEncoder()
+    private let jsonDecoder = JSONDecoder()
 
     var notificationScheduler: NotificationScheduler?
     var geofenceManager: GeofenceManager?
@@ -129,15 +131,8 @@ final class MemoryService: ObservableObject {
         let context = persistence.container.viewContext
 
         do {
-            let reminderModels = try fetchReminders(in: context)
-            let noteModels = try fetchNotes(in: context)
-            let todoModels = try fetchTodoLists(in: context)
-
-            let combined = await buildUnifiedMemories(
-                reminders: reminderModels,
-                notes: noteModels,
-                todos: todoModels
-            )
+            let entities = try fetchMemoryEntities(in: context)
+            let combined = await buildMemoryModels(from: entities)
 
             memories = combined
             lastRefreshed = Date()
@@ -145,9 +140,9 @@ final class MemoryService: ObservableObject {
             cacheTimestamps.removeAll()
 
             if let scheduler = notificationScheduler {
-                await scheduler.refreshNotifications(reminders: reminderModels)
+                await scheduler.refreshNotifications(memories: combined)
             }
-            geofenceManager?.sync(reminders: reminderModels)
+            geofenceManager?.sync(memories: combined)
 
             return combined
         } catch {
@@ -331,70 +326,176 @@ final class MemoryService: ObservableObject {
         cache.removeAll()
         cacheTimestamps.removeAll()
     }
+
+    // MARK: - CRUD
+
+    func createMemory(from draft: MemoryDraft) async throws -> MemoryModel {
+        try await persist(draft: draft, isUpdate: false)
+    }
+
+    func updateMemory(from draft: MemoryDraft) async throws -> MemoryModel {
+        try await persist(draft: draft, isUpdate: true)
+    }
+
+    func deleteMemory(id: UUID) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            persistence.performBackgroundTask { context in
+                do {
+                    guard let memory = try self.fetchMemory(by: id, context: context) else {
+                        throw MemoryServiceError.memoryNotFound
+                    }
+                    context.delete(memory)
+                    try context.save()
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+        try attachmentStore.deleteAllAttachments(for: id)
+        await refresh(force: true)
+    }
+
+    func toggleCompletion(memoryID: UUID) async throws {
+        guard let current = memory(id: memoryID) else {
+            throw MemoryServiceError.memoryNotFound
+        }
+        let newStatus: MemoryStatus = current.status == .completed ? .active : .completed
+        try await setStatus(memoryID: memoryID, status: newStatus)
+    }
+
+    func togglePin(memoryID: UUID) async throws {
+        guard let current = memory(id: memoryID) else {
+            throw MemoryServiceError.memoryNotFound
+        }
+        try await mutateMemory(memoryID: memoryID) { memory in
+            memory.isPinned.toggle()
+        }
+    }
+
+    func setStatus(memoryID: UUID, status: MemoryStatus) async throws {
+        try await mutateMemory(memoryID: memoryID) { memory in
+            memory.statusRaw = status.rawValue
+            if status == .completed {
+                memory.dueDate = memory.dueDate
+            }
+        }
+    }
+
+    func setPriority(memoryID: UUID, priority: MemoryPriority?) async throws {
+        try await mutateMemory(memoryID: memoryID) { memory in
+            if let priority {
+                memory.priorityRaw = NSNumber(value: priority.rawValue)
+            } else {
+                memory.priorityRaw = nil
+            }
+        }
+    }
+
+    func moveMemory(_ id: UUID, to space: SpaceModel?) async throws {
+        try await mutateMemory(memoryID: id) { memory in
+            if let space,
+               space.id != SpaceModel.allSpacesIdentifier,
+               space.id != SpaceModel.inboxIdentifier,
+               let spaceEntity = try self.fetchSpace(by: space.id, context: memory.managedObjectContext ?? self.persistence.container.viewContext) {
+                memory.space = spaceEntity
+            } else {
+                memory.space = nil
+            }
+        }
+    }
 }
 
-// MARK: - Fetching & conversion
+// MARK: - Private helpers
 
 private extension MemoryService {
-    func fetchReminders(in context: NSManagedObjectContext) throws -> [ReminderModel] {
-        let request: NSFetchRequest<Reminder> = Reminder.fetchRequest()
-        request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \Reminder.updatedAt, ascending: false)
-        ]
-        request.relationshipKeyPathsForPrefetching = ["triggers", "folder"]
-        request.returnsObjectsAsFaults = false
-        return try context.fetch(request).map { $0.toModel() }
+    func persist(draft: MemoryDraft, isUpdate: Bool) async throws -> MemoryModel {
+        let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sanitizedTitle.isEmpty else {
+            throw MemoryServiceError.validationFailed("Title is required.")
+        }
+
+        let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
+            persistence.performBackgroundTask { context in
+                do {
+                    let memory: Memory
+                    if isUpdate {
+                        guard let existing = try self.fetchMemory(by: draft.id, context: context) else {
+                            throw MemoryServiceError.memoryNotFound
+                        }
+                        memory = existing
+                    } else {
+                        memory = Memory(context: context)
+                        memory.id = draft.id
+                        memory.createdAt = Date()
+                        memory.userOrder = 0
+                    }
+
+                    try self.apply(draft: draft, to: memory, context: context, sanitizedTitle: sanitizedTitle)
+                    try context.save()
+                    continuation.resume(returning: memory.objectID)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+
+        try attachmentStore.replaceAttachments(for: draft.id, with: draft.attachments)
+        let model = try await fetchMemoryFromViewContext(objectID: objectID)
+        await refresh(force: true)
+        return model
     }
 
-    func fetchNotes(in context: NSManagedObjectContext) throws -> [NoteModel] {
-        let request: NSFetchRequest<Note> = Note.fetchRequest()
-        request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \Note.updatedAt, ascending: false)
-        ]
-        request.relationshipKeyPathsForPrefetching = ["folder", "tags"]
-        request.returnsObjectsAsFaults = false
-        return try context.fetch(request).map { $0.toModel() }
+    func apply(draft: MemoryDraft,
+               to entity: Memory,
+               context: NSManagedObjectContext,
+               sanitizedTitle: String) throws {
+        entity.title = sanitizedTitle
+        entity.statusRaw = draft.status.rawValue
+        entity.isPinned = draft.isPinned
+        entity.priorityRaw = draft.priority.map { NSNumber(value: $0.rawValue) }
+        entity.dueDate = draft.dueDate
+        entity.autoCompleteOnChecklistCompletion = draft.autoCompleteOnChecklistCompletion
+        entity.updatedAt = Date()
+
+        entity.triggersData = try jsonEncoder.encode(draft.triggers)
+        let bundle = MemoryContentBundle(contents: draft.contents)
+        entity.contentsData = try jsonEncoder.encode(bundle)
+        entity.body = draft.contents.aggregatedBodyText()
+
+        if let spaceID = draft.spaceID,
+           spaceID != SpaceModel.allSpacesIdentifier,
+           spaceID != SpaceModel.inboxIdentifier,
+           let space = try fetchSpace(by: spaceID, context: context) {
+            entity.space = space
+        } else {
+            entity.space = nil
+        }
     }
 
-    func fetchTodoLists(in context: NSManagedObjectContext) throws -> [TodoListModel] {
-        let request: NSFetchRequest<TodoList> = TodoList.fetchRequest()
+    func fetchMemoryEntities(in context: NSManagedObjectContext) throws -> [Memory] {
+        let request: NSFetchRequest<Memory> = Memory.fetchRequest()
         request.sortDescriptors = [
-            NSSortDescriptor(keyPath: \TodoList.updatedAt, ascending: false)
+            NSSortDescriptor(keyPath: \Memory.isPinned, ascending: false),
+            NSSortDescriptor(keyPath: \Memory.updatedAt, ascending: false)
         ]
-        request.relationshipKeyPathsForPrefetching = ["items", "folder"]
         request.returnsObjectsAsFaults = false
-        return try context.fetch(request).map { $0.toModel() }
+        request.relationshipKeyPathsForPrefetching = ["space"]
+        return try context.fetch(request)
     }
 
-    func buildUnifiedMemories(reminders: [ReminderModel],
-                              notes: [NoteModel],
-                              todos: [TodoListModel]) async -> [MemoryModel] {
-        let defaultSpace = spaceService.defaultSpace()
+    func buildMemoryModels(from entities: [Memory]) async -> [MemoryModel] {
         var unified: [MemoryModel] = []
-        unified.reserveCapacity(reminders.count + notes.count + todos.count)
+        unified.reserveCapacity(entities.count)
 
-        for reminder in reminders {
-            let space = reminder.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            var memory = reminder.toMemory(space: space)
-            let attachments = await attachmentStore.attachments(for: memory.id)
-            populateContents(for: &memory, attachments: attachments)
-            unified.append(memory)
-        }
-
-        for note in notes {
-            let space = note.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            var memory = note.toMemory(space: space)
-            let attachments = await attachmentStore.attachments(for: memory.id)
-            populateContents(for: &memory, attachments: attachments)
-            unified.append(memory)
-        }
-
-        for todo in todos {
-            let space = todo.folder.flatMap { spaceService.resolveSpace(for: $0) } ?? defaultSpace
-            var memory = todo.toMemory(space: space)
-            let attachments = await attachmentStore.attachments(for: memory.id)
-            populateContents(for: &memory, attachments: attachments)
-            unified.append(memory)
+        for entity in entities {
+            let attachments = await attachmentStore.attachments(for: entity.id ?? UUID())
+            do {
+                let model = try makeMemoryModel(from: entity, attachments: attachments)
+                unified.append(model)
+            } catch {
+                logger.error("Failed to decode memory \(entity.id?.uuidString ?? \"<unknown>\"): \(error.localizedDescription)")
+            }
         }
 
         return unified.sorted { lhs, rhs in
@@ -403,6 +504,126 @@ private extension MemoryService {
             }
             return lhs.updatedAt > rhs.updatedAt
         }
+    }
+
+    func makeMemoryModel(from entity: Memory,
+                         attachments: [MemoryModel.Attachment]) throws -> MemoryModel {
+        let triggers = decodeTriggers(from: entity.triggersData)
+        let decoded = decodeContents(for: entity, attachments: attachments)
+
+        var memory = MemoryModel(
+            id: entity.id ?? UUID(),
+            title: entity.title ?? "Untitled",
+            body: decoded.body,
+            createdAt: entity.createdAt ?? Date(),
+            updatedAt: entity.updatedAt ?? Date(),
+            status: MemoryStatus(rawValue: entity.statusRaw ?? MemoryStatus.active.rawValue) ?? .active,
+            isPinned: entity.isPinned,
+            priority: entity.priorityRaw.map { MemoryPriority(rawValue: Int16(truncating: $0)) }.flatMap { $0 },
+            dueDate: entity.dueDate,
+            space: entity.space?.toModel(),
+            triggers: triggers,
+            checkItems: decoded.checkItems,
+            autoCompleteOnChecklistCompletion: entity.autoCompleteOnChecklistCompletion,
+            contents: decoded.contents,
+            attachments: decoded.attachments
+        )
+
+        return memory
+    }
+
+    func decodeContents(for entity: Memory,
+                        attachments: [MemoryModel.Attachment]) -> (contents: [MemoryContent], attachments: [MemoryModel.Attachment], checkItems: [CheckItemModel], body: String?) {
+        if let data = entity.contentsData,
+           let bundle = try? jsonDecoder.decode(MemoryContentBundle.self, from: data) {
+            let contents = bundle.contents
+            let referencedIDs = Set(contents.referencedAttachmentIDs())
+            let filteredAttachments = referencedIDs.isEmpty ? attachments : attachments.filter { referencedIDs.contains($0.id) }
+            let body = contents.aggregatedBodyText()
+            let checkItems = contents.flattenedChecklistItems()
+            return (contents, filteredAttachments, checkItems, body)
+        } else {
+            let decodeResult = MemoryContentCodec.extractContents(from: attachments)
+            var contents = decodeResult.contents
+            if contents.isEmpty {
+                contents = MemoryContent.legacyContents(
+                    body: entity.body,
+                    checkItems: [],
+                    photoAttachments: attachments.filter { $0.kind == .photo },
+                    linkAttachments: attachments.filter { $0.kind == .link }
+                )
+            }
+            let referencedIDs = Set(contents.referencedAttachmentIDs())
+            let filteredAttachments = referencedIDs.isEmpty
+                ? decodeResult.remainingAttachments
+                : decodeResult.remainingAttachments.filter { referencedIDs.contains($0.id) }
+            let body = contents.aggregatedBodyText()
+            let checkItems = contents.flattenedChecklistItems()
+            return (contents, filteredAttachments, checkItems, body)
+        }
+    }
+
+    func decodeTriggers(from data: Data?) -> [MemoryTriggerModel] {
+        guard let data else { return [] }
+        do {
+            return try jsonDecoder.decode([MemoryTriggerModel].self, from: data)
+        } catch {
+            logger.error("Failed to decode triggers: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    func mutateMemory(memoryID: UUID,
+                      mutation: @escaping (Memory) throws -> Void) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            persistence.performBackgroundTask { context in
+                do {
+                    guard let memory = try self.fetchMemory(by: memoryID, context: context) else {
+                        throw MemoryServiceError.memoryNotFound
+                    }
+                    try mutation(memory)
+                    memory.updatedAt = Date()
+                    try context.save()
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+        await refresh(force: true)
+    }
+
+    func fetchMemory(by id: UUID, context: NSManagedObjectContext) throws -> Memory? {
+        let request: NSFetchRequest<Memory> = Memory.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        return try context.fetch(request).first
+    }
+
+    func fetchMemoryFromViewContext(objectID: NSManagedObjectID) async throws -> MemoryModel {
+        let memory: Memory = try await withCheckedThrowingContinuation { continuation in
+            let viewContext = persistence.container.viewContext
+            viewContext.perform {
+                do {
+                    guard let memory = try viewContext.existingObject(with: objectID) as? Memory else {
+                        throw MemoryServiceError.memoryNotFound
+                    }
+                    continuation.resume(returning: memory)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+
+        let attachments = await attachmentStore.attachments(for: memory.id ?? UUID())
+        return try makeMemoryModel(from: memory, attachments: attachments)
+    }
+
+    func fetchSpace(by id: UUID, context: NSManagedObjectContext) throws -> Space? {
+        let request: NSFetchRequest<Space> = Space.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        return try context.fetch(request).first
     }
 
     func sortedMemories(_ memories: [MemoryModel], using strategy: SortStrategy) -> [MemoryModel] {
@@ -453,33 +674,5 @@ private extension MemoryService {
                 return lhs.updatedAt > rhs.updatedAt
             }
         }
-    }
-
-    func populateContents(for memory: inout MemoryModel,
-                          attachments: [MemoryModel.Attachment]) {
-        let decodeResult = MemoryContentCodec.extractContents(from: attachments)
-
-        let photoAttachments = decodeResult.remainingAttachments.filter { $0.kind == .photo }
-        let linkAttachments = decodeResult.remainingAttachments.filter { $0.kind == .link }
-
-        if decodeResult.contents.isEmpty {
-            memory.contents = MemoryContent.legacyContents(
-                body: memory.body,
-                checkItems: memory.checkItems,
-                photoAttachments: photoAttachments,
-                linkAttachments: linkAttachments
-            )
-        } else {
-            memory.contents = decodeResult.contents
-        }
-
-        let referencedAttachmentIDs = Set(memory.contents.referencedAttachmentIDs())
-        if referencedAttachmentIDs.isEmpty {
-            memory.attachments = decodeResult.remainingAttachments
-        } else {
-            memory.attachments = decodeResult.remainingAttachments.filter { referencedAttachmentIDs.contains($0.id) }
-        }
-        memory.body = memory.contents.aggregatedBodyText()
-        memory.checkItems = memory.contents.flattenedChecklistItems()
     }
 }

@@ -30,11 +30,7 @@ final class MemoryEditorViewModel: ObservableObject {
     let environment: AppEnvironment
     private let attachmentStore: MemoryAttachmentStore
     private var existingMemory: MemoryModel?
-    private struct MemoryPersistenceIdentity {
-        var id: UUID?
-        var origin: MemoryModel.Metadata.Origin?
-    }
-    private var persistenceIdentity: MemoryPersistenceIdentity
+    private var persistedMemoryID: UUID?
     private let template: MemoryEditorTemplate
     private let defaultSpace: SpaceModel?
 
@@ -48,11 +44,8 @@ final class MemoryEditorViewModel: ObservableObject {
         self.existingMemory = memory
         self.template = template
         self.defaultSpace = defaultSpace
-        self.autoCompleteChecklist = memory?.metadata.autoCompleteOnChecklistCompletion ?? false
-        self.persistenceIdentity = MemoryPersistenceIdentity(
-            id: memory?.id,
-            origin: memory?.metadata.origin
-        )
+        self.autoCompleteChecklist = memory?.autoCompleteOnChecklistCompletion ?? false
+        self.persistedMemoryID = memory?.id
         configureInitialState()
     }
 
@@ -61,7 +54,7 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     var editingMemoryID: UUID? {
-        persistenceIdentity.id ?? existingMemory?.id
+        persistedMemoryID ?? existingMemory?.id
     }
 
     var selectedSpace: SpaceModel? {
@@ -108,50 +101,9 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     func loadLatestDataIfNeeded() async {
-        if let origin = persistenceIdentity.origin, let id = persistenceIdentity.id {
-            switch origin {
-            case .reminder:
-                if let reminder = environment.reminderService.fetchReminderWithRelationships(id: id) {
-                    let attachments = await attachmentStore.attachments(for: reminder.id)
-                    apply(reminder: reminder, attachments: attachments)
-                }
-            case .note:
-                if let note = environment.noteService.fetchNoteWithRelationships(id: id) {
-                    let attachments = await attachmentStore.attachments(for: note.id)
-                    apply(note: note, attachments: attachments)
-                }
-            case .todoList:
-                if let list = environment.todoService.fetchListWithItems(id: id) {
-                    let attachments = await attachmentStore.attachments(for: list.id)
-                    apply(todoList: list, attachments: attachments)
-                }
-            }
-            return
-        }
-
-        guard let memory = existingMemory else { return }
-        switch memory.metadata.origin {
-        case .reminder(let id):
-            if let reminder = environment.reminderService.fetchReminderWithRelationships(id: id) {
-                let attachments = await attachmentStore.attachments(for: reminder.id)
-                apply(reminder: reminder, attachments: attachments)
-                persistenceIdentity = MemoryPersistenceIdentity(id: reminder.id, origin: .reminder(id))
-            }
-        case .note(let id):
-            if let note = environment.noteService.fetchNoteWithRelationships(id: id) {
-                let attachments = await attachmentStore.attachments(for: note.id)
-                apply(note: note, attachments: attachments)
-                persistenceIdentity = MemoryPersistenceIdentity(id: note.id, origin: .note(id))
-            }
-        case .todoList(let id):
-            if let list = environment.todoService.fetchListWithItems(id: id) {
-                let attachments = await attachmentStore.attachments(for: list.id)
-                apply(todoList: list, attachments: attachments)
-                persistenceIdentity = MemoryPersistenceIdentity(id: list.id, origin: .todoList(id))
-            }
-        case .none:
-            break
-        }
+        guard let id = editingMemoryID else { return }
+        guard let latest = environment.memoryService.memory(id: id) else { return }
+        apply(memory: latest)
     }
 
     @discardableResult
@@ -400,34 +352,37 @@ final class MemoryEditorViewModel: ObservableObject {
             errorMessage = "Provide a title for the memory."
             return false
         }
-        let trimmedBody = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sanitizedChecklist = sanitizedChecklistItems()
-        let memoryContents = contentsRepresentation()
+
+        let contents = contentsRepresentation()
+        let attachments = allPhotoAttachments + allLinkAttachments
+        let triggerModels = triggers.map { $0.toModel() }
+
+        var draft = MemoryDraft(
+            id: editingMemoryID ?? UUID(),
+            title: trimmedTitle,
+            status: status,
+            priority: priority,
+            isPinned: isPinned,
+            dueDate: nil,
+            spaceID: selectedSpaceID,
+            triggers: triggerModels,
+            contents: contents,
+            attachments: attachments,
+            autoCompleteOnChecklistCompletion: autoCompleteChecklist
+        )
 
         isSaving = true
         defer { isSaving = false }
 
         do {
-            let persistenceOutcome = try await persistMemory(
-                trimmedTitle: trimmedTitle,
-                trimmedBody: trimmedBody,
-                sanitizedChecklist: sanitizedChecklist
-            )
-            persistenceIdentity = persistenceOutcome
-
-            let attachments = allPhotoAttachments
-            let links = allLinkAttachments
-            let bundleAttachment = try MemoryContentCodec.attachment(from: memoryContents)
-            var allAttachments: [MemoryModel.Attachment] = []
-            if let bundleAttachment {
-                allAttachments.append(bundleAttachment)
+            let savedMemory: MemoryModel
+            if editingMemoryID != nil {
+                savedMemory = try await environment.memoryService.updateMemory(from: draft)
+            } else {
+                savedMemory = try await environment.memoryService.createMemory(from: draft)
             }
-            allAttachments.append(contentsOf: attachments)
-            allAttachments.append(contentsOf: links)
-            if let targetID = persistenceOutcome.id {
-                try await attachmentStore.replaceAttachments(for: targetID, with: allAttachments)
-            }
-            await environment.memoryService.refresh(force: true)
+            existingMemory = savedMemory
+            persistedMemoryID = savedMemory.id
             return true
         } catch {
             errorMessage = "Unable to save memory."
@@ -450,14 +405,14 @@ private extension MemoryEditorViewModel {
     }
 
     func apply(memory: MemoryModel) {
-        persistenceIdentity = MemoryPersistenceIdentity(id: memory.id, origin: memory.metadata.origin)
+        persistedMemoryID = memory.id
         title = memory.title
         selectedSpaceID = memory.space?.id
         status = memory.status
         priority = memory.priority ?? .medium
         isPinned = memory.isPinned
         triggers = memory.triggers.map { draft(from: $0) }
-        autoCompleteChecklist = memory.metadata.autoCompleteOnChecklistCompletion
+        autoCompleteChecklist = memory.autoCompleteOnChecklistCompletion
 
         let attachments = memory.attachments
         let contents = memory.contents.isEmpty
@@ -470,95 +425,6 @@ private extension MemoryEditorViewModel {
         : memory.contents
 
         rebuildContentQueue(from: contents, attachments: attachments)
-    }
-
-    func apply(reminder: ReminderModel, attachments: [MemoryModel.Attachment]) {
-        let trimmedTitle = reminder.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedTitle.isEmpty {
-            title = trimmedTitle
-        }
-        priority = MemoryPriority(rawValue: reminder.priority.rawValue) ?? .medium
-        switch reminder.status {
-        case .completed, .archived:
-            status = .completed
-        default:
-            status = .active
-        }
-        triggers = reminder.triggers.map { draft(from: $0) }
-        isPinned = false
-        if let folder = reminder.folder,
-           let space = environment.spaceService.resolveSpace(for: folder) {
-            selectedSpaceID = space.id
-        } else {
-            selectedSpaceID = nil
-        }
-
-        rebuildContentQueueUsingAttachments(
-            attachments,
-            fallbackBody: reminder.notes,
-            fallbackChecklist: []
-        )
-    }
-
-    func apply(note: NoteModel, attachments: [MemoryModel.Attachment]) {
-        if let trimmedTitle = note.title?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty {
-            title = trimmedTitle
-        }
-        isPinned = note.isPinned
-        if let folder = note.folder,
-           let space = environment.spaceService.resolveSpace(for: folder) {
-            selectedSpaceID = space.id
-        } else {
-            selectedSpaceID = nil
-        }
-
-        rebuildContentQueueUsingAttachments(
-            attachments,
-            fallbackBody: note.content,
-            fallbackChecklist: []
-        )
-    }
-
-    func apply(todoList: TodoListModel, attachments: [MemoryModel.Attachment]) {
-        let trimmedTitle = todoList.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedTitle.isEmpty {
-            title = trimmedTitle
-        }
-        isPinned = todoList.isPinned
-        status = (todoList.isArchived || todoList.isCompleted) ? .completed : .active
-        autoCompleteChecklist = existingMemory?.metadata.autoCompleteOnChecklistCompletion ?? autoCompleteChecklist
-        if let folder = todoList.folder,
-           let space = environment.spaceService.resolveSpace(for: folder) {
-            selectedSpaceID = space.id
-        } else {
-            selectedSpaceID = nil
-        }
-
-        let checklistModels: [CheckItemModel] = todoList.items
-            .sorted { lhs, rhs in
-                if lhs.sortOrder != rhs.sortOrder {
-                    return lhs.sortOrder < rhs.sortOrder
-                }
-                return lhs.createdAt < rhs.createdAt
-            }
-            .map { item in
-                CheckItemModel(
-                    id: item.id,
-                    title: item.title,
-                    detail: item.detail,
-                    isCompleted: item.isCompleted,
-                    sortOrder: item.sortOrder,
-                    createdAt: item.createdAt,
-                    updatedAt: item.completedAt ?? item.createdAt,
-                    completedAt: item.completedAt
-                )
-            }
-
-        rebuildContentQueueUsingAttachments(
-            attachments,
-            fallbackBody: todoList.notes,
-            fallbackChecklist: checklistModels
-        )
     }
 
     func applyTemplate(_ template: MemoryEditorTemplate) {
@@ -586,233 +452,6 @@ private extension MemoryEditorViewModel {
     func reindexChecklist(in content: inout MemoryEditorChecklistContent) {
         for index in content.items.indices {
             content.items[index].sortOrder = index
-        }
-    }
-
-    func sanitizedChecklistItems() -> [CheckItemDraft] {
-        var sanitized: [CheckItemDraft] = []
-        for item in contentQueue {
-            guard let checklist = item.checklistContent else { continue }
-            for draft in checklist.items {
-                let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { continue }
-                var normalized = draft
-                normalized.title = trimmed
-                normalized.detail = draft.detail.trimmingCharacters(in: .whitespacesAndNewlines)
-                normalized.sortOrder = sanitized.count
-                sanitized.append(normalized)
-            }
-        }
-        return sanitized
-    }
-
-    private func persistMemory(trimmedTitle: String,
-                               trimmedBody: String,
-                               sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
-        if let id = persistenceIdentity.id {
-            return try await updateExistingMemory(
-                id: id,
-                origin: persistenceIdentity.origin,
-                sanitizedChecklist: sanitizedChecklist
-            )
-        } else {
-            return try await createNewMemory(
-                trimmedTitle: trimmedTitle,
-                trimmedBody: trimmedBody,
-                sanitizedChecklist: sanitizedChecklist
-            )
-        }
-    }
-
-    private func updateExistingMemory(id: UUID,
-                                      origin: MemoryModel.Metadata.Origin?,
-                                      sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
-        if let origin {
-            switch origin {
-            case .reminder:
-                let identifier = try await updateReminder(id: id)
-                return MemoryPersistenceIdentity(id: identifier, origin: .reminder(identifier))
-            case .note:
-                let identifier = try await updateNote(id: id)
-                return MemoryPersistenceIdentity(id: identifier, origin: .note(identifier))
-            case .todoList:
-                let identifier = try await updateTodoList(id: id, sanitizedChecklist: sanitizedChecklist)
-                return MemoryPersistenceIdentity(id: identifier, origin: .todoList(identifier))
-            }
-        }
-
-        if environment.reminderService.fetchReminderWithRelationships(id: id) != nil {
-            let identifier = try await updateReminder(id: id)
-            return MemoryPersistenceIdentity(id: identifier, origin: .reminder(identifier))
-        }
-
-        if environment.noteService.fetchNoteWithRelationships(id: id) != nil {
-            let identifier = try await updateNote(id: id)
-            return MemoryPersistenceIdentity(id: identifier, origin: .note(identifier))
-        }
-
-        if environment.todoService.fetchListWithItems(id: id) != nil {
-            let identifier = try await updateTodoList(id: id, sanitizedChecklist: sanitizedChecklist)
-            return MemoryPersistenceIdentity(id: identifier, origin: .todoList(identifier))
-        }
-
-        return try await createNewMemory(
-            trimmedTitle: title.trimmingCharacters(in: .whitespacesAndNewlines),
-            trimmedBody: aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines),
-            sanitizedChecklist: sanitizedChecklist
-        )
-    }
-
-    private func createNewMemory(trimmedTitle: String,
-                                 trimmedBody: String,
-                                 sanitizedChecklist: [CheckItemDraft]) async throws -> MemoryPersistenceIdentity {
-        if !triggers.isEmpty {
-            let reminderID = try await createReminder(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
-            return MemoryPersistenceIdentity(id: reminderID, origin: .reminder(reminderID))
-        } else if !sanitizedChecklist.isEmpty {
-            let listID = try await createTodoList(trimmedTitle: trimmedTitle,
-                                                  trimmedBody: trimmedBody,
-                                                  sanitizedChecklist: sanitizedChecklist)
-            return MemoryPersistenceIdentity(id: listID, origin: .todoList(listID))
-        } else {
-            let noteID = try await createNote(trimmedTitle: trimmedTitle, trimmedBody: trimmedBody)
-            return MemoryPersistenceIdentity(id: noteID, origin: .note(noteID))
-        }
-    }
-
-    func updateReminder(id: UUID) async throws -> UUID {
-        guard var reminder = environment.reminderService.fetchReminderWithRelationships(id: id)
-                ?? environment.reminderService.reminders.first(where: { $0.id == id }) else {
-            throw MemoryService.MemoryServiceError.memoryNotFound
-        }
-
-        reminder.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        reminder.notes = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        reminder.priority = ReminderPriority(rawValue: priority.rawValue) ?? .medium
-        reminder.status = reminderStatus(for: status)
-        reminder.folder = folderForAudience(.reminders)
-        reminder.triggers = triggers.map { $0.toModel() }
-        reminder.updatedAt = Date()
-
-        let updated = try await environment.reminderService.updateReminder(reminder)
-        await environment.reminderService.refresh(force: true)
-        return updated.id
-    }
-
-    func updateNote(id: UUID) async throws -> UUID {
-        guard var note = environment.noteService.fetchNoteWithRelationships(id: id)
-                ?? environment.noteService.notes.first(where: { $0.id == id }) else {
-            throw NoteService.NoteServiceError.noteNotFound
-        }
-
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedContent = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        note.title = trimmedTitle
-        note.content = trimmedContent
-        note.isPinned = isPinned
-        note.updatedAt = Date()
-        note.folder = folderForAudience(.notes)
-        let updated = try await environment.noteService.updateNote(note)
-        await environment.noteService.refresh(force: true)
-        return updated.id
-    }
-
-    func updateTodoList(id: UUID, sanitizedChecklist: [CheckItemDraft]) async throws -> UUID {
-        guard var list = environment.todoService.fetchListWithItems(id: id)
-                ?? environment.todoService.lists.first(where: { $0.id == id }) else {
-            throw TodoService.TodoServiceError.listNotFound
-        }
-
-        list.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        list.notes = aggregatedBody.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        list.isPinned = isPinned
-        list.isArchived = false
-        list.updatedAt = Date()
-        list.folder = folderForAudience(.todos)
-        list.items = sanitizedChecklist.enumerated().map { index, draft in
-            draft.toModel(at: index)
-        }
-
-        let updated = try await environment.todoService.updateList(list)
-        await environment.todoService.refresh(force: true)
-        return updated.id
-    }
-
-    func createReminder(trimmedTitle: String, trimmedBody: String) async throws -> UUID {
-        let draft = ReminderDraft(
-            title: trimmedTitle.isEmpty ? "Reminder" : trimmedTitle,
-            notes: trimmedBody.nilIfEmpty,
-            status: reminderStatus(for: status),
-            priority: ReminderPriority(rawValue: priority.rawValue) ?? .medium,
-            folderID: folderForAudience(.reminders)?.id,
-            createdAt: Date(),
-            updatedAt: Date(),
-            triggers: triggers
-        )
-        let reminder = try await environment.reminderService.createReminder(from: draft)
-        await environment.reminderService.refresh(force: true)
-        return reminder.id
-    }
-
-    func createNote(trimmedTitle: String, trimmedBody: String) async throws -> UUID {
-        let note = try await environment.noteService.createNote(
-            title: trimmedTitle,
-            content: trimmedBody,
-            folderID: folderForAudience(.notes)?.id,
-            tagIDs: [],
-            isPinned: isPinned
-        )
-        await environment.noteService.refresh(force: true)
-        return note.id
-    }
-
-    func createTodoList(trimmedTitle: String,
-                        trimmedBody: String,
-                        sanitizedChecklist: [CheckItemDraft]) async throws -> UUID {
-        let fallbackItems: [CheckItemDraft] = sanitizedChecklist.isEmpty ? [CheckItemDraft(title: trimmedTitle.isEmpty ? "Item" : trimmedTitle, sortOrder: 0)] : sanitizedChecklist
-        let items = fallbackItems.enumerated().map { index, draft in
-            draft.toModel(at: index)
-        }
-
-        let list = try await environment.todoService.createList(
-            title: trimmedTitle.isEmpty ? "Checklist" : trimmedTitle,
-            notes: trimmedBody.nilIfEmpty,
-            dueDate: nil,
-            isPinned: isPinned,
-            folderID: folderForAudience(.todos)?.id,
-            items: items
-        )
-        await environment.todoService.refresh(force: true)
-        return list.id
-    }
-
-    func folderForAudience(_ audience: FolderAudience) -> FolderModel? {
-        guard let selectedSpaceID else {
-            return nil
-        }
-
-        if selectedSpaceID == SpaceModel.allSpacesIdentifier || selectedSpaceID == SpaceModel.inboxIdentifier {
-            return environment.folderService.defaultFolder(for: audience)
-        }
-
-        if let space = environment.spaceService.space(id: selectedSpaceID) ?? selectedSpace,
-           let folder = space.legacyFolder,
-           folder.audience == audience {
-            return folder
-        }
-
-        if let folder = environment.folderService.folders.first(where: { $0.id == selectedSpaceID && $0.audience == audience }) {
-            return folder
-        }
-
-        return environment.folderService.defaultFolder(for: audience)
-    }
-
-    func reminderStatus(for memoryStatus: MemoryStatus) -> ReminderStatus {
-        switch memoryStatus {
-        case .active: return .active
-        case .completed: return .completed
         }
     }
 
@@ -966,33 +605,4 @@ private extension MemoryEditorViewModel {
         }
     }
 
-    func rebuildContentQueueUsingAttachments(_ attachments: [MemoryModel.Attachment],
-                                             fallbackBody: String?,
-                                             fallbackChecklist: [CheckItemModel]) {
-        let decodeResult = MemoryContentCodec.extractContents(from: attachments)
-        let photoAttachments = decodeResult.remainingAttachments.filter { $0.kind == .photo }
-        let linkAttachments = decodeResult.remainingAttachments.filter { $0.kind == .link }
-
-        let contents: [MemoryContent]
-        if decodeResult.contents.isEmpty {
-            contents = MemoryContent.legacyContents(
-                body: fallbackBody,
-                checkItems: fallbackChecklist,
-                photoAttachments: photoAttachments,
-                linkAttachments: linkAttachments
-            )
-        } else {
-            contents = decodeResult.contents
-        }
-
-        let referencedIDs = Set(contents.referencedAttachmentIDs())
-        let filteredAttachments: [MemoryModel.Attachment]
-        if referencedIDs.isEmpty {
-            filteredAttachments = decodeResult.remainingAttachments
-        } else {
-            filteredAttachments = decodeResult.remainingAttachments.filter { referencedIDs.contains($0.id) }
-        }
-
-        rebuildContentQueue(from: contents, attachments: filteredAttachments)
-    }
 }

@@ -39,29 +39,29 @@ final class NotificationScheduler {
         await requestAuthorizationIfNeeded()
     }
 
-    func scheduleNotifications(for reminder: ReminderModel) async {
+    func scheduleNotifications(for memory: MemoryModel) async {
         await requestAuthorizationIfNeeded()
-        guard reminder.status == .active else {
-            await removeNotifications(for: reminder.id)
+        guard memory.status == .active else {
+            await removeNotifications(for: memory.id)
             return
         }
-        await removeNotifications(for: reminder.id)
+        await removeNotifications(for: memory.id)
 
         let content = UNMutableNotificationContent()
-        content.title = reminder.title
-        if let notes = reminder.notes {
-            content.body = notes
+        content.title = memory.title
+        if let body = memory.body {
+            content.body = body
         }
         content.sound = settings.notificationSoundEnabled ? .default : nil
         content.categoryIdentifier = "REMINDER_ACTIONS"
 
         var requests: [UNNotificationRequest] = []
 
-        for trigger in reminder.triggers {
+        for trigger in memory.triggers {
             switch trigger.type {
             case .time:
                 guard let fireDate = trigger.fireDate else { continue }
-                let identifier = notificationIdentifier(reminderID: reminder.id, triggerID: trigger.id)
+                let identifier = notificationIdentifier(memoryID: memory.id, triggerID: trigger.id)
                 let triggerDate = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate),
                                                                 repeats: trigger.recurrenceRule != nil)
                 let request = UNNotificationRequest(identifier: identifier, content: content, trigger: triggerDate)
@@ -71,7 +71,7 @@ final class NotificationScheduler {
                 for day in 1...7 {
                     let bit = Int16(1 << day)
                     guard weekdayMask & bit != 0 else { continue }
-                    let identifier = notificationIdentifier(reminderID: reminder.id, triggerID: trigger.id) + "-\(day)"
+                    let identifier = notificationIdentifier(memoryID: memory.id, triggerID: trigger.id) + "-\(day)"
                     var components = DateComponents()
                     components.weekday = day
                     if let fireDate = trigger.fireDate {
@@ -100,18 +100,18 @@ final class NotificationScheduler {
         }
     }
 
-    func removeNotifications(for reminderID: UUID) async {
+    func removeNotifications(for memoryID: UUID) async {
         let identifiers = await pendingIdentifiers()
-            .filter { $0.contains(reminderID.uuidString) }
+            .filter { $0.contains(memoryID.uuidString) }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
-    func refreshNotifications(reminders: [ReminderModel]) async {
+    func refreshNotifications(memories: [MemoryModel]) async {
         await requestAuthorizationIfNeeded()
         let identifiers = await pendingIdentifiers()
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
-        for reminder in reminders {
-            await scheduleNotifications(for: reminder)
+        for memory in memories {
+            await scheduleNotifications(for: memory)
         }
     }
 
@@ -123,8 +123,8 @@ final class NotificationScheduler {
         }
     }
 
-    private func notificationIdentifier(reminderID: UUID, triggerID: UUID) -> String {
-        "reminder-\(reminderID.uuidString)-\(triggerID.uuidString)"
+    private func notificationIdentifier(memoryID: UUID, triggerID: UUID) -> String {
+        "memory-\(memoryID.uuidString)-\(triggerID.uuidString)"
     }
 }
 

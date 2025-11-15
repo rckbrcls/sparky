@@ -103,13 +103,13 @@ private struct ReminderSettingsView: View {
         Form {
             Section {
                 Picker("Timeline default filter", selection: $settings.defaultTimelineFilter) {
-                    ForEach(ReminderService.TimelineFilter.allCases, id: \.self) { filter in
+                    ForEach(MemoryTimelineFilter.allCases, id: \.self) { filter in
                         Text(filter.displayTitle).tag(filter)
                     }
                 }
 
-                Picker("Default reminder priority", selection: $settings.defaultReminderPriority) {
-                    ForEach(ReminderPriority.allCases, id: \.self) { priority in
+                Picker("Default memory priority", selection: $settings.defaultMemoryPriority) {
+                    ForEach(MemoryPriority.allCases, id: \.self) { priority in
                         Label(priority.displayName, systemImage: priority.iconName)
                             .tag(priority)
                     }
@@ -263,34 +263,6 @@ private func durationDescription(minutes: Int) -> String {
 
 // MARK: - Extensions
 
-private extension ReminderService.TimelineFilter {
-    var displayTitle: String {
-        switch self {
-        case .all: return "All"
-        case .overdue: return "Overdue"
-        case .today: return "Today"
-        case .upcoming: return "Upcoming"
-        case .thisWeek: return "This Week"
-        case .byPriority: return "Priority"
-        case .byTriggerType: return "Type"
-        case .timeTriggers: return "Scheduled"
-        case .locationTriggers: return "Location"
-        case .personTriggers: return "People"
-        case .recurring: return "Recurring"
-        case .noTriggers: return "No Triggers"
-        }
-    }
-}
-
-private extension ReminderPriority {
-    var displayName: String {
-        switch self {
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
-        }
-    }
-}
 
 private extension UNAuthorizationStatus {
     var displayName: String {

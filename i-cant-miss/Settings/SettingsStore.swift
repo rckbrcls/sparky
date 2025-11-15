@@ -22,15 +22,15 @@ final class SettingsStore: ObservableObject {
 
     private let defaults: UserDefaults
 
-    @Published var defaultTimelineFilter: ReminderService.TimelineFilter {
+    @Published var defaultTimelineFilter: MemoryTimelineFilter {
         didSet {
             defaults.set(defaultTimelineFilter.storageKey, forKey: Keys.timelineFilter)
         }
     }
 
-    @Published var defaultReminderPriority: ReminderPriority {
+    @Published var defaultMemoryPriority: MemoryPriority {
         didSet {
-            defaults.set(Int(defaultReminderPriority.rawValue), forKey: Keys.reminderPriority)
+            defaults.set(Int(defaultMemoryPriority.rawValue), forKey: Keys.reminderPriority)
         }
     }
 
@@ -77,12 +77,12 @@ final class SettingsStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
-        let storedFilter = defaults.string(forKey: Keys.timelineFilter) ?? ReminderService.TimelineFilter.today.storageKey
-        let filter = ReminderService.TimelineFilter(storageKey: storedFilter) ?? .today
+        let storedFilter = defaults.string(forKey: Keys.timelineFilter) ?? MemoryTimelineFilter.today.storageKey
+        let filter = MemoryTimelineFilter(storageKey: storedFilter) ?? .today
         self.defaultTimelineFilter = filter
 
         let storedPriority = defaults.integer(forKey: Keys.reminderPriority)
-        self.defaultReminderPriority = ReminderPriority(rawValue: Int16(storedPriority)) ?? .medium
+        self.defaultMemoryPriority = MemoryPriority(rawValue: Int16(storedPriority)) ?? .medium
 
         let snoozeMinutes = defaults.object(forKey: Keys.snoozeMinutes) as? Int ?? 15
         self.defaultSnoozeMinutes = SettingsStore.clamp(minutes: snoozeMinutes, fallback: 15)
@@ -106,34 +106,5 @@ final class SettingsStore: ObservableObject {
     private static func clamp(minutes: Int, fallback: Int) -> Int {
         let sanitized = max(1, min(minutes, 24 * 60))
         return minutes <= 0 ? fallback : sanitized
-    }
-}
-
-// MARK: - Persistence helpers
-
-private extension ReminderService.TimelineFilter {
-    var storageKey: String {
-        switch self {
-        case .all: return "all"
-        case .overdue: return "overdue"
-        case .today: return "today"
-        case .upcoming: return "upcoming"
-        case .thisWeek: return "thisWeek"
-        case .byPriority: return "byPriority"
-        case .byTriggerType: return "byTriggerType"
-        case .timeTriggers: return "timeTriggers"
-        case .locationTriggers: return "locationTriggers"
-        case .personTriggers: return "personTriggers"
-        case .recurring: return "recurring"
-        case .noTriggers: return "noTriggers"
-        }
-    }
-
-    init?(storageKey: String) {
-        if let match = Self.allCases.first(where: { $0.storageKey == storageKey }) {
-            self = match
-        } else {
-            return nil
-        }
     }
 }

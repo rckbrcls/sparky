@@ -123,31 +123,30 @@ private extension PersistenceController {
         let calendar = Calendar.current
         let now = Date()
 
-        let defaultFolder = Folder(context: context)
-        defaultFolder.id = UUID()
-        defaultFolder.name = "Personal"
-        defaultFolder.iconName = "person"
-        defaultFolder.colorHex = "#4F46E5"
-        defaultFolder.isDefault = true
-        defaultFolder.sortOrder = 0
+        let defaultSpace = Space(context: context)
+        defaultSpace.id = UUID()
+        defaultSpace.name = "Personal"
+        defaultSpace.iconName = "person"
+        defaultSpace.colorHex = "#4F46E5"
+        defaultSpace.isDefault = true
+        defaultSpace.sortOrder = 0
 
-        let workFolder = Folder(context: context)
-        workFolder.id = UUID()
-        workFolder.name = "Work"
-        workFolder.iconName = "briefcase"
-        workFolder.colorHex = "#10B981"
-        workFolder.isDefault = false
-        workFolder.sortOrder = 1
+        let workSpace = Space(context: context)
+        workSpace.id = UUID()
+        workSpace.name = "Work"
+        workSpace.iconName = "briefcase"
+        workSpace.colorHex = "#10B981"
+        workSpace.isDefault = false
+        workSpace.sortOrder = 1
 
-        let errandsSubfolder = Folder(context: context)
-        errandsSubfolder.id = UUID()
-        errandsSubfolder.name = "Weekend Projects"
-        errandsSubfolder.iconName = "hammer.fill"
-        errandsSubfolder.colorHex = "#F59E0B"
-        errandsSubfolder.isDefault = false
-        errandsSubfolder.parent = defaultFolder
-        errandsSubfolder.sortOrder = 0
-        errandsSubfolder.setAudience(.reminders)
+        let errandsSubspace = Space(context: context)
+        errandsSubspace.id = UUID()
+        errandsSubspace.name = "Weekend Projects"
+        errandsSubspace.iconName = "hammer.fill"
+        errandsSubspace.colorHex = "#F59E0B"
+        errandsSubspace.isDefault = false
+        errandsSubspace.parent = defaultSpace
+        errandsSubspace.sortOrder = 0
 
         let swiftTag = Tag(context: context)
         swiftTag.id = UUID()
@@ -159,153 +158,62 @@ private extension PersistenceController {
         designTag.name = "Design"
         designTag.colorHex = "#EC4899"
 
-        let note = Note(context: context)
-        note.id = UUID()
-        note.title = "Ideas for next release"
-        note.content = """
+        // Create sample memory for notes functionality
+        let noteMemory = Memory(context: context)
+        noteMemory.id = UUID()
+        noteMemory.title = "Ideas for next release"
+        noteMemory.body = """
         • Improve timeline grouping
         • Add quick templates for recurring reminders
         • Experiment with AI powered suggestions
         """
-        note.createdAt = now
-        note.updatedAt = now
-        note.isPinned = true
-        note.folder = workFolder
-        note.addToTags(NSSet(array: [swiftTag, designTag]))
+        noteMemory.createdAt = now
+        noteMemory.updatedAt = now
+        noteMemory.isPinned = true
+        noteMemory.statusRaw = "active"
+        noteMemory.userOrder = 0
+        noteMemory.space = workSpace
+        noteMemory.autoCompleteOnChecklistCompletion = false
 
-        let reminder = Reminder(context: context)
-        reminder.id = UUID()
-        reminder.title = "Send status update to Maya"
-        reminder.notes = "Include metrics and next week's plan."
-        reminder.setStatus(.active)
-        reminder.setPriority(.high)
-        reminder.createdAt = now
-        reminder.updatedAt = now
-        reminder.userOrder = 0
-        reminder.snoozeCount = 1
+        // Create sample memory with time trigger (reminder functionality)
+        let reminderMemory = Memory(context: context)
+        reminderMemory.id = UUID()
+        reminderMemory.title = "Send status update to Maya"
+        reminderMemory.body = "Include metrics and next week's plan."
+        reminderMemory.statusRaw = "active"
+        reminderMemory.isPinned = false
+        reminderMemory.priorityRaw = NSNumber(value: 2) // High priority
+        reminderMemory.createdAt = now
+        reminderMemory.updatedAt = now
+        reminderMemory.userOrder = 1
+        reminderMemory.autoCompleteOnChecklistCompletion = false
 
-        let timeTrigger = ReminderTrigger(context: context)
-        timeTrigger.id = UUID()
-        timeTrigger.setType(.time)
-        timeTrigger.fireDate = calendar.date(byAdding: .hour, value: 3, to: now)
-        timeTrigger.startDate = now
-        timeTrigger.setRecurrence(RecurrenceRule(frequency: .weekly, interval: 1))
-        timeTrigger.timeZoneIdentifier = TimeZone.current.identifier
-        timeTrigger.weekdayMask = 0
-        timeTrigger.isActive = true
-        timeTrigger.locationLatitude = 0
-        timeTrigger.locationLongitude = 0
-        timeTrigger.locationRadius = 0
-        timeTrigger.spacedStage = 0
-        timeTrigger.ignoreCount = 0
-        reminder.addToTriggers(timeTrigger)
+        // Create sample memory with checklist (todo functionality)
+        let todoMemory = Memory(context: context)
+        todoMemory.id = UUID()
+        todoMemory.title = "Weekend errands"
+        todoMemory.body = "Finish before Sunday afternoon."
+        todoMemory.createdAt = now
+        todoMemory.updatedAt = now
+        todoMemory.dueDate = calendar.date(byAdding: .day, value: 2, to: now)
+        todoMemory.isPinned = true
+        todoMemory.statusRaw = "active"
+        todoMemory.userOrder = 2
+        todoMemory.space = defaultSpace
+        todoMemory.autoCompleteOnChecklistCompletion = true
 
-        let locationTrigger = ReminderTrigger(context: context)
-        locationTrigger.id = UUID()
-        locationTrigger.setType(.location)
-        locationTrigger.isActive = true
-        locationTrigger.locationLatitude = 37.3327
-        locationTrigger.locationLongitude = -122.0053
-        locationTrigger.locationRadius = 150
-        locationTrigger.locationName = "Apple Park"
-        locationTrigger.setLocationEvent(.onEntry)
-        locationTrigger.spacedStage = 0
-        locationTrigger.ignoreCount = 0
-        reminder.addToTriggers(locationTrigger)
-
-        let snooze = ReminderSnooze(context: context)
-        snooze.id = UUID()
-        snooze.originalFireDate = now
-        snooze.newFireDate = calendar.date(byAdding: .minute, value: 30, to: now) ?? now
-        snooze.createdAt = now
-        reminder.addToSnoozes(snooze)
-
-        let birthdayReminder = Reminder(context: context)
-        birthdayReminder.id = UUID()
-        birthdayReminder.title = "Celebrate Leo's birthday"
-        birthdayReminder.notes = "Pick up a gift and write a card."
-        birthdayReminder.setStatus(.active)
-        birthdayReminder.setPriority(.medium)
-        birthdayReminder.createdAt = now
-        birthdayReminder.updatedAt = now
-        birthdayReminder.userOrder = 1
-        birthdayReminder.snoozeCount = 0
-
-        let birthdayDate = calendar.nextDate(
-            after: now,
-            matching: DateComponents(month: 11, day: 5, hour: 10, minute: 0),
-            matchingPolicy: .nextTimePreservingSmallerComponents
-        ) ?? now
-
-        let birthdayTrigger = ReminderTrigger(context: context)
-        birthdayTrigger.id = UUID()
-        birthdayTrigger.setType(.time)
-        birthdayTrigger.fireDate = birthdayDate
-        birthdayTrigger.startDate = birthdayDate
-        birthdayTrigger.setRecurrence(RecurrenceRule(frequency: .yearly))
-        birthdayTrigger.timeZoneIdentifier = TimeZone.current.identifier
-        birthdayTrigger.isActive = true
-        birthdayTrigger.spacedStage = 0
-        birthdayTrigger.ignoreCount = 0
-        birthdayReminder.addToTriggers(birthdayTrigger)
-
-        let errandsList = TodoList(context: context)
-        errandsList.id = UUID()
-        errandsList.title = "Weekend errands"
-        errandsList.notes = "Finish before Sunday afternoon."
-        errandsList.createdAt = now
-        errandsList.updatedAt = now
-        errandsList.dueDate = calendar.date(byAdding: .day, value: 2, to: now)
-        errandsList.isPinned = true
-        errandsList.isArchived = false
-        errandsList.userOrder = 0
-        errandsList.folder = defaultFolder
-
-        let buyGift = TodoItem(context: context)
-        buyGift.id = UUID()
-        buyGift.title = "Pick up birthday gift"
-        buyGift.detail = "Check the wishlist for ideas."
-        buyGift.isCompleted = false
-        buyGift.sortOrder = 0
-        buyGift.createdAt = now
-        buyGift.list = errandsList
-
-        let washCar = TodoItem(context: context)
-        washCar.id = UUID()
-        washCar.title = "Wash the car"
-        washCar.detail = "Use the quick detailer spray after washing."
-        washCar.isCompleted = true
-        washCar.sortOrder = 1
-        washCar.createdAt = calendar.date(byAdding: .day, value: -1, to: now)
-        washCar.completedAt = now
-        washCar.list = errandsList
-
-        let selfCareList = TodoList(context: context)
-        selfCareList.id = UUID()
-        selfCareList.title = "Self-care checklist"
-        selfCareList.createdAt = now
-        selfCareList.updatedAt = now
-        selfCareList.isPinned = false
-        selfCareList.isArchived = false
-        selfCareList.userOrder = 1
-        selfCareList.folder = workFolder
-
-        let stretchItem = TodoItem(context: context)
-        stretchItem.id = UUID()
-        stretchItem.title = "Morning stretch"
-        stretchItem.isCompleted = false
-        stretchItem.sortOrder = 0
-        stretchItem.createdAt = now
-        stretchItem.list = selfCareList
-
-        let journalItem = TodoItem(context: context)
-        journalItem.id = UUID()
-        journalItem.title = "Journal three things you are grateful for"
-        journalItem.detail = "Use the small notebook on the desk."
-        journalItem.isCompleted = false
-        journalItem.sortOrder = 1
-        journalItem.createdAt = now
-        journalItem.list = selfCareList
+        // Create another sample memory with birthday reminder
+        let birthdayMemory = Memory(context: context)
+        birthdayMemory.id = UUID()
+        birthdayMemory.title = "Celebrate Leo's birthday"
+        birthdayMemory.body = "Pick up a gift and write a card."
+        birthdayMemory.statusRaw = "active"
+        birthdayMemory.isPinned = false
+        birthdayMemory.priorityRaw = NSNumber(value: 1) // Medium priority
+        birthdayMemory.createdAt = now
+        birthdayMemory.updatedAt = now
+        birthdayMemory.userOrder = 3
+        birthdayMemory.autoCompleteOnChecklistCompletion = false
 
         save(context: context)
     }

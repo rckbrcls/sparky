@@ -550,7 +550,6 @@ struct MemoryEditorView: View {
                     .fontWeight(.bold)
                     .multilineTextAlignment(.leading)
                     .submitLabel(.done)
-                    .lineLimit(2)
                     .focused($isTitleFocused)
                     .onSubmit {
                         isTitleFocused = false
@@ -573,7 +572,6 @@ struct MemoryEditorView: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(3)
                     .foregroundStyle(isTitlePlaceholder ? Color.secondary : Color.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
