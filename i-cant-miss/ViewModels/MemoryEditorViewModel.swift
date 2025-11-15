@@ -488,7 +488,7 @@ private extension MemoryEditorViewModel {
             partialResult |= Int16(1 << day)
         }
 
-        // Se não há fireDate, remover trigger
+        // If there's no fireDate, remove trigger
         guard let fireDate = fireDate else {
             triggers.removeAll { $0.type == .scheduled }
             return

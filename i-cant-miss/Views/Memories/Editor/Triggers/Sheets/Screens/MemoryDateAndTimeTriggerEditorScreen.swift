@@ -43,13 +43,13 @@ struct MemoryDateAndTimeTriggerEditorScreen: View {
                 }
                 .onChange(of: selectedFrequency) { oldValue, newValue in
                     if newValue != nil && selectedDays.isEmpty {
-                        // Se recorrência foi selecionada e não há dias selecionados, mostrar seleção
+                        // If recurrence was selected and no days are selected, show selection
                         showWeekdaySelection = true
                         if selectedDays.isEmpty {
                             selectedDays.insert(Calendar.current.component(.weekday, from: Date()))
                         }
                     } else if newValue == nil {
-                        // Se recorrência foi removida, limpar seleção de dias
+                        // If recurrence was removed, clear day selection
                         showWeekdaySelection = false
                         selectedDays.removeAll()
                     }

@@ -20,7 +20,8 @@ struct SpaceDetailView: View {
     let onSpaceContextChange: (SpaceModel?) -> Void
 
     @State private var showingFilterSheet = false
-    @State private var selectedMemoryTypes: Set<MemoryType> = []
+    @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
+    @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
     @State private var selectedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
@@ -38,8 +39,11 @@ struct SpaceDetailView: View {
 
     private var activeFilterCount: Int {
         var count = 0
-        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
-            count += selectedMemoryTypes.count
+        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
+            count += selectedContentTypes.count
+        }
+        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
+            count += selectedTriggerTypes.count
         }
         if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
             count += selectedSections.count
@@ -127,11 +131,18 @@ struct SpaceDetailView: View {
     private var filterDescription: String {
         var parts: [String] = []
 
-        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
-            let typeLabels = selectedMemoryTypes
+        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
+            let contentTypeLabels = selectedContentTypes
                 .map(\.label)
                 .sorted()
-            parts.append(typeLabels.joined(separator: ", "))
+            parts.append(contentTypeLabels.joined(separator: ", "))
+        }
+
+        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
+            let triggerTypeLabels = selectedTriggerTypes
+                .map(\.label)
+                .sorted()
+            parts.append(triggerTypeLabels.joined(separator: ", "))
         }
 
         if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
@@ -301,7 +312,8 @@ struct SpaceDetailView: View {
     @ViewBuilder
     private func filterSheetContent() -> some View {
         FilterSheetView(
-            selectedMemoryTypes: $selectedMemoryTypes,
+            selectedContentTypes: $selectedContentTypes,
+            selectedTriggerTypes: $selectedTriggerTypes,
             selectedSections: $selectedSections,
             showInbox: $showInbox,
             detentSelection: $filterSheetDetent
@@ -419,35 +431,53 @@ struct SpaceDetailView: View {
         let query = trimmedSearchText
 
         return base.filter { memory in
-            matchesSelectedType(memory) &&
+            matchesSelectedContentAndTrigger(memory) &&
             matchesSelectedSection(memory, referenceDate: referenceDate) &&
             (showInbox || !isInboxMemory(memory)) &&
             matchesSearch(memory, query: query)
         }
     }
 
-    private func matchesSelectedType(_ memory: MemoryModel) -> Bool {
-        if selectedMemoryTypes.isEmpty {
-            return true
-        }
-        return selectedMemoryTypes.contains { type in
-            switch type {
-            case .text:
-                return memory.contents.contains {
-                    if case .richText = $0 { return true }
-                    return false
+    private func matchesSelectedContentAndTrigger(_ memory: MemoryModel) -> Bool {
+        // Check content types
+        let contentMatches: Bool
+        if selectedContentTypes.isEmpty {
+            contentMatches = true
+        } else {
+            contentMatches = selectedContentTypes.contains { contentType in
+                switch contentType {
+                case .richText:
+                    return memory.contents.contains {
+                        if case .richText = $0 { return true }
+                        return false
+                    }
+                case .checklist:
+                    return memory.hasChecklist
+                case .photos:
+                    return memory.contents.contains {
+                        if case .photos = $0 { return true }
+                        return false
+                    }
+                case .links:
+                    return memory.contents.contains {
+                        if case .links = $0 { return true }
+                        return false
+                    }
                 }
-            case .checklist:
-                return memory.hasChecklist
-            case .photos:
-                return memory.contents.contains {
-                    if case .photos = $0 { return true }
-                    return false
-                }
-            case .triggered:
-                return memory.hasTriggers
             }
         }
+
+        // Check trigger types
+        let triggerMatches: Bool
+        if selectedTriggerTypes.isEmpty {
+            triggerMatches = true
+        } else {
+            triggerMatches = selectedTriggerTypes.contains { triggerType in
+                memory.triggers.contains { $0.type == triggerType && $0.isActive }
+            }
+        }
+
+        return contentMatches && triggerMatches
     }
 
     private func matchesSelectedSection(_ memory: MemoryModel, referenceDate: Date = Date()) -> Bool {

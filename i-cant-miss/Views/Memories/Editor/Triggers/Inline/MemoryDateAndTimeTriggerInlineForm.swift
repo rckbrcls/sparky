@@ -71,24 +71,24 @@ struct MemoryDateAndTimeTriggerInlineForm: View {
     private func scheduledSummary(for trigger: MemoryTriggerDraft) -> String {
         var parts: [String] = []
 
-        // Se houver weekdayMask, mostrar resumo dos dias
+        // If there's a weekdayMask, show day summary
         if trigger.weekdayMask != 0 {
             let weekdaySummary = weekdayMaskSummary(mask: trigger.weekdayMask)
             parts.append(weekdaySummary)
         }
 
-        // Se houver fireDate, mostrar data/hora
+        // If there's a fireDate, show date/time
         if let fireDate = trigger.fireDate {
             if trigger.weekdayMask != 0 {
-                // Se houver dias da semana, mostrar apenas a hora
+                // If there are weekdays, show only the time
                 parts.append(fireDate.formatted(date: .omitted, time: .shortened))
             } else {
-                // Caso contrário, mostrar data e hora
+                // Otherwise, show date and time
                 parts.append(fireDate.formatted(date: .abbreviated, time: .shortened))
             }
         }
 
-        // Se houver recorrência, mostrar resumo
+        // If there's recurrence, show summary
         if let recurrence = trigger.recurrenceRule {
             parts.append(recurrenceSummary(recurrence))
         }

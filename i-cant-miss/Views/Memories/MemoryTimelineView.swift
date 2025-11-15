@@ -16,7 +16,8 @@ struct MemoryTimelineView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @State private var showingFilterSheet = false
     @State private var searchText = ""
-    @State private var selectedMemoryTypes: Set<MemoryType> = []
+    @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
+    @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
     @State private var selectedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
@@ -50,7 +51,7 @@ struct MemoryTimelineView: View {
                 MemoryService.TimelineSection(
                     kind: section.kind,
                     memories: section.memories.filter { memory in
-                        !memory.isPinned && isMemoryTypeSelected(memory)
+                        !memory.isPinned && isMemoryContentAndTriggerSelected(memory)
                     }
                 )
             }
@@ -64,7 +65,7 @@ struct MemoryTimelineView: View {
         return memoryService.memories
             .filter { memory in
                 guard memory.status == .active, memory.isPinned else { return false }
-                guard isMemoryTypeSelected(memory) else { return false }
+                guard isMemoryContentAndTriggerSelected(memory) else { return false }
                 if !showInbox && isInboxMemory(memory) {
                     return false
                 }
@@ -91,7 +92,7 @@ struct MemoryTimelineView: View {
     private var filteredInboxMemories: [MemoryModel] {
         memoryService.inboxMemories()
             .filter { memory in
-                !memory.isPinned && isMemoryTypeSelected(memory)
+                !memory.isPinned && isMemoryContentAndTriggerSelected(memory)
             }
     }
 
@@ -103,8 +104,11 @@ struct MemoryTimelineView: View {
 
     private var activeFilterCount: Int {
         var count = 0
-        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
-            count += selectedMemoryTypes.count
+        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
+            count += selectedContentTypes.count
+        }
+        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
+            count += selectedTriggerTypes.count
         }
         if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
             count += selectedSections.count
@@ -118,11 +122,18 @@ struct MemoryTimelineView: View {
     private var filterDescription: String {
         var parts: [String] = []
 
-        if !selectedMemoryTypes.isEmpty && selectedMemoryTypes.count < MemoryType.allCases.count {
-            let typeLabels = selectedMemoryTypes
+        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
+            let contentTypeLabels = selectedContentTypes
                 .map(\.label)
                 .sorted()
-            parts.append(typeLabels.joined(separator: ", "))
+            parts.append(contentTypeLabels.joined(separator: ", "))
+        }
+
+        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
+            let triggerTypeLabels = selectedTriggerTypes
+                .map(\.label)
+                .sorted()
+            parts.append(triggerTypeLabels.joined(separator: ", "))
         }
 
         if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
@@ -219,7 +230,8 @@ struct MemoryTimelineView: View {
                 }
                 .sheet(isPresented: $showingFilterSheet) {
                     FilterSheetView(
-                        selectedMemoryTypes: $selectedMemoryTypes,
+                        selectedContentTypes: $selectedContentTypes,
+                        selectedTriggerTypes: $selectedTriggerTypes,
                         selectedSections: $selectedSections,
                         showInbox: $showInbox,
                         detentSelection: $filterSheetDetent
@@ -421,28 +433,46 @@ struct MemoryTimelineView: View {
         .listRowSeparator(.hidden)
     }
 
-    private func isMemoryTypeSelected(_ memory: MemoryModel) -> Bool {
-        if selectedMemoryTypes.isEmpty {
-            return true
-        }
-        return selectedMemoryTypes.contains { type in
-            switch type {
-            case .text:
-                return memory.contents.contains {
-                    if case .richText = $0 { return true }
-                    return false
+    private func isMemoryContentAndTriggerSelected(_ memory: MemoryModel) -> Bool {
+        // Check content types
+        let contentMatches: Bool
+        if selectedContentTypes.isEmpty {
+            contentMatches = true
+        } else {
+            contentMatches = selectedContentTypes.contains { contentType in
+                switch contentType {
+                case .richText:
+                    return memory.contents.contains {
+                        if case .richText = $0 { return true }
+                        return false
+                    }
+                case .checklist:
+                    return memory.hasChecklist
+                case .photos:
+                    return memory.contents.contains {
+                        if case .photos = $0 { return true }
+                        return false
+                    }
+                case .links:
+                    return memory.contents.contains {
+                        if case .links = $0 { return true }
+                        return false
+                    }
                 }
-            case .checklist:
-                return memory.hasChecklist
-            case .photos:
-                return memory.contents.contains {
-                    if case .photos = $0 { return true }
-                    return false
-                }
-            case .triggered:
-                return memory.hasTriggers
             }
         }
+
+        // Check trigger types
+        let triggerMatches: Bool
+        if selectedTriggerTypes.isEmpty {
+            triggerMatches = true
+        } else {
+            triggerMatches = selectedTriggerTypes.contains { triggerType in
+                memory.triggers.contains { $0.type == triggerType && $0.isActive }
+            }
+        }
+
+        return contentMatches && triggerMatches
     }
 
     private func sectionExpansionBinding(for kind: MemoryService.TimelineSection.Kind) -> Binding<Bool> {

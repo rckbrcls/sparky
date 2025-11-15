@@ -35,7 +35,7 @@ extension Color {
         return String(format: "#%02X%02X%02X", r, g, b)
     }
 
-    // Cores pré-selecionadas que funcionam bem no modo claro e escuro
+    // Preset colors that work well in both light and dark mode
     struct PresetColors {
         struct PresetColor: Identifiable {
             let id: String

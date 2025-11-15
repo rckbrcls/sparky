@@ -42,7 +42,7 @@ struct ContactPickerView: UIViewControllerRepresentable {
         }
 
         func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
-            // Usuário cancelou a seleção
+            // User cancelled selection
         }
     }
 }

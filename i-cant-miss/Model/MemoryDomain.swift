@@ -191,29 +191,29 @@ extension MemoryTriggerModel {
     }
 
     private func nextScheduledOccurrence(from reference: Date) -> Date? {
-        // Se houver weekdayMask, usar lógica de dias da semana
+        // If there's a weekdayMask, use weekday logic
         if weekdayMask != 0 {
             return nextWeekdayOccurrence(from: reference)
         }
 
-        // Se houver apenas fireDate sem recorrência, retornar o fireDate
+        // If there's only a fireDate without recurrence, return the fireDate
         guard let fireDate = fireDate else {
             return startDate
         }
 
-        // Se houver recorrência, calcular próxima ocorrência
+        // If there's recurrence, calculate next occurrence
         if let recurrence = recurrenceRule {
             return nextRecurrenceDate(from: reference, fireDate: fireDate, recurrence: recurrence)
         }
 
-        // Caso simples: apenas uma data/hora
+        // Simple case: just a date/time
         return fireDate >= reference ? fireDate : nil
     }
 
     private func nextRecurrenceDate(from reference: Date, fireDate: Date, recurrence: RecurrenceRule) -> Date? {
         let calendar = Calendar.current
 
-        // Se a data de referência é anterior à fireDate, retornar fireDate
+        // If reference date is before fireDate, return fireDate
         if reference < fireDate {
             return fireDate
         }
@@ -275,7 +275,7 @@ extension MemoryTriggerModel {
             let candidate = calendar.date(byAdding: .day, value: dayOffset, to: reference) ?? reference
             let weekday = calendar.component(.weekday, from: candidate)
             if targetDays.contains(weekday) {
-                // Se houver fireDate, usar a hora dele
+                // If there's a fireDate, use its time
                 if let fireDate = fireDate {
                     let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: fireDate)
                     if let dateWithTime = calendar.date(bySettingHour: timeComponents.hour ?? 0,
@@ -362,6 +362,33 @@ enum MemoryType: String, CaseIterable, Identifiable {
         case .checklist: return "checklist"
         case .photos: return "photo.on.rectangle"
         case .triggered: return "alarm"
+        }
+    }
+}
+
+enum MemoryContentFilterType: String, CaseIterable, Identifiable {
+    case richText
+    case checklist
+    case photos
+    case links
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .richText: return "Notes"
+        case .checklist: return "Checklists"
+        case .photos: return "Photos"
+        case .links: return "Links"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .richText: return "text.justify.leading"
+        case .checklist: return "checklist"
+        case .photos: return "photo.on.rectangle.angled"
+        case .links: return "link"
         }
     }
 }

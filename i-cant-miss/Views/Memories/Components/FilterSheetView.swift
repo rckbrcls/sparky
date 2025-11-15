@@ -3,7 +3,8 @@ import SwiftUI
 struct FilterSheetView: View {
     @Environment(\.dismiss) var dismiss
 
-    @Binding var selectedMemoryTypes: Set<MemoryType>
+    @Binding var selectedContentTypes: Set<MemoryContentFilterType>
+    @Binding var selectedTriggerTypes: Set<MemoryTriggerType>
     @Binding var selectedSections: Set<MemoryService.TimelineSection.Kind>
     @Binding var showInbox: Bool
     @Binding var detentSelection: PresentationDetent
@@ -14,14 +15,14 @@ struct FilterSheetView: View {
                 Section {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedMemoryTypes.removeAll()
+                            selectedContentTypes.removeAll()
                         }
                     } label: {
                         HStack {
-                            Label("All Types", systemImage: "square.stack.3d.up.fill")
+                            Label("All Contents", systemImage: "square.stack.3d.up.fill")
                                 .foregroundStyle(.primary)
                             Spacer()
-                            if selectedMemoryTypes.isEmpty || selectedMemoryTypes.count == MemoryType.allCases.count {
+                            if selectedContentTypes.isEmpty || selectedContentTypes.count == MemoryContentFilterType.allCases.count {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accent)
                                     .fontWeight(.semibold)
@@ -30,17 +31,17 @@ struct FilterSheetView: View {
                     }
                     .tint(.primary)
 
-                    ForEach(MemoryType.allCases) { type in
+                    ForEach(MemoryContentFilterType.allCases) { contentType in
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                toggleMemoryType(type)
+                                toggleContentType(contentType)
                             }
                         } label: {
                             HStack {
-                                Label(type.label, systemImage: type.systemImage)
+                                Label(contentType.label, systemImage: contentType.systemImage)
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                if isMemoryTypeVisuallySelected(type) {
+                                if isContentTypeVisuallySelected(contentType) {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(Color.accent)
                                         .fontWeight(.semibold)
@@ -50,7 +51,49 @@ struct FilterSheetView: View {
                         .tint(.primary)
                     }
                 } header: {
-                    Text("Memory Type")
+                    Text("Contents")
+                }
+
+                Section {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedTriggerTypes.removeAll()
+                        }
+                    } label: {
+                        HStack {
+                            Label("All Triggers", systemImage: "alarm.fill")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if selectedTriggerTypes.isEmpty || selectedTriggerTypes.count == MemoryTriggerType.allCases.count {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accent)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                    }
+                    .tint(.primary)
+
+                    ForEach(MemoryTriggerType.allCases) { triggerType in
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                toggleTriggerType(triggerType)
+                            }
+                        } label: {
+                            HStack {
+                                Label(triggerType.label, systemImage: triggerType.systemImage)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if isTriggerTypeVisuallySelected(triggerType) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.accent)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                        }
+                        .tint(.primary)
+                    }
+                } header: {
+                    Text("Triggers")
                 }
 
                 Section {
@@ -127,7 +170,8 @@ struct FilterSheetView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .cancel) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedMemoryTypes.removeAll()
+                            selectedContentTypes.removeAll()
+                            selectedTriggerTypes.removeAll()
                             selectedSections.removeAll()
                             showInbox = true
                         }
@@ -140,7 +184,8 @@ struct FilterSheetView: View {
                 ToolbarItem(placement: .destructiveAction) {
                     Button(role: .destructive) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedMemoryTypes.removeAll()
+                            selectedContentTypes.removeAll()
+                            selectedTriggerTypes.removeAll()
                             selectedSections.removeAll()
                             showInbox = true
                         }
@@ -160,18 +205,33 @@ struct FilterSheetView: View {
         }
     }
 
-    private func isMemoryTypeVisuallySelected(_ type: MemoryType) -> Bool {
-        if selectedMemoryTypes.isEmpty {
+    private func isContentTypeVisuallySelected(_ contentType: MemoryContentFilterType) -> Bool {
+        if selectedContentTypes.isEmpty {
             return true
         }
-        return selectedMemoryTypes.contains(type)
+        return selectedContentTypes.contains(contentType)
     }
 
-    private func toggleMemoryType(_ type: MemoryType) {
-        if selectedMemoryTypes.contains(type) {
-            selectedMemoryTypes.remove(type)
+    private func toggleContentType(_ contentType: MemoryContentFilterType) {
+        if selectedContentTypes.contains(contentType) {
+            selectedContentTypes.remove(contentType)
         } else {
-            selectedMemoryTypes.insert(type)
+            selectedContentTypes.insert(contentType)
+        }
+    }
+
+    private func isTriggerTypeVisuallySelected(_ triggerType: MemoryTriggerType) -> Bool {
+        if selectedTriggerTypes.isEmpty {
+            return true
+        }
+        return selectedTriggerTypes.contains(triggerType)
+    }
+
+    private func toggleTriggerType(_ triggerType: MemoryTriggerType) {
+        if selectedTriggerTypes.contains(triggerType) {
+            selectedTriggerTypes.remove(triggerType)
+        } else {
+            selectedTriggerTypes.insert(triggerType)
         }
     }
 

@@ -27,10 +27,6 @@ final class PersistenceController {
             description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
             if inMemory {
                 description.url = URL(fileURLWithPath: "/dev/null")
-            } else {
-                // Configure store location explicitly
-                description.shouldMigrateStoreAutomatically = true
-                description.shouldInferMappingModelAutomatically = true
             }
         }
 
