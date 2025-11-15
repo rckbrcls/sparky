@@ -369,6 +369,7 @@ struct MemoryEditorView: View {
                     .transition(cardBounceTransition)
             }
         }
+
         .toolbar{
             ToolbarItem(placement: .cancellationAction) {
                 Button(role: .cancel) {
@@ -506,41 +507,49 @@ struct MemoryEditorView: View {
     }
 
     private var titleSectionRow: some View {
-        titleSection
-            .padding(.horizontal, 20)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: 20, leading: 0, bottom: 12, trailing: 0))
-            .listRowBackground(Color.clear)
+        VStack(alignment: .leading, spacing: 16.0) {
+            titleSection
+                .padding(.horizontal, 20)
+
+            if !viewModel.triggers.isEmpty {
+                MemoryEditorTriggerButtonsBar(
+                    viewModel: viewModel,
+                    showDateAndTimeSheet: $showDateAndTimeSheet,
+                    showLocationPicker: $showLocationPicker,
+                    showPersonSheet: $showPersonSheet,
+                    showSequentialSheet: $showSequentialSheet,
+                    memoryLookup: memoryLookup
+                )
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
+            }
+        }
+        .listRowSeparator(.hidden)
+        .listRowInsets(.init(top: 20, leading: 0, bottom: 16, trailing: 0))
+        .listRowBackground(Color.clear)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.triggers.count)
     }
 
     @ViewBuilder
     private func contentRow(for item: Binding<MemoryEditorContentItem>) -> some View {
-        switch item.wrappedValue {
-        case .richText(let content):
-            richTextCard(for: item, content: content)
-            .padding(.horizontal, 20)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-            .listRowBackground(Color.clear)
-        case .checklist(let content):
-            checklistCard(for: item, content: content)
-            .padding(.horizontal, 20)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-            .listRowBackground(Color.clear)
-        case .photos(let content):
-            photosCard(for: item, content: content)
-            .padding(.horizontal, 20)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-            .listRowBackground(Color.clear)
-        case .links(let content):
-            linksCard(for: item, content: content)
-            .padding(.horizontal, 20)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: 0, leading: 0, bottom: 24, trailing: 0))
-            .listRowBackground(Color.clear)
+        Group {
+            switch item.wrappedValue {
+            case .richText(let content):
+                richTextCard(for: item, content: content)
+            case .checklist(let content):
+                checklistCard(for: item, content: content)
+            case .photos(let content):
+                photosCard(for: item, content: content)
+            case .links(let content):
+                linksCard(for: item, content: content)
+            }
         }
+        .padding(.horizontal, 20)
+        .listRowSeparator(.hidden)
+        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
+        .listRowBackground(Color.clear)
     }
 
     private var titleSection: some View {
@@ -777,8 +786,7 @@ struct MemoryEditorView: View {
             pendingPhotoContentID = nil
             isPresentingPhotoLibrary = true
         case .links:
-            let contentID = viewModel.appendContent(type)
-            pendingLinkContentID = contentID
+            pendingLinkContentID = nil
             showAddLinkSheet = true
         }
     }
@@ -826,7 +834,14 @@ struct MemoryEditorView: View {
     }
 
     private func handleLinkAdded(_ url: URL) {
-        guard let contentID = pendingLinkContentID else { return }
+        let contentID: UUID
+        if let existingID = pendingLinkContentID,
+           viewModel.contentQueue.contains(where: { $0.id == existingID && $0.contentType == .links }) {
+            contentID = existingID
+        } else {
+            contentID = viewModel.appendContent(.links)
+        }
+
         if viewModel.addLinkAttachment(url: url, to: contentID) != nil {
             pendingLinkContentID = nil
         }

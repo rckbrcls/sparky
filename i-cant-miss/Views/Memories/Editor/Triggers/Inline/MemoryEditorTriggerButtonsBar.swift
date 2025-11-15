@@ -10,7 +10,7 @@ struct MemoryEditorTriggerButtonsBar: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
                 if hasScheduledTrigger {
                     MemoryDateAndTimeTriggerInlineForm(
                         viewModel: viewModel,
@@ -37,11 +37,10 @@ struct MemoryEditorTriggerButtonsBar: View {
                     )
                 }
             }
-            .padding(.vertical, 8)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 
     private var hasScheduledTrigger: Bool {
