@@ -12,15 +12,6 @@ struct MapContainer: View {
     let onCoordinateSelected: (CLLocationCoordinate2D) -> Void
 
     var body: some View {
-        if #available(iOS 17, *) {
-            mapForModernPlatforms
-        } else {
-            mapForLegacyPlatforms
-        }
-    }
-
-    @available(iOS 17, *)
-    private var mapForModernPlatforms: some View {
         Map(position: $mapCameraPosition,
             interactionModes: allowsSelection ? .all : []) {
             if let coordinate = selectedCoordinate {
@@ -46,23 +37,6 @@ struct MapContainer: View {
                 MapUserLocationButton()
             }
         }
-    }
-
-    private var mapForLegacyPlatforms: some View {
-        LegacySelectableMap(region: $region,
-                            selectedCoordinate: $selectedCoordinate,
-                            allowsSelection: allowsSelection,
-                            defaultRadius: defaultRadius,
-                            resolvedLocationName: resolvedLocationName,
-                            onCoordinateSelected: onCoordinateSelected,
-                            onRegionChange: { newRegion in
-                                let span = sanitizedSpan(newRegion.span)
-                                let updatedRegion = MKCoordinateRegion(center: newRegion.center, span: span)
-                                region = updatedRegion
-                                if allowsSelection {
-                                    onCameraChange(updatedRegion)
-                                }
-                            })
     }
 
     private func sanitizedSpan(_ span: MKCoordinateSpan) -> MKCoordinateSpan {

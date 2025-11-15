@@ -570,22 +570,12 @@ private struct OnboardingMiniCard: View {
 // MARK: - Utilities
 
 private extension View {
-    @ViewBuilder
     func zeroContentMarginsIfAvailable() -> some View {
-        if #available(iOS 17.0, *) {
-            contentMargins(.zero, for: .scrollContent)
-        } else {
-            self
-        }
+        contentMargins(.zero, for: .scrollContent)
     }
 
-    @ViewBuilder
     func applyPageTabStyle() -> some View {
-        if #available(iOS 17.0, *) {
-            self.tabViewStyle(.page(indexDisplayMode: .never))
-        } else {
-            self.tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-        }
+        self.tabViewStyle(.page(indexDisplayMode: .never))
     }
 }
 

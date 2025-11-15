@@ -259,7 +259,7 @@ private extension LocationPickerView {
         selectedCoordinate = coordinate
         region = updatedRegion
 
-        if updateCamera, #available(iOS 17, *) {
+        if updateCamera {
             isCameraAdjusting = true
             mapCameraPosition = .region(updatedRegion)
             cameraCooldownTask?.cancel()
