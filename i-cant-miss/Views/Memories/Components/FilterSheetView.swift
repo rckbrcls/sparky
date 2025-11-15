@@ -70,24 +70,6 @@ struct FilterSheetView: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedContentTypes.removeAll()
-                }
-            } label: {
-                HStack {
-                    Label("All Contents", systemImage: "square.stack.3d.up.fill")
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    if selectedContentTypes.isEmpty || selectedContentTypes.count == MemoryContentFilterType.allCases.count {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(Color.accent)
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-            .tint(.primary)
-
             FlowLayoutView(spacing: 8) {
                 ForEach(MemoryContentFilterType.allCases) { contentType in
                     FilterBadge(
@@ -101,6 +83,7 @@ struct FilterSheetView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -109,24 +92,6 @@ struct FilterSheetView: View {
             Text("Triggers")
                 .font(.headline)
                 .foregroundStyle(.primary)
-
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTriggerTypes.removeAll()
-                }
-            } label: {
-                HStack {
-                    Label("All Triggers", systemImage: "alarm.fill")
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    if selectedTriggerTypes.isEmpty || selectedTriggerTypes.count == MemoryTriggerType.allCases.count {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(Color.accent)
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-            .tint(.primary)
 
             FlowLayoutView(spacing: 8) {
                 ForEach(MemoryTriggerType.allCases) { triggerType in
@@ -141,6 +106,7 @@ struct FilterSheetView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -149,24 +115,6 @@ struct FilterSheetView: View {
             Text("Timeline Section")
                 .font(.headline)
                 .foregroundStyle(.primary)
-
-            Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedSections.removeAll()
-                }
-            } label: {
-                HStack {
-                    Label("All Sections", systemImage: "calendar")
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    if selectedSections.isEmpty || selectedSections.count == MemoryService.TimelineSection.Kind.allCases.count {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(Color.accent)
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-            .tint(.primary)
 
             FlowLayoutView(spacing: 8) {
                 ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
@@ -181,6 +129,7 @@ struct FilterSheetView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -201,6 +150,7 @@ struct FilterSheetView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
