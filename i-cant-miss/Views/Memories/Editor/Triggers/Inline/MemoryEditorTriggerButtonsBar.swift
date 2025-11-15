@@ -2,8 +2,7 @@ import SwiftUI
 
 struct MemoryEditorTriggerButtonsBar: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @Binding var showExactTimeSheet: Bool
-    @Binding var showWeekdaySheet: Bool
+    @Binding var showDateAndTimeSheet: Bool
     @Binding var showLocationPicker: Bool
     @Binding var showPersonSheet: Bool
     @Binding var showSequentialSheet: Bool
@@ -12,16 +11,10 @@ struct MemoryEditorTriggerButtonsBar: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
-                if hasExactTimeTrigger {
-                    MemoryExactTimeTriggerInlineForm(
+                if hasScheduledTrigger {
+                    MemoryDateAndTimeTriggerInlineForm(
                         viewModel: viewModel,
-                        showSheet: $showExactTimeSheet
-                    )
-                }
-                if hasWeekdayTrigger {
-                    MemoryWeekdayTriggerInlineForm(
-                        viewModel: viewModel,
-                        showSheet: $showWeekdaySheet
+                        showSheet: $showDateAndTimeSheet
                     )
                 }
                 if hasLocationTrigger {
@@ -51,12 +44,8 @@ struct MemoryEditorTriggerButtonsBar: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var hasExactTimeTrigger: Bool {
-        viewModel.triggers.contains(where: { $0.type == .time })
-    }
-
-    private var hasWeekdayTrigger: Bool {
-        viewModel.triggers.contains(where: { $0.type == .dayOfWeek })
+    private var hasScheduledTrigger: Bool {
+        viewModel.triggers.contains(where: { $0.type == .scheduled })
     }
 
     private var hasLocationTrigger: Bool {

@@ -261,17 +261,28 @@ final class MemoryEditorViewModel: ObservableObject {
         weekdaySelection: Set<Int>,
         weekdayReferenceTime: Date
     ) {
-        updateTimeTrigger(fireDate: fireDate, recurrence: recurrence)
-        updateWeekdayTrigger(weekdaySelection: weekdaySelection, referenceTime: weekdayReferenceTime)
+        setScheduledTrigger(
+            fireDate: fireDate,
+            recurrence: recurrence,
+            weekdaySelection: weekdaySelection,
+            referenceTime: weekdayReferenceTime
+        )
     }
 
-    func setTimeTrigger(fireDate: Date?, recurrence: RecurrenceRule?) {
-        updateTimeTrigger(fireDate: fireDate, recurrence: recurrence)
+    func setScheduledTrigger(
+        fireDate: Date?,
+        recurrence: RecurrenceRule?,
+        weekdaySelection: Set<Int>,
+        referenceTime: Date
+    ) {
+        updateScheduledTrigger(
+            fireDate: fireDate,
+            recurrence: recurrence,
+            weekdaySelection: weekdaySelection,
+            referenceTime: referenceTime
+        )
     }
 
-    func setWeekdayTrigger(weekdaySelection: Set<Int>, referenceTime: Date) {
-        updateWeekdayTrigger(weekdaySelection: weekdaySelection, referenceTime: referenceTime)
-    }
 
     func addLocationTrigger(name: String, latitude: Double, longitude: Double, radius: Double, event: LocationEvent) {
         let draft = MemoryTriggerDraft(
@@ -308,7 +319,7 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     func clearScheduleTriggers() {
-        triggers.removeAll { $0.type == .time || $0.type == .dayOfWeek }
+        triggers.removeAll { $0.type == .scheduled }
     }
 
     func updateSequentialTrigger(previousMemoryID: UUID?, nextMemoryID: UUID?) {
@@ -431,7 +442,7 @@ private extension MemoryEditorViewModel {
         case .quickReminder:
             let fireDate = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date()) ?? Date().addingTimeInterval(3600)
             let trigger = MemoryTriggerDraft(
-                type: .time,
+                type: .scheduled,
                 fireDate: fireDate,
                 startDate: fireDate,
                 timeZoneIdentifier: TimeZone.current.identifier,
@@ -467,63 +478,31 @@ private extension MemoryEditorViewModel {
         )
     }
 
-    func updateTimeTrigger(fireDate: Date?, recurrence: RecurrenceRule?) {
-        let existingIndex = triggers.firstIndex { $0.type == .time }
-
-        guard let fireDate else {
-            if let existingIndex {
-                triggers.remove(at: existingIndex)
-            }
-            return
-        }
-
-        let identifier = existingIndex.map { triggers[$0].id } ?? UUID()
-        let draft = MemoryTriggerDraft(
-            id: identifier,
-            type: .time,
-            fireDate: fireDate,
-            startDate: fireDate,
-            recurrenceRule: recurrence,
-            timeZoneIdentifier: TimeZone.current.identifier,
-            weekdayMask: 0,
-            isActive: true
-        )
-
-        if let existingIndex {
-            triggers[existingIndex] = draft
-        } else {
-            triggers.append(draft)
-        }
-    }
-
-    func updateWeekdayTrigger(weekdaySelection: Set<Int>, referenceTime: Date) {
+    func updateScheduledTrigger(
+        fireDate: Date?,
+        recurrence: RecurrenceRule?,
+        weekdaySelection: Set<Int>,
+        referenceTime: Date
+    ) {
         let mask = weekdaySelection.reduce(into: Int16(0)) { partialResult, day in
             partialResult |= Int16(1 << day)
         }
 
-        if mask == 0 {
-            triggers.removeAll { $0.type == .dayOfWeek }
+        // Se não há fireDate, remover trigger
+        guard let fireDate = fireDate else {
+            triggers.removeAll { $0.type == .scheduled }
             return
         }
 
-        let calendar = Calendar.current
-        var components = calendar.dateComponents([.hour, .minute, .second], from: referenceTime)
-
-        if components.hour == nil || components.minute == nil {
-            components.hour = calendar.component(.hour, from: Date())
-            components.minute = calendar.component(.minute, from: Date())
-            components.second = 0
-        }
-
-        let fireDate = calendar.nextDate(after: Date(), matching: components, matchingPolicy: .nextTime) ?? referenceTime
-
-        let existingIndex = triggers.firstIndex(where: { $0.type == .dayOfWeek })
+        let existingIndex = triggers.firstIndex { $0.type == .scheduled }
         let identifier = existingIndex.map { triggers[$0].id } ?? UUID()
+
         let draft = MemoryTriggerDraft(
             id: identifier,
-            type: .dayOfWeek,
+            type: .scheduled,
             fireDate: fireDate,
-            startDate: referenceTime,
+            startDate: fireDate,
+            recurrenceRule: recurrence,
             timeZoneIdentifier: TimeZone.current.identifier,
             weekdayMask: mask,
             isActive: true
@@ -535,6 +514,7 @@ private extension MemoryEditorViewModel {
             triggers.append(draft)
         }
     }
+
 
     func rebuildContentQueue(from contents: [MemoryContent],
                              attachments: [MemoryModel.Attachment]) {

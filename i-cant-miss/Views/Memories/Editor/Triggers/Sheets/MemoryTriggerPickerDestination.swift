@@ -1,6 +1,5 @@
 enum MemoryTriggerPickerDestination: Hashable {
-    case exactTime
-    case weekdayRoutine
+    case dateAndTime
     case location
     case person
     case sequential

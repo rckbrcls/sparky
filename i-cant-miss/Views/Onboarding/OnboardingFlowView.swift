@@ -406,7 +406,7 @@ private enum OnboardingSampleData {
 
         let investorTrigger = MemoryTriggerModel(
             id: UUID(),
-            type: .time,
+            type: .scheduled,
             fireDate: calendar.date(byAdding: .hour, value: 6, to: now),
             startDate: now,
             recurrenceRule: RecurrenceRule(frequency: .weekly, interval: 1),

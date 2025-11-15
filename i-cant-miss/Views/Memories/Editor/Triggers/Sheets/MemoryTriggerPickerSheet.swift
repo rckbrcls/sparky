@@ -10,20 +10,12 @@ struct MemoryTriggerPickerSheet: View {
             List {
                 Section("Date & Time") {
                     TriggerPickerRow(
-                        title: "Exact time",
-                        subtitle: exactTimeSubtitle,
-                        systemImage: "alarm",
-                        isActive: isExactTimeActive
+                        title: "Date & Time",
+                        subtitle: dateAndTimeSubtitle,
+                        systemImage: "clock.badge",
+                        isActive: isDateAndTimeActive
                     ) {
-                        select(.exactTime)
-                    }
-                    TriggerPickerRow(
-                        title: "Weekday routine",
-                        subtitle: weekdaySubtitle,
-                        systemImage: "calendar.badge.clock",
-                        isActive: isWeekdayRoutineActive
-                    ) {
-                        select(.weekdayRoutine)
+                        select(.dateAndTime)
                     }
                 }
 
@@ -75,10 +67,8 @@ struct MemoryTriggerPickerSheet: View {
             }
             .navigationDestination(item: $selectedDestination) { destination in
                 switch destination {
-                case .exactTime:
-                    MemoryExactTimeTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
-                case .weekdayRoutine:
-                    MemoryWeekdayTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
+                case .dateAndTime:
+                    MemoryDateAndTimeTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .location:
                     MemoryLocationTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .person:
@@ -94,12 +84,8 @@ struct MemoryTriggerPickerSheet: View {
         }
     }
 
-    private var isExactTimeActive: Bool {
-        viewModel.triggers.contains(where: { $0.type == .time })
-    }
-
-    private var isWeekdayRoutineActive: Bool {
-        viewModel.triggers.contains(where: { $0.type == .dayOfWeek })
+    private var isDateAndTimeActive: Bool {
+        viewModel.triggers.contains(where: { $0.type == .scheduled })
     }
 
     private var isLocationActive: Bool {
@@ -114,18 +100,11 @@ struct MemoryTriggerPickerSheet: View {
         viewModel.sequentialTrigger != nil
     }
 
-    private var exactTimeSubtitle: String {
-        if isExactTimeActive {
-            return "Update the existing exact time trigger."
+    private var dateAndTimeSubtitle: String {
+        if isDateAndTimeActive {
+            return "Update the existing date & time trigger."
         }
-        return "Schedule a specific date and time with optional repeats."
-    }
-
-    private var weekdaySubtitle: String {
-        if isWeekdayRoutineActive {
-            return "Modify the current weekday routine."
-        }
-        return "Pick days of the week to repeat this memory."
+        return "Schedule a specific date and time with optional repeats and weekday selection."
     }
 
     private var locationSubtitle: String {

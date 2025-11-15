@@ -159,13 +159,13 @@ struct MemoryEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: MemoryEditorViewModel
-    @State private var showExactTimeSheet = false
-    @State private var showWeekdaySheet = false
+    @State private var showDateAndTimeSheet = false
     @State private var showTriggerPickerSheet = false
     @State private var showAddLinkSheet = false
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
+    @State private var showErrorAlert = false
     @State private var checklistDraftRows: [UUID: [ChecklistDraftRow]] = [:]
     @State private var isPresentingPhotoLibrary = false
     @State private var photoPickerItems: [PhotosPickerItem] = []
@@ -239,16 +239,19 @@ struct MemoryEditorView: View {
                     syncChecklistDraftRowsWithContent()
                 }
             }
-            .alert("Unable to save", isPresented: Binding(
-                get: { viewModel.errorMessage != nil },
-                set: { _ in viewModel.errorMessage = nil }
-            )) {
-                Button("OK", role: .cancel) {}
+            .alert("Unable to save", isPresented: $showErrorAlert) {
+                Button("OK", role: .cancel) {
+                    viewModel.errorMessage = nil
+                }
             } message: {
-                Text(viewModel.errorMessage ?? "")
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                }
             }
-            .sheet(isPresented: $showExactTimeSheet, content: exactTimeSheet)
-            .sheet(isPresented: $showWeekdaySheet, content: weekdaySheet)
+            .onChange(of: viewModel.errorMessage) { oldValue, newValue in
+                showErrorAlert = newValue != nil
+            }
+            .sheet(isPresented: $showDateAndTimeSheet, content: dateAndTimeSheet)
             .sheet(isPresented: $showTriggerPickerSheet) {
                 MemoryTriggerPickerSheet(viewModel: viewModel)
                     .presentationDetents([.large])
@@ -1254,16 +1257,9 @@ struct MemoryEditorView: View {
     }
 
     @ViewBuilder
-    private func exactTimeSheet() -> some View {
+    private func dateAndTimeSheet() -> some View {
         NavigationStack {
-            MemoryExactTimeTriggerEditorScreen(viewModel: viewModel)
-        }
-    }
-
-    @ViewBuilder
-    private func weekdaySheet() -> some View {
-        NavigationStack {
-            MemoryWeekdayTriggerEditorScreen(viewModel: viewModel)
+            MemoryDateAndTimeTriggerEditorScreen(viewModel: viewModel)
         }
     }
 

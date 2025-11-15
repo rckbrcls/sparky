@@ -49,8 +49,7 @@ enum LocationEvent: String, CaseIterable, Identifiable, Codable {
 // MARK: - Memory Trigger Types
 
 enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
-    case time
-    case dayOfWeek
+    case scheduled
     case location
     case person
     case sequential
@@ -59,8 +58,7 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
 
     var systemImage: String {
         switch self {
-        case .time: return "clock"
-        case .dayOfWeek: return "calendar"
+        case .scheduled: return "clock.badge"
         case .location: return "mappin.and.ellipse"
         case .person: return "person.crop.circle"
         case .sequential: return "arrowshape.turn.up.right.circle"
@@ -69,8 +67,7 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
 
     var label: String {
         switch self {
-        case .time: return "Time"
-        case .dayOfWeek: return "Weekday"
+        case .scheduled: return "Date & Time"
         case .location: return "Location"
         case .person: return "Person"
         case .sequential: return "Sequential"
@@ -186,12 +183,81 @@ extension MemoryTriggerDraft {
 extension MemoryTriggerModel {
     func nextFireDate(after reference: Date = Date()) -> Date? {
         switch type {
-        case .time:
-            return fireDate
-        case .dayOfWeek:
-            return nextWeekdayOccurrence(from: reference)
+        case .scheduled:
+            return nextScheduledOccurrence(from: reference)
         case .location, .person, .sequential:
             return startDate ?? fireDate
+        }
+    }
+
+    private func nextScheduledOccurrence(from reference: Date) -> Date? {
+        // Se houver weekdayMask, usar lógica de dias da semana
+        if weekdayMask != 0 {
+            return nextWeekdayOccurrence(from: reference)
+        }
+
+        // Se houver apenas fireDate sem recorrência, retornar o fireDate
+        guard let fireDate = fireDate else {
+            return startDate
+        }
+
+        // Se houver recorrência, calcular próxima ocorrência
+        if let recurrence = recurrenceRule {
+            return nextRecurrenceDate(from: reference, fireDate: fireDate, recurrence: recurrence)
+        }
+
+        // Caso simples: apenas uma data/hora
+        return fireDate >= reference ? fireDate : nil
+    }
+
+    private func nextRecurrenceDate(from reference: Date, fireDate: Date, recurrence: RecurrenceRule) -> Date? {
+        let calendar = Calendar.current
+
+        // Se a data de referência é anterior à fireDate, retornar fireDate
+        if reference < fireDate {
+            return fireDate
+        }
+
+        switch recurrence.frequency {
+        case .daily:
+            var nextDate = fireDate
+            while nextDate <= reference {
+                guard let date = calendar.date(byAdding: .day, value: recurrence.interval, to: nextDate) else {
+                    return nil
+                }
+                nextDate = date
+            }
+            return nextDate
+
+        case .weekly:
+            var nextDate = fireDate
+            while nextDate <= reference {
+                guard let date = calendar.date(byAdding: .weekOfYear, value: recurrence.interval, to: nextDate) else {
+                    return nil
+                }
+                nextDate = date
+            }
+            return nextDate
+
+        case .monthly:
+            var nextDate = fireDate
+            while nextDate <= reference {
+                guard let date = calendar.date(byAdding: .month, value: recurrence.interval, to: nextDate) else {
+                    return nil
+                }
+                nextDate = date
+            }
+            return nextDate
+
+        case .yearly:
+            var nextDate = fireDate
+            while nextDate <= reference {
+                guard let date = calendar.date(byAdding: .year, value: recurrence.interval, to: nextDate) else {
+                    return nil
+                }
+                nextDate = date
+            }
+            return nextDate
         }
     }
 
@@ -209,6 +275,17 @@ extension MemoryTriggerModel {
             let candidate = calendar.date(byAdding: .day, value: dayOffset, to: reference) ?? reference
             let weekday = calendar.component(.weekday, from: candidate)
             if targetDays.contains(weekday) {
+                // Se houver fireDate, usar a hora dele
+                if let fireDate = fireDate {
+                    let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: fireDate)
+                    if let dateWithTime = calendar.date(bySettingHour: timeComponents.hour ?? 0,
+                                                         minute: timeComponents.minute ?? 0,
+                                                         second: timeComponents.second ?? 0,
+                                                         of: candidate) {
+                        let start = startDate ?? dateWithTime
+                        return dateWithTime < start ? start : dateWithTime
+                    }
+                }
                 let start = startDate ?? candidate
                 return candidate < start ? start : candidate
             }

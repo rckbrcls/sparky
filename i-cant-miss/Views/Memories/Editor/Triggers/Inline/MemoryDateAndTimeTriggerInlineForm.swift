@@ -1,20 +1,25 @@
 import SwiftUI
 
-struct MemoryExactTimeTriggerInlineForm: View {
+struct MemoryDateAndTimeTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
 
     private var trigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .time })
+        viewModel.triggers.first(where: { $0.type == .scheduled })
     }
 
     var body: some View {
         Group {
-            if let trigger, let fireDate = trigger.fireDate {
-                configuredButton(for: trigger, fireDate: fireDate)
+            if let trigger {
+                configuredButton(for: trigger)
                     .swipeActions {
                         Button(role: .destructive) {
-                            viewModel.setTimeTrigger(fireDate: nil, recurrence: nil)
+                            viewModel.setScheduledTrigger(
+                                fireDate: nil,
+                                recurrence: nil,
+                                weekdaySelection: [],
+                                referenceTime: trigger.fireDate ?? Date()
+                            )
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -25,12 +30,12 @@ struct MemoryExactTimeTriggerInlineForm: View {
         }
     }
 
-    private func configuredButton(for trigger: MemoryTriggerDraft, fireDate: Date) -> some View {
+    private func configuredButton(for trigger: MemoryTriggerDraft) -> some View {
         Button {
             showSheet = true
         } label: {
             HStack {
-                Label(timeSummary(for: trigger, fireDate: fireDate),
+                Label(scheduledSummary(for: trigger),
                       systemImage: "clock.badge")
                     .font(.caption)
                     .lineLimit(1)
@@ -51,7 +56,7 @@ struct MemoryExactTimeTriggerInlineForm: View {
         Button {
             showSheet = true
         } label: {
-            Label("Add exact time", systemImage: "clock.badge.plus")
+            Label("Add date & time", systemImage: "clock.badge.plus")
                 .foregroundStyle(.accent)
                 .font(.caption.bold())
                 .lineLimit(1)
@@ -63,16 +68,36 @@ struct MemoryExactTimeTriggerInlineForm: View {
         .buttonStyle(.glass)
     }
 
-    private func timeSummary(for trigger: MemoryTriggerDraft, fireDate: Date) -> String {
-        if let recurrence = trigger.recurrenceRule {
-            let formatter = DateFormatter()
-            formatter.timeStyle = .short
-            formatter.dateStyle = .medium
-            let dateText = formatter.string(from: fireDate)
-            let recurrenceText = recurrenceSummary(recurrence)
-            return "\(dateText) · \(recurrenceText)"
+    private func scheduledSummary(for trigger: MemoryTriggerDraft) -> String {
+        var parts: [String] = []
+
+        // Se houver weekdayMask, mostrar resumo dos dias
+        if trigger.weekdayMask != 0 {
+            let weekdaySummary = weekdayMaskSummary(mask: trigger.weekdayMask)
+            parts.append(weekdaySummary)
         }
-        return fireDate.formatted(date: .abbreviated, time: .shortened)
+
+        // Se houver fireDate, mostrar data/hora
+        if let fireDate = trigger.fireDate {
+            if trigger.weekdayMask != 0 {
+                // Se houver dias da semana, mostrar apenas a hora
+                parts.append(fireDate.formatted(date: .omitted, time: .shortened))
+            } else {
+                // Caso contrário, mostrar data e hora
+                parts.append(fireDate.formatted(date: .abbreviated, time: .shortened))
+            }
+        }
+
+        // Se houver recorrência, mostrar resumo
+        if let recurrence = trigger.recurrenceRule {
+            parts.append(recurrenceSummary(recurrence))
+        }
+
+        if parts.isEmpty {
+            return "No date selected"
+        }
+
+        return parts.joined(separator: " · ")
     }
 
     private func recurrenceSummary(_ recurrence: RecurrenceRule) -> String {
@@ -88,5 +113,3 @@ struct MemoryExactTimeTriggerInlineForm: View {
         }
     }
 }
-
-

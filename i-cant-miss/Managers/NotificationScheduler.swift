@@ -59,34 +59,8 @@ final class NotificationScheduler {
 
         for trigger in memory.triggers {
             switch trigger.type {
-            case .time:
-                guard let fireDate = trigger.fireDate else { continue }
-                let identifier = notificationIdentifier(memoryID: memory.id, triggerID: trigger.id)
-                let triggerDate = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate),
-                                                                repeats: trigger.recurrenceRule != nil)
-                let request = UNNotificationRequest(identifier: identifier, content: content, trigger: triggerDate)
-                requests.append(request)
-            case .dayOfWeek:
-                let weekdayMask = trigger.weekdayMask
-                for day in 1...7 {
-                    let bit = Int16(1 << day)
-                    guard weekdayMask & bit != 0 else { continue }
-                    let identifier = notificationIdentifier(memoryID: memory.id, triggerID: trigger.id) + "-\(day)"
-                    var components = DateComponents()
-                    components.weekday = day
-                    if let fireDate = trigger.fireDate {
-                        let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: fireDate)
-                        components.hour = timeComponents.hour
-                        components.minute = timeComponents.minute
-                    } else {
-                        components.hour = 9
-                        components.minute = 0
-                    }
-                    let request = UNNotificationRequest(identifier: identifier,
-                                                        content: content,
-                                                        trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true))
-                    requests.append(request)
-                }
+            case .scheduled:
+                scheduleScheduledTrigger(trigger: trigger, memoryID: memory.id, content: content, requests: &requests)
             case .location, .person, .sequential:
                 // Location, person, and sequential triggers rely on geofencing or manual events.
                 continue
@@ -125,6 +99,55 @@ final class NotificationScheduler {
 
     private func notificationIdentifier(memoryID: UUID, triggerID: UUID) -> String {
         "memory-\(memoryID.uuidString)-\(triggerID.uuidString)"
+    }
+
+    private func scheduleScheduledTrigger(
+        trigger: MemoryTriggerModel,
+        memoryID: UUID,
+        content: UNMutableNotificationContent,
+        requests: inout [UNNotificationRequest]
+    ) {
+        guard let fireDate = trigger.fireDate else { return }
+
+        // Se houver weekdayMask, criar notificações para cada dia selecionado
+        if trigger.weekdayMask != 0 {
+            for day in 1...7 {
+                let bit = Int16(1 << day)
+                guard trigger.weekdayMask & bit != 0 else { continue }
+                let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id) + "-\(day)"
+                var components = DateComponents()
+                components.weekday = day
+                let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: fireDate)
+                components.hour = timeComponents.hour
+                components.minute = timeComponents.minute
+                let request = UNNotificationRequest(
+                    identifier: identifier,
+                    content: content,
+                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                )
+                requests.append(request)
+            }
+        } else if trigger.recurrenceRule != nil {
+            // Se houver recorrência sem weekdayMask, criar notificação recorrente
+            let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id)
+            let dateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            let request = UNNotificationRequest(
+                identifier: identifier,
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+            )
+            requests.append(request)
+        } else {
+            // Caso simples: apenas uma data/hora
+            let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id)
+            let dateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            let request = UNNotificationRequest(
+                identifier: identifier,
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
+            )
+            requests.append(request)
+        }
     }
 }
 
