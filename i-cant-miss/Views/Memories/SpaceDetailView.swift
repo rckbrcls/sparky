@@ -248,12 +248,19 @@ struct SpaceDetailView: View {
         }
         .onAppear {
             onMultiSelectionChange(isMultiSelecting)
-            onSpaceContextChange(resolvedSpace)
+            notifySpaceContextChange()
+        }
+        .onReceive(spaceService.$spaces) { _ in
+            notifySpaceContextChange()
         }
         .onDisappear {
             onMultiSelectionChange(false)
             onSpaceContextChange(nil)
         }
+    }
+
+    private func notifySpaceContextChange() {
+        onSpaceContextChange(resolvedSpace)
     }
 
     private var childSpaces: [SpaceModel] {
