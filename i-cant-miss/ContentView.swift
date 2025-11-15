@@ -44,8 +44,7 @@ enum CustomTab: String, CaseIterable {
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @State private var editorRoute: MemoryEditorRoute?
-    @State private var showSpaceComposer = false
-    @State private var pendingParentSpace: SpaceModel?
+    @State private var spaceComposerRequest: SpaceComposerRequest?
     @State private var activeTab: CustomTab = .home
     @State private var homeNavigationPath = NavigationPath()
     @State private var spacesNavigationPath = NavigationPath()
@@ -128,10 +127,10 @@ struct ContentView: View {
                 )
             }
         }
-        .sheet(isPresented: $showSpaceComposer, onDismiss: {
-            pendingParentSpace = nil
-        }) {
-            SpaceComposerView(environment: environment, defaultParent: pendingParentSpace)
+        .sheet(item: $spaceComposerRequest, onDismiss: {
+            spaceComposerRequest = nil
+        }) { request in
+            SpaceComposerView(environment: environment, defaultParent: request.parent)
         }
         .fullScreenCover(isPresented: $showingOnboarding) {
             OnboardingFlowView {
@@ -207,8 +206,7 @@ struct ContentView: View {
     }
 
     private func presentSpaceCreation(for parent: SpaceModel?) {
-        pendingParentSpace = parent
-        showSpaceComposer = true
+        spaceComposerRequest = SpaceComposerRequest(parent: parent)
     }
 
     private func handleTabReselection(_ tab: CustomTab) {
@@ -243,6 +241,11 @@ private struct MemoryEditorRoute: Identifiable {
 
     let id = UUID()
     let mode: Mode
+}
+
+private struct SpaceComposerRequest: Identifiable {
+    let id = UUID()
+    let parent: SpaceModel?
 }
 
 extension View{

@@ -287,21 +287,11 @@ final class ReminderService: ObservableObject {
 
     func completeReminder(id: UUID) async throws -> ReminderModel {
         try await mutateReminder(id: id) { reminder, context in
-            let now = Date()
-            let shouldReactivate = self.shouldReactivateReminder(reminder)
-
-            reminder.lastCompletionDate = now
-            reminder.updatedAt = now
-
-            if shouldReactivate {
-                self.advanceRecurringTriggers(for: reminder, referenceDate: now)
-                reminder.setStatus(.active)
-            } else {
-                reminder.setStatus(.completed)
-                try self.activateSequentialTriggers(forCompletedReminder: reminder, context: context)
-            }
-
+            reminder.setStatus(.completed)
+            reminder.lastCompletionDate = Date()
+            reminder.updatedAt = Date()
             ReminderService.updatePersonTriggers(reminder, success: true)
+            try self.activateSequentialTriggers(forCompletedReminder: reminder, context: context)
         }
     }
 
@@ -792,56 +782,6 @@ private extension ReminderService {
         timeTrigger.timeZoneIdentifier = TimeZone.current.identifier
         timeTrigger.lastReviewDate = nil
         timeTrigger.ignoreCount = 0
-    }
-}
-
-private extension ReminderService {
-    func shouldReactivateReminder(_ reminder: Reminder) -> Bool {
-        reminder.triggerSet.contains { isRepeating(trigger: $0) }
-    }
-
-    func isRepeating(trigger: ReminderTrigger) -> Bool {
-        guard trigger.isActive else { return false }
-
-        switch trigger.triggerType {
-        case .time:
-            return trigger.recurrence != nil
-        case .dayOfWeek:
-            return trigger.weekdayMask != 0
-        case .location, .person:
-            return true
-        case .sequential:
-            return false
-        }
-    }
-
-    func advanceRecurringTriggers(for reminder: Reminder, referenceDate: Date) {
-        for trigger in reminder.triggerSet where trigger.isActive {
-            switch trigger.triggerType {
-            case .time:
-                guard trigger.recurrence != nil else { continue }
-                let reference = completionReferenceDate(for: trigger, completionDate: referenceDate)
-                guard let nextDate = trigger.toModel().nextFireDate(after: reference) else { continue }
-                updateSchedule(for: trigger, with: nextDate)
-            case .dayOfWeek:
-                guard trigger.weekdayMask != 0 else { continue }
-                let reference = completionReferenceDate(for: trigger, completionDate: referenceDate)
-                guard let nextDate = trigger.toModel().nextFireDate(after: reference) else { continue }
-                updateSchedule(for: trigger, with: nextDate)
-            case .location, .person, .sequential:
-                continue
-            }
-        }
-    }
-
-    func completionReferenceDate(for trigger: ReminderTrigger, completionDate: Date) -> Date {
-        let scheduled = trigger.fireDate ?? trigger.startDate ?? completionDate
-        return max(scheduled, completionDate).addingTimeInterval(1)
-    }
-
-    func updateSchedule(for trigger: ReminderTrigger, with nextDate: Date) {
-        trigger.fireDate = nextDate
-        trigger.startDate = nextDate
     }
 }
 
