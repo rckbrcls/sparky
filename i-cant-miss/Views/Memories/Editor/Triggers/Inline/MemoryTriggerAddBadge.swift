@@ -10,15 +10,6 @@ struct MemoryTriggerAddBadge: View {
     var displayStyle: DisplayStyle = .inline
 
     var body: some View {
-        switch displayStyle {
-        case .inline:
-            inlineButton
-        case .toolbar:
-            toolbarButton
-        }
-    }
-
-    private var inlineButton: some View {
         Button {
             isPresented = true
         } label: {
@@ -31,18 +22,6 @@ struct MemoryTriggerAddBadge: View {
         }
         .buttonStyle(.glassProminent)
         .accessibilityLabel("Add trigger")
-    }
 
-    private var toolbarButton: some View {
-        Button {
-            isPresented = true
-        } label: {
-            Image(systemName: "bolt.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .tint(.white)
-                .glassEffect(.regular.interactive())
-        }
-        .accessibilityLabel("Add trigger")
-    }
+    }  
 }

@@ -11,157 +11,16 @@ struct FilterSheetView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedContentTypes.removeAll()
-                        }
-                    } label: {
-                        HStack {
-                            Label("All Contents", systemImage: "square.stack.3d.up.fill")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if selectedContentTypes.isEmpty || selectedContentTypes.count == MemoryContentFilterType.allCases.count {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accent)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                    .tint(.primary)
-
-                    ForEach(MemoryContentFilterType.allCases) { contentType in
-                        Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                toggleContentType(contentType)
-                            }
-                        } label: {
-                            HStack {
-                                Label(contentType.label, systemImage: contentType.systemImage)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if isContentTypeVisuallySelected(contentType) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accent)
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                        }
-                        .tint(.primary)
-                    }
-                } header: {
-                    Text("Contents")
+            ScrollView {
+                VStack(spacing: 24) {
+                    contentsSection
+                    triggersSection
+                    timelineSectionsSection
+                    inboxSection
                 }
-
-                Section {
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedTriggerTypes.removeAll()
-                        }
-                    } label: {
-                        HStack {
-                            Label("All Triggers", systemImage: "alarm.fill")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if selectedTriggerTypes.isEmpty || selectedTriggerTypes.count == MemoryTriggerType.allCases.count {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accent)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                    .tint(.primary)
-
-                    ForEach(MemoryTriggerType.allCases) { triggerType in
-                        Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                toggleTriggerType(triggerType)
-                            }
-                        } label: {
-                            HStack {
-                                Label(triggerType.label, systemImage: triggerType.systemImage)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if isTriggerTypeVisuallySelected(triggerType) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accent)
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                        }
-                        .tint(.primary)
-                    }
-                } header: {
-                    Text("Triggers")
-                }
-
-                Section {
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedSections.removeAll()
-                        }
-                    } label: {
-                        HStack {
-                            Label("All Sections", systemImage: "calendar")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if selectedSections.isEmpty || selectedSections.count == MemoryService.TimelineSection.Kind.allCases.count {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accent)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                    }
-                    .tint(.primary)
-
-                    ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
-                        Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                toggleSection(kind)
-                            }
-                        } label: {
-                            HStack {
-                                Label(kind.title, systemImage: kind.systemImage)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if isSectionVisuallySelected(kind) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accent)
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                        }
-                        .tint(.primary)
-                    }
-                } header: {
-                    Text("Timeline Section")
-                }
-
-                Section {
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            showInbox.toggle()
-                        }
-                    } label: {
-                        HStack {
-                            Label("Show Inbox", systemImage: "tray.fill")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if showInbox {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accent)
-                                    .fontWeight(.semibold)
-                                    .transition(.scale.combined(with: .opacity))
-                            }
-                        }
-                    }
-                    .tint(.primary)
-                } header: {
-                    Text("Inbox")
-                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-            .scrollContentBackground(.hidden)
             .scrollIndicators(.hidden)
             .scrollDisabled(detentSelection == .medium)
             .navigationTitle("Filter")
@@ -199,6 +58,146 @@ struct FilterSheetView: View {
                         dismiss()
                     } label: {
                         Label("Done", systemImage: "checkmark")
+                    }
+                }
+            }
+        }
+    }
+
+    private var contentsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Contents")
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    selectedContentTypes.removeAll()
+                }
+            } label: {
+                HStack {
+                    Label("All Contents", systemImage: "square.stack.3d.up.fill")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if selectedContentTypes.isEmpty || selectedContentTypes.count == MemoryContentFilterType.allCases.count {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(Color.accent)
+                            .fontWeight(.semibold)
+                    }
+                }
+            }
+            .tint(.primary)
+
+            FlowLayoutView(spacing: 8) {
+                ForEach(MemoryContentFilterType.allCases) { contentType in
+                    FilterBadge(
+                        label: contentType.label,
+                        systemImage: contentType.systemImage,
+                        isSelected: isContentTypeVisuallySelected(contentType)
+                    ) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            toggleContentType(contentType)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var triggersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Triggers")
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    selectedTriggerTypes.removeAll()
+                }
+            } label: {
+                HStack {
+                    Label("All Triggers", systemImage: "alarm.fill")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if selectedTriggerTypes.isEmpty || selectedTriggerTypes.count == MemoryTriggerType.allCases.count {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(Color.accent)
+                            .fontWeight(.semibold)
+                    }
+                }
+            }
+            .tint(.primary)
+
+            FlowLayoutView(spacing: 8) {
+                ForEach(MemoryTriggerType.allCases) { triggerType in
+                    FilterBadge(
+                        label: triggerType.label,
+                        systemImage: triggerType.systemImage,
+                        isSelected: isTriggerTypeVisuallySelected(triggerType)
+                    ) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            toggleTriggerType(triggerType)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var timelineSectionsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Timeline Section")
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    selectedSections.removeAll()
+                }
+            } label: {
+                HStack {
+                    Label("All Sections", systemImage: "calendar")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if selectedSections.isEmpty || selectedSections.count == MemoryService.TimelineSection.Kind.allCases.count {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(Color.accent)
+                            .fontWeight(.semibold)
+                    }
+                }
+            }
+            .tint(.primary)
+
+            FlowLayoutView(spacing: 8) {
+                ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
+                    FilterBadge(
+                        label: kind.title,
+                        systemImage: kind.systemImage,
+                        isSelected: isSectionVisuallySelected(kind)
+                    ) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            toggleSection(kind)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var inboxSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Inbox")
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            FlowLayoutView(spacing: 8) {
+                FilterBadge(
+                    label: "Show Inbox",
+                    systemImage: "tray.fill",
+                    isSelected: showInbox
+                ) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showInbox.toggle()
                     }
                 }
             }

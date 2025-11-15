@@ -473,7 +473,6 @@ struct MemoryEditorView: View {
             GlassEffectContainer(spacing: 10) {
                 HStack {
                     if isEditingEnabled {
-
                         HStack {
                             addRichTextButton
                             Spacer()
@@ -484,11 +483,10 @@ struct MemoryEditorView: View {
                             capturePhotoButton
                             Spacer()
                             addLinkButton
+                            Spacer()
+                            triggerToolbarButton
                         }
-
                     }
-                    Spacer()
-                    triggerToolbarButton
                 }
             }
             .padding(.horizontal, 24)
@@ -720,10 +718,16 @@ struct MemoryEditorView: View {
     }
 
     private var triggerToolbarButton: some View {
-        MemoryTriggerAddBadge(
-            isPresented: $showTriggerPickerSheet,
-            displayStyle: .toolbar
-        )
+        Button {
+             showTriggerPickerSheet = true
+        } label: {
+            Image(systemName:  "bolt.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+        }
+        .accessibilityLabel("Add trigger")
     }
 
     private var addPhotoLibraryButton: some View {
