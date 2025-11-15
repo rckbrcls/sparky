@@ -497,27 +497,6 @@ struct MemoryDomain {
     struct MemoryContentBundle: Codable {
         let contents: [MemoryContent]
     }
-
-    struct MemoryContentCodec {
-        private static let decoder = JSONDecoder()
-
-        static func extractContents(from attachments: [MemoryModel.Attachment]) -> (contents: [MemoryContent], remainingAttachments: [MemoryModel.Attachment]) {
-            guard let index = attachments.firstIndex(where: { $0.kind == .contentBundle }) else {
-                return (contents: [], remainingAttachments: attachments)
-            }
-
-            let bundleAttachment = attachments[index]
-            let remaining = attachments.enumerated()
-                .filter { $0.offset != index }
-                .map(\.element)
-
-            guard let bundle = try? decoder.decode(MemoryContentBundle.self, from: bundleAttachment.data) else {
-                return (contents: [], remainingAttachments: remaining)
-            }
-
-            return (contents: bundle.contents, remainingAttachments: remaining)
-        }
-    }
 }
 
 // MARK: - Memory Models
@@ -532,7 +511,6 @@ struct MemoryModel: Identifiable, Hashable {
 
         static let photo = AttachmentKind(rawValue: "photo")
         static let link = AttachmentKind(rawValue: "link")
-        static let contentBundle = AttachmentKind(rawValue: "content-bundle")
     }
 
     struct Attachment: Identifiable, Hashable {

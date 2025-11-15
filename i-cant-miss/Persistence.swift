@@ -171,7 +171,6 @@ private extension PersistenceController {
         noteMemory.updatedAt = now
         noteMemory.isPinned = true
         noteMemory.statusRaw = "active"
-        noteMemory.userOrder = 0
         noteMemory.space = workSpace
         noteMemory.autoCompleteOnChecklistCompletion = false
 
@@ -185,7 +184,6 @@ private extension PersistenceController {
         reminderMemory.priorityRaw = NSNumber(value: 2) // High priority
         reminderMemory.createdAt = now
         reminderMemory.updatedAt = now
-        reminderMemory.userOrder = 1
         reminderMemory.autoCompleteOnChecklistCompletion = false
 
         // Create sample memory with checklist (todo functionality)
@@ -198,7 +196,6 @@ private extension PersistenceController {
         todoMemory.dueDate = calendar.date(byAdding: .day, value: 2, to: now)
         todoMemory.isPinned = true
         todoMemory.statusRaw = "active"
-        todoMemory.userOrder = 2
         todoMemory.space = defaultSpace
         todoMemory.autoCompleteOnChecklistCompletion = true
 
@@ -212,7 +209,6 @@ private extension PersistenceController {
         birthdayMemory.priorityRaw = NSNumber(value: 1) // Medium priority
         birthdayMemory.createdAt = now
         birthdayMemory.updatedAt = now
-        birthdayMemory.userOrder = 3
         birthdayMemory.autoCompleteOnChecklistCompletion = false
 
         save(context: context)

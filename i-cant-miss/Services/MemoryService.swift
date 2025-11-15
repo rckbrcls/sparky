@@ -373,9 +373,6 @@ final class MemoryService: ObservableObject {
     func setStatus(memoryID: UUID, status: MemoryStatus) async throws {
         try await mutateMemory(memoryID: memoryID) { memory in
             memory.statusRaw = status.rawValue
-            if status == .completed {
-                memory.dueDate = memory.dueDate
-            }
         }
     }
 
@@ -425,7 +422,6 @@ private extension MemoryService {
                         memory = Memory(context: context)
                         memory.id = draft.id
                         memory.createdAt = Date()
-                        memory.userOrder = 0
                     }
 
                     try self.apply(draft: draft, to: memory, context: context, sanitizedTitle: sanitizedTitle)
@@ -531,25 +527,17 @@ private extension MemoryService {
 
     func decodeContents(for entity: Memory,
                         attachments: [MemoryModel.Attachment]) -> (contents: [MemoryContent], attachments: [MemoryModel.Attachment], checkItems: [CheckItemModel], body: String?) {
-        if let data = entity.contentsData,
-           let bundle = try? jsonDecoder.decode(MemoryDomain.MemoryContentBundle.self, from: data) {
-            let contents = bundle.contents
-            let referencedIDs = Set(contents.referencedAttachmentIDs())
-            let filteredAttachments = referencedIDs.isEmpty ? attachments : attachments.filter { referencedIDs.contains($0.id) }
-            let body = contents.aggregatedBodyText()
-            let checkItems = contents.flattenedChecklistItems()
-            return (contents, filteredAttachments, checkItems, body)
-        } else {
-            let decodeResult = MemoryDomain.MemoryContentCodec.extractContents(from: attachments)
-            let contents = decodeResult.contents
-            let referencedIDs = Set(contents.referencedAttachmentIDs())
-            let filteredAttachments = referencedIDs.isEmpty
-                ? decodeResult.remainingAttachments
-                : decodeResult.remainingAttachments.filter { referencedIDs.contains($0.id) }
-            let body = contents.aggregatedBodyText()
-            let checkItems = contents.flattenedChecklistItems()
-            return (contents, filteredAttachments, checkItems, body)
+        guard let data = entity.contentsData,
+              let bundle = try? jsonDecoder.decode(MemoryDomain.MemoryContentBundle.self, from: data) else {
+            return ([], attachments, [], nil)
         }
+
+        let contents = bundle.contents
+        let referencedIDs = Set(contents.referencedAttachmentIDs())
+        let filteredAttachments = referencedIDs.isEmpty ? attachments : attachments.filter { referencedIDs.contains($0.id) }
+        let body = contents.aggregatedBodyText()
+        let checkItems = contents.flattenedChecklistItems()
+        return (contents, filteredAttachments, checkItems, body)
     }
 
     func decodeTriggers(from data: Data?) -> [MemoryTriggerModel] {

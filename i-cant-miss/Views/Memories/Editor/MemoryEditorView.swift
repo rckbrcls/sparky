@@ -1220,37 +1220,7 @@ struct MemoryEditorView: View {
     }
 
     private func flattenAttachments(_ attachments: [MemoryModel.Attachment]) -> [MemoryModel.Attachment] {
-        var flattened: [MemoryModel.Attachment] = []
-        for attachment in attachments {
-            if attachment.kind == .contentBundle {
-                if let bundleAttachments = extractAttachmentsFromBundle(attachment.data) {
-                    flattened.append(contentsOf: bundleAttachments)
-                }
-            } else if attachment.kind == .photo {
-                if !attachment.data.isEmpty {
-                    flattened.append(attachment)
-                }
-            }
-        }
-        return flattened
-    }
-
-    private func extractAttachmentsFromBundle(_ bundleData: Data) -> [MemoryModel.Attachment]? {
-        let decoder = JSONDecoder()
-        guard let bundle = try? decoder.decode(MemoryDomain.MemoryContentBundle.self, from: bundleData) else {
-            return nil
-        }
-        var extracted: [MemoryModel.Attachment] = []
-        for content in bundle.contents {
-            if case .photos(let attachmentIDs) = content {
-                let allAttachments = viewModel.allPhotoAttachments
-                let attachmentLookup = Dictionary(uniqueKeysWithValues: allAttachments.map { ($0.id, $0) })
-                let matchedAttachments = attachmentIDs.compactMap { attachmentLookup[$0] }
-                    .filter { $0.kind == .photo && !$0.data.isEmpty }
-                extracted.append(contentsOf: matchedAttachments)
-            }
-        }
-        return extracted.isEmpty ? nil : extracted
+        attachments.filter { $0.kind == .photo && !$0.data.isEmpty }
     }
 
     private var photoViewerErrorView: some View {
