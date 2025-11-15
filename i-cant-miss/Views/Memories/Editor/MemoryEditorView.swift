@@ -781,7 +781,6 @@ struct MemoryEditorView: View {
         case .checklist:
             let contentID = viewModel.appendContent(type)
             ensureDraftContainer(for: contentID)
-            focusedDraftID = checklistDraftRows[contentID]?.first?.id
         case .photos:
             pendingPhotoContentID = nil
             isPresentingPhotoLibrary = true

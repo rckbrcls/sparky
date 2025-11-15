@@ -42,10 +42,9 @@ struct MemoryDateAndTimeTriggerEditorScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Summary View
-            summaryView
+            // Summary Card
+            summaryCard
                 .padding()
-                .background(Color(.secondarySystemBackground))
 
             Form {
                 // Section 1: Time
@@ -54,12 +53,13 @@ struct MemoryDateAndTimeTriggerEditorScreen: View {
                 }
 
                 // Section 2: Schedule Type
-                Section("Schedule Type") {
+                Section {
                     Picker("Type", selection: $scheduleType) {
                         ForEach(ScheduleType.allCases, id: \.self) { type in
                             Text(type.rawValue).tag(type)
                         }
                     }
+                    .pickerStyle(.segmented)
                     .onChange(of: scheduleType) { oldValue, newValue in
                         // Reset states when switching types
                         if newValue == .exactDate {
@@ -189,12 +189,14 @@ struct MemoryDateAndTimeTriggerEditorScreen: View {
 
     // MARK: - Summary View
 
-    private var summaryView: some View {
+    private var summaryCard: some View {
         summaryText
             .font(.subheadline)
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.secondarySystemBackground))
+            .cornerRadius(24)
+            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
 
     private var summaryText: Text {
