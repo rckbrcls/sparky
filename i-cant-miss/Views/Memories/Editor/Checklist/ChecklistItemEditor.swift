@@ -46,16 +46,23 @@ struct ChecklistItemEditor: View {
 
     private var readOnlyBody: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(item.isCompleted ? .green : .secondary)
-                Text(readOnlyTitle)
-                    .font(.body)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .strikethrough(item.isCompleted, color: item.isCompleted ? .secondary : nil)
+            Button(action: onToggle) {
+                HStack(spacing: 8) {
+                    Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(item.isCompleted ? .green : .secondary)
+                    Text(readOnlyTitle)
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .strikethrough(item.isCompleted, color: item.isCompleted ? .secondary : nil)
+                }
             }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .accessibilityLabel(readOnlyTitle)
+            .accessibilityHint("Toggle checklist item completion")
+            .accessibilityValue(item.isCompleted ? "Completed" : "Pending")
 
             if let detail = readOnlyDetail {
                 Text(detail)
