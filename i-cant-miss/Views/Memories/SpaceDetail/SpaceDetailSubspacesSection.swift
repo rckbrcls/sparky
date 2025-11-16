@@ -5,6 +5,7 @@ struct SpaceDetailSubspacesSection: View {
     let spaceService: SpaceService
     let memoryService: MemoryService?
     let memoryCountProvider: (SpaceModel) -> Int
+    let onEditSpace: ((SpaceModel) -> Void)?
 
     var body: some View {
         if childSpaces.isEmpty {
@@ -17,7 +18,8 @@ struct SpaceDetailSubspacesSection: View {
                             space: child,
                             count: memoryCountProvider(child),
                             spaceService: spaceService,
-                            memoryService: memoryService
+                            memoryService: memoryService,
+                            onEdit: onEditSpace
                         )
                     }
                     .listRowInsets(.init(top: 12, leading: 20, bottom: 12, trailing: 20))

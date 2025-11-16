@@ -14,6 +14,7 @@ struct SpacesRootView: View {
 
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: (SpaceModel?) -> Void
+    let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
 
@@ -28,7 +29,8 @@ struct SpacesRootView: View {
                                 count: memoryCount(for: space),
                                 spaceService: spaceService,
                                 memoryService: memoryService,
-                                parentLookup: spaceService.space(id:)
+                                parentLookup: spaceService.space(id:),
+                                onEdit: onEditSpace
                             )
                         }
                         .accessibilityHint("Opens details for \(space.name)")
@@ -59,6 +61,7 @@ struct SpacesRootView: View {
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     onCreateSpace: onCreateSpace,
+                    onEditSpace: onEditSpace,
                     onMultiSelectionChange: onMultiSelectionChange,
                     onSpaceContextChange: { newSpace in
                         // Immediately notify when space context changes
@@ -122,6 +125,7 @@ struct SpacesRootView: View {
         navigationPath: .constant(NavigationPath()),
         onSelectMemory: { _ in },
         onCreateSpace: { _ in },
+        onEditSpace: nil,
         onMultiSelectionChange: { _ in },
         onSpaceContextChange: { _ in }
     )

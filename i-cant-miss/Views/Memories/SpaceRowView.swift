@@ -20,13 +20,15 @@ struct SpaceRowView: View {
         count: Int,
         spaceService: SpaceService? = nil,
         memoryService: MemoryService? = nil,
-        parentLookup: ((UUID) -> SpaceModel?)? = nil
+        parentLookup: ((UUID) -> SpaceModel?)? = nil,
+        onEdit: ((SpaceModel) -> Void)? = nil
     ) {
         self.space = space
         self.count = count
         self.spaceService = spaceService
         self.memoryService = memoryService
         self.parentLookup = parentLookup
+        self.onEdit = onEdit
     }
 
     var body: some View {
@@ -68,6 +70,15 @@ struct SpaceRowView: View {
                 }
                 .tint(.red)
             }
+
+            if canEditSpace {
+                Button {
+                    onEdit?(space)
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.blue)
+            }
         }
         .alert("Delete Space", isPresented: $showingDeleteConfirmation) {
             Button("Delete Space Only", role: .destructive) {
@@ -91,11 +102,19 @@ struct SpaceRowView: View {
     /// Optional closure used to render breadcrumb context while the hierarchy is still evolving.
     var parentLookup: ((UUID) -> SpaceModel?)?
 
+    /// Optional closure called when user taps edit swipe action
+    var onEdit: ((SpaceModel) -> Void)?
+
     private var spaceColor: Color {
         if let hex = space.colorHex, let color = Color(hex: hex) {
             return color
         }
         return .accentColor
+    }
+
+    private var canEditSpace: Bool {
+        guard !space.isAllSpaces else { return false }
+        return true
     }
 
     private var canDeleteSpace: Bool {

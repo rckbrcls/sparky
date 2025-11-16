@@ -17,11 +17,25 @@ struct SpaceComposerView: View {
     @State private var errorMessage: String?
     private let selectedParentID: UUID?
     private let parentSpaceName: String?
+    private let spaceToEdit: SpaceModel?
 
-    init(environment: AppEnvironment, defaultParent: SpaceModel? = nil) {
+    init(environment: AppEnvironment, defaultParent: SpaceModel? = nil, spaceToEdit: SpaceModel? = nil) {
         self.environment = environment
-        self.selectedParentID = defaultParent?.id
-        self.parentSpaceName = defaultParent?.name
+        self.spaceToEdit = spaceToEdit
+
+        if let spaceToEdit = spaceToEdit {
+            self.selectedParentID = spaceToEdit.parentID
+            // Look up parent name from service
+            if let parentID = spaceToEdit.parentID,
+               let parent = environment.spaceService.space(id: parentID) {
+                self.parentSpaceName = parent.name
+            } else {
+                self.parentSpaceName = nil
+            }
+        } else {
+            self.selectedParentID = defaultParent?.id
+            self.parentSpaceName = defaultParent?.name
+        }
     }
 
     var body: some View {
@@ -67,7 +81,7 @@ struct SpaceComposerView: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Space")
+            .navigationTitle(spaceToEdit == nil ? "Space" : "Edit Space")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -83,12 +97,20 @@ struct SpaceComposerView: View {
                     Button(role: .confirm){
                         saveSpace()
                     } label: {
-                        Label("Create", systemImage: "checkmark")
+                        Label(spaceToEdit == nil ? "Create" : "Save", systemImage: "checkmark")
                     }
                     .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .interactiveDismissDisabled(isSaving)
+        }
+        .onAppear {
+            // Load values from spaceToEdit if editing
+            if let spaceToEdit = spaceToEdit {
+                name = spaceToEdit.name
+                selectedIcon = spaceToEdit.iconName ?? SpaceComposerView.iconSections.first?.icons.first ?? "square.grid.2x2"
+                selectedColorHex = spaceToEdit.colorHex ?? Color.PresetColors.all.first?.hex ?? "#6366F1"
+            }
         }
     }
 
@@ -199,13 +221,25 @@ struct SpaceComposerView: View {
 
         Task {
             do {
-                _ = try await environment.spaceService.createSpace(
-                    name: trimmedName,
-                    colorHex: selectedColorHex,
-                    iconName: selectedIcon,
-                    isDefault: false,
-                    parentID: selectedParentID
-                )
+                if let spaceToEdit = spaceToEdit {
+                    // Update existing space
+                    var updatedSpace = spaceToEdit
+                    updatedSpace.name = trimmedName
+                    updatedSpace.colorHex = selectedColorHex
+                    updatedSpace.iconName = selectedIcon
+                    updatedSpace.parentID = selectedParentID
+
+                    _ = try await environment.spaceService.updateSpace(updatedSpace)
+                } else {
+                    // Create new space
+                    _ = try await environment.spaceService.createSpace(
+                        name: trimmedName,
+                        colorHex: selectedColorHex,
+                        iconName: selectedIcon,
+                        isDefault: false,
+                        parentID: selectedParentID
+                    )
+                }
 
                 _ = await environment.spaceService.refresh(force: true)
 

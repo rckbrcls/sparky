@@ -16,6 +16,7 @@ struct SpaceDetailView: View {
 
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateSpace: (SpaceModel?) -> Void
+    let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
 
@@ -329,7 +330,8 @@ struct SpaceDetailView: View {
                 childSpaces: childSpaces,
                 spaceService: spaceService,
                 memoryService: memoryService,
-                memoryCountProvider: memoryCount(for:)
+                memoryCountProvider: memoryCount(for:),
+                onEditSpace: onEditSpace
             )
         }
     }

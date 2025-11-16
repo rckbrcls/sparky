@@ -80,6 +80,9 @@ struct ContentView: View {
                         onCreateSpace: { parent in
                             presentSpaceCreation(for: parent)
                         },
+                        onEditSpace: { space in
+                            presentSpaceEdit(for: space)
+                        },
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onSpaceContextChange: { space in
                             // Update context immediately when space changes
@@ -131,7 +134,11 @@ struct ContentView: View {
         .sheet(item: $spaceComposerRequest, onDismiss: {
             spaceComposerRequest = nil
         }) { request in
-            SpaceComposerView(environment: environment, defaultParent: request.parent)
+            SpaceComposerView(
+                environment: environment,
+                defaultParent: request.parent,
+                spaceToEdit: request.spaceToEdit
+            )
         }
         .fullScreenCover(isPresented: $showingOnboarding) {
             OnboardingFlowView {
@@ -213,7 +220,11 @@ struct ContentView: View {
     }
 
     private func presentSpaceCreation(for parent: SpaceModel?) {
-        spaceComposerRequest = SpaceComposerRequest(parent: parent)
+        spaceComposerRequest = SpaceComposerRequest(parent: parent, spaceToEdit: nil)
+    }
+
+    private func presentSpaceEdit(for space: SpaceModel) {
+        spaceComposerRequest = SpaceComposerRequest(parent: nil, spaceToEdit: space)
     }
 
     private func handleTabReselection(_ tab: CustomTab) {
@@ -267,6 +278,7 @@ private struct MemoryEditorRoute: Identifiable {
 private struct SpaceComposerRequest: Identifiable {
     let id = UUID()
     let parent: SpaceModel?
+    let spaceToEdit: SpaceModel?
 }
 
 extension View{
