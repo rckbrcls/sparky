@@ -23,7 +23,7 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
         case .audio:
             return "waveform"
         case .files:
-            return "doc"
+            return "doc.fill"
         }
     }
 

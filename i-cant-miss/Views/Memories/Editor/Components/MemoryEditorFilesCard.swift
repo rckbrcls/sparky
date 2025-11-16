@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MemoryEditorFilesCard: View {
     @Binding var files: [MemoryModel.Attachment]
@@ -6,6 +7,7 @@ struct MemoryEditorFilesCard: View {
     var isImporting: Bool = false
     var onImport: () -> Void
     var onRemove: (UUID) -> Void
+    var onPreview: (MemoryModel.Attachment) -> Void
 
     private let byteCountFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
@@ -80,17 +82,17 @@ struct MemoryEditorFilesCard: View {
                     .progressViewStyle(.circular)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            ForEach(files) { file in
-                fileRow(for: file)
+            LazyVStack(spacing: 10) {
+                ForEach(files) { file in
+                    fileRow(for: file)
+                }
             }
         }
     }
 
     private func fileRow(for file: MemoryModel.Attachment) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: "doc.text.fill")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.accent)
+            filePreview(for: file)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.filename ?? "File")
@@ -123,5 +125,33 @@ struct MemoryEditorFilesCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.secondary.opacity(0.08))
         )
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .onTapGesture {
+            onPreview(file)
+        }
+    }
+
+    @ViewBuilder
+    private func filePreview(for file: MemoryModel.Attachment) -> some View {
+        if let image = UIImage(data: file.data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 54, height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                )
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.secondary.opacity(0.12))
+                    .frame(width: 54, height: 54)
+                Image(systemName: "doc.text.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.accent)
+            }
+        }
     }
 }

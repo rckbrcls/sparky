@@ -154,6 +154,7 @@ import PhotosUI
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import QuickLook
 
 struct MemoryEditorView: View {
     enum Mode {
@@ -188,6 +189,8 @@ struct MemoryEditorView: View {
     @State private var isPhotoViewerPresented = false
     @State private var selectedAttachmentIndex = 0
     @State private var selectedPhotoContentID: UUID?
+    @State private var filePreviewItem: FilePreviewItem?
+    @State private var isShowingFilePreview = false
     @State private var navigationPath = NavigationPath()
     @Namespace private var toolbarGlassNamespace
     @StateObject private var titleTranscriber = SpeechTranscriber()
@@ -304,6 +307,12 @@ struct MemoryEditorView: View {
             .fullScreenCover(isPresented: $isPhotoViewerPresented) {
                 photoViewerContent
             }
+            .fullScreenCover(isPresented: $isShowingFilePreview) {
+                if let item = filePreviewItem {
+                    FilePreviewController(item: item)
+                        .ignoresSafeArea()
+                }
+            }
 
         let stateChangeConfigured = attachmentConfigured
             .onChange(of: isPhotoViewerPresented) { _, isPresented in
@@ -339,6 +348,11 @@ struct MemoryEditorView: View {
                         }
                     }
                     cleanupPendingContentTargets()
+                }
+            }
+            .onChange(of: isShowingFilePreview) { _, isPresented in
+                if !isPresented {
+                    filePreviewItem = nil
                 }
             }
             .onChange(of: isPresentingCamera) { _, isPresented in
@@ -556,8 +570,6 @@ struct MemoryEditorView: View {
                             addFilesButton
                             Spacer()
                             addAudioButton
-                            Spacer()
-                            triggerToolbarButton
                         }
                     }
                 }
@@ -585,19 +597,18 @@ struct MemoryEditorView: View {
             titleSection
                 .padding(.horizontal, 20)
 
-            if !viewModel.triggers.isEmpty {
-                MemoryEditorTriggerButtonsBar(
-                    viewModel: viewModel,
-                    showDateAndTimeSheet: $showDateAndTimeSheet,
-                    showLocationPicker: $showLocationPicker,
-                    showPersonSheet: $showPersonSheet,
-                    showSequentialSheet: $showSequentialSheet,
-                    memoryLookup: memoryLookup
-                )
-                .transition(.asymmetric(
-                    insertion: .move(edge: .top).combined(with: .opacity),
-                    removal: .move(edge: .top).combined(with: .opacity)
-                ))
+            if isEditingEnabled {
+                triggerButtonsBar(onAddTrigger: { showTriggerPickerSheet = true })
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+            } else if !viewModel.triggers.isEmpty {
+                triggerButtonsBar(onAddTrigger: nil)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
             }
         }
         .listRowSeparator(.hidden)
@@ -628,6 +639,23 @@ struct MemoryEditorView: View {
         .listRowSeparator(.hidden)
         .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
         .listRowBackground(Color.clear)
+    }
+
+    @ViewBuilder
+    private func triggerButtonsBar(onAddTrigger: (() -> Void)?) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            MemoryEditorTriggerButtonsBar(
+                viewModel: viewModel,
+                onAddTrigger: onAddTrigger,
+                showDateAndTimeSheet: $showDateAndTimeSheet,
+                showLocationPicker: $showLocationPicker,
+                showPersonSheet: $showPersonSheet,
+                showSequentialSheet: $showSequentialSheet,
+                memoryLookup: memoryLookup
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 20)
     }
 
     private var titleSection: some View {
@@ -748,7 +776,8 @@ struct MemoryEditorView: View {
             onImport: { beginFileImport(to: content.id) },
             onRemove: { id in
                 viewModel.removeFileAttachment(id: id, from: content.id)
-            }
+            },
+            onPreview: { presentFilePreview(for: $0) }
         )
         .modifier(EditingSwipeActionModifier(
             isEnabled: isEditingEnabled,
@@ -905,20 +934,6 @@ struct MemoryEditorView: View {
         .accessibilityLabel("Add audio")
     }
 
-    private var triggerToolbarButton: some View {
-        Button {
-             showTriggerPickerSheet = true
-        } label: {
-            Image(systemName:  "bolt.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(!viewModel.triggers.isEmpty ? Color.accentColor : .primary)
-        }
-        .accessibilityLabel("Add trigger")
-    }
-
     private var addPhotoMenuButton: some View {
         Button {
             showPhotoOptionsSheet = true
@@ -1035,6 +1050,8 @@ struct MemoryEditorView: View {
         guard isEditingEnabled else { return }
         pendingFileContentID = contentID
         isPresentingFileImporter = true
+        filePreviewItem = nil
+        isShowingFilePreview = false
     }
 
     private func importFiles(from urls: [URL]) async {
@@ -1094,6 +1111,21 @@ struct MemoryEditorView: View {
             }
 
             cleanupPendingContentTargets()
+        }
+    }
+
+    private func presentFilePreview(for attachment: MemoryModel.Attachment) {
+        guard !attachment.data.isEmpty else { return }
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(attachment.id.uuidString)_preview_\(attachment.filename ?? "file")")
+
+        do {
+            try attachment.data.write(to: tempURL, options: .atomic)
+            filePreviewItem = FilePreviewItem(url: tempURL)
+            isShowingFilePreview = true
+        } catch {
+            filePreviewItem = nil
+            isShowingFilePreview = false
         }
     }
 
