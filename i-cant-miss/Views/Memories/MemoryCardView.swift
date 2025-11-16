@@ -144,14 +144,14 @@ struct MemoryCardView: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundStyle(.primary)
-                    .lineLimit(1)
+                    .lineLimit(2)
 
 
                 if let bodyPreview {
                     Text(bodyPreview)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(3)
                 }
 
             }
