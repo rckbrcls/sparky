@@ -274,6 +274,20 @@ final class SpaceService: ObservableObject {
         return visited
     }
 
+    func memoryIDs(in space: SpaceModel) -> [UUID] {
+        let context = persistence.container.viewContext
+        do {
+            guard let spaceEntity = try fetchSpace(by: space.id, context: context) else {
+                return []
+            }
+            let memories = spaceEntity.memories as? Set<Memory> ?? []
+            return memories.compactMap { $0.id }
+        } catch {
+            logger.error("Failed to fetch memories for space: \(error.localizedDescription)")
+            return []
+        }
+    }
+
     // MARK: - CRUD Operations
 
     func createSpace(
@@ -388,9 +402,15 @@ final class SpaceService: ObservableObject {
         }
     }
 
-    func deleteSpace(_ space: SpaceModel) async throws {
+    func deleteSpace(_ space: SpaceModel, deleteMemories: Bool = false, memoryService: MemoryService? = nil) async throws {
         guard !space.isDefault else {
             throw SpaceServiceError.cannotDeleteDefaultSpace
+        }
+
+        // If deleteMemories is true and memoryService is provided, use it to delete memories (which also cleans up attachments)
+        if deleteMemories, let memoryService = memoryService {
+            let memoryIDs = memoryIDs(in: space)
+            try await memoryService.deleteMemories(ids: memoryIDs)
         }
 
         try await withCheckedThrowingContinuation { continuation in
@@ -398,6 +418,15 @@ final class SpaceService: ObservableObject {
                 do {
                     guard let spaceEntity = try self.fetchSpace(by: space.id, context: context) else {
                         throw SpaceServiceError.spaceNotFound
+                    }
+
+                    // If deleteMemories is true but memoryService was not provided, delete memories directly in Core Data
+                    // Note: This won't clean up attachments, but it's a fallback for backward compatibility
+                    if deleteMemories && memoryService == nil {
+                        let memories = spaceEntity.memories as? Set<Memory> ?? []
+                        for memory in memories {
+                            context.delete(memory)
+                        }
                     }
 
                     context.delete(spaceEntity)

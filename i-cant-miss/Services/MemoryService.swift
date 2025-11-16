@@ -356,6 +356,12 @@ final class MemoryService: ObservableObject {
         await refresh(force: true)
     }
 
+    func deleteMemories(ids: [UUID]) async throws {
+        for id in ids {
+            try await deleteMemory(id: id)
+        }
+    }
+
     func toggleCompletion(memoryID: UUID) async throws {
         guard let current = memory(id: memoryID) else {
             throw MemoryServiceError.memoryNotFound

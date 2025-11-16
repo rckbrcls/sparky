@@ -11,16 +11,21 @@ struct SpaceRowView: View {
     let space: SpaceModel
     let count: Int
     let spaceService: SpaceService?
+    let memoryService: MemoryService?
+
+    @State private var showingDeleteConfirmation = false
 
     init(
         space: SpaceModel,
         count: Int,
         spaceService: SpaceService? = nil,
+        memoryService: MemoryService? = nil,
         parentLookup: ((UUID) -> SpaceModel?)? = nil
     ) {
         self.space = space
         self.count = count
         self.spaceService = spaceService
+        self.memoryService = memoryService
         self.parentLookup = parentLookup
     }
 
@@ -54,11 +59,31 @@ struct SpaceRowView: View {
         .padding(.vertical, 4)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             if canDeleteSpace {
-                Button(role: .destructive) {
-                    deleteSpace()
+                Button {
+                    Task { @MainActor in
+                        showingDeleteConfirmation = true
+                    }
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+                .tint(.red)
+            }
+        }
+        .alert("Delete Space", isPresented: $showingDeleteConfirmation) {
+            Button("Delete Space Only", role: .destructive) {
+                deleteSpace(deleteMemories: false)
+            }
+            if count > 0 {
+                Button("Delete Space and Memories", role: .destructive) {
+                    deleteSpace(deleteMemories: true)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if count > 0 {
+                Text("This space contains \(count) memory\(count == 1 ? "" : "ies"). Do you want to delete the space only (memories will be moved to \"No Space\") or delete the space and all its memories?")
+            } else {
+                Text("Are you sure you want to delete this space?")
             }
         }
     }
@@ -79,14 +104,14 @@ struct SpaceRowView: View {
         return !space.isDefault
     }
 
-    private func deleteSpace() {
+    private func deleteSpace(deleteMemories: Bool) {
         guard let service = spaceService else { return }
         guard !space.isAllSpaces,
               !space.isDefault else { return }
 
         Task { @MainActor in
             do {
-                try await service.deleteSpace(space)
+                try await service.deleteSpace(space, deleteMemories: deleteMemories, memoryService: memoryService)
             } catch {
                 assertionFailure("Failed to delete space: \(error.localizedDescription)")
             }

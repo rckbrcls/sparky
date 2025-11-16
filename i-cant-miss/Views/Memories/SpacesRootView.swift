@@ -27,6 +27,7 @@ struct SpacesRootView: View {
                                 space: space,
                                 count: memoryCount(for: space),
                                 spaceService: spaceService,
+                                memoryService: memoryService,
                                 parentLookup: spaceService.space(id:)
                             )
                         }

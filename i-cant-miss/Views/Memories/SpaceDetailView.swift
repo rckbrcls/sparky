@@ -344,6 +344,7 @@ struct SpaceDetailView: View {
             SpaceDetailSubspacesSection(
                 childSpaces: childSpaces,
                 spaceService: spaceService,
+                memoryService: memoryService,
                 memoryCountProvider: memoryCount(for:)
             )
         }
