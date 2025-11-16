@@ -178,7 +178,20 @@ struct MemoryEditorAudioCard: View {
         recordingError = nil
         stopPlaybackIfNeeded()
         let session = AVAudioSession.sharedInstance()
-        session.requestRecordPermission { granted in
+        let requestPermission: (@escaping (Bool) -> Void) -> Void
+        if #available(iOS 17.0, *) {
+            requestPermission = { handler in
+                AVAudioApplication.requestRecordPermission { granted in
+                    handler(granted)
+                }
+            }
+        } else {
+            requestPermission = { handler in
+                session.requestRecordPermission(handler)
+            }
+        }
+
+        requestPermission { granted in
             DispatchQueue.main.async {
                 guard granted else {
                     recordingError = "Microphone access was denied."
@@ -186,7 +199,7 @@ struct MemoryEditorAudioCard: View {
                 }
 
                 do {
-                    try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetooth])
+                    try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetoothHFP])
                     try session.setActive(true)
                     let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).m4a")
                     let recorder = try AVAudioRecorder(url: url, settings: recordingSettings)

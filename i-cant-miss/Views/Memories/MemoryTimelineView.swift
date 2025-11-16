@@ -468,6 +468,11 @@ struct MemoryTimelineView: View {
                         if case .audio = $0 { return true }
                         return false
                     }
+                case .files:
+                    return memory.contents.contains {
+                        if case .files = $0 { return true }
+                        return false
+                    }
                 }
             }
         }

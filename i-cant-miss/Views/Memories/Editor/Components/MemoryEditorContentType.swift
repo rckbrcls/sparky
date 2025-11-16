@@ -6,6 +6,7 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
     case photos
     case links
     case audio
+    case files
 
     var id: Self { self }
 
@@ -21,6 +22,8 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
             return "link"
         case .audio:
             return "waveform"
+        case .files:
+            return "doc"
         }
     }
 
@@ -36,6 +39,8 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
             return "Links"
         case .audio:
             return "Audio"
+        case .files:
+            return "Files"
         }
     }
 
@@ -51,6 +56,8 @@ enum MemoryEditorContentType: CaseIterable, Identifiable {
             return "Reference relevant webpages"
         case .audio:
             return "Record or attach clips"
+        case .files:
+            return "Attach documents or files"
         }
     }
 }

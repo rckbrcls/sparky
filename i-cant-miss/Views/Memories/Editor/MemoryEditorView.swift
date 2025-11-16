@@ -130,6 +130,10 @@ extension MemoryEditorView {
         if pendingLinkContentID == id {
             pendingLinkContentID = nil
         }
+        if pendingFileContentID == id {
+            pendingFileContentID = nil
+        }
+        fileImportingContentIDs.remove(id)
         if selectedPhotoContentID == id {
             selectedPhotoContentID = nil
             selectedAttachmentIndex = 0
@@ -149,6 +153,7 @@ extension MemoryEditorView {
 import PhotosUI
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct MemoryEditorView: View {
     enum Mode {
@@ -174,6 +179,9 @@ struct MemoryEditorView: View {
     @State private var photoLoadingContentIDs: Set<UUID> = []
     @State private var pendingPhotoContentID: UUID?
     @State private var pendingLinkContentID: UUID?
+    @State private var isPresentingFileImporter = false
+    @State private var pendingFileContentID: UUID?
+    @State private var fileImportingContentIDs: Set<UUID> = []
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
     @State private var isEditingEnabled: Bool
@@ -182,6 +190,8 @@ struct MemoryEditorView: View {
     @State private var selectedPhotoContentID: UUID?
     @State private var navigationPath = NavigationPath()
     @Namespace private var toolbarGlassNamespace
+    @StateObject private var titleTranscriber = SpeechTranscriber()
+    @State private var titleTranscriptionPrefix = ""
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -222,16 +232,12 @@ struct MemoryEditorView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ZStack {
-                baseBackground
-                    .ignoresSafeArea()
-                readOnlyGradient
-                    .opacity(isReadOnly ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.35), value: isReadOnly)
-                    .allowsHitTesting(false)
+            editorStack
+        }
+    }
 
-                editorContent
-            }
+    private var editorStack: some View {
+        let lifecycleConfigured = baseEditorContainer
             .scrollDismissesKeyboard(.interactively)
             .onAppear {
                 syncChecklistDraftRowsWithContent()
@@ -249,9 +255,11 @@ struct MemoryEditorView: View {
                     Text(errorMessage)
                 }
             }
-            .onChange(of: viewModel.errorMessage) { oldValue, newValue in
+            .onChange(of: viewModel.errorMessage) { _, newValue in
                 showErrorAlert = newValue != nil
             }
+
+        let sheetConfigured = lifecycleConfigured
             .sheet(isPresented: $showDateAndTimeSheet, content: dateAndTimeSheet)
             .sheet(isPresented: $showTriggerPickerSheet) {
                 MemoryTriggerPickerSheet(viewModel: viewModel)
@@ -262,6 +270,8 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
             .sheet(isPresented: $showPhotoOptionsSheet, content: photoOptionsSheet)
+
+        let attachmentConfigured = sheetConfigured
             .fullScreenCover(isPresented: $isPresentingCamera) {
                 CameraCaptureView(
                     onCapture: { image in
@@ -277,9 +287,25 @@ struct MemoryEditorView: View {
             .photosPicker(isPresented: $isPresentingPhotoLibrary,
                           selection: $photoPickerItems,
                           matching: .images)
+            .fileImporter(isPresented: $isPresentingFileImporter,
+                          allowedContentTypes: [.item],
+                          allowsMultipleSelection: true) { result in
+                switch result {
+                case .success(let urls):
+                    Task {
+                        await importFiles(from: urls)
+                    }
+                case .failure:
+                    pendingFileContentID = nil
+                    isPresentingFileImporter = false
+                    cleanupPendingContentTargets()
+                }
+            }
             .fullScreenCover(isPresented: $isPhotoViewerPresented) {
                 photoViewerContent
             }
+
+        let stateChangeConfigured = attachmentConfigured
             .onChange(of: isPhotoViewerPresented) { _, isPresented in
                 if !isPresented {
                     selectedPhotoContentID = nil
@@ -326,48 +352,76 @@ struct MemoryEditorView: View {
                     cleanupPendingContentTargets()
                 }
             }
+            .onChange(of: isPresentingFileImporter) { _, isPresented in
+                if !isPresented {
+                    cleanupPendingContentTargets()
+                }
+            }
             .onChange(of: showAddLinkSheet) { _, isPresented in
                 if !isPresented {
                     cleanupPendingContentTargets()
                 }
             }
+
+        let metadataSaveConfigured = stateChangeConfigured
             .onChange(of: viewModel.isPinned) { _, _ in
-                if !isEditingEnabled {
-                    Task {
-                        await viewModel.saveMetadataOnly()
-                    }
-                }
+                handleMetadataSaveIfNeeded()
             }
             .onChange(of: viewModel.selectedSpaceID) { _, _ in
-                if !isEditingEnabled {
-                    Task {
-                        await viewModel.saveMetadataOnly()
-                    }
-                }
+                handleMetadataSaveIfNeeded()
             }
             .onChange(of: viewModel.status) { _, _ in
-                if !isEditingEnabled {
-                    Task {
-                        await viewModel.saveMetadataOnly()
-                    }
-                }
+                handleMetadataSaveIfNeeded()
             }
             .onChange(of: viewModel.priority) { _, _ in
-                if !isEditingEnabled {
-                    Task {
-                        await viewModel.saveMetadataOnly()
-                    }
-                }
+                handleMetadataSaveIfNeeded()
             }
             .onChange(of: viewModel.autoCompleteChecklist) { _, _ in
-                if !isEditingEnabled {
-                    Task {
-                        await viewModel.saveMetadataOnly()
-                    }
+                handleMetadataSaveIfNeeded()
+            }
+
+        return metadataSaveConfigured
+            .onChange(of: isEditingEnabled) { _, newValue in
+                if !newValue {
+                    titleTranscriber.stop()
                 }
             }
-        }
+            .onReceive(titleTranscriber.$transcript, perform: handleTitleTranscript)
+            .onDisappear {
+                titleTranscriber.stop()
+            }
+    }
 
+    private func handleMetadataSaveIfNeeded() {
+        guard !isEditingEnabled else { return }
+        Task {
+            await viewModel.saveMetadataOnly()
+        }
+    }
+
+    private func handleTitleTranscript(_ transcript: String) {
+        guard titleTranscriber.isRecording else { return }
+        let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = titleTranscriptionPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        let combined = [base, trimmedTranscript]
+            .filter { !$0.isEmpty }
+            .joined(separator: base.isEmpty || trimmedTranscript.isEmpty ? "" : " ")
+        if !combined.isEmpty {
+            viewModel.title = combined
+        }
+    }
+
+    private var baseEditorContainer: some View {
+        ZStack {
+            baseBackground
+                .ignoresSafeArea()
+            readOnlyGradient
+                .opacity(isReadOnly ? 1 : 0)
+                .animation(.easeInOut(duration: 0.35), value: isReadOnly)
+                .allowsHitTesting(false)
+
+            editorContent
+        }
     }
 
     private var memoryLookup: [UUID: MemoryModel] {
@@ -499,6 +553,8 @@ struct MemoryEditorView: View {
                             Spacer()
                             addLinkButton
                             Spacer()
+                            addFilesButton
+                            Spacer()
                             addAudioButton
                             Spacer()
                             triggerToolbarButton
@@ -520,6 +576,7 @@ struct MemoryEditorView: View {
         .animation(cardBounceAnimation, value: shouldShowRichTextCard)
         .animation(cardBounceAnimation, value: shouldShowPhotosCard)
         .animation(cardBounceAnimation, value: shouldShowLinksCard)
+        .animation(cardBounceAnimation, value: shouldShowFilesCard)
         .animation(cardBounceAnimation, value: shouldShowAudioCard)
     }
 
@@ -563,6 +620,8 @@ struct MemoryEditorView: View {
                 linksCard(for: item, content: content)
             case .audio(let content):
                 audioCard(for: item, content: content)
+            case .files(let content):
+                filesCard(for: item, content: content)
             }
         }
         .padding(.horizontal, 20)
@@ -574,28 +633,48 @@ struct MemoryEditorView: View {
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             if isEditingEnabled {
-                TextField("Memory", text: $viewModel.title, axis: .vertical)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.leading)
-                    .submitLabel(.done)
-                    .focused($isTitleFocused)
-                    .onSubmit {
-                        isTitleFocused = false
-                    }
-                    .onChange(of: viewModel.title) { _, newValue in
-                        guard newValue.contains(where: { $0.isNewline }) else { return }
-                        let sanitized = newValue
-                            .split(whereSeparator: \.isNewline)
-                            .joined(separator: " ")
-                        if sanitized != newValue {
-                            viewModel.title = sanitized
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .center, spacing: 12) {
+                        TextField("Memory", text: $viewModel.title, axis: .vertical)
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.leading)
+                            .submitLabel(.done)
+                            .focused($isTitleFocused)
+                            .onSubmit {
+                                isTitleFocused = false
+                            }
+                            .onChange(of: viewModel.title) { _, newValue in
+                                guard newValue.contains(where: { $0.isNewline }) else { return }
+                                let sanitized = newValue
+                                    .split(whereSeparator: \.isNewline)
+                                    .joined(separator: " ")
+                                if sanitized != newValue {
+                                    viewModel.title = sanitized
+                                }
+                                DispatchQueue.main.async {
+                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                    isTitleFocused = false
+                                }
+                            }
+                        Spacer(minLength: 0)
+                        Button {
+                            toggleTitleTranscription()
+                        } label: {
+                            Image(systemName: titleTranscriber.isRecording ? "mic.fill" : "mic")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(titleTranscriber.isRecording ? .red : .secondary)
                         }
-                        DispatchQueue.main.async {
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            isTitleFocused = false
-                        }
+                        .accessibilityLabel(titleTranscriber.isRecording ? "Parar transcrição do título" : "Transcrever áudio para o título")
+                        .disabled(viewModel.isSaving)
                     }
+
+                    if let errorMessage = titleTranscriber.errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                }
             } else {
                 Text(displayTitle)
                     .font(.title3)
@@ -609,6 +688,19 @@ struct MemoryEditorView: View {
         .padding(.vertical)
         .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .contentShape(Rectangle())
+    }
+
+    private func toggleTitleTranscription() {
+        guard isEditingEnabled else { return }
+        Task {
+            if titleTranscriber.isRecording {
+                titleTranscriber.stop()
+                titleTranscriptionPrefix = viewModel.title
+            } else {
+                titleTranscriptionPrefix = viewModel.title
+                await titleTranscriber.start()
+            }
+        }
     }
 
     private func checklistCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorChecklistContent) -> some View {
@@ -644,6 +736,25 @@ struct MemoryEditorView: View {
             title: "Delete Checklist",
             systemImage: "trash",
             accessibilityLabel: "Delete checklist content",
+            action: { removeContent(with: content.id) }
+        ))
+    }
+
+    private func filesCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorFilesContent) -> some View {
+        MemoryEditorFilesCard(
+            files: filesBinding(for: item),
+            isEditable: isEditingEnabled,
+            isImporting: fileImportingContentIDs.contains(content.id),
+            onImport: { beginFileImport(to: content.id) },
+            onRemove: { id in
+                viewModel.removeFileAttachment(id: id, from: content.id)
+            }
+        )
+        .modifier(EditingSwipeActionModifier(
+            isEnabled: isEditingEnabled,
+            title: "Delete Files",
+            systemImage: "trash",
+            accessibilityLabel: "Delete files content",
             action: { removeContent(with: content.id) }
         ))
     }
@@ -765,6 +876,21 @@ struct MemoryEditorView: View {
         .accessibilityLabel("Add link")
     }
 
+    private var addFilesButton: some View {
+        Button {
+            handleAddContentSelection(.files)
+        } label: {
+            Image(systemName: MemoryEditorContentType.files.iconName)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(hasContent(of: .files) ? Color.accentColor : .primary)
+        }
+        .disabled(viewModel.isSaving || isPresentingFileImporter || !fileImportingContentIDs.isEmpty)
+        .accessibilityLabel("Add files")
+    }
+
     private var addAudioButton: some View {
         Button {
             handleAddContentSelection(.audio)
@@ -842,6 +968,9 @@ struct MemoryEditorView: View {
             showAddLinkSheet = true
         case .audio:
             _ = viewModel.appendContent(type)
+        case .files:
+            pendingFileContentID = nil
+            beginFileImport(to: nil)
         }
     }
 
@@ -900,6 +1029,72 @@ struct MemoryEditorView: View {
             pendingLinkContentID = nil
         }
         cleanupPendingContentTargets()
+    }
+
+    private func beginFileImport(to contentID: UUID?) {
+        guard isEditingEnabled else { return }
+        pendingFileContentID = contentID
+        isPresentingFileImporter = true
+    }
+
+    private func importFiles(from urls: [URL]) async {
+        guard !urls.isEmpty else {
+            await MainActor.run {
+                isPresentingFileImporter = false
+                pendingFileContentID = nil
+                cleanupPendingContentTargets()
+            }
+            return
+        }
+
+        let targetID: UUID = await MainActor.run {
+            let id: UUID
+            if let existingID = pendingFileContentID,
+               viewModel.contentQueue.contains(where: { $0.id == existingID && $0.contentType == .files }) {
+                id = existingID
+            } else {
+                id = viewModel.appendContent(.files)
+            }
+            fileImportingContentIDs.insert(id)
+            return id
+        }
+
+        var didAddAttachment = false
+        for url in urls {
+            let hasAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if hasAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            guard let data = try? Data(contentsOf: url) else { continue }
+            let added = await MainActor.run {
+                viewModel.addFileAttachment(
+                    data: data,
+                    filename: url.lastPathComponent,
+                    sourceURL: url,
+                    to: targetID
+                ) != nil
+            }
+            if added {
+                didAddAttachment = true
+            }
+        }
+
+        await MainActor.run {
+            fileImportingContentIDs.remove(targetID)
+            isPresentingFileImporter = false
+            if !didAddAttachment {
+                viewModel.removeContent(id: targetID)
+            }
+
+            if pendingFileContentID == targetID {
+                pendingFileContentID = nil
+            }
+
+            cleanupPendingContentTargets()
+        }
     }
 
     private func presentPhotoViewer(at index: Int, for contentID: UUID, clickedAttachment: MemoryModel.Attachment) {
@@ -1052,6 +1247,23 @@ struct MemoryEditorView: View {
         )
     }
 
+    private func filesBinding(for item: Binding<MemoryEditorContentItem>) -> Binding<[MemoryModel.Attachment]> {
+        Binding(
+            get: {
+                if case .files(let content) = item.wrappedValue {
+                    return content.files
+                }
+                return []
+            },
+            set: { newValue in
+                if case .files(var content) = item.wrappedValue {
+                    content.files = newValue
+                    item.wrappedValue = .files(content)
+                }
+            }
+        )
+    }
+
     private func photoAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
         guard let item = viewModel.contentQueue.first(where: { $0.id == contentID && $0.contentType == .photos }),
               let photosContent = item.photosContent else {
@@ -1062,6 +1274,10 @@ struct MemoryEditorView: View {
 
     private func linkAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
         viewModel.contentQueue.first { $0.id == contentID && $0.contentType == .links }?.linksContent?.links
+    }
+
+    private func fileAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
+        viewModel.contentQueue.first { $0.id == contentID && $0.contentType == .files }?.filesContent?.files
     }
 
     private func hasContent(of type: MemoryEditorContentType) -> Bool {
@@ -1098,6 +1314,7 @@ struct MemoryEditorView: View {
         for key in checklistDraftRows.keys where !existingIDs.contains(key) {
             checklistDraftRows.removeValue(forKey: key)
         }
+        fileImportingContentIDs = fileImportingContentIDs.intersection(existingIDs)
 
         if let pendingPhotoID = pendingPhotoContentID,
            !isPresentingPhotoLibrary,
@@ -1115,6 +1332,14 @@ struct MemoryEditorView: View {
            (linkAttachments(for: pendingLinkID)?.isEmpty ?? true) {
             viewModel.removeContent(id: pendingLinkID)
             pendingLinkContentID = nil
+        }
+
+        if let pendingFileID = pendingFileContentID,
+           !isPresentingFileImporter,
+           !fileImportingContentIDs.contains(pendingFileID),
+           (fileAttachments(for: pendingFileID)?.isEmpty ?? true) {
+            viewModel.removeContent(id: pendingFileID)
+            pendingFileContentID = nil
         }
     }
 
@@ -1196,6 +1421,10 @@ struct MemoryEditorView: View {
 
     private var shouldShowLinksCard: Bool {
         hasContent(of: .links)
+    }
+
+    private var shouldShowFilesCard: Bool {
+        hasContent(of: .files)
     }
 
     private var shouldShowAudioCard: Bool {

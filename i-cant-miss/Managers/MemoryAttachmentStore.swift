@@ -15,7 +15,17 @@ actor MemoryAttachmentStore {
     private let photoKindRawValue = "photo"
     private let linkKindRawValue = "link"
     private let audioKindRawValue = "audio"
+    private let fileKindRawValue = "file"
     private let audioExtensions: Set<String> = ["m4a", "mp3", "wav", "aac", "aiff", "aif", "caf"]
+
+    private struct AttachmentResource: Sendable {
+        let id: UUID
+        let kindRawValue: String
+        let data: Data
+        let url: URL?
+        let createdAt: Date
+        let filename: String?
+    }
 
     private struct LinkAttachmentPayload: Codable {
         let url: URL
@@ -45,19 +55,16 @@ actor MemoryAttachmentStore {
             return []
         }
 
-        struct AttachmentResource: Sendable {
-            let id: UUID
-            let kindRawValue: String
-            let data: Data
-            let url: URL?
-            let createdAt: Date
-        }
-
         let resources: [AttachmentResource] = contents.compactMap { url in
             let fileExtension = url.pathExtension.lowercased()
             let metadata = try? url.resourceValues(forKeys: resourceKeys)
             let createdAt = metadata?.creationDate ?? Date()
             let identifier = UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID()
+            let filename = url.lastPathComponent
+
+            if let fileResource = parseFileAttachment(url: url, createdAt: createdAt) {
+                return fileResource
+            }
 
             switch fileExtension {
             case "jpg", "jpeg":
@@ -67,7 +74,8 @@ actor MemoryAttachmentStore {
                     kindRawValue: photoKindRawValue,
                     data: data,
                     url: nil,
-                    createdAt: createdAt
+                    createdAt: createdAt,
+                    filename: nil
                 )
             case "json":
                 guard let data = try? Data(contentsOf: url),
@@ -79,7 +87,8 @@ actor MemoryAttachmentStore {
                     kindRawValue: linkKindRawValue,
                     data: Data(),
                     url: payload.url,
-                    createdAt: createdAt
+                    createdAt: createdAt,
+                    filename: nil
                 )
             case _ where audioExtensions.contains(fileExtension):
                 guard let data = try? Data(contentsOf: url) else { return nil }
@@ -88,7 +97,8 @@ actor MemoryAttachmentStore {
                     kindRawValue: audioKindRawValue,
                     data: data,
                     url: url,
-                    createdAt: createdAt
+                    createdAt: createdAt,
+                    filename: filename
                 )
             default:
                 return nil
@@ -111,7 +121,8 @@ actor MemoryAttachmentStore {
                     kind: MemoryModel.AttachmentKind(rawValue: resource.kindRawValue),
                     data: resource.data,
                     createdAt: resource.createdAt,
-                    url: resource.url
+                    url: resource.url,
+                    filename: resource.filename
                 )
             }
         }
@@ -149,6 +160,15 @@ actor MemoryAttachmentStore {
                 let filename = "\(attachment.id.uuidString).\(preferredExtension)"
                 let url = directory.appendingPathComponent(filename, isDirectory: false)
                 try attachment.data.write(to: url, options: .atomic)
+            } else if kindRawValue == fileKindRawValue {
+                guard !attachment.data.isEmpty else { continue }
+                let preferredName = sanitizedFilename(
+                    attachment.filename ?? attachment.url?.lastPathComponent ?? "file"
+                )
+                let finalName = preferredName.contains(".") ? preferredName : "\(preferredName).bin"
+                let filename = "\(attachment.id.uuidString)_file_\(finalName)"
+                let url = directory.appendingPathComponent(filename, isDirectory: false)
+                try attachment.data.write(to: url, options: .atomic)
             }
         }
     }
@@ -169,5 +189,31 @@ actor MemoryAttachmentStore {
         if !fileManager.fileExists(atPath: url.path) {
             try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
         }
+    }
+
+    private func sanitizedFilename(_ filename: String) -> String {
+        let trimmed = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        let clean = trimmed.replacingOccurrences(of: "/", with: "-")
+        return clean.isEmpty ? "file" : clean
+    }
+
+    private func parseFileAttachment(url: URL, createdAt: Date) -> AttachmentResource? {
+        let filename = url.lastPathComponent
+        guard filename.contains("_file_") else { return nil }
+
+        let parts = filename.components(separatedBy: "_file_")
+        guard let idPart = parts.first else { return nil }
+        let identifier = UUID(uuidString: idPart) ?? UUID()
+        let displayName = parts.dropFirst().joined(separator: "_file_")
+        guard let data = try? Data(contentsOf: url) else { return nil }
+
+        return AttachmentResource(
+            id: identifier,
+            kindRawValue: fileKindRawValue,
+            data: data,
+            url: url,
+            createdAt: createdAt,
+            filename: displayName.isEmpty ? nil : displayName
+        )
     }
 }

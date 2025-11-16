@@ -25,12 +25,18 @@ struct MemoryEditorAudioContent: Identifiable, Hashable {
     var clips: [MemoryModel.Attachment] = []
 }
 
+struct MemoryEditorFilesContent: Identifiable, Hashable {
+    var id: UUID = UUID()
+    var files: [MemoryModel.Attachment] = []
+}
+
 enum MemoryEditorContentItem: Identifiable, Hashable {
     case richText(MemoryEditorRichTextContent)
     case checklist(MemoryEditorChecklistContent)
     case photos(MemoryEditorPhotosContent)
     case links(MemoryEditorLinksContent)
     case audio(MemoryEditorAudioContent)
+    case files(MemoryEditorFilesContent)
 
     var id: UUID {
         switch self {
@@ -43,6 +49,8 @@ enum MemoryEditorContentItem: Identifiable, Hashable {
         case .links(let content):
             return content.id
         case .audio(let content):
+            return content.id
+        case .files(let content):
             return content.id
         }
     }
@@ -59,6 +67,8 @@ enum MemoryEditorContentItem: Identifiable, Hashable {
             return .links
         case .audio:
             return .audio
+        case .files:
+            return .files
         }
     }
 
@@ -84,6 +94,11 @@ enum MemoryEditorContentItem: Identifiable, Hashable {
 
     var audioContent: MemoryEditorAudioContent? {
         guard case .audio(let content) = self else { return nil }
+        return content
+    }
+
+    var filesContent: MemoryEditorFilesContent? {
+        guard case .files(let content) = self else { return nil }
         return content
     }
 
@@ -115,5 +130,11 @@ enum MemoryEditorContentItem: Identifiable, Hashable {
         guard case .audio(var content) = self else { return }
         mutate(&content)
         self = .audio(content)
+    }
+
+    mutating func mutateFiles(_ mutate: (inout MemoryEditorFilesContent) -> Void) {
+        guard case .files(var content) = self else { return }
+        mutate(&content)
+        self = .files(content)
     }
 }
