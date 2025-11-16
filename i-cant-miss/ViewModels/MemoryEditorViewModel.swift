@@ -97,6 +97,14 @@ final class MemoryEditorViewModel: ObservableObject {
         contentQueue.flatMap { $0.linksContent?.links ?? [] }
     }
 
+    var allAudioAttachments: [MemoryModel.Attachment] {
+        contentQueue.flatMap { $0.audioContent?.clips ?? [] }
+    }
+
+    private var allAttachments: [MemoryModel.Attachment] {
+        allPhotoAttachments + allLinkAttachments + allAudioAttachments
+    }
+
     func loadLatestDataIfNeeded() async {
         guard let id = editingMemoryID else { return }
         guard let latest = environment.memoryService.memory(id: id) else { return }
@@ -115,6 +123,8 @@ final class MemoryEditorViewModel: ObservableObject {
             item = .photos(MemoryEditorPhotosContent())
         case .links:
             item = .links(MemoryEditorLinksContent())
+        case .audio:
+            item = .audio(MemoryEditorAudioContent())
         }
         contentQueue.append(item)
         return item.id
@@ -223,6 +233,32 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     @MainActor
+    func addAudioAttachment(data: Data, sourceURL: URL?, to contentID: UUID) -> MemoryModel.Attachment? {
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return nil }
+        var addedAttachment: MemoryModel.Attachment?
+        contentQueue[index].mutateAudio { audioContent in
+            let attachment = MemoryModel.Attachment(
+                id: UUID(),
+                kind: .audio,
+                data: data,
+                createdAt: Date(),
+                url: sourceURL
+            )
+            audioContent.clips.append(attachment)
+            addedAttachment = attachment
+        }
+        return addedAttachment
+    }
+
+    @MainActor
+    func removeAudioAttachment(id: UUID, from contentID: UUID) {
+        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
+        contentQueue[index].mutateAudio { audioContent in
+            audioContent.clips.removeAll { $0.id == id }
+        }
+    }
+
+    @MainActor
     func syncAttachments(withReferencedIDs ids: Set<UUID>) {
         guard !ids.isEmpty else {
             contentQueue = contentQueue.map { item in
@@ -231,6 +267,8 @@ final class MemoryEditorViewModel: ObservableObject {
                     return .photos(MemoryEditorPhotosContent(id: item.id, attachments: []))
                 case .links:
                     return .links(MemoryEditorLinksContent(id: item.id, links: []))
+                case .audio:
+                    return .audio(MemoryEditorAudioContent(id: item.id, clips: []))
                 default:
                     return item
                 }
@@ -246,6 +284,9 @@ final class MemoryEditorViewModel: ObservableObject {
             case .links(var content):
                 content.links.removeAll { !ids.contains($0.id) }
                 return .links(content)
+            case .audio(var content):
+                content.clips.removeAll { !ids.contains($0.id) }
+                return .audio(content)
             default:
                 return item
             }
@@ -362,7 +403,7 @@ final class MemoryEditorViewModel: ObservableObject {
         }
 
         let contents = contentsRepresentation()
-        let attachments = allPhotoAttachments + allLinkAttachments
+        let attachments = allAttachments
         let triggerModels = triggers.map { $0.toModel() }
 
         let draft = MemoryDraft(
@@ -408,7 +449,7 @@ final class MemoryEditorViewModel: ObservableObject {
         }
 
         let contents = contentsRepresentation()
-        let attachments = allPhotoAttachments + allLinkAttachments
+        let attachments = allAttachments
         let triggerModels = triggers.map { $0.toModel() }
 
         let draft = MemoryDraft(
@@ -585,6 +626,9 @@ private extension MemoryEditorViewModel {
             case .links(let attachmentIDs):
                 let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
                 queue.append(.links(MemoryEditorLinksContent(id: UUID(), links: attachmentsForContent)))
+            case .audio(let attachmentIDs):
+                let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
+                queue.append(.audio(MemoryEditorAudioContent(id: UUID(), clips: attachmentsForContent)))
             }
         }
 
@@ -614,6 +658,8 @@ private extension MemoryEditorViewModel {
                 return .photos(content.attachments.map(\.id))
             case .links(let content):
                 return .links(content.links.map(\.id))
+            case .audio(let content):
+                return .audio(content.clips.map(\.id))
             }
         }
     }

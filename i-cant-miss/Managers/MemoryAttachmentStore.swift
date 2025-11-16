@@ -14,6 +14,8 @@ actor MemoryAttachmentStore {
     private let jsonDecoder = JSONDecoder()
     private let photoKindRawValue = "photo"
     private let linkKindRawValue = "link"
+    private let audioKindRawValue = "audio"
+    private let audioExtensions: Set<String> = ["m4a", "mp3", "wav", "aac", "aiff", "aif", "caf"]
 
     private struct LinkAttachmentPayload: Codable {
         let url: URL
@@ -79,6 +81,15 @@ actor MemoryAttachmentStore {
                     url: payload.url,
                     createdAt: createdAt
                 )
+            case _ where audioExtensions.contains(fileExtension):
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                return AttachmentResource(
+                    id: identifier,
+                    kindRawValue: audioKindRawValue,
+                    data: data,
+                    url: url,
+                    createdAt: createdAt
+                )
             default:
                 return nil
             }
@@ -130,6 +141,14 @@ actor MemoryAttachmentStore {
                 let payload = LinkAttachmentPayload(url: linkURL)
                 let data = try jsonEncoder.encode(payload)
                 try data.write(to: url, options: .atomic)
+            } else if kindRawValue == audioKindRawValue {
+                guard !attachment.data.isEmpty else { continue }
+                let preferredExtension = attachment.url?.pathExtension.isEmpty == false
+                    ? attachment.url!.pathExtension.lowercased()
+                    : "m4a"
+                let filename = "\(attachment.id.uuidString).\(preferredExtension)"
+                let url = directory.appendingPathComponent(filename, isDirectory: false)
+                try attachment.data.write(to: url, options: .atomic)
             }
         }
     }

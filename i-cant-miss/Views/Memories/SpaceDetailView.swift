@@ -454,6 +454,11 @@ struct SpaceDetailView: View {
                         if case .links = $0 { return true }
                         return false
                     }
+                case .audio:
+                    return memory.contents.contains {
+                        if case .audio = $0 { return true }
+                        return false
+                    }
                 }
             }
         }

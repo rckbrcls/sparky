@@ -371,6 +371,7 @@ enum MemoryContentFilterType: String, CaseIterable, Identifiable {
     case checklist
     case photos
     case links
+    case audio
 
     var id: String { rawValue }
 
@@ -380,6 +381,7 @@ enum MemoryContentFilterType: String, CaseIterable, Identifiable {
         case .checklist: return "Checklists"
         case .photos: return "Photos"
         case .links: return "Links"
+        case .audio: return "Audio"
         }
     }
 
@@ -389,6 +391,7 @@ enum MemoryContentFilterType: String, CaseIterable, Identifiable {
         case .checklist: return "checklist"
         case .photos: return "photo.on.rectangle.angled"
         case .links: return "link"
+        case .audio: return "waveform"
         }
     }
 }
@@ -501,6 +504,7 @@ enum MemoryContent: Codable, Hashable {
     case checklist([CheckItemModel])
     case photos([UUID])
     case links([UUID])
+    case audio([UUID])
 
     private enum CodingKeys: String, CodingKey {
         case type
@@ -514,6 +518,7 @@ enum MemoryContent: Codable, Hashable {
         case checklist
         case photos
         case links
+        case audio
     }
 
     init(from decoder: Decoder) throws {
@@ -533,6 +538,9 @@ enum MemoryContent: Codable, Hashable {
         case .links:
             let ids = try container.decode([UUID].self, forKey: .attachmentIDs)
             self = .links(ids)
+        case .audio:
+            let ids = try container.decode([UUID].self, forKey: .attachmentIDs)
+            self = .audio(ids)
         }
     }
 
@@ -551,6 +559,9 @@ enum MemoryContent: Codable, Hashable {
             try container.encode(ids, forKey: .attachmentIDs)
         case .links(let ids):
             try container.encode(ContentType.links, forKey: .type)
+            try container.encode(ids, forKey: .attachmentIDs)
+        case .audio(let ids):
+            try container.encode(ContentType.audio, forKey: .type)
             try container.encode(ids, forKey: .attachmentIDs)
         }
     }
@@ -578,6 +589,8 @@ extension Array where Element == MemoryContent {
             case .photos(let attachmentIDs):
                 return attachmentIDs
             case .links(let attachmentIDs):
+                return attachmentIDs
+            case .audio(let attachmentIDs):
                 return attachmentIDs
             default:
                 return []
@@ -615,6 +628,7 @@ struct MemoryModel: Identifiable, Hashable {
 
         static let photo = AttachmentKind(rawValue: "photo")
         static let link = AttachmentKind(rawValue: "link")
+        static let audio = AttachmentKind(rawValue: "audio")
     }
 
     struct Attachment: Identifiable, Hashable {

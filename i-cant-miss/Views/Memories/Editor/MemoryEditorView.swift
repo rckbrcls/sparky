@@ -481,27 +481,6 @@ struct MemoryEditorView: View {
                         .pickerStyle(.menu)
                     }
 
-                    Menu("Preferences") {
-                        Toggle(isOn: $viewModel.autoCompleteChecklist) {
-                            Label("Auto-complete when checklist is done", systemImage: "checkmark.circle")
-                        }
-                        .disabled(!viewModel.canToggleAutoComplete)
-                        .foregroundStyle(viewModel.canToggleAutoComplete ? .primary : .secondary)
-
-                        Toggle(isOn: $viewModel.isPinned) {
-                            Label("Show in Today view", systemImage: "calendar")
-                        }
-
-                        Toggle(isOn: Binding(
-                            get: { !viewModel.triggers.isEmpty },
-                            set: { _ in }
-                        )) {
-                            Label("Enable notifications", systemImage: "bell.badge")
-                        }
-                        .disabled(true)
-                        .foregroundStyle(.secondary)
-                    }
-
                 } label: {
                     Image(systemName: "ellipsis")
                 }
@@ -519,6 +498,8 @@ struct MemoryEditorView: View {
                             addPhotoMenuButton
                             Spacer()
                             addLinkButton
+                            Spacer()
+                            addAudioButton
                             Spacer()
                             triggerToolbarButton
                         }
@@ -539,6 +520,7 @@ struct MemoryEditorView: View {
         .animation(cardBounceAnimation, value: shouldShowRichTextCard)
         .animation(cardBounceAnimation, value: shouldShowPhotosCard)
         .animation(cardBounceAnimation, value: shouldShowLinksCard)
+        .animation(cardBounceAnimation, value: shouldShowAudioCard)
     }
 
     private var titleSectionRow: some View {
@@ -579,6 +561,8 @@ struct MemoryEditorView: View {
                 photosCard(for: item, content: content)
             case .links(let content):
                 linksCard(for: item, content: content)
+            case .audio(let content):
+                audioCard(for: item, content: content)
             }
         }
         .padding(.horizontal, 20)
@@ -719,6 +703,26 @@ struct MemoryEditorView: View {
         ))
     }
 
+    private func audioCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorAudioContent) -> some View {
+        MemoryEditorAudioCard(
+            clips: audioBinding(for: item),
+            isEditable: isEditingEnabled,
+            onAddClip: { data, url in
+                _ = viewModel.addAudioAttachment(data: data, sourceURL: url, to: content.id)
+            },
+            onRemoveClip: { id in
+                viewModel.removeAudioAttachment(id: id, from: content.id)
+            }
+        )
+        .modifier(EditingSwipeActionModifier(
+            isEnabled: isEditingEnabled,
+            title: "Delete Audio",
+            systemImage: "trash",
+            accessibilityLabel: "Delete audio content",
+            action: { removeContent(with: content.id) }
+        ))
+    }
+
     private var addRichTextButton: some View {
         Button {
             handleAddContentSelection(.richText)
@@ -759,6 +763,20 @@ struct MemoryEditorView: View {
                 .foregroundStyle(hasContent(of: .links) ? Color.accentColor : .primary)
         }
         .accessibilityLabel("Add link")
+    }
+
+    private var addAudioButton: some View {
+        Button {
+            handleAddContentSelection(.audio)
+        } label: {
+            Image(systemName: MemoryEditorContentType.audio.iconName)
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 48, height: 48)
+                .glassEffect(.regular.interactive())
+                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
+                .foregroundStyle(hasContent(of: .audio) ? Color.accentColor : .primary)
+        }
+        .accessibilityLabel("Add audio")
     }
 
     private var triggerToolbarButton: some View {
@@ -822,6 +840,8 @@ struct MemoryEditorView: View {
         case .links:
             pendingLinkContentID = nil
             showAddLinkSheet = true
+        case .audio:
+            _ = viewModel.appendContent(type)
         }
     }
 
@@ -1015,6 +1035,23 @@ struct MemoryEditorView: View {
         )
     }
 
+    private func audioBinding(for item: Binding<MemoryEditorContentItem>) -> Binding<[MemoryModel.Attachment]> {
+        Binding(
+            get: {
+                if case .audio(let content) = item.wrappedValue {
+                    return content.clips
+                }
+                return []
+            },
+            set: { newValue in
+                if case .audio(var content) = item.wrappedValue {
+                    content.clips = newValue
+                    item.wrappedValue = .audio(content)
+                }
+            }
+        )
+    }
+
     private func photoAttachments(for contentID: UUID) -> [MemoryModel.Attachment]? {
         guard let item = viewModel.contentQueue.first(where: { $0.id == contentID && $0.contentType == .photos }),
               let photosContent = item.photosContent else {
@@ -1159,6 +1196,10 @@ struct MemoryEditorView: View {
 
     private var shouldShowLinksCard: Bool {
         hasContent(of: .links)
+    }
+
+    private var shouldShowAudioCard: Bool {
+        hasContent(of: .audio)
     }
 
     private var canEnableEditing: Bool {

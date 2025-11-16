@@ -6,6 +6,8 @@
 	<string>This app needs access to your contacts to allow you to select people for person-based reminders.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Precisamos acessar a câmera para que você adicione fotos às memórias.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Precisamos acessar o microfone para que você grave áudios nas memórias.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Precisamos acessar suas fotos para que você anexe imagens às memórias.</string>
 </dict>
