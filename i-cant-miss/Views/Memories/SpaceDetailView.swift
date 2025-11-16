@@ -15,6 +15,7 @@ struct SpaceDetailView: View {
     @ObservedObject var memoryService: MemoryService
 
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onCreateSpace: (SpaceModel?) -> Void
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
@@ -345,6 +346,7 @@ struct SpaceDetailView: View {
                 isPerformingBulkAction: isPerformingBulkAction,
                 isMemorySelected: isMemorySelected(_:),
                 onSelectMemory: onSelectMemory,
+                onEditMemory: onEditMemory,
                 onToggleSelection: toggleMemorySelection(_:)
             )
         } else {
@@ -368,6 +370,7 @@ struct SpaceDetailView: View {
             sectionExpansionProvider: sectionExpansionBinding(for:),
             isMemorySelected: isMemorySelected(_:),
             onSelectMemory: onSelectMemory,
+            onEditMemory: onEditMemory,
             onToggleSelection: toggleMemorySelection(_:),
             shouldShowEmptyState: shouldShowEmptyStateCard
         )
@@ -380,6 +383,7 @@ struct SpaceDetailView: View {
                 isPerformingBulkAction: isPerformingBulkAction,
                 isInboxExpanded: $isInboxExpanded,
                 onSelectMemory: onSelectMemory,
+                onEditMemory: onEditMemory,
                 onToggleSelection: toggleMemorySelection(_:)
             )
         }

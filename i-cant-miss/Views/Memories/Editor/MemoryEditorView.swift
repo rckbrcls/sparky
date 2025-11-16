@@ -1313,7 +1313,7 @@ struct MemoryEditorView: View {
         MemoryEditorAddLinkSheet { url in
             handleLinkAdded(url)
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.height(200)])
     }
 
     @ViewBuilder

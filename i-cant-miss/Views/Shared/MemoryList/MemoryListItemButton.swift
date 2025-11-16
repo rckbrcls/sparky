@@ -7,6 +7,7 @@ struct MemoryListItemButton: View {
     let isDisabled: Bool
     let onSelect: (MemoryModel) -> Void
     let onToggleSelection: ((MemoryModel) -> Void)?
+    let onEdit: ((MemoryModel) -> Void)?
 
     @EnvironmentObject private var environment: AppEnvironment
 
@@ -15,7 +16,7 @@ struct MemoryListItemButton: View {
             listButton
         } else {
             listButton
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     trailingSwipeActions()
                 }
                 .swipeActions(edge: .leading, allowsFullSwipe: false) {
@@ -70,6 +71,7 @@ struct MemoryListItemButton: View {
 
     @ViewBuilder
     private func trailingSwipeActions() -> some View {
+        // Completed action first (for fullSwipe)
         Button {
             Task { await toggleMemoryCompletion() }
         } label: {
@@ -78,6 +80,17 @@ struct MemoryListItemButton: View {
         }
         .tint(.green)
 
+        // Edit action (between completed and delete)
+        if let onEdit = onEdit {
+            Button {
+                onEdit(memory)
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+            .tint(.blue)
+        }
+
+        // Delete action last
         Button(role: .destructive) {
             Task { await deleteMemory() }
         } label: {

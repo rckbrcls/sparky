@@ -10,6 +10,7 @@ import SwiftUI
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     @Binding var navigationPath: NavigationPath
 
@@ -330,6 +331,7 @@ struct MemoryTimelineView: View {
                 selectedMemoryIDs: selectedMemoryIDs,
                 isDisabled: isPerformingBulkAction,
                 onSelect: onSelectMemory,
+                onEdit: onEditMemory,
                 onToggleSelection: toggleMemorySelection(_:))
         }
     }
@@ -366,6 +368,7 @@ struct MemoryTimelineView: View {
                 selectedMemoryIDs: selectedMemoryIDs,
                 isDisabled: isPerformingBulkAction,
                 onSelect: onSelectMemory,
+                onEdit: onEditMemory,
                 onToggleSelection: toggleMemorySelection(_:))
         }
     }
@@ -386,7 +389,8 @@ struct MemoryTimelineView: View {
                             isSelected: isMemorySelected(memory),
                             isDisabled: isPerformingBulkAction,
                             onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:))
+                            onToggleSelection: toggleMemorySelection(_:),
+                            onEdit: onEditMemory)
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -427,7 +431,8 @@ struct MemoryTimelineView: View {
             isSelected: isMemorySelected(memory),
             isDisabled: isPerformingBulkAction,
             onSelect: onSelectMemory,
-            onToggleSelection: toggleMemorySelection(_:))
+            onToggleSelection: toggleMemorySelection(_:),
+            onEdit: onEditMemory)
         .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -682,6 +687,7 @@ struct MemoryTimelineView: View {
     return MemoryTimelineView(
         memoryService: environment.memoryService,
         onSelectMemory: { _ in },
+        onEditMemory: nil,
         onMultiSelectionChange: { _ in },
         navigationPath: .constant(NavigationPath())
     )

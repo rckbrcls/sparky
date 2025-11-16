@@ -7,6 +7,7 @@ struct SpaceDetailInboxSectionView: View {
     let isPerformingBulkAction: Bool
     @Binding var isInboxExpanded: Bool
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onToggleSelection: (MemoryModel) -> Void
 
     var body: some View {
@@ -24,7 +25,8 @@ struct SpaceDetailInboxSectionView: View {
                             isSelected: selectedMemoryIDs.contains(memory.id),
                             isDisabled: isPerformingBulkAction,
                             onSelect: onSelectMemory,
-                            onToggleSelection: onToggleSelection
+                            onToggleSelection: onToggleSelection,
+                            onEdit: onEditMemory
                         )
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)

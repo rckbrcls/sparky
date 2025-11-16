@@ -6,6 +6,7 @@ struct SpaceDetailSearchResultsView: View {
     let isPerformingBulkAction: Bool
     let isMemorySelected: (MemoryModel) -> Bool
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onToggleSelection: (MemoryModel) -> Void
 
     var body: some View {
@@ -27,7 +28,8 @@ struct SpaceDetailSearchResultsView: View {
                     isSelected: isMemorySelected(memory),
                     isDisabled: isPerformingBulkAction,
                     onSelect: onSelectMemory,
-                    onToggleSelection: onToggleSelection
+                    onToggleSelection: onToggleSelection,
+                    onEdit: onEditMemory
                 )
                 .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                 .listRowBackground(Color.clear)

@@ -10,12 +10,14 @@ struct MemoryEditorAddLinkSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Link") {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
                     TextField("https://example.com", text: $urlString, axis: .vertical)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .padding()
+                        .glassEffect(in: .rect(cornerRadius: 24.0))
                         .onChange(of: urlString) { _, _ in
                             validationMessage = nil
                         }
@@ -24,15 +26,19 @@ struct MemoryEditorAddLinkSheet: View {
                         Text(validationMessage)
                             .font(.footnote)
                             .foregroundStyle(.red)
+                            .padding(.horizontal)
                     }
                 }
             }
+            .padding()
             .navigationTitle("Add Link")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
                     }
                 }
 

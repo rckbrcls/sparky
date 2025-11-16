@@ -65,6 +65,7 @@ struct ContentView: View {
                     MemoryTimelineView(
                         memoryService: environment.memoryService,
                         onSelectMemory: handleMemorySelection,
+                        onEditMemory: handleMemoryEdit,
                         onMultiSelectionChange: handleMultiSelectionChange,
                         navigationPath: $homeNavigationPath
                     )
@@ -77,6 +78,7 @@ struct ContentView: View {
                         memoryService: environment.memoryService,
                         navigationPath: $spacesNavigationPath,
                         onSelectMemory: handleMemorySelection,
+                        onEditMemory: handleMemoryEdit,
                         onCreateSpace: { parent in
                             presentSpaceCreation(for: parent)
                         },
@@ -217,6 +219,10 @@ struct ContentView: View {
 
     private func handleMemorySelection(_ memory: MemoryModel) {
         editorRoute = MemoryEditorRoute(mode: .view(memory: memory))
+    }
+
+    private func handleMemoryEdit(_ memory: MemoryModel) {
+        editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 
     private func presentSpaceCreation(for parent: SpaceModel?) {

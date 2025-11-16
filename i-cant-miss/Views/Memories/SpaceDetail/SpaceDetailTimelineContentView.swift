@@ -14,6 +14,7 @@ struct SpaceDetailTimelineContentView: View {
     let sectionExpansionProvider: (MemoryService.TimelineSection.Kind) -> Binding<Bool>
     let isMemorySelected: (MemoryModel) -> Bool
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onToggleSelection: (MemoryModel) -> Void
     let shouldShowEmptyState: Bool
 
@@ -44,6 +45,7 @@ struct SpaceDetailTimelineContentView: View {
                         selectedMemoryIDs: selectedMemoryIDs,
                         isDisabled: isPerformingBulkAction,
                         onSelect: onSelectMemory,
+                        onEdit: onEditMemory,
                         onToggleSelection: onToggleSelection
                     )
                 }
@@ -66,6 +68,7 @@ struct SpaceDetailTimelineContentView: View {
             selectedMemoryIDs: selectedMemoryIDs,
             isDisabled: isPerformingBulkAction,
             onSelect: onSelectMemory,
+            onEdit: onEditMemory,
             onToggleSelection: onToggleSelection
         )
     }
@@ -100,7 +103,8 @@ struct SpaceDetailTimelineContentView: View {
                         isSelected: isMemorySelected(memory),
                         isDisabled: isPerformingBulkAction,
                         onSelect: onSelectMemory,
-                        onToggleSelection: onToggleSelection
+                        onToggleSelection: onToggleSelection,
+                        onEdit: onEditMemory
                     )
                     .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                     .listRowBackground(Color.clear)

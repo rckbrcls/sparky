@@ -13,6 +13,7 @@ struct SpacesRootView: View {
     @Binding var navigationPath: NavigationPath
 
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onCreateSpace: (SpaceModel?) -> Void
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
@@ -60,6 +61,7 @@ struct SpacesRootView: View {
                     spaceService: spaceService,
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
+                    onEditMemory: onEditMemory,
                     onCreateSpace: onCreateSpace,
                     onEditSpace: onEditSpace,
                     onMultiSelectionChange: onMultiSelectionChange,
@@ -124,6 +126,7 @@ struct SpacesRootView: View {
         memoryService: environment.memoryService,
         navigationPath: .constant(NavigationPath()),
         onSelectMemory: { _ in },
+        onEditMemory: nil,
         onCreateSpace: { _ in },
         onEditSpace: nil,
         onMultiSelectionChange: { _ in },
