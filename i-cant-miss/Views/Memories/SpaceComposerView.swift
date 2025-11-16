@@ -50,12 +50,12 @@ struct SpaceComposerView: View {
                     }
                 }
 
-                Section("Icon") {
-                    iconGrid
-                }
-
                 Section("Color") {
                     colorSelector
+                }
+                
+                Section("Icon") {
+                    iconGrid
                 }
 
                 if let errorMessage {
