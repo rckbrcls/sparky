@@ -82,6 +82,7 @@ struct ContentView: View {
                         },
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onSpaceContextChange: { space in
+                            // Update context immediately when space changes
                             currentSpaceContext = space
                         }
                     )
@@ -145,6 +146,12 @@ struct ContentView: View {
         .onChange(of: environment.hasCompletedOnboarding) { _, completed in
             withAnimation(.easeInOut) {
                 showingOnboarding = !completed
+            }
+        }
+        .onChange(of: activeTab) { _, newTab in
+            // Clear context when switching away from spaces tab
+            if newTab != .spaces {
+                currentSpaceContext = nil
             }
         }
     }
@@ -228,7 +235,21 @@ struct ContentView: View {
 
     private func targetSpaceForCreation() -> SpaceModel? {
         guard activeTab == .spaces else { return nil }
-        return currentSpaceContext
+        // Use currentSpaceContext if available, otherwise try to extract from navigation path
+        if let context = currentSpaceContext {
+            return context
+        }
+        // Fallback: try to get the last space from navigation path
+        // This is a workaround since NavigationPath doesn't expose its items directly
+        // The SpaceDetailView should have already notified the context, but this is a safety net
+        return extractLastSpaceFromNavigationPath()
+    }
+
+    private func extractLastSpaceFromNavigationPath() -> SpaceModel? {
+        // NavigationPath doesn't expose items directly, so we rely on currentSpaceContext
+        // which should be set by SpaceDetailView.onAppear
+        // If it's nil here, it means we're at the root, so return nil
+        return nil
     }
 }
 

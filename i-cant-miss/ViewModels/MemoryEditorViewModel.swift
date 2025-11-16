@@ -447,7 +447,9 @@ private extension MemoryEditorViewModel {
         if let memory = existingMemory {
             apply(memory: memory)
         } else {
-            selectedSpaceID = nil
+            // When creating a new memory, prefer the provided defaultSpace (if any)
+            // so that creations from a specific space/subspace are scoped correctly.
+            selectedSpaceID = defaultSpace?.id
             contentQueue = []
             applyTemplate(template)
         }

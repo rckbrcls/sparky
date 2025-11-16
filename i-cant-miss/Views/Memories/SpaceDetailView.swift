@@ -209,63 +209,47 @@ struct SpaceDetailView: View {
     }
 
     var body: some View {
-        spaceDetailList
-        .navigationTitle(navigationTitleText)
-        .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
-        .toolbar { toolbarContent }
-        .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
-        .onAppear(perform: syncExpansionStates)
-        .onChange(of: timelineSectionsForSpace.count) { _, _ in
-            syncExpansionStates()
-        }
-        .onChange(of: ungroupedMemories.count) { _, _ in
-            syncExpansionStates()
-        }
-        .onChange(of: inboxMemories.count) { _, _ in
-            syncExpansionStates()
-        }
-        .onChange(of: isInboxExpanded) { _, newValue in
-            autoCollapsedInbox = inboxMemories.isEmpty && !newValue
-        }
-        .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
-            Button("Delete", role: .destructive) {
-                performBulkDeletion()
-            }
-            .disabled(isPerformingBulkAction)
+        baseView
+            .modifier(SpaceDetailModifiers(
+                showingDeleteConfirmation: $showingDeleteConfirmation,
+                bulkActionErrorMessage: $bulkActionErrorMessage,
+                deleteConfirmationMessage: deleteConfirmationMessage,
+                isPerformingBulkAction: isPerformingBulkAction,
+                onDelete: performBulkDeletion
+            ))
+            .modifier(SpaceDetailContextModifiers(
+                isMultiSelecting: isMultiSelecting,
+                spaceID: space.id,
+                spaceService: spaceService,
+                onMultiSelectionChange: onMultiSelectionChange,
+                onNotifyContext: notifySpaceContextChange,
+                resolvedSpaceProvider: { resolvedSpace }
+            ))
+    }
 
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(deleteConfirmationMessage)
-        }
-        .alert("Unable to complete action", isPresented: Binding(
-            get: { bulkActionErrorMessage != nil },
-            set: { isPresented in
-                if !isPresented {
-                    bulkActionErrorMessage = nil
-                }
+    private var baseView: some View {
+        spaceDetailList
+            .navigationTitle(navigationTitleText)
+            .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
+            .toolbar { toolbarContent }
+            .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
+            .onAppear(perform: syncExpansionStates)
+            .onChange(of: timelineSectionsForSpace.count) { _, _ in
+                syncExpansionStates()
             }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(bulkActionErrorMessage ?? "")
-        }
-        .onChange(of: isMultiSelecting) { _, newValue in
-            onMultiSelectionChange(newValue)
-        }
-        .onAppear {
-            onMultiSelectionChange(isMultiSelecting)
-            notifySpaceContextChange()
-        }
-        .onReceive(spaceService.$spaces) { _ in
-            notifySpaceContextChange()
-        }
-        .onDisappear {
-            onMultiSelectionChange(false)
-            onSpaceContextChange(nil)
-        }
+            .onChange(of: ungroupedMemories.count) { _, _ in
+                syncExpansionStates()
+            }
+            .onChange(of: inboxMemories.count) { _, _ in
+                syncExpansionStates()
+            }
+            .onChange(of: isInboxExpanded) { _, newValue in
+                autoCollapsedInbox = inboxMemories.isEmpty && !newValue
+            }
     }
 
     private func notifySpaceContextChange() {
+        // Always notify with the resolved space to ensure context is up to date
         onSpaceContextChange(resolvedSpace)
     }
 
@@ -706,5 +690,78 @@ struct SpaceDetailView: View {
         }
 
         return lhs.updatedAt > rhs.updatedAt
+    }
+}
+
+private struct SpaceDetailModifiers: ViewModifier {
+    @Binding var showingDeleteConfirmation: Bool
+    @Binding var bulkActionErrorMessage: String?
+    let deleteConfirmationMessage: String
+    let isPerformingBulkAction: Bool
+    let onDelete: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                }
+                .disabled(isPerformingBulkAction)
+
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(deleteConfirmationMessage)
+            }
+            .alert("Unable to complete action", isPresented: Binding(
+                get: { bulkActionErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        bulkActionErrorMessage = nil
+                    }
+                }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(bulkActionErrorMessage ?? "")
+            }
+    }
+}
+
+private struct SpaceDetailContextModifiers: ViewModifier {
+    let isMultiSelecting: Bool
+    let spaceID: UUID
+    @ObservedObject var spaceService: SpaceService
+    let onMultiSelectionChange: (Bool) -> Void
+    let onNotifyContext: () -> Void
+    let resolvedSpaceProvider: () -> SpaceModel
+
+    private var resolvedSpace: SpaceModel {
+        resolvedSpaceProvider()
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: isMultiSelecting) { _, newValue in
+                onMultiSelectionChange(newValue)
+            }
+            .onAppear {
+                onMultiSelectionChange(isMultiSelecting)
+                onNotifyContext()
+            }
+            .onReceive(spaceService.$spaces) { _ in
+                onNotifyContext()
+            }
+            .onChange(of: resolvedSpace.id) { _, _ in
+                onNotifyContext()
+            }
+            .onDisappear {
+                onMultiSelectionChange(false)
+            }
+            .task(id: resolvedSpace.id) {
+                onNotifyContext()
+            }
+            .onChange(of: spaceID) { _, _ in
+                onNotifyContext()
+            }
     }
 }

@@ -439,6 +439,11 @@ final class SpaceService: ObservableObject {
         }
 
         _ = await refresh(force: true)
+
+        // Refresh MemoryService to update memories that now have space = nil
+        if let memoryService = memoryService {
+            _ = await memoryService.refresh(force: true)
+        }
     }
 
     // MARK: - Tag Operations

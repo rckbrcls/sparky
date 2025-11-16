@@ -60,13 +60,27 @@ struct SpacesRootView: View {
                     onSelectMemory: onSelectMemory,
                     onCreateSpace: onCreateSpace,
                     onMultiSelectionChange: onMultiSelectionChange,
-                    onSpaceContextChange: onSpaceContextChange
+                    onSpaceContextChange: { newSpace in
+                        // Immediately notify when space context changes
+                        onSpaceContextChange(newSpace)
+                    }
                 )
+                .onAppear {
+                    // Ensure context is set immediately when destination appears
+                    onSpaceContextChange(space)
+                }
             }
         }
         .onAppear {
             onMultiSelectionChange(false)
             onSpaceContextChange(nil)
+        }
+        .onChange(of: navigationPath) { oldPath, newPath in
+            // When navigation path changes, if it's empty, clear the context
+            // Otherwise, let SpaceDetailView notify the context
+            if newPath.isEmpty {
+                onSpaceContextChange(nil)
+            }
         }
     }
 
