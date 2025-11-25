@@ -395,12 +395,12 @@ struct MemoryEditorView: View {
                     titleTranscriber?.stop()
                 }
             }
-            .onChange(of: titleTranscriber?.transcript ?? "") { _, newTranscript in
-                handleTitleTranscript(newTranscript)
-            }
             .onDisappear {
                 titleTranscriber?.stop()
             }
+            .background(
+                transcriptObserver
+            )
     }
 
     private func handleMetadataSaveIfNeeded() {
@@ -717,6 +717,17 @@ struct MemoryEditorView: View {
 
     private func toggleTitleTranscription() {
         guard isEditingEnabled else { return }
+
+        // Se já existe um transcriber e está gravando, desativa imediatamente
+        if let transcriber = titleTranscriber, transcriber.isRecording {
+            transcriber.stop()
+            titleTranscriptionPrefix = viewModel.title
+            // Remove o foco do título ao parar
+            isTitleFocused = false
+            return
+        }
+
+        // Se não está gravando, inicia a transcrição
         Task {
             // Cria o transcriber apenas quando necessário (na primeira vez que clicar)
             if titleTranscriber == nil {
@@ -725,13 +736,10 @@ struct MemoryEditorView: View {
 
             guard let transcriber = titleTranscriber else { return }
 
-            if transcriber.isRecording {
-                transcriber.stop()
-                titleTranscriptionPrefix = viewModel.title
-            } else {
-                titleTranscriptionPrefix = viewModel.title
-                await transcriber.start()
-            }
+            titleTranscriptionPrefix = viewModel.title
+            // Foca no título quando começar a transcrição
+            isTitleFocused = true
+            await transcriber.start()
         }
     }
 
@@ -1503,6 +1511,18 @@ struct MemoryEditorView: View {
 
     private var isTitlePlaceholder: Bool {
         viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    @ViewBuilder
+    private var transcriptObserver: some View {
+        if let transcriber = titleTranscriber {
+            Color.clear
+                .onReceive(transcriber.$transcript) { transcript in
+                    handleTitleTranscript(transcript)
+                }
+        } else {
+            Color.clear
+        }
     }
 
     @ViewBuilder

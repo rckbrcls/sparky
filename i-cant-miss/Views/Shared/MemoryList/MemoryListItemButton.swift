@@ -37,8 +37,6 @@ struct MemoryListItemButton: View {
                         }
                     )
                     .presentationDetents([.height(200)])
-                    .presentationDragIndicator(.hidden)
-                    .presentationBackground(.clear)
                 }
         }
     }
