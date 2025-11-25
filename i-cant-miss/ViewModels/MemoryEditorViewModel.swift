@@ -124,6 +124,9 @@ final class MemoryEditorViewModel: ObservableObject {
         case .checklist:
             item = .checklist(MemoryEditorChecklistContent())
         case .photos:
+            if let existingPhotos = contentQueue.first(where: { $0.contentType == .photos }) {
+                return existingPhotos.id
+            }
             item = .photos(MemoryEditorPhotosContent())
         case .links:
             item = .links(MemoryEditorLinksContent())
@@ -660,7 +663,15 @@ private extension MemoryEditorViewModel {
                 queue.append(.checklist(MemoryEditorChecklistContent(id: UUID(), items: drafts)))
             case .photos(let attachmentIDs):
                 let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
-                queue.append(.photos(MemoryEditorPhotosContent(id: UUID(), attachments: attachmentsForContent)))
+                if let existingIndex = queue.firstIndex(where: { $0.contentType == .photos }) {
+                    queue[existingIndex].mutatePhotos { photos in
+                        let existingIDs = Set(photos.attachments.map(\.id))
+                        let newOnes = attachmentsForContent.filter { !existingIDs.contains($0.id) }
+                        photos.attachments.append(contentsOf: newOnes)
+                    }
+                } else {
+                    queue.append(.photos(MemoryEditorPhotosContent(id: UUID(), attachments: attachmentsForContent)))
+                }
             case .links(let attachmentIDs):
                 let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
                 queue.append(.links(MemoryEditorLinksContent(id: UUID(), links: attachmentsForContent)))
