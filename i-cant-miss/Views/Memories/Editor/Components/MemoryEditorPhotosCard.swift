@@ -65,10 +65,10 @@ struct MemoryEditorPhotosCard: View {
     private var addButtonBox: some View {
         Menu {
             Button(action: onAddFromLibrary) {
-                Label("Add From Library", systemImage: "photo.on.rectangle")
+                Label("Library", systemImage: "photo.on.rectangle")
             }
             Button(action: onAddFromCamera) {
-                Label("Capture Photo", systemImage: "camera.fill")
+                Label("Camera", systemImage: "camera.fill")
             }
         } label: {
             Image(systemName: "plus")

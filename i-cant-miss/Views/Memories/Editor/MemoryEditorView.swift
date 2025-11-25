@@ -339,13 +339,10 @@ struct MemoryEditorView: View {
             }
             .onChange(of: isPresentingPhotoLibrary) { _, isPresented in
                 if !isPresented {
-                    if photoPickerItems.isEmpty {
-                        if pendingPhotoContentID != nil {
-                            let cardExists = viewModel.contentQueue.contains(where: { $0.id == pendingPhotoContentID && $0.contentType == .photos })
-                            if !cardExists {
-                                pendingPhotoContentID = nil
-                            }
-                        }
+                    let hadItems = !photoPickerItems.isEmpty
+                    photoPickerItems = []
+                    if photoLoadingContentIDs.isEmpty && !hadItems {
+                        pendingPhotoContentID = nil
                     }
                     cleanupPendingContentTargets()
                 }
@@ -357,11 +354,8 @@ struct MemoryEditorView: View {
             }
             .onChange(of: isPresentingCamera) { _, isPresented in
                 if !isPresented {
-                    if pendingPhotoContentID != nil {
-                        let cardExists = viewModel.contentQueue.contains(where: { $0.id == pendingPhotoContentID && $0.contentType == .photos })
-                        if !cardExists {
-                            pendingPhotoContentID = nil
-                        }
+                    if photoLoadingContentIDs.isEmpty {
+                        pendingPhotoContentID = nil
                     }
                     cleanupPendingContentTargets()
                 }
