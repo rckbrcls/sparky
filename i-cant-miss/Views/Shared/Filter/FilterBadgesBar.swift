@@ -38,7 +38,6 @@ struct FilterBadgesBar: View {
                             .font(.caption2)
                     }
                     .font(.caption.bold())
-                    .foregroundStyle(.primary)
                 }
 
                 FilterBadgeButton(
@@ -54,7 +53,6 @@ struct FilterBadgesBar: View {
                             .font(.caption2)
                     }
                     .font(.caption.bold())
-                    .foregroundStyle(.primary)
                 }
 
                 FilterBadgeButton(
@@ -67,9 +65,12 @@ struct FilterBadgesBar: View {
                         }
                     }
                 ) {
-                    Label("Show Inbox", systemImage: "tray.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(showInbox ? .white : .primary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "tray.fill")
+                        Text("Show Inbox")
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(showInbox ? .white : .primary)
                 }
 
                 FilterBadgeButton(
@@ -82,9 +83,12 @@ struct FilterBadgesBar: View {
                         }
                     }
                 ) {
-                    Label("Pinned", systemImage: "pin.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(showPinned ? .white : .primary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "pin.fill")
+                        Text("Pinned")
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(showPinned ? .white : .primary)
                 }
             }
             .padding(.horizontal, 4)
