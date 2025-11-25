@@ -15,15 +15,7 @@ struct MemoryTimelineView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject private var environment: AppEnvironment
-    @State private var showingFilterSheet = false
     @State private var searchText = ""
-    @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
-    @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
-    @State private var showInbox = true
-    @State private var filterSheetDetent: PresentationDetent = .large
-    @State private var isInboxExpanded = true
-    @State private var autoCollapsedInbox = false
-    @State private var isPinnedExpanded = true
     @State private var isMultiSelecting = false
     @State private var selectedDate = Date()
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
@@ -45,10 +37,6 @@ struct MemoryTimelineView: View {
         return memoryService.memories
             .filter { memory in
                 guard memory.status == .active, memory.isPinned else { return false }
-                guard isMemoryContentAndTriggerSelected(memory) else { return false }
-                if !showInbox && memory.isInbox {
-                    return false
-                }
                 return true
             }
             .sorted { lhs, rhs in
@@ -56,18 +44,11 @@ struct MemoryTimelineView: View {
             }
     }
 
-    private var filteredInboxMemories: [MemoryModel] {
-        memoryService.inboxMemories()
-            .filter { memory in
-                !memory.isPinned && isMemoryContentAndTriggerSelected(memory)
-            }
-    }
-
     private var scheduledMemories: [MemoryModel] {
         memoryService.scheduledMemories(referenceDate: selectedDate)
             .filter { memory in
                 guard memory.nextFireDate(referenceDate: selectedDate) != nil else { return false }
-                return isMemoryContentAndTriggerSelected(memory)
+                return true
             }
     }
 
@@ -121,47 +102,12 @@ struct MemoryTimelineView: View {
 
     private var hasAnyContent: Bool {
         !filteredPinnedMemories.isEmpty ||
-        !scheduledMemories.isEmpty ||
-        (showInbox && !filteredInboxMemories.isEmpty)
+        !scheduledMemories.isEmpty
     }
 
-    private var activeFilterCount: Int {
-        var count = 0
-        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
-            count += selectedContentTypes.count
-        }
-        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
-            count += selectedTriggerTypes.count
-        }
-        if !showInbox {
-            count += 1
-        }
-        return count
-    }
 
-    private var filterDescription: String {
-        var parts: [String] = []
 
-        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
-            let contentTypeLabels = selectedContentTypes
-                .map(\.label)
-                .sorted()
-            parts.append(contentTypeLabels.joined(separator: ", "))
-        }
 
-        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
-            let triggerTypeLabels = selectedTriggerTypes
-                .map(\.label)
-                .sorted()
-            parts.append(triggerTypeLabels.joined(separator: ", "))
-        }
-
-        if !showInbox {
-            parts.append("No Inbox")
-        }
-
-        return parts.isEmpty ? "All" : parts.joined(separator: " • ")
-    }
 
     private var navigationTitleText: String {
         if isMultiSelecting {
@@ -219,19 +165,7 @@ struct MemoryTimelineView: View {
                             onDone: { toggleMultiSelection() }
                         )
                     } else {
-                        ToolbarItemGroup(placement: .navigationBarTrailing) {
-                            MemoryFilterSummaryButton(
-                                activeFilterCount: activeFilterCount,
-                                filterDescription: filterDescription,
-                                isSheetPresented: showingFilterSheet,
-                                isDisabled: isPerformingBulkAction
-                            ) {
-                                filterSheetDetent = .large
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    showingFilterSheet = true
-                                }
-                            }
-
+                        ToolbarItem(placement: .navigationBarTrailing) {
                             Button {
                                 toggleMultiSelection()
                             } label: {
@@ -240,16 +174,6 @@ struct MemoryTimelineView: View {
                             .disabled(isPerformingBulkAction)
                         }
                     }
-                }
-                .sheet(isPresented: $showingFilterSheet) {
-                    FilterSheetView(
-                        selectedContentTypes: $selectedContentTypes,
-                        selectedTriggerTypes: $selectedTriggerTypes,
-                        showInbox: $showInbox,
-                        detentSelection: $filterSheetDetent
-                    )
-                    .onAppear { filterSheetDetent = .large }
-                    .presentationDetents([.large], selection: $filterSheetDetent)
                 }
                 .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
                     Button("Delete", role: .destructive) {
@@ -272,13 +196,6 @@ struct MemoryTimelineView: View {
                     Button("OK", role: .cancel) {}
                 } message: {
                     Text(bulkActionErrorMessage ?? "")
-                }
-                .onAppear(perform: syncExpansionStates)
-                .onChange(of: filteredInboxMemories.count) {
-                    syncExpansionStates()
-                }
-                .onChange(of: isInboxExpanded) {
-                    autoCollapsedInbox = filteredInboxMemories.isEmpty && !isInboxExpanded
                 }
                 .onChange(of: isMultiSelecting) { _, newValue in
                     onMultiSelectionChange(newValue)
@@ -306,10 +223,6 @@ struct MemoryTimelineView: View {
                     pinnedSection
 
                     calendarContent
-
-                    if showInbox {
-                        inboxListContent
-                    }
                 } else {
                     MemoryEmptyStateCard(
                         systemImage: "tray",
@@ -371,17 +284,30 @@ struct MemoryTimelineView: View {
     @ViewBuilder
     private var pinnedSection: some View {
         if !filteredPinnedMemories.isEmpty {
-            MemoryDisclosureListSection(
-                title: "Pinned Memories",
-                systemImage: "pin.fill",
-                isExpanded: $isPinnedExpanded,
-                memories: filteredPinnedMemories,
-                isMultiSelecting: isMultiSelecting,
-                selectedMemoryIDs: selectedMemoryIDs,
-                isDisabled: isPerformingBulkAction,
-                onSelect: onSelectMemory,
-                onEdit: onEditMemory,
-                onToggleSelection: toggleMemorySelection(_:))
+            Section {
+                ForEach(filteredPinnedMemories) { memory in
+                    MemoryListItemButton(
+                        memory: memory,
+                        isMultiSelecting: isMultiSelecting,
+                        isSelected: isMemorySelected(memory),
+                        isDisabled: isPerformingBulkAction,
+                        onSelect: onSelectMemory,
+                        onToggleSelection: toggleMemorySelection(_:),
+                        onEdit: onEditMemory
+                    )
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            } header: {
+                HStack(spacing: 12) {
+                    Label("Pinned Memories", systemImage: "pin.fill")
+                        .foregroundStyle(.white)
+                }
+                .padding(.vertical, 12)
+                .listRowInsets(.init(top: 24, leading: 20, bottom: 8, trailing: 20))
+            }
+            .listSectionSeparator(.hidden)
         }
     }
 
@@ -404,57 +330,6 @@ struct MemoryTimelineView: View {
         }
     }
 
-    @ViewBuilder
-    private var inboxListContent: some View {
-        let inboxMemories = filteredInboxMemories
-
-        if !inboxMemories.isEmpty {
-            Section {
-                inboxHeaderRow(memories: inboxMemories)
-
-                if isInboxExpanded {
-                    ForEach(inboxMemories) { memory in
-                        MemoryListItemButton(
-                            memory: memory,
-                            isMultiSelecting: isMultiSelecting,
-                            isSelected: isMemorySelected(memory),
-                            isDisabled: isPerformingBulkAction,
-                            onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:),
-                            onEdit: onEditMemory)
-                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
-                }
-            }
-            .listSectionSeparator(.hidden)
-        }
-    }
-
-    private func inboxHeaderRow(memories: [MemoryModel]) -> some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isInboxExpanded.toggle()
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Label("Inbox", systemImage: "tray.fill")
-                    .foregroundStyle(.white)
-                Spacer()
-                Image(systemName: isInboxExpanded ? "chevron.down" : "chevron.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 12)
-        }
-        .buttonStyle(.plain)
-        .listRowInsets(.init(top: 24, leading: 20, bottom: isInboxExpanded && !memories.isEmpty ? 0 : 8, trailing: 20))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-        .disabled(memories.isEmpty)
-    }
-
     private func memoryRow(for memory: MemoryModel) -> some View {
         MemoryListItemButton(
             memory: memory,
@@ -467,58 +342,6 @@ struct MemoryTimelineView: View {
         .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
-    }
-
-    private func isMemoryContentAndTriggerSelected(_ memory: MemoryModel) -> Bool {
-        // Check content types
-        let contentMatches: Bool
-        if selectedContentTypes.isEmpty {
-            contentMatches = true
-        } else {
-            contentMatches = selectedContentTypes.contains { contentType in
-                switch contentType {
-                case .richText:
-                    return memory.contents.contains {
-                        if case .richText = $0 { return true }
-                        return false
-                    }
-                case .checklist:
-                    return memory.hasChecklist
-                case .photos:
-                    return memory.contents.contains {
-                        if case .photos = $0 { return true }
-                        return false
-                    }
-                case .links:
-                    return memory.contents.contains {
-                        if case .links = $0 { return true }
-                        return false
-                    }
-                case .audio:
-                    return memory.contents.contains {
-                        if case .audio = $0 { return true }
-                        return false
-                    }
-                case .files:
-                    return memory.contents.contains {
-                        if case .files = $0 { return true }
-                        return false
-                    }
-                }
-            }
-        }
-
-        // Check trigger types
-        let triggerMatches: Bool
-        if selectedTriggerTypes.isEmpty {
-            triggerMatches = true
-        } else {
-            triggerMatches = selectedTriggerTypes.contains { triggerType in
-                memory.triggers.contains { $0.type == triggerType && $0.isActive }
-            }
-        }
-
-        return contentMatches && triggerMatches
     }
 
     private func sortPinned(_ lhs: MemoryModel, _ rhs: MemoryModel, referenceDate: Date = Date()) -> Bool {
@@ -569,18 +392,6 @@ struct MemoryTimelineView: View {
         }
     }
 
-    private func syncExpansionStates() {
-        if filteredInboxMemories.isEmpty {
-            if isInboxExpanded {
-                isInboxExpanded = false
-                autoCollapsedInbox = true
-            }
-        } else if autoCollapsedInbox && !isInboxExpanded {
-            isInboxExpanded = true
-            autoCollapsedInbox = false
-        }
-    }
-
     private func isMemorySelected(_ memory: MemoryModel) -> Bool {
         selectedMemoryIDs.contains(memory.id)
     }
@@ -598,7 +409,6 @@ struct MemoryTimelineView: View {
             selectedMemoryIDs.removeAll()
             searchText = ""
         }
-        showingFilterSheet = false
         showingDeleteConfirmation = false
     }
 

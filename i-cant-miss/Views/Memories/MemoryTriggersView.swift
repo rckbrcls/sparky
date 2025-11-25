@@ -15,14 +15,13 @@ struct MemoryTriggersView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject private var environment: AppEnvironment
-    @State private var showingFilterSheet = false
     @State private var searchText = ""
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
-    @State private var filterSheetDetent: PresentationDetent = .large
-    @State private var isLocationExpanded = true
-    @State private var isPersonExpanded = true
-    @State private var isSequentialExpanded = true
+    @State private var showInbox = true
+    @State private var showPinned = true
+    @State private var showTriggerSheet = false
+    @State private var showContentSheet = false
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -48,45 +47,33 @@ struct MemoryTriggersView: View {
             .filter { isMemoryContentAndTriggerSelected($0) }
     }
 
+    private var allTriggerMemories: [MemoryModel] {
+        let allMemories = locationOnlyMemories + personOnlyMemories + sequentialOnlyMemories
+        var seenIDs = Set<UUID>()
+        return allMemories.filter { memory in
+            if seenIDs.contains(memory.id) {
+                return false
+            } else {
+                seenIDs.insert(memory.id)
+                return true
+            }
+        }
+    }
+
+    private var pinnedMemories: [MemoryModel] {
+        allTriggerMemories.filter { $0.isPinned }
+    }
+
+    private var nonPinnedMemories: [MemoryModel] {
+        allTriggerMemories.filter { !$0.isPinned }
+    }
+
     private var filteredMemories: [MemoryModel] {
         isSearching ? memoryService.searchMemories(query: searchText) : []
     }
 
     private var hasAnyContent: Bool {
-        !locationOnlyMemories.isEmpty ||
-        !personOnlyMemories.isEmpty ||
-        !sequentialOnlyMemories.isEmpty
-    }
-
-    private var activeFilterCount: Int {
-        var count = 0
-        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
-            count += selectedContentTypes.count
-        }
-        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
-            count += selectedTriggerTypes.count
-        }
-        return count
-    }
-
-    private var filterDescription: String {
-        var parts: [String] = []
-
-        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
-            let contentTypeLabels = selectedContentTypes
-                .map(\.label)
-                .sorted()
-            parts.append(contentTypeLabels.joined(separator: ", "))
-        }
-
-        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
-            let triggerTypeLabels = selectedTriggerTypes
-                .map(\.label)
-                .sorted()
-            parts.append(triggerTypeLabels.joined(separator: ", "))
-        }
-
-        return parts.isEmpty ? "All" : parts.joined(separator: " • ")
+        !allTriggerMemories.isEmpty
     }
 
     private var navigationTitleText: String {
@@ -145,19 +132,7 @@ struct MemoryTriggersView: View {
                             onDone: { toggleMultiSelection() }
                         )
                     } else {
-                        ToolbarItemGroup(placement: .navigationBarTrailing) {
-                            MemoryFilterSummaryButton(
-                                activeFilterCount: activeFilterCount,
-                                filterDescription: filterDescription,
-                                isSheetPresented: showingFilterSheet,
-                                isDisabled: isPerformingBulkAction
-                            ) {
-                                filterSheetDetent = .large
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    showingFilterSheet = true
-                                }
-                            }
-
+                        ToolbarItem(placement: .navigationBarTrailing) {
                             Button {
                                 toggleMultiSelection()
                             } label: {
@@ -167,15 +142,11 @@ struct MemoryTriggersView: View {
                         }
                     }
                 }
-                .sheet(isPresented: $showingFilterSheet) {
-                    FilterSheetView(
-                        selectedContentTypes: $selectedContentTypes,
-                        selectedTriggerTypes: $selectedTriggerTypes,
-                        showInbox: .constant(true),
-                        detentSelection: $filterSheetDetent
-                    )
-                    .onAppear { filterSheetDetent = .large }
-                    .presentationDetents([.large], selection: $filterSheetDetent)
+                .sheet(isPresented: $showTriggerSheet) {
+                    TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
+                }
+                .sheet(isPresented: $showContentSheet) {
+                    ContentFilterSheetView(selectedContentTypes: $selectedContentTypes)
                 }
                 .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
                     Button("Delete", role: .destructive) {
@@ -213,18 +184,37 @@ struct MemoryTriggersView: View {
 
     private var triggersList: some View {
         List {
+            FilterBadgesBar(
+                selectedTriggerTypes: $selectedTriggerTypes,
+                selectedContentTypes: $selectedContentTypes,
+                showInbox: $showInbox,
+                showPinned: $showPinned,
+                showTriggerSheet: $showTriggerSheet,
+                showContentSheet: $showContentSheet
+            )
+            .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+
             if isSearching {
                 searchResultsList
             } else {
                 if hasAnyContent {
-                    if !locationOnlyMemories.isEmpty {
-                        locationSection
-                    }
-                    if !personOnlyMemories.isEmpty {
-                        personSection
-                    }
-                    if !sequentialOnlyMemories.isEmpty {
-                        sequentialSection
+                    pinnedSection
+
+                    ForEach(nonPinnedMemories) { memory in
+                        MemoryListItemButton(
+                            memory: memory,
+                            isMultiSelecting: isMultiSelecting,
+                            isSelected: isMemorySelected(memory),
+                            isDisabled: isPerformingBulkAction,
+                            onSelect: onSelectMemory,
+                            onToggleSelection: toggleMemorySelection(_:),
+                            onEdit: onEditMemory
+                        )
+                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                 } else {
                     MemoryEmptyStateCard(
@@ -269,49 +259,34 @@ struct MemoryTriggersView: View {
         }
     }
 
-    private var locationSection: some View {
-        MemoryDisclosureListSection(
-            title: "Location-based",
-            systemImage: "mappin.and.ellipse",
-            isExpanded: $isLocationExpanded,
-            memories: locationOnlyMemories,
-            isMultiSelecting: isMultiSelecting,
-            selectedMemoryIDs: selectedMemoryIDs,
-            isDisabled: isPerformingBulkAction,
-            onSelect: onSelectMemory,
-            onEdit: onEditMemory,
-            onToggleSelection: toggleMemorySelection(_:)
-        )
-    }
-
-    private var personSection: some View {
-        MemoryDisclosureListSection(
-            title: "Person-based",
-            systemImage: "person.crop.circle",
-            isExpanded: $isPersonExpanded,
-            memories: personOnlyMemories,
-            isMultiSelecting: isMultiSelecting,
-            selectedMemoryIDs: selectedMemoryIDs,
-            isDisabled: isPerformingBulkAction,
-            onSelect: onSelectMemory,
-            onEdit: onEditMemory,
-            onToggleSelection: toggleMemorySelection(_:)
-        )
-    }
-
-    private var sequentialSection: some View {
-        MemoryDisclosureListSection(
-            title: "Sequential",
-            systemImage: "arrowshape.turn.up.right.circle",
-            isExpanded: $isSequentialExpanded,
-            memories: sequentialOnlyMemories,
-            isMultiSelecting: isMultiSelecting,
-            selectedMemoryIDs: selectedMemoryIDs,
-            isDisabled: isPerformingBulkAction,
-            onSelect: onSelectMemory,
-            onEdit: onEditMemory,
-            onToggleSelection: toggleMemorySelection(_:)
-        )
+    @ViewBuilder
+    private var pinnedSection: some View {
+        if !pinnedMemories.isEmpty {
+            Section {
+                ForEach(pinnedMemories) { memory in
+                    MemoryListItemButton(
+                        memory: memory,
+                        isMultiSelecting: isMultiSelecting,
+                        isSelected: isMemorySelected(memory),
+                        isDisabled: isPerformingBulkAction,
+                        onSelect: onSelectMemory,
+                        onToggleSelection: toggleMemorySelection(_:),
+                        onEdit: onEditMemory
+                    )
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            } header: {
+                HStack(spacing: 12) {
+                    Label("Pinned Memories", systemImage: "pin.fill")
+                        .foregroundStyle(.white)
+                }
+                .padding(.vertical, 12)
+                .listRowInsets(.init(top: 24, leading: 20, bottom: 8, trailing: 20))
+            }
+            .listSectionSeparator(.hidden)
+        }
     }
 
     private func memoryRow(for memory: MemoryModel) -> some View {
@@ -406,7 +381,6 @@ struct MemoryTriggersView: View {
             selectedMemoryIDs.removeAll()
             searchText = ""
         }
-        showingFilterSheet = false
         showingDeleteConfirmation = false
     }
 
