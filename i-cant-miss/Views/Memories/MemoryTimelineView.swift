@@ -553,8 +553,8 @@ struct MemoryTimelineView: View {
         }
 
         if lhs.priority != rhs.priority {
-            let lhsPriority = lhs.priority?.rawValue ?? -1
-            let rhsPriority = rhs.priority?.rawValue ?? -1
+            let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
+            let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
             return lhsPriority > rhsPriority
         }
 

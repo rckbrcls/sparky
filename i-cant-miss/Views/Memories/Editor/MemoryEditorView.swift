@@ -1393,6 +1393,7 @@ struct MemoryEditorView: View {
 
     private func priorityLabel(for priority: MemoryPriority) -> String {
         switch priority {
+        case .noPriority: return "No Priority"
         case .low: return "Low"
         case .medium: return "Medium"
         case .high: return "High"

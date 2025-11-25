@@ -82,7 +82,7 @@ final class SettingsStore: ObservableObject {
         self.defaultTimelineFilter = filter
 
         let storedPriority = defaults.integer(forKey: Keys.reminderPriority)
-        self.defaultMemoryPriority = MemoryPriority(rawValue: Int16(storedPriority)) ?? .medium
+        self.defaultMemoryPriority = MemoryPriority(rawValue: Int16(storedPriority)) ?? .noPriority
 
         let snoozeMinutes = defaults.object(forKey: Keys.snoozeMinutes) as? Int ?? 15
         self.defaultSnoozeMinutes = SettingsStore.clamp(minutes: snoozeMinutes, fallback: 15)

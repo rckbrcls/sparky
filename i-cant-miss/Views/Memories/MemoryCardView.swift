@@ -155,10 +155,10 @@ struct MemoryCardView: View {
                 }
 
             }
-            
+
             if sequentialSummary != nil || nextTriggerText != nil || dueDateText != nil || checklistProgressText != nil {
                 Divider()
-                
+
                 HStack(spacing: 12) {
                     if let sequentialSummary {
                         Label(sequentialSummary, systemImage: "arrowshape.turn.up.right.circle")
@@ -168,7 +168,7 @@ struct MemoryCardView: View {
                             .padding(.horizontal, 12)
                             .glassEffect()
                     }
-                    
+
                     if let nextTriggerText {
                         Label(nextTriggerText, systemImage: "alarm")
                             .font(.caption)
@@ -176,7 +176,7 @@ struct MemoryCardView: View {
                             .padding(.horizontal, 12)
                             .glassEffect()
                     }
-                    
+
                     if let dueDateText {
                         Label(dueDateText, systemImage: "calendar")
                             .font(.caption)
@@ -184,7 +184,7 @@ struct MemoryCardView: View {
                             .padding(.horizontal, 12)
                             .glassEffect()
                     }
-                    
+
                     if let checklistProgressText {
                         Label(checklistProgressText, systemImage: "checklist")
                             .font(.caption)
@@ -193,7 +193,7 @@ struct MemoryCardView: View {
                             .glassEffect()
                     }
                 }
-            }            
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
@@ -203,6 +203,7 @@ struct MemoryCardView: View {
 
     private func priorityColor(for priority: MemoryPriority) -> Color {
         switch priority {
+        case .noPriority: return .gray
         case .low: return .blue
         case .medium: return .orange
         case .high: return .red

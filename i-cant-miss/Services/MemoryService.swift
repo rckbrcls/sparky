@@ -236,8 +236,8 @@ final class MemoryService: ObservableObject {
                     return lhsDate < rhsDate
                 }
                 if lhs.priority != rhs.priority {
-                    let lhsPriority = lhs.priority?.rawValue ?? -1
-                    let rhsPriority = rhs.priority?.rawValue ?? -1
+                    let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
+                    let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
                     return lhsPriority > rhsPriority
                 }
                 return lhs.updatedAt > rhs.updatedAt
@@ -648,8 +648,8 @@ private extension MemoryService {
                 let rhsDate = rhs.nextFireDate() ?? .distantFuture
                 if lhsDate != rhsDate { return lhsDate < rhsDate }
                 if lhs.priority != rhs.priority {
-                    let lhsPriority = lhs.priority?.rawValue ?? -1
-                    let rhsPriority = rhs.priority?.rawValue ?? -1
+                    let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
+                    let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
                     return lhsPriority > rhsPriority
                 }
                 return lhs.updatedAt > rhs.updatedAt

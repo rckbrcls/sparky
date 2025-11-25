@@ -19,7 +19,7 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var title: String = ""
     @Published var selectedSpaceID: UUID?
     @Published var status: MemoryStatus = .active
-    @Published var priority: MemoryPriority = .medium
+    @Published var priority: MemoryPriority = .noPriority
     @Published var isPinned: Bool = false
     @Published var autoCompleteChecklist: Bool
     @Published var triggers: [MemoryTriggerDraft] = []
@@ -539,7 +539,7 @@ private extension MemoryEditorViewModel {
         title = memory.title
         selectedSpaceID = memory.space?.id
         status = memory.status
-        priority = memory.priority ?? .medium
+        priority = memory.priority ?? .noPriority
         isPinned = memory.isPinned
         triggers = memory.triggers.map { draft(from: $0) }
         autoCompleteChecklist = memory.autoCompleteOnChecklistCompletion
