@@ -14,15 +14,19 @@ final class TriggerExecutorCoordinator {
     private let locationExecutor: LocationTriggerExecutor
     private let personExecutor: PersonTriggerExecutor
     private let sequentialExecutor: SequentialTriggerExecutor
+    private let focusExecutor: FocusTriggerExecutor
 
     var scheduled: ScheduledTriggerExecutor { scheduledExecutor }
     var location: LocationTriggerExecutor { locationExecutor }
+    var sequential: SequentialTriggerExecutor { sequentialExecutor }
+    var focus: FocusTriggerExecutor { focusExecutor }
 
-    init(settings: SettingsStore) {
+    init(settings: SettingsStore, memoryService: MemoryService? = nil) {
         self.scheduledExecutor = ScheduledTriggerExecutor(settings: settings)
         self.locationExecutor = LocationTriggerExecutor()
-        self.personExecutor = PersonTriggerExecutor()
-        self.sequentialExecutor = SequentialTriggerExecutor()
+        self.personExecutor = PersonTriggerExecutor(settings: settings)
+        self.sequentialExecutor = SequentialTriggerExecutor(memoryService: memoryService)
+        self.focusExecutor = FocusTriggerExecutor(memoryService: memoryService)
     }
 
     /// Registra um trigger específico
@@ -36,6 +40,8 @@ final class TriggerExecutorCoordinator {
             await personExecutor.register(trigger: trigger, for: memory.id)
         case .sequential:
             await sequentialExecutor.register(trigger: trigger, for: memory.id)
+        case .focus:
+            await focusExecutor.register(trigger: trigger, for: memory)
         }
     }
 
@@ -50,6 +56,8 @@ final class TriggerExecutorCoordinator {
             await personExecutor.unregister(triggerID: triggerID, for: memoryID)
         case .sequential:
             await sequentialExecutor.unregister(triggerID: triggerID, for: memoryID)
+        case .focus:
+            await focusExecutor.unregister(triggerID: triggerID, for: memoryID)
         }
     }
 
@@ -59,6 +67,7 @@ final class TriggerExecutorCoordinator {
         await locationExecutor.unregisterAll(for: memoryID)
         await personExecutor.unregisterAll(for: memoryID)
         await sequentialExecutor.unregisterAll(for: memoryID)
+        await focusExecutor.unregisterAll(for: memoryID)
     }
 
     /// Sincroniza todos os triggers de uma lista de memórias
@@ -67,6 +76,7 @@ final class TriggerExecutorCoordinator {
         await locationExecutor.sync(memories: memories)
         await personExecutor.sync(memories: memories)
         await sequentialExecutor.sync(memories: memories)
+        await focusExecutor.sync(memories: memories)
     }
 
     /// Atualiza triggers de uma memória específica

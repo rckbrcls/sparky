@@ -7,6 +7,7 @@ struct TriggerButtonsBar: View {
     @Binding var showLocationPicker: Bool
     @Binding var showPersonSheet: Bool
     @Binding var showSequentialSheet: Bool
+    @Binding var showFocusSheet: Bool
     let memoryLookup: [UUID: MemoryModel]
 
     var body: some View {
@@ -51,6 +52,12 @@ struct TriggerButtonsBar: View {
                     memoryLookup: memoryLookup
                 )
             }
+            if hasFocusTrigger {
+                FocusTriggerInlineForm(
+                    viewModel: viewModel,
+                    showSheet: $showFocusSheet
+                )
+            }
         }
     }
 
@@ -69,5 +76,9 @@ struct TriggerButtonsBar: View {
     private var hasSequentialTrigger: Bool {
         guard let configuration = viewModel.sequentialTrigger?.sequential else { return false }
         return configuration.previousMemoryID != nil || configuration.nextMemoryID != nil
+    }
+
+    private var hasFocusTrigger: Bool {
+        viewModel.triggers.contains(where: { $0.type == .focus })
     }
 }

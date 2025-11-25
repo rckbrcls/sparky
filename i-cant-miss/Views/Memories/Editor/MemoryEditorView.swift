@@ -172,6 +172,7 @@ struct MemoryEditorView: View {
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
+    @State private var showFocusSheet = false
     @State private var showPhotoOptionsSheet = false
     @State private var showErrorAlert = false
     @State private var checklistDraftRows: [UUID: [ChecklistDraftRow]] = [:]
@@ -273,6 +274,7 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
+            .sheet(isPresented: $showFocusSheet, content: focusSheet)
             .sheet(isPresented: $showPhotoOptionsSheet, content: photoOptionsSheet)
 
         let attachmentConfigured = sheetConfigured
@@ -648,6 +650,7 @@ struct MemoryEditorView: View {
                 showLocationPicker: $showLocationPicker,
                 showPersonSheet: $showPersonSheet,
                 showSequentialSheet: $showSequentialSheet,
+                showFocusSheet: $showFocusSheet,
                 memoryLookup: memoryLookup
             )
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1660,6 +1663,14 @@ struct MemoryEditorView: View {
             )
         }
         .presentationDetents([.large])
+    }
+
+    @ViewBuilder
+    private func focusSheet() -> some View {
+        NavigationStack {
+            FocusTriggerEditorScreen(viewModel: viewModel)
+        }
+        .presentationDetents([.medium])
     }
 
     @ViewBuilder

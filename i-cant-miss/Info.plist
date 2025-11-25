@@ -12,5 +12,7 @@
 	<string>Precisamos acessar o microfone para que você grave áudios nas memórias.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Precisamos acessar suas fotos para que você anexe imagens às memórias.</string>
+	<key>NSFocusStatusUsageDescription</key>
+	<string>This app needs access to your focus status to trigger reminders when you activate specific focus modes.</string>
 </dict>
 </plist>

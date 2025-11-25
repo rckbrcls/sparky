@@ -192,7 +192,7 @@ struct MemoryTriggersView: View {
                 showTriggerSheet: $showTriggerSheet,
                 showContentSheet: $showContentSheet
             )
-            .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+            .listRowInsets(.init(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 

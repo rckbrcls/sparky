@@ -42,7 +42,7 @@ final class AppEnvironment: ObservableObject {
         self.memoryService = MemoryService(persistence: persistence,
                                            spaceService: spaceService,
                                            attachmentStore: attachmentStore)
-        self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings)
+        self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings, memoryService: memoryService)
 
         self.hasCompletedOnboarding = settings.hasCompletedOnboarding
 
@@ -73,6 +73,11 @@ final class AppEnvironment: ObservableObject {
             _ = await (spacesTask, tagsTask, memoriesTask)
 
             await triggerExecutorCoordinator.scheduled.requestAuthorizationIfNeeded()
+
+            // Request focus status authorization if available
+            if #available(iOS 15.0, *) {
+                await triggerExecutorCoordinator.focus.requestAuthorization()
+            }
 
             hasBootstrapped = true
             isBootstrapping = false

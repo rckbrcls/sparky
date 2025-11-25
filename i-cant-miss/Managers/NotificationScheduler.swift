@@ -61,8 +61,7 @@ final class NotificationScheduler {
             switch trigger.type {
             case .scheduled:
                 scheduleScheduledTrigger(trigger: trigger, memoryID: memory.id, content: content, requests: &requests)
-            case .location, .person, .sequential:
-                // Location, person, and sequential triggers rely on geofencing or manual events.
+            case .location, .person, .sequential, .focus:
                 continue
             }
         }

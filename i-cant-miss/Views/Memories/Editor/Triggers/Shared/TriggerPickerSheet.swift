@@ -51,6 +51,17 @@ struct TriggerPickerSheet: View {
                         select(.sequential)
                     }
                 }
+
+                Section("Focus") {
+                    TriggerPickerRow(
+                        title: "Focus trigger",
+                        subtitle: focusSubtitle,
+                        systemImage: "moon.fill",
+                        isActive: isFocusActive
+                    ) {
+                        select(.focus)
+                    }
+                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Add Trigger")
@@ -79,6 +90,8 @@ struct TriggerPickerSheet: View {
                         excludedMemoryID: viewModel.editingMemoryID,
                         showsCloseButton: false
                     )
+                case .focus:
+                    FocusTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 }
             }
         }
@@ -98,6 +111,10 @@ struct TriggerPickerSheet: View {
 
     private var isSequentialActive: Bool {
         viewModel.sequentialTrigger != nil
+    }
+
+    private var isFocusActive: Bool {
+        viewModel.triggers.contains(where: { $0.type == .focus })
     }
 
     private var dateAndTimeSubtitle: String {
@@ -126,6 +143,13 @@ struct TriggerPickerSheet: View {
             return "Manage the sequential trigger for this memory."
         }
         return "Link this memory with others to create sequences."
+    }
+
+    private var focusSubtitle: String {
+        if isFocusActive {
+            return "Update the existing focus mode trigger."
+        }
+        return "Get reminded when you activate a specific focus mode."
     }
 
     private func select(_ destination: MemoryTriggerPickerDestination) {

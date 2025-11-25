@@ -71,6 +71,12 @@ final class MemoryService: ObservableObject {
         Task { await refresh(force: true) }
     }
 
+    /// Notifica o executor sequencial sobre a conclusão de uma memória
+    private func notifySequentialExecutor(memoryID: UUID) async {
+        guard let coordinator = triggerExecutorCoordinator else { return }
+        await coordinator.sequential.handleMemoryCompletion(memoryID: memoryID)
+    }
+
     deinit {
         refreshTimer?.cancel()
     }
@@ -378,6 +384,11 @@ final class MemoryService: ObservableObject {
         }
         let newStatus: MemoryStatus = current.status == .completed ? .active : .completed
         try await setStatus(memoryID: memoryID, status: newStatus)
+
+        // Se a memória foi completada, notificar executor sequencial
+        if newStatus == .completed {
+            await notifySequentialExecutor(memoryID: memoryID)
+        }
     }
 
     func togglePin(memoryID: UUID) async throws {
@@ -389,6 +400,11 @@ final class MemoryService: ObservableObject {
     func setStatus(memoryID: UUID, status: MemoryStatus) async throws {
         try await mutateMemory(memoryID: memoryID) { memory in
             memory.statusRaw = status.rawValue
+        }
+
+        // Se a memória foi completada, notificar executor sequencial
+        if status == .completed {
+            await notifySequentialExecutor(memoryID: memoryID)
         }
     }
 

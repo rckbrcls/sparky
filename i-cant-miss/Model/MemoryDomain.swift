@@ -53,6 +53,7 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
     case location
     case person
     case sequential
+    case focus
 
     var id: String { rawValue }
 
@@ -62,6 +63,7 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
         case .location: return "mappin.and.ellipse"
         case .person: return "person.crop.circle"
         case .sequential: return "arrowshape.turn.up.right.circle"
+        case .focus: return "moon.fill"
         }
     }
 
@@ -71,6 +73,7 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
         case .location: return "Location"
         case .person: return "Person"
         case .sequential: return "Sequential"
+        case .focus: return "Focus"
         }
     }
 }
@@ -87,6 +90,7 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     var location: TriggerLocation?
     var person: TriggerPerson?
     var sequential: TriggerSequential?
+    var focus: TriggerFocus?
     var spacedStage: Int
     var lastReviewDate: Date?
     var ignoreCount: Int
@@ -108,6 +112,11 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         var previousMemoryID: UUID?
         var nextMemoryID: UUID?
     }
+
+    struct TriggerFocus: Hashable, Codable {
+        var focusIdentifier: String?
+        var focusName: String
+    }
 }
 
 struct MemoryTriggerDraft: Identifiable, Hashable {
@@ -122,6 +131,7 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
     var location: MemoryTriggerModel.TriggerLocation?
     var person: MemoryTriggerModel.TriggerPerson?
     var sequential: MemoryTriggerModel.TriggerSequential?
+    var focus: MemoryTriggerModel.TriggerFocus?
     var spacedStage: Int
     var lastReviewDate: Date?
     var ignoreCount: Int
@@ -138,6 +148,7 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         location: MemoryTriggerModel.TriggerLocation? = nil,
         person: MemoryTriggerModel.TriggerPerson? = nil,
         sequential: MemoryTriggerModel.TriggerSequential? = nil,
+        focus: MemoryTriggerModel.TriggerFocus? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
         ignoreCount: Int = 0
@@ -153,6 +164,7 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         self.location = location
         self.person = person
         self.sequential = sequential
+        self.focus = focus
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
         self.ignoreCount = ignoreCount
@@ -173,6 +185,7 @@ extension MemoryTriggerDraft {
             location: location,
             person: person,
             sequential: sequential,
+            focus: focus,
             spacedStage: spacedStage,
             lastReviewDate: lastReviewDate,
             ignoreCount: ignoreCount
@@ -197,7 +210,7 @@ extension MemoryTriggerModel {
         switch type {
         case .scheduled:
             return nextScheduledOccurrence(from: reference)
-        case .location, .person, .sequential:
+        case .location, .person, .sequential, .focus:
             return startDate ?? fireDate
         }
     }
