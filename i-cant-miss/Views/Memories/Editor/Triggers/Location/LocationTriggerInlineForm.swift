@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryLocationTriggerInlineForm: View {
+struct LocationTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showLocationPicker: Bool
 
@@ -52,5 +52,3 @@ struct MemoryLocationTriggerInlineForm: View {
         }
     }
 }
-
-

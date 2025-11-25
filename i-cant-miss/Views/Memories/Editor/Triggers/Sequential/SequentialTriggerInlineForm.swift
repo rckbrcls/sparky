@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemorySequentialTriggerInlineForm: View {
+struct SequentialTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
     let memoryLookup: [UUID: MemoryModel]
@@ -84,5 +84,3 @@ struct MemorySequentialTriggerInlineForm: View {
         return String(id.uuidString.prefix(6)) + "…"
     }
 }
-
-

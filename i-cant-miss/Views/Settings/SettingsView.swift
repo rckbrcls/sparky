@@ -12,7 +12,7 @@ import UIKit
 
 struct SettingsView: View {
     @ObservedObject private var settings: SettingsStore
-    @ObservedObject private var geofenceManager: GeofenceManager
+    @ObservedObject private var geofenceManager: LocationTriggerExecutor
     private let environment: AppEnvironment
     @Binding private var navigationPath: NavigationPath
 
@@ -173,7 +173,7 @@ private struct NotificationSettingsView: View {
 
 private struct LocationSettingsView: View {
     @ObservedObject var settings: SettingsStore
-    @ObservedObject var geofenceManager: GeofenceManager
+    @ObservedObject var geofenceManager: LocationTriggerExecutor
     @Binding var isRequestingLocation: Bool
 
     let requestAuthorization: (Bool) -> Void

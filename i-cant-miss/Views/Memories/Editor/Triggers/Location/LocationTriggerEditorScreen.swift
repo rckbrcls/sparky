@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryLocationTriggerEditorScreen: View {
+struct LocationTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     private let showsCloseButton: Bool

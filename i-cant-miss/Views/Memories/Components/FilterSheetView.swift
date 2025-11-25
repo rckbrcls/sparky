@@ -5,7 +5,6 @@ struct FilterSheetView: View {
 
     @Binding var selectedContentTypes: Set<MemoryContentFilterType>
     @Binding var selectedTriggerTypes: Set<MemoryTriggerType>
-    @Binding var selectedSections: Set<MemoryService.TimelineSection.Kind>
     @Binding var showInbox: Bool
     @Binding var detentSelection: PresentationDetent
 
@@ -15,7 +14,6 @@ struct FilterSheetView: View {
                 VStack(spacing: 24) {
                     contentsSection
                     triggersSection
-                    timelineSectionsSection
                     inboxSection
                 }
                 .padding(.horizontal, 20)
@@ -31,7 +29,6 @@ struct FilterSheetView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedContentTypes.removeAll()
                             selectedTriggerTypes.removeAll()
-                            selectedSections.removeAll()
                             showInbox = true
                         }
                         dismiss()
@@ -45,7 +42,6 @@ struct FilterSheetView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedContentTypes.removeAll()
                             selectedTriggerTypes.removeAll()
-                            selectedSections.removeAll()
                             showInbox = true
                         }
                     } label: {
@@ -114,31 +110,6 @@ struct FilterSheetView: View {
         .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
-    private var timelineSectionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Timeline Section")
-                .font(.headline)
-                .foregroundStyle(.primary)
-
-            FlowLayoutView(spacing: 8) {
-                ForEach(MemoryService.TimelineSection.Kind.allCases) { kind in
-                    FilterBadge(
-                        label: kind.title,
-                        systemImage: kind.systemImage,
-                        isSelected: isSectionVisuallySelected(kind)
-                    ) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            toggleSection(kind)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(16)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-
     private var inboxSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Inbox")
@@ -192,18 +163,4 @@ struct FilterSheetView: View {
         }
     }
 
-    private func isSectionVisuallySelected(_ kind: MemoryService.TimelineSection.Kind) -> Bool {
-        if selectedSections.isEmpty {
-            return true
-        }
-        return selectedSections.contains(kind)
-    }
-
-    private func toggleSection(_ kind: MemoryService.TimelineSection.Kind) {
-        if selectedSections.contains(kind) {
-            selectedSections.remove(kind)
-        } else {
-            selectedSections.insert(kind)
-        }
-    }
 }

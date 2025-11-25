@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryPersonTriggerInlineForm: View {
+struct PersonTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
 
@@ -52,5 +52,3 @@ struct MemoryPersonTriggerInlineForm: View {
         }
     }
 }
-
-

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryTriggerPickerSheet: View {
+struct TriggerPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     @State private var selectedDestination: MemoryTriggerPickerDestination?
@@ -68,13 +68,13 @@ struct MemoryTriggerPickerSheet: View {
             .navigationDestination(item: $selectedDestination) { destination in
                 switch destination {
                 case .dateAndTime:
-                    MemoryDateAndTimeTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
+                    ScheduledTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .location:
-                    MemoryLocationTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
+                    LocationTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .person:
-                    MemoryPersonTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
+                    PersonTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 case .sequential:
-                    MemorySequentialTriggerEditorScreen(
+                    SequentialTriggerEditorScreen(
                         viewModel: viewModel,
                         excludedMemoryID: viewModel.editingMemoryID,
                         showsCloseButton: false

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryEditorTriggerButtonsBar: View {
+struct TriggerButtonsBar: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     var onAddTrigger: (() -> Void)? = nil
     @Binding var showDateAndTimeSheet: Bool
@@ -27,25 +27,25 @@ struct MemoryEditorTriggerButtonsBar: View {
                 .accessibilityLabel("Add trigger")
             }
             if hasScheduledTrigger {
-                MemoryDateAndTimeTriggerInlineForm(
+                ScheduledTriggerInlineForm(
                     viewModel: viewModel,
                     showSheet: $showDateAndTimeSheet
                 )
             }
             if hasLocationTrigger {
-                MemoryLocationTriggerInlineForm(
+                LocationTriggerInlineForm(
                     viewModel: viewModel,
                     showLocationPicker: $showLocationPicker
                 )
             }
             if hasPersonTrigger {
-                MemoryPersonTriggerInlineForm(
+                PersonTriggerInlineForm(
                     viewModel: viewModel,
                     showSheet: $showPersonSheet
                 )
             }
             if hasSequentialTrigger {
-                MemorySequentialTriggerInlineForm(
+                SequentialTriggerInlineForm(
                     viewModel: viewModel,
                     showSheet: $showSequentialSheet,
                     memoryLookup: memoryLookup

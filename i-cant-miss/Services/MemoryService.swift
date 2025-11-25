@@ -41,39 +41,6 @@ final class MemoryService: ObservableObject {
         }
     }
 
-    struct TimelineSection: Identifiable, Hashable {
-        enum Kind: String, CaseIterable, Identifiable {
-            case today
-            case nextSevenDays
-            case later
-            case recurring
-
-            var id: String { rawValue }
-
-            var title: String {
-                switch self {
-                case .today: return "Today"
-                case .nextSevenDays: return "Next 7 Days"
-                case .later: return "Later"
-                case .recurring: return "Recurring"
-                }
-            }
-
-            var systemImage: String {
-                switch self {
-                case .today: return "sun.max.fill"
-                case .nextSevenDays: return "calendar.badge.clock"
-                case .later: return "calendar.badge.exclamationmark"
-                case .recurring: return "arrow.triangle.2.circlepath"
-                }
-            }
-        }
-
-        let kind: Kind
-        let memories: [MemoryModel]
-
-        var id: Kind { kind }
-    }
 
     @Published private(set) var memories: [MemoryModel] = []
     @Published private(set) var lastRefreshed: Date?
@@ -89,8 +56,7 @@ final class MemoryService: ObservableObject {
     private let jsonEncoder = JSONEncoder()
     private let jsonDecoder = JSONDecoder()
 
-    var notificationScheduler: NotificationScheduler?
-    var geofenceManager: GeofenceManager?
+    var triggerExecutorCoordinator: TriggerExecutorCoordinator?
 
     init(persistence: PersistenceController,
          spaceService: SpaceService,
@@ -139,10 +105,9 @@ final class MemoryService: ObservableObject {
             cache.removeAll()
             cacheTimestamps.removeAll()
 
-            if let scheduler = notificationScheduler {
-                await scheduler.refreshNotifications(memories: combined)
+            if let coordinator = triggerExecutorCoordinator {
+                await coordinator.sync(memories: combined)
             }
-            geofenceManager?.sync(memories: combined)
 
             return combined
         } catch {
@@ -244,55 +209,98 @@ final class MemoryService: ObservableObject {
             }
     }
 
-    func timelineSections(referenceDate: Date = Date()) -> [TimelineSection] {
-        let calendar = Calendar.current
-        let timelineMemories = timelineMemories(referenceDate: referenceDate)
-        guard !timelineMemories.isEmpty else { return [] }
+    func scheduledMemories(referenceDate: Date = Date()) -> [MemoryModel] {
+        return memories
+            .filter { memory in
+                guard memory.status == .active else { return false }
+                guard memory.space == nil else { return false } // Memórias com space não aparecem na Timeline
+                guard memory.nextFireDate(referenceDate: referenceDate) != nil else { return false }
 
-        var today: [MemoryModel] = []
-        var nextSeven: [MemoryModel] = []
-        var later: [MemoryModel] = []
-        var recurring: [UUID: MemoryModel] = [:]
+                // Deve ter pelo menos um trigger scheduled ativo
+                let hasScheduled = memory.triggers.contains {
+                    $0.type == .scheduled && $0.isActive
+                }
 
-        let startOfDay = calendar.startOfDay(for: referenceDate)
-        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
-        let sevenDaysOut = calendar.date(byAdding: .day, value: 7, to: startOfTomorrow) ?? referenceDate
-
-        for memory in timelineMemories {
-            guard let fireDate = memory.nextFireDate(referenceDate: referenceDate) else { continue }
-            if calendar.isDate(fireDate, inSameDayAs: referenceDate) {
-                today.append(memory)
-            } else if fireDate < sevenDaysOut {
-                nextSeven.append(memory)
-            } else {
-                later.append(memory)
+                return hasScheduled
             }
-
-            if memory.hasRecurringTriggers {
-                recurring[memory.id] = memory
+            .sorted { lhs, rhs in
+                let lhsDate = lhs.nextFireDate(referenceDate: referenceDate) ?? .distantFuture
+                let rhsDate = rhs.nextFireDate(referenceDate: referenceDate) ?? .distantFuture
+                if lhsDate != rhsDate {
+                    return lhsDate < rhsDate
+                }
+                if lhs.priority != rhs.priority {
+                    let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
+                    let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
+                    return lhsPriority > rhsPriority
+                }
+                return lhs.updatedAt > rhs.updatedAt
             }
-        }
+    }
 
-        var sections: [TimelineSection] = []
+    func nonScheduledMemories() -> [MemoryModel] {
+        return memories
+            .filter { memory in
+                guard memory.status == .active else { return false }
+                guard memory.space == nil else { return false } // Memórias com space não aparecem na aba Triggers
 
-        if !today.isEmpty {
-            sections.append(TimelineSection(kind: .today, memories: sortedMemories(today, using: .nextTriggerAscending)))
-        }
+                // Não deve ter nenhum trigger scheduled ativo
+                let hasScheduled = memory.triggers.contains {
+                    $0.type == .scheduled && $0.isActive
+                }
 
-        if !nextSeven.isEmpty {
-            sections.append(TimelineSection(kind: .nextSevenDays, memories: sortedMemories(nextSeven, using: .nextTriggerAscending)))
-        }
+                return !hasScheduled
+            }
+    }
 
-        if !later.isEmpty {
-            sections.append(TimelineSection(kind: .later, memories: sortedMemories(later, using: .nextTriggerAscending)))
-        }
+    func memoriesWithLocationOnly() -> [MemoryModel] {
+        return nonScheduledMemories()
+            .filter { memory in
+                let activeTriggers = memory.triggers.filter { $0.isActive }
+                guard !activeTriggers.isEmpty else { return false }
 
-        if !recurring.isEmpty {
-            let items = Array(recurring.values)
-            sections.append(TimelineSection(kind: .recurring, memories: sortedMemories(items, using: .nextTriggerAscending)))
-        }
+                // Deve ter apenas triggers location
+                let hasLocation = activeTriggers.contains { $0.type == .location }
+                let hasOtherTypes = activeTriggers.contains { $0.type != .location }
 
-        return sections
+                return hasLocation && !hasOtherTypes
+            }
+    }
+
+    func memoriesWithPersonOnly() -> [MemoryModel] {
+        return nonScheduledMemories()
+            .filter { memory in
+                let activeTriggers = memory.triggers.filter { $0.isActive }
+                guard !activeTriggers.isEmpty else { return false }
+
+                // Deve ter apenas triggers person
+                let hasPerson = activeTriggers.contains { $0.type == .person }
+                let hasOtherTypes = activeTriggers.contains { $0.type != .person }
+
+                return hasPerson && !hasOtherTypes
+            }
+    }
+
+    func memoriesWithSequentialOnly() -> [MemoryModel] {
+        return nonScheduledMemories()
+            .filter { memory in
+                let activeTriggers = memory.triggers.filter { $0.isActive }
+                guard !activeTriggers.isEmpty else { return false }
+
+                // Deve ter apenas triggers sequential
+                let hasSequential = activeTriggers.contains { $0.type == .sequential }
+                let hasOtherTypes = activeTriggers.contains { $0.type != .sequential }
+
+                return hasSequential && !hasOtherTypes
+            }
+    }
+
+    func memoriesWithoutTriggers() -> [MemoryModel] {
+        return memories
+            .filter { memory in
+                guard memory.status == .active else { return false }
+                return !memory.hasTriggers
+            }
     }
 
     func searchMemories(query: String) -> [MemoryModel] {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemorySequentialTriggerEditorScreen: View {
+struct SequentialTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     let excludedMemoryID: UUID?

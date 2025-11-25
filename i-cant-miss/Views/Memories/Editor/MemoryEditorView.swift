@@ -266,7 +266,7 @@ struct MemoryEditorView: View {
         let sheetConfigured = lifecycleConfigured
             .sheet(isPresented: $showDateAndTimeSheet, content: dateAndTimeSheet)
             .sheet(isPresented: $showTriggerPickerSheet) {
-                MemoryTriggerPickerSheet(viewModel: viewModel)
+                TriggerPickerSheet(viewModel: viewModel)
                     .presentationDetents([.large])
             }
             .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
@@ -641,7 +641,7 @@ struct MemoryEditorView: View {
     @ViewBuilder
     private func triggerButtonsBar(onAddTrigger: (() -> Void)?) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            MemoryEditorTriggerButtonsBar(
+            TriggerButtonsBar(
                 viewModel: viewModel,
                 onAddTrigger: onAddTrigger,
                 showDateAndTimeSheet: $showDateAndTimeSheet,
@@ -1624,14 +1624,14 @@ struct MemoryEditorView: View {
     @ViewBuilder
     private func dateAndTimeSheet() -> some View {
         NavigationStack {
-            MemoryDateAndTimeTriggerEditorScreen(viewModel: viewModel)
+            ScheduledTriggerEditorScreen(viewModel: viewModel)
         }
     }
 
     @ViewBuilder
     private func locationSheet() -> some View {
         NavigationStack {
-            MemoryLocationTriggerEditorScreen(viewModel: viewModel)
+            LocationTriggerEditorScreen(viewModel: viewModel)
         }
     }
 
@@ -1646,7 +1646,7 @@ struct MemoryEditorView: View {
     @ViewBuilder
     private func personSheet() -> some View {
         NavigationStack {
-            MemoryPersonTriggerEditorScreen(viewModel: viewModel)
+            PersonTriggerEditorScreen(viewModel: viewModel)
         }
         .presentationDetents([.medium])
     }
@@ -1654,7 +1654,7 @@ struct MemoryEditorView: View {
     @ViewBuilder
     private func sequentialSheet() -> some View {
         NavigationStack {
-            MemorySequentialTriggerEditorScreen(
+            SequentialTriggerEditorScreen(
                 viewModel: viewModel,
                 excludedMemoryID: viewModel.editingMemoryID
             )

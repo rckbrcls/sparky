@@ -14,10 +14,17 @@ final class AppEnvironment: ObservableObject {
     let persistence: PersistenceController
     let spaceService: SpaceService
     let memoryService: MemoryService
-    let notificationScheduler: NotificationScheduler
-    let geofenceManager: GeofenceManager
+    let triggerExecutorCoordinator: TriggerExecutorCoordinator
     let settings: SettingsStore
     let attachmentStore: MemoryAttachmentStore
+
+    // Mantidos para compatibilidade durante transição
+    var notificationScheduler: ScheduledTriggerExecutor {
+        triggerExecutorCoordinator.scheduled
+    }
+    var geofenceManager: LocationTriggerExecutor {
+        triggerExecutorCoordinator.location
+    }
 
     @Published var isBootstrapping = true
     @Published var hasBootstrapped = false
@@ -35,14 +42,11 @@ final class AppEnvironment: ObservableObject {
         self.memoryService = MemoryService(persistence: persistence,
                                            spaceService: spaceService,
                                            attachmentStore: attachmentStore)
-        self.notificationScheduler = NotificationScheduler(settings: settings)
-        self.geofenceManager = GeofenceManager()
+        self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings)
 
         self.hasCompletedOnboarding = settings.hasCompletedOnboarding
 
-        memoryService.notificationScheduler = notificationScheduler
-        memoryService.geofenceManager = geofenceManager
-        geofenceManager.notificationScheduler = notificationScheduler
+        memoryService.triggerExecutorCoordinator = triggerExecutorCoordinator
 
         settings.$hasCompletedOnboarding
             .receive(on: DispatchQueue.main)
@@ -68,7 +72,7 @@ final class AppEnvironment: ObservableObject {
 
             _ = await (spacesTask, tagsTask, memoriesTask)
 
-            await notificationScheduler.requestAuthorizationIfNeeded()
+            await triggerExecutorCoordinator.scheduled.requestAuthorizationIfNeeded()
 
             hasBootstrapped = true
             isBootstrapping = false

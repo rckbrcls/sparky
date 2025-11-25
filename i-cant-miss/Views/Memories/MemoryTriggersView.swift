@@ -1,5 +1,5 @@
 //
-//  MemoryTimelineView.swift
+//  MemoryTriggersView.swift
 //  i-cant-miss
 //
 //  Created by Codex on 09/03/24.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct MemoryTimelineView: View {
+struct MemoryTriggersView: View {
     @ObservedObject var memoryService: MemoryService
     let onSelectMemory: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
@@ -19,13 +19,11 @@ struct MemoryTimelineView: View {
     @State private var searchText = ""
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
-    @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
-    @State private var isInboxExpanded = true
-    @State private var autoCollapsedInbox = false
-    @State private var isPinnedExpanded = true
+    @State private var isLocationExpanded = true
+    @State private var isPersonExpanded = true
+    @State private var isSequentialExpanded = true
     @State private var isMultiSelecting = false
-    @State private var selectedDate = Date()
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
@@ -35,94 +33,29 @@ struct MemoryTimelineView: View {
         !searchText.isEmpty
     }
 
+    private var locationOnlyMemories: [MemoryModel] {
+        memoryService.memoriesWithLocationOnly()
+            .filter { isMemoryContentAndTriggerSelected($0) }
+    }
+
+    private var personOnlyMemories: [MemoryModel] {
+        memoryService.memoriesWithPersonOnly()
+            .filter { isMemoryContentAndTriggerSelected($0) }
+    }
+
+    private var sequentialOnlyMemories: [MemoryModel] {
+        memoryService.memoriesWithSequentialOnly()
+            .filter { isMemoryContentAndTriggerSelected($0) }
+    }
+
     private var filteredMemories: [MemoryModel] {
         isSearching ? memoryService.searchMemories(query: searchText) : []
     }
 
-    private var filteredPinnedMemories: [MemoryModel] {
-        let referenceDate = Date()
-
-        return memoryService.memories
-            .filter { memory in
-                guard memory.status == .active, memory.isPinned else { return false }
-                guard isMemoryContentAndTriggerSelected(memory) else { return false }
-                if !showInbox && memory.isInbox {
-                    return false
-                }
-                return true
-            }
-            .sorted { lhs, rhs in
-                sortPinned(lhs, rhs, referenceDate: referenceDate)
-            }
-    }
-
-    private var filteredInboxMemories: [MemoryModel] {
-        memoryService.inboxMemories()
-            .filter { memory in
-                !memory.isPinned && isMemoryContentAndTriggerSelected(memory)
-            }
-    }
-
-    private var scheduledMemories: [MemoryModel] {
-        memoryService.scheduledMemories(referenceDate: selectedDate)
-            .filter { memory in
-                guard memory.nextFireDate(referenceDate: selectedDate) != nil else { return false }
-                return isMemoryContentAndTriggerSelected(memory)
-            }
-    }
-
-    private var memoriesByDate: [Date: [MemoryModel]] {
-        Dictionary(grouping: scheduledMemories) { memory in
-            Calendar.current.startOfDay(for: memory.nextFireDate(referenceDate: selectedDate) ?? Date())
-        }
-    }
-
-    private var sortedDates: [Date] {
-        memoriesByDate.keys.sorted()
-    }
-
-    private var weeks: [(start: Date, end: Date, dates: [Date])] {
-        let calendar = Calendar.current
-        var weeks: [(start: Date, end: Date, dates: [Date])] = []
-
-        guard !sortedDates.isEmpty else { return weeks }
-
-        var currentWeekStart: Date?
-        var currentWeekDates: [Date] = []
-
-        for date in sortedDates {
-            let weekStart = calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? date
-
-            if let existingWeekStart = currentWeekStart {
-                if calendar.isDate(weekStart, equalTo: existingWeekStart, toGranularity: .day) {
-                    currentWeekDates.append(date)
-                } else {
-                    // Save previous week
-                    let weekEnd = calendar.date(byAdding: .day, value: 6, to: existingWeekStart) ?? existingWeekStart
-                    weeks.append((start: existingWeekStart, end: weekEnd, dates: currentWeekDates))
-                    // Start new week
-                    currentWeekStart = weekStart
-                    currentWeekDates = [date]
-                }
-            } else {
-                currentWeekStart = weekStart
-                currentWeekDates = [date]
-            }
-        }
-
-        // Save last week
-        if let weekStart = currentWeekStart, !currentWeekDates.isEmpty {
-            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-            weeks.append((start: weekStart, end: weekEnd, dates: currentWeekDates))
-        }
-
-        return weeks
-    }
-
     private var hasAnyContent: Bool {
-        !filteredPinnedMemories.isEmpty ||
-        !scheduledMemories.isEmpty ||
-        (showInbox && !filteredInboxMemories.isEmpty)
+        !locationOnlyMemories.isEmpty ||
+        !personOnlyMemories.isEmpty ||
+        !sequentialOnlyMemories.isEmpty
     }
 
     private var activeFilterCount: Int {
@@ -132,9 +65,6 @@ struct MemoryTimelineView: View {
         }
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
             count += selectedTriggerTypes.count
-        }
-        if !showInbox {
-            count += 1
         }
         return count
     }
@@ -156,10 +86,6 @@ struct MemoryTimelineView: View {
             parts.append(triggerTypeLabels.joined(separator: ", "))
         }
 
-        if !showInbox {
-            parts.append("No Inbox")
-        }
-
         return parts.isEmpty ? "All" : parts.joined(separator: " • ")
     }
 
@@ -170,7 +96,7 @@ struct MemoryTimelineView: View {
             }
             return "\(selectedMemoryIDs.count) Selected"
         }
-        return "Timeline"
+        return "Triggers"
     }
 
     private var bulkActionSpaces: [SpaceModel] {
@@ -200,7 +126,7 @@ struct MemoryTimelineView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            timelineList
+            triggersList
                 .navigationTitle(navigationTitleText)
                 .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
                 .toolbar {
@@ -245,7 +171,7 @@ struct MemoryTimelineView: View {
                     FilterSheetView(
                         selectedContentTypes: $selectedContentTypes,
                         selectedTriggerTypes: $selectedTriggerTypes,
-                        showInbox: $showInbox,
+                        showInbox: .constant(true),
                         detentSelection: $filterSheetDetent
                     )
                     .onAppear { filterSheetDetent = .large }
@@ -273,13 +199,6 @@ struct MemoryTimelineView: View {
                 } message: {
                     Text(bulkActionErrorMessage ?? "")
                 }
-                .onAppear(perform: syncExpansionStates)
-                .onChange(of: filteredInboxMemories.count) {
-                    syncExpansionStates()
-                }
-                .onChange(of: isInboxExpanded) {
-                    autoCollapsedInbox = filteredInboxMemories.isEmpty && !isInboxExpanded
-                }
                 .onChange(of: isMultiSelecting) { _, newValue in
                     onMultiSelectionChange(newValue)
                 }
@@ -292,29 +211,26 @@ struct MemoryTimelineView: View {
         }
     }
 
-    private var timelineList: some View {
+    private var triggersList: some View {
         List {
             if isSearching {
                 searchResultsList
             } else {
                 if hasAnyContent {
-                    CalendarMonthHeader(selectedDate: $selectedDate, searchText: $searchText)
-                        .listRowInsets(.init())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-
-                    pinnedSection
-
-                    calendarContent
-
-                    if showInbox {
-                        inboxListContent
+                    if !locationOnlyMemories.isEmpty {
+                        locationSection
+                    }
+                    if !personOnlyMemories.isEmpty {
+                        personSection
+                    }
+                    if !sequentialOnlyMemories.isEmpty {
+                        sequentialSection
                     }
                 } else {
                     MemoryEmptyStateCard(
-                        systemImage: "tray",
-                        title: "No memories yet",
-                        message: "Create a memory or capture a reminder to get started."
+                        systemImage: "bolt.fill",
+                        title: "No triggers yet",
+                        message: "Create a memory with location, person, or sequential triggers to get started."
                     )
                     .padding(.top, 16)
                     .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
@@ -332,57 +248,6 @@ struct MemoryTimelineView: View {
         }
         .listRowSeparator(.hidden)
         .background(Color.clear)
-    }
-
-    @ViewBuilder
-    private var calendarContent: some View {
-        ForEach(weeks, id: \.start) { week in
-            CalendarWeekDivider(startDate: week.start, endDate: week.end)
-                .listRowInsets(.init())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
-            ForEach(week.dates, id: \.self) { date in
-                CalendarDayHeader(date: date)
-                    .listRowInsets(.init())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-
-                if let memories = memoriesByDate[date] {
-                    ForEach(memories) { memory in
-                        MemoryListItemButton(
-                            memory: memory,
-                            isMultiSelecting: isMultiSelecting,
-                            isSelected: isMemorySelected(memory),
-                            isDisabled: isPerformingBulkAction,
-                            onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:),
-                            onEdit: onEditMemory
-                        )
-                        .listRowInsets(.init(top: 4, leading: 20, bottom: 4, trailing: 20))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var pinnedSection: some View {
-        if !filteredPinnedMemories.isEmpty {
-            MemoryDisclosureListSection(
-                title: "Pinned Memories",
-                systemImage: "pin.fill",
-                isExpanded: $isPinnedExpanded,
-                memories: filteredPinnedMemories,
-                isMultiSelecting: isMultiSelecting,
-                selectedMemoryIDs: selectedMemoryIDs,
-                isDisabled: isPerformingBulkAction,
-                onSelect: onSelectMemory,
-                onEdit: onEditMemory,
-                onToggleSelection: toggleMemorySelection(_:))
-        }
     }
 
     @ViewBuilder
@@ -404,55 +269,49 @@ struct MemoryTimelineView: View {
         }
     }
 
-    @ViewBuilder
-    private var inboxListContent: some View {
-        let inboxMemories = filteredInboxMemories
-
-        if !inboxMemories.isEmpty {
-            Section {
-                inboxHeaderRow(memories: inboxMemories)
-
-                if isInboxExpanded {
-                    ForEach(inboxMemories) { memory in
-                        MemoryListItemButton(
-                            memory: memory,
-                            isMultiSelecting: isMultiSelecting,
-                            isSelected: isMemorySelected(memory),
-                            isDisabled: isPerformingBulkAction,
-                            onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:),
-                            onEdit: onEditMemory)
-                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
-                }
-            }
-            .listSectionSeparator(.hidden)
-        }
+    private var locationSection: some View {
+        MemoryDisclosureListSection(
+            title: "Location-based",
+            systemImage: "mappin.and.ellipse",
+            isExpanded: $isLocationExpanded,
+            memories: locationOnlyMemories,
+            isMultiSelecting: isMultiSelecting,
+            selectedMemoryIDs: selectedMemoryIDs,
+            isDisabled: isPerformingBulkAction,
+            onSelect: onSelectMemory,
+            onEdit: onEditMemory,
+            onToggleSelection: toggleMemorySelection(_:)
+        )
     }
 
-    private func inboxHeaderRow(memories: [MemoryModel]) -> some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isInboxExpanded.toggle()
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Label("Inbox", systemImage: "tray.fill")
-                    .foregroundStyle(.white)
-                Spacer()
-                Image(systemName: isInboxExpanded ? "chevron.down" : "chevron.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 12)
-        }
-        .buttonStyle(.plain)
-        .listRowInsets(.init(top: 24, leading: 20, bottom: isInboxExpanded && !memories.isEmpty ? 0 : 8, trailing: 20))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-        .disabled(memories.isEmpty)
+    private var personSection: some View {
+        MemoryDisclosureListSection(
+            title: "Person-based",
+            systemImage: "person.crop.circle",
+            isExpanded: $isPersonExpanded,
+            memories: personOnlyMemories,
+            isMultiSelecting: isMultiSelecting,
+            selectedMemoryIDs: selectedMemoryIDs,
+            isDisabled: isPerformingBulkAction,
+            onSelect: onSelectMemory,
+            onEdit: onEditMemory,
+            onToggleSelection: toggleMemorySelection(_:)
+        )
+    }
+
+    private var sequentialSection: some View {
+        MemoryDisclosureListSection(
+            title: "Sequential",
+            systemImage: "arrowshape.turn.up.right.circle",
+            isExpanded: $isSequentialExpanded,
+            memories: sequentialOnlyMemories,
+            isMultiSelecting: isMultiSelecting,
+            selectedMemoryIDs: selectedMemoryIDs,
+            isDisabled: isPerformingBulkAction,
+            onSelect: onSelectMemory,
+            onEdit: onEditMemory,
+            onToggleSelection: toggleMemorySelection(_:)
+        )
     }
 
     private func memoryRow(for memory: MemoryModel) -> some View {
@@ -521,63 +380,12 @@ struct MemoryTimelineView: View {
         return contentMatches && triggerMatches
     }
 
-    private func sortPinned(_ lhs: MemoryModel, _ rhs: MemoryModel, referenceDate: Date = Date()) -> Bool {
-        let lhsFire = lhs.nextFireDate(referenceDate: referenceDate)
-        let rhsFire = rhs.nextFireDate(referenceDate: referenceDate)
-
-        if lhsFire != rhsFire {
-            switch (lhsFire, rhsFire) {
-            case let (lhsDate?, rhsDate?):
-                return lhsDate < rhsDate
-            case (_?, nil):
-                return true
-            case (nil, _?):
-                return false
-            default:
-                break
-            }
-        }
-
-        if lhs.dueDate != rhs.dueDate {
-            switch (lhs.dueDate, rhs.dueDate) {
-            case let (lhsDate?, rhsDate?):
-                return lhsDate < rhsDate
-            case (_?, nil):
-                return true
-            case (nil, _?):
-                return false
-            default:
-                break
-            }
-        }
-
-        if lhs.priority != rhs.priority {
-            let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-            let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-            return lhsPriority > rhsPriority
-        }
-
-        return lhs.updatedAt > rhs.updatedAt
-    }
-
     private func toggleMemorySelection(_ memory: MemoryModel) {
         let id = memory.id
         if selectedMemoryIDs.contains(id) {
             selectedMemoryIDs.remove(id)
         } else {
             selectedMemoryIDs.insert(id)
-        }
-    }
-
-    private func syncExpansionStates() {
-        if filteredInboxMemories.isEmpty {
-            if isInboxExpanded {
-                isInboxExpanded = false
-                autoCollapsedInbox = true
-            }
-        } else if autoCollapsedInbox && !isInboxExpanded {
-            isInboxExpanded = true
-            autoCollapsedInbox = false
         }
     }
 
@@ -687,13 +495,12 @@ struct MemoryTimelineView: View {
             }
         }
     }
-
 }
 
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
-    return MemoryTimelineView(
+    return MemoryTriggersView(
         memoryService: environment.memoryService,
         onSelectMemory: { _ in },
         onEditMemory: nil,

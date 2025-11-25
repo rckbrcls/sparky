@@ -24,11 +24,9 @@ struct SpaceDetailView: View {
     @State private var showingFilterSheet = false
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
-    @State private var selectedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var showInbox = true
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var searchText = ""
-    @State private var collapsedSections: Set<MemoryService.TimelineSection.Kind> = []
     @State private var isInboxExpanded = true
     @State private var isOtherExpanded = true
     @State private var isPinnedExpanded = true
@@ -46,9 +44,6 @@ struct SpaceDetailView: View {
         }
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
             count += selectedTriggerTypes.count
-        }
-        if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
-            count += selectedSections.count
         }
         if !showInbox {
             count += 1
@@ -93,39 +88,8 @@ struct SpaceDetailView: View {
             }
     }
 
-    private var timelineSectionsForSpace: [MemoryService.TimelineSection] {
-        let referenceDate = Date()
-        var sections: [MemoryService.TimelineSection] = []
-
-        for kind in MemoryService.TimelineSection.Kind.allCases {
-            let memories = nonInboxMemories.filter { memory in
-                switch kind {
-                case .recurring:
-                    return memory.hasRecurringTriggers
-                default:
-                    guard let sectionKind = sectionKind(for: memory, referenceDate: referenceDate) else {
-                        return false
-                    }
-                    return sectionKind == kind
-                }
-            }
-
-            if !memories.isEmpty {
-                sections.append(MemoryService.TimelineSection(kind: kind, memories: memories))
-            }
-        }
-
-        return sections
-    }
-
-    private var ungroupedMemories: [MemoryModel] {
-        let sectionIDs = Set(timelineSectionsForSpace.flatMap(\.memories).map(\.id))
-        return nonInboxMemories.filter { !sectionIDs.contains($0.id) }
-    }
-
     private var shouldShowEmptyStateCard: Bool {
-        timelineSectionsForSpace.isEmpty &&
-        ungroupedMemories.isEmpty &&
+        nonInboxMemories.isEmpty &&
         pinnedMemories.isEmpty &&
         (!showInbox || inboxMemories.isEmpty)
     }
@@ -145,13 +109,6 @@ struct SpaceDetailView: View {
                 .map(\.label)
                 .sorted()
             parts.append(triggerTypeLabels.joined(separator: ", "))
-        }
-
-        if !selectedSections.isEmpty && selectedSections.count < MemoryService.TimelineSection.Kind.allCases.count {
-            let sectionTitles = selectedSections
-                .map(\.title)
-                .sorted()
-            parts.append(sectionTitles.joined(separator: ", "))
         }
 
         if !showInbox {
@@ -236,12 +193,6 @@ struct SpaceDetailView: View {
             .toolbar { toolbarContent }
             .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
             .onAppear(perform: syncExpansionStates)
-            .onChange(of: timelineSectionsForSpace.count) { _, _ in
-                syncExpansionStates()
-            }
-            .onChange(of: ungroupedMemories.count) { _, _ in
-                syncExpansionStates()
-            }
             .onChange(of: inboxMemories.count) { _, _ in
                 syncExpansionStates()
             }
@@ -300,7 +251,6 @@ struct SpaceDetailView: View {
         FilterSheetView(
             selectedContentTypes: $selectedContentTypes,
             selectedTriggerTypes: $selectedTriggerTypes,
-            selectedSections: $selectedSections,
             showInbox: $showInbox,
             detentSelection: $filterSheetDetent
         )
@@ -357,17 +307,14 @@ struct SpaceDetailView: View {
     @ViewBuilder
     private var timelineAndInboxSection: some View {
         SpaceDetailTimelineContentView(
-            sections: timelineSectionsForSpace,
+            memories: nonInboxMemories,
             pinnedMemories: pinnedMemories,
-            ungroupedMemories: ungroupedMemories,
             emptyStateTitle: emptyStateTitle,
             emptyStateMessage: emptyStateMessage,
             isMultiSelecting: isMultiSelecting,
             selectedMemoryIDs: selectedMemoryIDs,
             isPerformingBulkAction: isPerformingBulkAction,
             isPinnedExpanded: $isPinnedExpanded,
-            isOtherExpanded: $isOtherExpanded,
-            sectionExpansionProvider: sectionExpansionBinding(for:),
             isMemorySelected: isMemorySelected(_:),
             onSelectMemory: onSelectMemory,
             onEditMemory: onEditMemory,
@@ -418,12 +365,10 @@ struct SpaceDetailView: View {
             sort: .updatedAtDescending
         )
 
-        let referenceDate = Date()
         let query = trimmedSearchText
 
         return base.filter { memory in
             matchesSelectedContentAndTrigger(memory) &&
-            matchesSelectedSection(memory, referenceDate: referenceDate) &&
             (showInbox || !memory.isInbox) &&
             matchesSearch(memory, query: query)
         }
@@ -481,62 +426,12 @@ struct SpaceDetailView: View {
         return contentMatches && triggerMatches
     }
 
-    private func matchesSelectedSection(_ memory: MemoryModel, referenceDate: Date = Date()) -> Bool {
-        if selectedSections.isEmpty || selectedSections.count == MemoryService.TimelineSection.Kind.allCases.count {
-            return true
-        }
-
-        if selectedSections.contains(.recurring), memory.hasRecurringTriggers {
-            return true
-        }
-
-        guard memory.status == .active,
-              memory.hasTriggers,
-              let kind = sectionKind(for: memory, referenceDate: referenceDate) else {
-            return false
-        }
-
-        return selectedSections.contains(kind)
-    }
-
-    private func sectionKind(for memory: MemoryModel, referenceDate: Date = Date()) -> MemoryService.TimelineSection.Kind? {
-        guard let fireDate = memory.nextFireDate(referenceDate: referenceDate) else { return nil }
-
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: referenceDate)
-        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
-        let sevenDaysOut = calendar.date(byAdding: .day, value: 7, to: startOfTomorrow) ?? referenceDate
-
-        if calendar.isDate(fireDate, inSameDayAs: referenceDate) {
-            return .today
-        } else if fireDate < sevenDaysOut {
-            return .nextSevenDays
-        } else {
-            return .later
-        }
-    }
-
     private func memoryCount(for space: SpaceModel) -> Int {
         let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { memory in
             guard let spaceID = memory.space?.id else { return false }
             return ids.contains(spaceID)
         }.count
-    }
-
-    private func sectionExpansionBinding(for kind: MemoryService.TimelineSection.Kind) -> Binding<Bool> {
-        Binding(
-            get: { !collapsedSections.contains(kind) },
-            set: { isExpanded in
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    if isExpanded {
-                        collapsedSections.remove(kind)
-                    } else {
-                        collapsedSections.insert(kind)
-                    }
-                }
-            }
-        )
     }
 
     private func matchesSearch(_ memory: MemoryModel, query: String) -> Bool {

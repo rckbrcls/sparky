@@ -178,6 +178,18 @@ extension MemoryTriggerDraft {
             ignoreCount: ignoreCount
         )
     }
+
+    /// Converte para um trigger protocol
+    func toTriggerProtocol() -> any TriggerProtocol {
+        TriggerFactory.createTrigger(from: self)
+    }
+}
+
+extension MemoryTriggerModel {
+    /// Converte para um trigger protocol
+    func toTriggerProtocol() -> any TriggerProtocol {
+        TriggerFactory.createTrigger(from: self)
+    }
 }
 
 extension MemoryTriggerModel {

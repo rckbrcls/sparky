@@ -5,7 +5,7 @@ enum ScheduleType: String, CaseIterable {
     case exactDate = "Date"
 }
 
-struct MemoryDateAndTimeTriggerEditorScreen: View {
+struct ScheduledTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     private let showsCloseButton: Bool

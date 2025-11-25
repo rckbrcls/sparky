@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct MemoryDateAndTimeTriggerInlineForm: View {
+struct ScheduledTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @Binding var showSheet: Bool
 

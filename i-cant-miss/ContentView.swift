@@ -10,6 +10,7 @@ import Combine
 
 enum CustomTab: String, CaseIterable {
     case home = "Timeline"
+    case triggers = "Triggers"
     case spaces = "Spaces"
     case settings = "Settings"
 
@@ -17,6 +18,8 @@ enum CustomTab: String, CaseIterable {
         switch self {
         case .home:
             return "list.bullet.rectangle"
+        case .triggers:
+            return "bolt.fill"
         case .spaces:
             return "square.grid.2x2"
         case .settings:
@@ -27,6 +30,8 @@ enum CustomTab: String, CaseIterable {
     var actionSymbol :String {
         switch self {
         case .home:
+            return "plus"
+        case .triggers:
             return "plus"
         case .spaces:
             return "plus"
@@ -47,6 +52,7 @@ struct ContentView: View {
     @State private var spaceComposerRequest: SpaceComposerRequest?
     @State private var activeTab: CustomTab = .home
     @State private var homeNavigationPath = NavigationPath()
+    @State private var triggersNavigationPath = NavigationPath()
     @State private var spacesNavigationPath = NavigationPath()
     @State private var settingsNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
@@ -68,6 +74,17 @@ struct ContentView: View {
                         onEditMemory: handleMemoryEdit,
                         onMultiSelectionChange: handleMultiSelectionChange,
                         navigationPath: $homeNavigationPath
+                    )
+                    .tabBarSpacer()
+                }
+
+                Tab.init(value: .triggers){
+                    MemoryTriggersView(
+                        memoryService: environment.memoryService,
+                        onSelectMemory: handleMemorySelection,
+                        onEditMemory: handleMemoryEdit,
+                        onMultiSelectionChange: handleMultiSelectionChange,
+                        navigationPath: $triggersNavigationPath
                     )
                     .tabBarSpacer()
                 }
@@ -237,6 +254,8 @@ struct ContentView: View {
         switch tab {
         case .home:
             homeNavigationPath = NavigationPath()
+        case .triggers:
+            triggersNavigationPath = NavigationPath()
         case .spaces:
             spacesNavigationPath = NavigationPath()
         case .settings:

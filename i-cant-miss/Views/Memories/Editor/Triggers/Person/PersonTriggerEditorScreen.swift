@@ -2,7 +2,7 @@ import SwiftUI
 import Contacts
 import UIKit
 
-struct MemoryPersonTriggerEditorScreen: View {
+struct PersonTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     private let showsCloseButton: Bool
