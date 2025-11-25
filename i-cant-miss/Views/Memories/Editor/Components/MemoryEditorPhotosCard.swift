@@ -51,10 +51,11 @@ struct MemoryEditorPhotosCard: View {
             squareCell { _ in
                 ZStack {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                        .fill(Color.clear)
+                        .liquidGlass(
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                            borderColor: Color.primary.opacity(0.1),
+                            borderLineWidth: 1
                         )
                     Image(systemName: "plus")
                         .font(.system(size: 28, weight: .semibold))

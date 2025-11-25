@@ -10,17 +10,35 @@ struct MemoryListItemButton: View {
     let onEdit: ((MemoryModel) -> Void)?
 
     @EnvironmentObject private var environment: AppEnvironment
+    @State private var isShowingMoreActions = false
 
     var body: some View {
         if isMultiSelecting || isDisabled {
             listButton
         } else {
             listButton
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     trailingSwipeActions()
                 }
                 .swipeActions(edge: .leading, allowsFullSwipe: false) {
                     leadingSwipeActions()
+                }
+                .sheet(isPresented: $isShowingMoreActions) {
+                    MemoryListMoreActionsSheet(
+                        canEdit: onEdit != nil,
+                        onEdit: {
+                            guard let onEdit else { return }
+                            isShowingMoreActions = false
+                            onEdit(memory)
+                        },
+                        onDelete: {
+                            isShowingMoreActions = false
+                            Task { await deleteMemory() }
+                        }
+                    )
+                    .presentationDetents([.height(200)])
+                    .presentationDragIndicator(.hidden)
+                    .presentationBackground(.clear)
                 }
         }
     }
@@ -80,22 +98,12 @@ struct MemoryListItemButton: View {
         }
         .tint(.green)
 
-        // Edit action (between completed and delete)
-        if let onEdit = onEdit {
-            Button {
-                onEdit(memory)
-            } label: {
-                Label("Edit", systemImage: "pencil")
-            }
-            .tint(.blue)
-        }
-
-        // Delete action last
-        Button(role: .destructive) {
-            Task { await deleteMemory() }
+        Button {
+            isShowingMoreActions = true
         } label: {
-            Label("Delete", systemImage: "trash")
+            Label("More", systemImage: "ellipsis")
         }
+        .tint(.gray)
     }
 
     @ViewBuilder

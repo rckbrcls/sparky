@@ -8,7 +8,9 @@ final class SpeechTranscriber: ObservableObject {
     @Published private(set) var isRecording: Bool = false
     @Published var errorMessage: String?
 
-    private let audioEngine = AVAudioEngine()
+    private lazy var audioEngine: AVAudioEngine = {
+        AVAudioEngine()
+    }()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let speechRecognizer: SFSpeechRecognizer?
@@ -80,6 +82,15 @@ final class SpeechTranscriber: ObservableObject {
         recognitionTask?.cancel()
         recognitionTask = nil
         recognitionRequest = nil
+
+        // Desativa a sessão de áudio para não interferir com outros apps
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // Ignora erros ao desativar a sessão, mas tenta garantir que não interfira
+        }
+
         if isRecording {
             isRecording = false
         }

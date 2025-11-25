@@ -86,8 +86,7 @@ struct FilterSheetView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var triggersSection: some View {
@@ -112,8 +111,7 @@ struct FilterSheetView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var timelineSectionsSection: some View {
@@ -138,8 +136,7 @@ struct FilterSheetView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var inboxSection: some View {
@@ -162,8 +159,7 @@ struct FilterSheetView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private func isContentTypeVisuallySelected(_ contentType: MemoryContentFilterType) -> Bool {

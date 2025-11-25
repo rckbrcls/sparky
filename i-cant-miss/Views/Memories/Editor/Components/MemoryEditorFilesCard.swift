@@ -34,7 +34,11 @@ struct MemoryEditorFilesCard: View {
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(Color.accentColor)
                         .padding(10)
-                        .background(.ultraThinMaterial, in: Circle())
+                        .background(
+                            Circle()
+                                .fill(Color.clear)
+                                .liquidGlass(in: Circle(), addSubtleBorder: false)
+                        )
                 }
                 .accessibilityLabel("Add files")
                 .disabled(isImporting)

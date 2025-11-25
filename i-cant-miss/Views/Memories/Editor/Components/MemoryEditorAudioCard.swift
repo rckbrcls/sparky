@@ -32,8 +32,17 @@ struct MemoryEditorAudioCard: View {
         }
         .onDisappear {
             stopTimer()
-            recorder?.stop()
+            if isRecording {
+                stopRecording(didCancel: true)
+            }
             player?.stop()
+            // Garante que a sessão de áudio seja desativada ao sair da view
+            do {
+                let session = AVAudioSession.sharedInstance()
+                try session.setActive(false, options: .notifyOthersOnDeactivation)
+            } catch {
+                // Ignora erros ao desativar a sessão
+            }
         }
     }
 
@@ -57,7 +66,11 @@ struct MemoryEditorAudioCard: View {
                         .font(.system(size: 26, weight: .bold))
                         .foregroundStyle(isRecording ? .red : .accentColor)
                         .padding(10)
-                        .background(.ultraThinMaterial, in: Circle())
+                        .background(
+                            Circle()
+                                .fill(Color.clear)
+                                .liquidGlass(in: Circle(), addSubtleBorder: false)
+                        )
                 }
                 .accessibilityLabel(isRecording ? "Stop recording" : "Start recording")
             }
@@ -224,6 +237,14 @@ struct MemoryEditorAudioCard: View {
         recordingURL = nil
         recordingDuration = 0
         isRecording = false
+
+        // Desativa a sessão de áudio para não interferir com outros apps
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // Ignora erros ao desativar a sessão
+        }
 
         guard !didCancel, let url, let data = try? Data(contentsOf: url), !data.isEmpty else {
             return

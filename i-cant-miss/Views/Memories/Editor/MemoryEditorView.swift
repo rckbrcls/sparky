@@ -155,6 +155,7 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 import QuickLook
+import Combine
 
 struct MemoryEditorView: View {
     enum Mode {
@@ -193,7 +194,7 @@ struct MemoryEditorView: View {
     @State private var isShowingFilePreview = false
     @State private var navigationPath = NavigationPath()
     @Namespace private var toolbarGlassNamespace
-    @StateObject private var titleTranscriber = SpeechTranscriber()
+    @State private var titleTranscriber: SpeechTranscriber?
     @State private var titleTranscriptionPrefix = ""
 
     private let mode: Mode
@@ -391,12 +392,14 @@ struct MemoryEditorView: View {
         return metadataSaveConfigured
             .onChange(of: isEditingEnabled) { _, newValue in
                 if !newValue {
-                    titleTranscriber.stop()
+                    titleTranscriber?.stop()
                 }
             }
-            .onReceive(titleTranscriber.$transcript, perform: handleTitleTranscript)
+            .onChange(of: titleTranscriber?.transcript ?? "") { _, newTranscript in
+                handleTitleTranscript(newTranscript)
+            }
             .onDisappear {
-                titleTranscriber.stop()
+                titleTranscriber?.stop()
             }
     }
 
@@ -408,7 +411,7 @@ struct MemoryEditorView: View {
     }
 
     private func handleTitleTranscript(_ transcript: String) {
-        guard titleTranscriber.isRecording else { return }
+        guard let transcriber = titleTranscriber, transcriber.isRecording else { return }
         let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = titleTranscriptionPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
         let combined = [base, trimmedTranscript]
@@ -683,15 +686,15 @@ struct MemoryEditorView: View {
                         Button {
                             toggleTitleTranscription()
                         } label: {
-                            Image(systemName: titleTranscriber.isRecording ? "mic.fill" : "mic")
+                            Image(systemName: titleTranscriber?.isRecording == true ? "mic.fill" : "mic")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(titleTranscriber.isRecording ? .red : .secondary)
+                                .foregroundStyle(titleTranscriber?.isRecording == true ? .red : .secondary)
                         }
-                        .accessibilityLabel(titleTranscriber.isRecording ? "Parar transcrição do título" : "Transcrever áudio para o título")
+                        .accessibilityLabel(titleTranscriber?.isRecording == true ? "Parar transcrição do título" : "Transcrever áudio para o título")
                         .disabled(viewModel.isSaving)
                     }
 
-                    if let errorMessage = titleTranscriber.errorMessage {
+                    if let errorMessage = titleTranscriber?.errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
                             .foregroundStyle(.red)
@@ -715,12 +718,19 @@ struct MemoryEditorView: View {
     private func toggleTitleTranscription() {
         guard isEditingEnabled else { return }
         Task {
-            if titleTranscriber.isRecording {
-                titleTranscriber.stop()
+            // Cria o transcriber apenas quando necessário (na primeira vez que clicar)
+            if titleTranscriber == nil {
+                titleTranscriber = SpeechTranscriber()
+            }
+
+            guard let transcriber = titleTranscriber else { return }
+
+            if transcriber.isRecording {
+                transcriber.stop()
                 titleTranscriptionPrefix = viewModel.title
             } else {
                 titleTranscriptionPrefix = viewModel.title
-                await titleTranscriber.start()
+                await transcriber.start()
             }
         }
     }

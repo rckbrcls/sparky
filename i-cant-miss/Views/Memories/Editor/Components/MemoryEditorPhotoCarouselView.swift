@@ -132,7 +132,11 @@ struct MemoryEditorPhotoCarouselView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial, in: Capsule())
+        .background(
+            Capsule()
+                .fill(Color.clear)
+                .liquidGlass(in: Capsule(), addSubtleBorder: false)
+        )
         .opacity(attachments.count > 1 ? 1 : 0)
         .animation(.easeInOut(duration: 0.25), value: attachments.count)
     }

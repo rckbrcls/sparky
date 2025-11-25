@@ -48,7 +48,11 @@ extension LocationPickerView {
                 }
             }
             .padding(16)
-            .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 22))
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color.clear)
+                    .liquidGlass(in: RoundedRectangle(cornerRadius: 22), addSubtleBorder: false)
+            )
             .shadow(color: Color.black.opacity(0.12), radius: 20, y: 12)
         }
     }
