@@ -59,6 +59,7 @@ struct TriggerButtonsBar: View {
                 )
             }
         }
+        .padding(.leading, 20)
     }
 
     private var hasScheduledTrigger: Bool {

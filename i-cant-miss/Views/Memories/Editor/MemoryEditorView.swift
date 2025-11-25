@@ -655,7 +655,6 @@ struct MemoryEditorView: View {
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 20)
     }
 
     private var titleSection: some View {
