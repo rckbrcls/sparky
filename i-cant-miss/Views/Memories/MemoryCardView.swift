@@ -8,8 +8,18 @@
 import SwiftUI
 
 struct MemoryCardView: View {
-    let memory: MemoryModel
+    let memoryID: UUID
+    @ObservedObject var memoryService: MemoryService
     @EnvironmentObject private var environment: AppEnvironment
+
+    init(memoryID: UUID, memoryService: MemoryService) {
+        self.memoryID = memoryID
+        self._memoryService = ObservedObject(wrappedValue: memoryService)
+    }
+
+    private var memory: MemoryModel? {
+        memoryService.memory(id: memoryID)
+    }
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
@@ -26,29 +36,34 @@ struct MemoryCardView: View {
     }()
 
     private var title: String {
+        guard let memory = memory else { return "Untitled" }
         let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "Untitled" : trimmed
     }
 
     private var bodyPreview: String? {
-        guard let body = memory.body?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let memory = memory,
+              let body = memory.body?.trimmingCharacters(in: .whitespacesAndNewlines),
               !body.isEmpty else { return nil }
         return body
     }
 
     private var nextTriggerText: String? {
-        guard let fireDate = memory.nextFireDate() else { return nil }
+        guard let memory = memory,
+              let fireDate = memory.nextFireDate() else { return nil }
         let now = Date()
         return Self.relativeFormatter.localizedString(for: fireDate, relativeTo: now)
     }
 
     private var dueDateText: String? {
-        guard let dueDate = memory.dueDate else { return nil }
+        guard let memory = memory,
+              let dueDate = memory.dueDate else { return nil }
         return Self.dueDateFormatter.string(from: dueDate)
     }
 
     private var checklistProgressText: String? {
-        guard memory.hasChecklist else { return nil }
+        guard let memory = memory,
+              memory.hasChecklist else { return nil }
         let total = memory.checkItems.count
         guard total > 0 else { return nil }
         let completed = memory.checkItems.filter(\.isCompleted).count
@@ -56,7 +71,8 @@ struct MemoryCardView: View {
     }
 
     private var sequentialSummary: String? {
-        guard let sequential = memory.triggers.first(where: { $0.type == .sequential })?.sequential else {
+        guard let memory = memory,
+              let sequential = memory.triggers.first(where: { $0.type == .sequential })?.sequential else {
             return nil
         }
 
@@ -71,6 +87,7 @@ struct MemoryCardView: View {
     }
 
     private var statusBadge: (text: String, systemImage: String, color: Color)? {
+        guard let memory = memory else { return nil }
         switch memory.status {
         case .active:
             return nil
@@ -80,14 +97,24 @@ struct MemoryCardView: View {
     }
 
     private var spaceAccent: Color {
-        if let hex = memory.space?.colorHex,
-           let color = Color(hex: hex) {
-            return color
+        guard let memory = memory,
+              let hex = memory.space?.colorHex,
+              let color = Color(hex: hex) else {
+            return .accentColor
         }
-        return .accentColor
+        return color
     }
 
     var body: some View {
+        if let memory = memory {
+            memoryContent(memory: memory)
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func memoryContent(memory: MemoryModel) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             let hasMetaIndicators = memory.priority != nil || statusBadge != nil
             let hasSpaceBadge = memory.space != nil
@@ -223,6 +250,8 @@ struct MemoryCardView: View {
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
-    return ContentView(environment: environment)
+    let sampleMemoryID = UUID()
+    return MemoryCardView(memoryID: sampleMemoryID, memoryService: environment.memoryService)
         .environmentObject(environment)
+        .padding()
 }

@@ -266,7 +266,7 @@ private extension OnboardingStep {
         case .memories:
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(OnboardingSampleData.memories) { memory in
-                    MemoryCardView(memory: memory)
+                    MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService)
                         .environmentObject(environment)
                         .allowsHitTesting(false)
                 }

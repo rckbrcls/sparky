@@ -315,6 +315,8 @@ final class MemoryService: ObservableObject {
     }
 
     func updateCachedMemory(_ memory: MemoryModel) {
+        // Ensure we're on the main thread since memories is @Published
+        assert(Thread.isMainThread, "updateCachedMemory must be called on main thread")
         guard let index = memories.firstIndex(where: { $0.id == memory.id }) else { return }
         memories[index] = memory
         cache.removeAll()
@@ -556,7 +558,7 @@ private extension MemoryService {
 
     func mutateMemory(memoryID: UUID,
                       mutation: @escaping (Memory) throws -> Void) async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     guard let memory = try self.fetchMemory(by: memoryID, context: context) else {
@@ -565,12 +567,23 @@ private extension MemoryService {
                     try mutation(memory)
                     memory.updatedAt = Date()
                     try context.save()
-                    continuation.resume()
+                    continuation.resume(returning: memory.objectID)
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
+
+        // Update cache immediately with the updated memory
+        // fetchMemoryFromViewContext is already @MainActor, so we're on main thread
+        do {
+            let updatedMemory = try await fetchMemoryFromViewContext(objectID: objectID)
+            updateCachedMemory(updatedMemory)
+        } catch {
+            logger.error("Failed to update cache immediately: \(error.localizedDescription)")
+        }
+
+        // Then refresh to ensure everything is in sync
         await refresh(force: true)
     }
 

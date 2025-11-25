@@ -17,11 +17,6 @@ struct MemoryEditorPhotosCard: View {
                 attachmentsGallery
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if isEditable {
-                addMenu
-            }
-        }
     }
 
     private var attachmentsGallery: some View {
@@ -44,6 +39,9 @@ struct MemoryEditorPhotosCard: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 12) {
+                        if isEditable {
+                            addButtonBox
+                        }
                         if isLoading {
                             ProgressView()
                                 .progressViewStyle(.circular)
@@ -64,21 +62,23 @@ struct MemoryEditorPhotosCard: View {
         }
     }
 
-    private var addMenu: some View {
+    private var addButtonBox: some View {
         Menu {
-            Button("Add From Library", action: onAddFromLibrary)
-            Button("Capture Photo", action: onAddFromCamera)
+            Button(action: onAddFromLibrary) {
+                Label("Add From Library", systemImage: "photo.on.rectangle")
+            }
+            Button(action: onAddFromCamera) {
+                Label("Capture Photo", systemImage: "camera.fill")
+            }
         } label: {
-            Image(systemName: "plus.circle.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-                .padding(10)
-                .background(.ultraThinMaterial, in: Circle())
+            Image(systemName: "plus")
+                .font(.system(size: 28, weight: .semibold))
+                .frame(width: 120, height: 120)
+                .glassEffect(in: .rect(cornerRadius: 18.0))
         }
         .accessibilityLabel("Add photos")
         .disabled(!isAddMenuEnabled || isLoading)
         .opacity((isAddMenuEnabled && !isLoading) ? 1 : 0.6)
-        .padding(8)
     }
 
     private func attachmentThumbnail(for attachment: MemoryModel.Attachment) -> some View {
@@ -122,4 +122,91 @@ struct MemoryEditorPhotosCard: View {
         }
     }
 
+}
+
+#Preview {
+    func createSampleImageData(color: UIColor = .systemBlue) -> Data {
+        let size = CGSize(width: 200, height: 200)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { context in
+            color.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        return image.pngData() ?? Data()
+    }
+
+    return VStack(spacing: 24) {
+        // Estado vazio
+        MemoryEditorPhotosCard(
+            attachments: .constant([]),
+            isLoading: false,
+            isEditable: true,
+            onRemoveAttachment: { _ in },
+            onAttachmentTap: { _, _ in },
+            onAddFromLibrary: {},
+            onAddFromCamera: {}
+        )
+        .padding()
+
+        // Estado com imagens
+        MemoryEditorPhotosCard(
+            attachments: .constant([
+                MemoryModel.Attachment(
+                    id: UUID(),
+                    kind: .photo,
+                    data: createSampleImageData(color: .systemBlue),
+                    createdAt: Date()
+                ),
+                MemoryModel.Attachment(
+                    id: UUID(),
+                    kind: .photo,
+                    data: createSampleImageData(color: .systemGreen),
+                    createdAt: Date()
+                ),
+                MemoryModel.Attachment(
+                    id: UUID(),
+                    kind: .photo,
+                    data: createSampleImageData(color: .systemOrange),
+                    createdAt: Date()
+                )
+            ]),
+            isLoading: false,
+            isEditable: true,
+            onRemoveAttachment: { _ in },
+            onAttachmentTap: { _, _ in },
+            onAddFromLibrary: {},
+            onAddFromCamera: {}
+        )
+        .padding()
+
+        // Estado carregando
+        MemoryEditorPhotosCard(
+            attachments: .constant([]),
+            isLoading: true,
+            isEditable: true,
+            onRemoveAttachment: { _ in },
+            onAttachmentTap: { _, _ in },
+            onAddFromLibrary: {},
+            onAddFromCamera: {}
+        )
+        .padding()
+
+        // Estado não editável
+        MemoryEditorPhotosCard(
+            attachments: .constant([
+                MemoryModel.Attachment(
+                    id: UUID(),
+                    kind: .photo,
+                    data: createSampleImageData(color: .systemPurple),
+                    createdAt: Date()
+                )
+            ]),
+            isLoading: false,
+            isEditable: false,
+            onRemoveAttachment: { _ in },
+            onAttachmentTap: { _, _ in }
+        )
+        .padding()
+    }
+    .background(Color(.systemGroupedBackground))
 }

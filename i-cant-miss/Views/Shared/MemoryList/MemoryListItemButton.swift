@@ -59,7 +59,7 @@ struct MemoryListItemButton: View {
                 onSelect(memory)
             }
         } label: {
-            MemoryCardView(memory: memory)
+            MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService)
                 .overlay(selectionOverlay)
                 .overlay(alignment: .topTrailing) {
                     selectionBadge
