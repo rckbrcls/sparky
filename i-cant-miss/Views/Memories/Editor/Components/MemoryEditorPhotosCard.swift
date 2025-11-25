@@ -37,32 +37,21 @@ struct MemoryEditorPhotosCard: View {
                         .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
                 )
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 12) {
-                        if isEditable {
-                            addButtonBox
-                        }
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .frame(width: 120, height: 120)
-                                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        }
-                        ForEach(Array(attachments.enumerated()), id: \.element.id) { index, attachment in
-                            attachmentThumbnail(for: attachment)
-                                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                .onTapGesture {
-                                    onAttachmentTap(index, attachment)
-                                }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
+                GridView(
+                    attachments: attachments,
+                    isLoading: isLoading,
+                    isEditable: isEditable,
+                    isAddMenuEnabled: isAddMenuEnabled,
+                    onRemoveAttachment: onRemoveAttachment,
+                    onAttachmentTap: onAttachmentTap,
+                    onAddFromLibrary: onAddFromLibrary,
+                    onAddFromCamera: onAddFromCamera
+                )
             }
         }
     }
 
-    private var addButtonBox: some View {
+    private func addButtonBox(size: CGFloat) -> some View {
         Menu {
             Button(action: onAddFromLibrary) {
                 Label("Library", systemImage: "photo.on.rectangle")
@@ -73,7 +62,7 @@ struct MemoryEditorPhotosCard: View {
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 28, weight: .semibold))
-                .frame(width: 120, height: 120)
+                .frame(width: size, height: size)
                 .glassEffect(in: .rect(cornerRadius: 18.0))
         }
         .accessibilityLabel("Add photos")
@@ -81,14 +70,14 @@ struct MemoryEditorPhotosCard: View {
         .opacity((isAddMenuEnabled && !isLoading) ? 1 : 0.6)
     }
 
-    private func attachmentThumbnail(for attachment: MemoryModel.Attachment) -> some View {
+    private func attachmentThumbnail(for attachment: MemoryModel.Attachment, size: CGFloat) -> some View {
         Group {
             if let image = UIImage(data: attachment.data) {
                 ZStack(alignment: .topTrailing) {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 120, height: 120)
+                        .frame(width: size, height: size)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -112,7 +101,7 @@ struct MemoryEditorPhotosCard: View {
             } else {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color.secondary.opacity(0.12))
-                    .frame(width: 120, height: 120)
+                    .frame(width: size, height: size)
                     .overlay(
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 20, weight: .semibold))
@@ -122,6 +111,110 @@ struct MemoryEditorPhotosCard: View {
         }
     }
 
+}
+
+private struct GridView: View {
+    let attachments: [MemoryModel.Attachment]
+    let isLoading: Bool
+    let isEditable: Bool
+    let isAddMenuEnabled: Bool
+    let onRemoveAttachment: (UUID) -> Void
+    let onAttachmentTap: (Int, MemoryModel.Attachment) -> Void
+    let onAddFromLibrary: () -> Void
+    let onAddFromCamera: () -> Void
+
+    var body: some View {
+        GeometryReader { geometry in
+            let spacing: CGFloat = 4
+            let itemSize = max(0, (geometry.size.width - (spacing * 2)) / 3)
+            let columns = [
+                GridItem(.flexible(), spacing: spacing),
+                GridItem(.flexible(), spacing: spacing),
+                GridItem(.flexible(), spacing: spacing)
+            ]
+
+            LazyVGrid(columns: columns, alignment: .leading, spacing: spacing) {
+                if isEditable {
+                    addButtonBox(size: itemSize)
+                }
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .frame(width: itemSize, height: itemSize)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                ForEach(Array(attachments.enumerated()), id: \.element.id) { index, attachment in
+                    attachmentThumbnail(for: attachment, size: itemSize)
+                        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .onTapGesture {
+                            onAttachmentTap(index, attachment)
+                        }
+                }
+            }
+            .frame(width: geometry.size.width)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func addButtonBox(size: CGFloat) -> some View {
+        Menu {
+            Button(action: onAddFromLibrary) {
+                Label("Library", systemImage: "photo.on.rectangle")
+            }
+            Button(action: onAddFromCamera) {
+                Label("Camera", systemImage: "camera.fill")
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 28, weight: .semibold))
+                .frame(width: size, height: size)
+                .glassEffect(in: .rect(cornerRadius: 18.0))
+        }
+        .accessibilityLabel("Add photos")
+        .disabled(!isAddMenuEnabled || isLoading)
+        .opacity((isAddMenuEnabled && !isLoading) ? 1 : 0.6)
+    }
+
+    private func attachmentThumbnail(for attachment: MemoryModel.Attachment, size: CGFloat) -> some View {
+        Group {
+            if let image = UIImage(data: attachment.data) {
+                ZStack(alignment: .topTrailing) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                        )
+
+                    if isEditable {
+                        Button {
+                            onRemoveAttachment(attachment.id)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(Color.white, Color.black.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(8)
+                        .accessibilityLabel("Remove photo")
+                    }
+                }
+            } else {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.secondary.opacity(0.12))
+                    .frame(width: size, height: size)
+                    .overlay(
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    )
+            }
+        }
+    }
 }
 
 #Preview {
