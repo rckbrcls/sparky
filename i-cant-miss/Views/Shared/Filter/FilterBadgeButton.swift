@@ -26,7 +26,7 @@ struct FilterBadgeButton<Content: View>: View {
             HStack {
                 content
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal)
             .frame(height: 40)
             .contentShape(Rectangle())
             .applyGlassEffect(isToggle: isToggle, isActive: isActive)

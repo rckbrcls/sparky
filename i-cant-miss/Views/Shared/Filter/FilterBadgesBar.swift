@@ -31,18 +31,14 @@ struct FilterBadgesBar: View {
                         showTriggerSheet = true
                     }
                 ) {
-                    Label("Triggers", systemImage: "bolt.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(.primary)
-                    if hasActiveTriggerFilter {
-                        Text("\(activeTriggerCount)")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.2))
-                            .clipShape(Capsule())
+                    HStack(spacing: 4) {
+                        Image(systemName: "bolt.fill")
+                        Text("Triggers")
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
                     }
+                    .font(.caption.bold())
+                    .foregroundStyle(.primary)
                 }
 
                 FilterBadgeButton(
@@ -51,18 +47,14 @@ struct FilterBadgesBar: View {
                         showContentSheet = true
                     }
                 ) {
-                    Label("Content", systemImage: "doc.text")
-                        .font(.caption.bold())
-                        .foregroundStyle(.primary)
-                    if hasActiveContentFilter {
-                        Text("\(activeContentCount)")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.2))
-                            .clipShape(Capsule())
+                    HStack(spacing: 4) {
+                        Image(systemName: "doc.text")
+                        Text("Content")
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
                     }
+                    .font(.caption.bold())
+                    .foregroundStyle(.primary)
                 }
 
                 FilterBadgeButton(

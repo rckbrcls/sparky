@@ -16,16 +16,13 @@ struct TriggerFilterSheetView: View {
                                 .foregroundStyle(.primary)
                             Spacer()
                             Image(systemName: isTriggerTypeSelected(triggerType) ? "checkmark.circle.fill" : "circle")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.title2)
                                 .foregroundStyle(isTriggerTypeSelected(triggerType) ? .accent : .secondary)
                         }
                     }
-                    .listRowInsets(.init(top: 12, leading: 20, bottom: 12, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                    .buttonStyle(.plain)
                 }
             }
-            .scrollContentBackground(.visible)
             .scrollIndicators(.hidden)
             .navigationTitle("Filter Triggers")
             .navigationBarTitleDisplayMode(.inline)
