@@ -302,9 +302,6 @@ private struct WeekSummarySection: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-
-            Divider()
-                .padding(.horizontal, 20)
         }
     }
 }
@@ -389,9 +386,6 @@ private struct DaySection: View {
                     memoriesSection(title: "Timed Events", memories: timedMemories)
                 }
             }
-
-            Divider()
-                .padding(.horizontal, 20)
         }
     }
 
