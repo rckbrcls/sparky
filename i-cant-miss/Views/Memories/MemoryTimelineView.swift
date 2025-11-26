@@ -15,99 +15,32 @@ struct MemoryTimelineView: View {
     @Binding var navigationPath: NavigationPath
 
     @EnvironmentObject private var environment: AppEnvironment
-    @State private var searchText = ""
+    @StateObject private var calendarDataManager: CalendarDataManager
     @State private var isMultiSelecting = false
-    @State private var selectedDate = Date()
+    @State private var selectedYear: Int
+    @State private var selectedMonth: Date
+    @State private var selectedDate: Date
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
+    @State private var viewMode: CalendarViewMode = .year
 
-    private var isSearching: Bool {
-        !searchText.isEmpty
-    }
+    init(memoryService: MemoryService, onSelectMemory: @escaping (MemoryModel) -> Void, onEditMemory: ((MemoryModel) -> Void)?, onMultiSelectionChange: @escaping (Bool) -> Void, navigationPath: Binding<NavigationPath>) {
+        self.memoryService = memoryService
+        self.onSelectMemory = onSelectMemory
+        self.onEditMemory = onEditMemory
+        self.onMultiSelectionChange = onMultiSelectionChange
+        self._navigationPath = navigationPath
+        self._calendarDataManager = StateObject(wrappedValue: CalendarDataManager(memoryService: memoryService))
 
-    private var filteredMemories: [MemoryModel] {
-        isSearching ? memoryService.searchMemories(query: searchText) : []
-    }
-
-    private var filteredPinnedMemories: [MemoryModel] {
-        let referenceDate = Date()
-
-        return memoryService.memories
-            .filter { memory in
-                guard memory.status == .active, memory.isPinned else { return false }
-                return true
-            }
-            .sorted { lhs, rhs in
-                sortPinned(lhs, rhs, referenceDate: referenceDate)
-            }
-    }
-
-    private var scheduledMemories: [MemoryModel] {
-        memoryService.scheduledMemories(referenceDate: selectedDate)
-            .filter { memory in
-                guard memory.nextFireDate(referenceDate: selectedDate) != nil else { return false }
-                return true
-            }
-    }
-
-    private var memoriesByDate: [Date: [MemoryModel]] {
-        Dictionary(grouping: scheduledMemories) { memory in
-            Calendar.current.startOfDay(for: memory.nextFireDate(referenceDate: selectedDate) ?? Date())
-        }
-    }
-
-    private var sortedDates: [Date] {
-        memoriesByDate.keys.sorted()
-    }
-
-    private var weeks: [(start: Date, end: Date, dates: [Date])] {
+        // Initialize state with current date
+        let now = Date()
         let calendar = Calendar.current
-        var weeks: [(start: Date, end: Date, dates: [Date])] = []
-
-        guard !sortedDates.isEmpty else { return weeks }
-
-        var currentWeekStart: Date?
-        var currentWeekDates: [Date] = []
-
-        for date in sortedDates {
-            let weekStart = calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? date
-
-            if let existingWeekStart = currentWeekStart {
-                if calendar.isDate(weekStart, equalTo: existingWeekStart, toGranularity: .day) {
-                    currentWeekDates.append(date)
-                } else {
-                    // Save previous week
-                    let weekEnd = calendar.date(byAdding: .day, value: 6, to: existingWeekStart) ?? existingWeekStart
-                    weeks.append((start: existingWeekStart, end: weekEnd, dates: currentWeekDates))
-                    // Start new week
-                    currentWeekStart = weekStart
-                    currentWeekDates = [date]
-                }
-            } else {
-                currentWeekStart = weekStart
-                currentWeekDates = [date]
-            }
-        }
-
-        // Save last week
-        if let weekStart = currentWeekStart, !currentWeekDates.isEmpty {
-            let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-            weeks.append((start: weekStart, end: weekEnd, dates: currentWeekDates))
-        }
-
-        return weeks
+        self._selectedYear = State(initialValue: calendar.component(.year, from: now))
+        self._selectedMonth = State(initialValue: calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now)
+        self._selectedDate = State(initialValue: now)
     }
-
-    private var hasAnyContent: Bool {
-        !filteredPinnedMemories.isEmpty ||
-        !scheduledMemories.isEmpty
-    }
-
-
-
-
 
     private var navigationTitleText: String {
         if isMultiSelecting {
@@ -116,7 +49,19 @@ struct MemoryTimelineView: View {
             }
             return "\(selectedMemoryIDs.count) Selected"
         }
-        return "Timeline"
+
+        switch viewMode {
+        case .year:
+            return "\(selectedYear)"
+        case .month(let date):
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: date)
+        case .day(let date):
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEEE - d MMM yyyy"
+            return formatter.string(from: date)
+        }
     }
 
     private var bulkActionSpaces: [SpaceModel] {
@@ -146,9 +91,9 @@ struct MemoryTimelineView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            timelineList
+            currentView
                 .navigationTitle(navigationTitleText)
-                .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     if isMultiSelecting {
                         MemoryMultiSelectToolbarContent(
@@ -165,6 +110,16 @@ struct MemoryTimelineView: View {
                             onDone: { toggleMultiSelection() }
                         )
                     } else {
+                        ToolbarItemGroup(placement: .navigationBarLeading) {
+                            if viewMode != .year {
+                                Button {
+                                    navigateBack()
+                                } label: {
+                                    Label("Back", systemImage: "chevron.left")
+                                }
+                            }
+                        }
+
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button {
                                 toggleMultiSelection()
@@ -172,6 +127,18 @@ struct MemoryTimelineView: View {
                                 Label("Select", systemImage: "checkmark.circle")
                             }
                             .disabled(isPerformingBulkAction)
+                        }
+
+                        if viewMode == .year {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button {
+                                    navigateToToday()
+                                } label: {
+                                    Text("Today")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                }
+                            }
                         }
                     }
                 }
@@ -206,181 +173,90 @@ struct MemoryTimelineView: View {
                 .onDisappear {
                     onMultiSelectionChange(false)
                 }
-        }
-    }
-
-    private var timelineList: some View {
-        List {
-            if isSearching {
-                searchResultsList
-            } else {
-                if hasAnyContent {
-                    CalendarMonthHeader(selectedDate: $selectedDate, searchText: $searchText)
-                        .listRowInsets(.init())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-
-                    pinnedSection
-
-                    calendarContent
-                } else {
-                    MemoryEmptyStateCard(
-                        systemImage: "tray",
-                        title: "No memories yet",
-                        message: "Create a memory or capture a reminder to get started."
-                    )
-                    .padding(.top, 16)
-                    .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                .onReceive(memoryService.$lastRefreshed) { _ in
+                    calendarDataManager.clearCache()
                 }
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .scrollIndicators(.hidden)
-        .environment(\.defaultMinListRowHeight, 0)
-        .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 70)
-        }
-        .listRowSeparator(.hidden)
-        .background(Color.clear)
-    }
-
-    @ViewBuilder
-    private var calendarContent: some View {
-        ForEach(weeks, id: \.start) { week in
-            CalendarWeekDivider(startDate: week.start, endDate: week.end)
-                .listRowInsets(.init())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
-            ForEach(week.dates, id: \.self) { date in
-                CalendarDayHeader(date: date)
-                    .listRowInsets(.init())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-
-                if let memories = memoriesByDate[date] {
-                    ForEach(memories) { memory in
-                        MemoryListItemButton(
-                            memory: memory,
-                            isMultiSelecting: isMultiSelecting,
-                            isSelected: isMemorySelected(memory),
-                            isDisabled: isPerformingBulkAction,
-                            onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:),
-                            onEdit: onEditMemory
-                        )
-                        .listRowInsets(.init(top: 4, leading: 20, bottom: 4, trailing: 20))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
-                }
-            }
         }
     }
 
     @ViewBuilder
-    private var pinnedSection: some View {
-        if !filteredPinnedMemories.isEmpty {
-            Section {
-                ForEach(filteredPinnedMemories) { memory in
-                    MemoryListItemButton(
-                        memory: memory,
-                        isMultiSelecting: isMultiSelecting,
-                        isSelected: isMemorySelected(memory),
-                        isDisabled: isPerformingBulkAction,
-                        onSelect: onSelectMemory,
-                        onToggleSelection: toggleMemorySelection(_:),
-                        onEdit: onEditMemory
-                    )
-                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            } header: {
-                HStack(spacing: 12) {
-                    Label("Pinned Memories", systemImage: "pin.fill")
-                        .foregroundStyle(.white)
-                }
-                .padding(.vertical, 12)
-                .listRowInsets(.init(top: 24, leading: 20, bottom: 8, trailing: 20))
-            }
-            .listSectionSeparator(.hidden)
+    private var currentView: some View {
+        switch viewMode {
+        case .year:
+            yearView
+        case .month(let month):
+            monthView(month: month)
+        case .day(let day):
+            dayView(day: day)
         }
     }
 
-    @ViewBuilder
-    private var searchResultsList: some View {
-        if filteredMemories.isEmpty {
-            MemoryEmptyStateCard(
-                systemImage: "magnifyingglass",
-                title: "No memories match your search",
-                message: "Try different keywords or reset filters to discover more memories."
-            )
-            .padding(.top, 16)
-            .listRowInsets(.init(top: 16, leading: 20, bottom: 24, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        } else {
-            ForEach(filteredMemories) { memory in
-                memoryRow(for: memory)
+    private var yearView: some View {
+        CalendarYearView(
+            dataManager: calendarDataManager,
+            selectedYear: $selectedYear,
+            onSelectMonth: { month in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    selectedMonth = month
+                    viewMode = .month(month)
+                }
             }
-        }
+        )
     }
 
-    private func memoryRow(for memory: MemoryModel) -> some View {
-        MemoryListItemButton(
-            memory: memory,
+    private func monthView(month: Date) -> some View {
+        CalendarMonthView(
+            dataManager: calendarDataManager,
+            currentMonth: $selectedMonth,
+            selectedDate: viewMode == .day(selectedDate) ? selectedDate : nil,
+            onSelectDay: { day in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    selectedDate = day
+                    viewMode = .day(day)
+                }
+            }
+        )
+        .id(month)
+    }
+
+    private func dayView(day: Date) -> some View {
+        CalendarDayView(
+            dataManager: calendarDataManager,
+            currentDate: $selectedDate,
             isMultiSelecting: isMultiSelecting,
-            isSelected: isMemorySelected(memory),
-            isDisabled: isPerformingBulkAction,
-            onSelect: onSelectMemory,
+            selectedMemoryIDs: selectedMemoryIDs,
+            isPerformingBulkAction: isPerformingBulkAction,
+            onSelectMemory: onSelectMemory,
             onToggleSelection: toggleMemorySelection(_:),
-            onEdit: onEditMemory)
-        .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+            onEditMemory: onEditMemory
+        )
+        .id(day)
     }
 
-    private func sortPinned(_ lhs: MemoryModel, _ rhs: MemoryModel, referenceDate: Date = Date()) -> Bool {
-        let lhsFire = lhs.nextFireDate(referenceDate: referenceDate)
-        let rhsFire = rhs.nextFireDate(referenceDate: referenceDate)
-
-        if lhsFire != rhsFire {
-            switch (lhsFire, rhsFire) {
-            case let (lhsDate?, rhsDate?):
-                return lhsDate < rhsDate
-            case (_?, nil):
-                return true
-            case (nil, _?):
-                return false
-            default:
+    private func navigateBack() {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            switch viewMode {
+            case .year:
                 break
+            case .month:
+                viewMode = .year
+            case .day:
+                viewMode = .month(selectedMonth)
             }
         }
+    }
 
-        if lhs.dueDate != rhs.dueDate {
-            switch (lhs.dueDate, rhs.dueDate) {
-            case let (lhsDate?, rhsDate?):
-                return lhsDate < rhsDate
-            case (_?, nil):
-                return true
-            case (nil, _?):
-                return false
-            default:
-                break
-            }
+    private func navigateToToday() {
+        let today = Date()
+        let calendar = Calendar.current
+        let todayMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
+
+        withAnimation(.easeInOut(duration: 0.25)) {
+            selectedYear = calendar.component(.year, from: today)
+            selectedMonth = todayMonth
+            selectedDate = today
+            viewMode = .month(todayMonth)
         }
-
-        if lhs.priority != rhs.priority {
-            let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-            let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-            return lhsPriority > rhsPriority
-        }
-
-        return lhs.updatedAt > rhs.updatedAt
     }
 
     private func toggleMemorySelection(_ memory: MemoryModel) {
@@ -390,10 +266,6 @@ struct MemoryTimelineView: View {
         } else {
             selectedMemoryIDs.insert(id)
         }
-    }
-
-    private func isMemorySelected(_ memory: MemoryModel) -> Bool {
-        selectedMemoryIDs.contains(memory.id)
     }
 
     private func toggleMultiSelection() {
@@ -407,7 +279,6 @@ struct MemoryTimelineView: View {
                 isMultiSelecting = true
             }
             selectedMemoryIDs.removeAll()
-            searchText = ""
         }
         showingDeleteConfirmation = false
     }
@@ -497,7 +368,6 @@ struct MemoryTimelineView: View {
             }
         }
     }
-
 }
 
 #Preview {
