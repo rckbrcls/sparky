@@ -12,7 +12,8 @@ struct CalendarYearView: View {
     @Binding var selectedYear: Int
     let onSelectMonth: (Date) -> Void
 
-    @StateObject private var scrollState: InfiniteScrollState<Int>
+    @State private var displayedYear: Int
+    @State private var transitionDirection: PullDirection?
 
     private let calendar = Calendar.current
 
@@ -24,75 +25,46 @@ struct CalendarYearView: View {
         self.dataManager = dataManager
         self._selectedYear = selectedYear
         self.onSelectMonth = onSelectMonth
-
-        // Initialize scroll state with current year centered
-        let initialYear = selectedYear.wrappedValue
-        self._scrollState = StateObject(wrappedValue: InfiniteScrollState.years(
-            initialYear: initialYear,
-            range: 2,
-            onLoadYear: { year in
-                dataManager.ensureYearLoaded(year)
-            }
-        ))
-    }
-
-    /// Check if an index is near edges and should trigger pre-loading
-    private func checkPreloadNeeded(at index: Int, totalCount: Int) {
-        let preloadThreshold = 1
-
-        if index < preloadThreshold {
-            scrollState.loadMoreBackward()
-        }
-
-        if index >= totalCount - preloadThreshold {
-            scrollState.loadMoreForward()
-        }
+        self._displayedYear = State(initialValue: selectedYear.wrappedValue)
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    // Top sentinel for loading more years backward
-                    InfiniteScrollSentinel {
-                        scrollState.loadMoreBackward()
-                    }
-
-                    let items = scrollState.items
-                    ForEach(Array(items.enumerated()), id: \.element) { index, year in
-                        YearSection(
-                            year: year,
-                            dataManager: dataManager,
-                            onSelectMonth: onSelectMonth
-                        )
-                        .id(year)
-                        .onAppear {
-                            dataManager.ensureYearLoaded(year)
-                            checkPreloadNeeded(at: index, totalCount: items.count)
-                        }
-                    }
-
-                    // Bottom sentinel for loading more years forward
-                    InfiniteScrollSentinel {
-                        scrollState.loadMoreForward()
-                    }
-                }
-                .padding(.vertical, 16)
+        PullToNavigateScrollView(
+            onPullUp: {
+                navigateToPreviousYear()
+            },
+            onPullDown: {
+                navigateToNextYear()
             }
-            .scrollIndicators(.hidden)
-            .onAppear {
-                // Ensure initial years are loaded
-                scrollState.items.forEach { year in
-                    dataManager.ensureYearLoaded(year)
-                }
+        ) {
+            YearSection(
+                year: displayedYear,
+                dataManager: dataManager,
+                onSelectMonth: onSelectMonth
+            )
+            .padding(.vertical, 16)
+            .id(displayedYear)
+        }
+        .onAppear {
+            dataManager.ensureYearLoaded(displayedYear)
+        }
+        .onChange(of: displayedYear) { _, newYear in
+            dataManager.ensureYearLoaded(newYear)
+            selectedYear = newYear
+        }
+    }
 
-                // Scroll to selected year on appear
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.none) {
-                        proxy.scrollTo(selectedYear, anchor: .top)
-                    }
-                }
-            }
+    private func navigateToPreviousYear() {
+        transitionDirection = .up
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            displayedYear -= 1
+        }
+    }
+
+    private func navigateToNextYear() {
+        transitionDirection = .down
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            displayedYear += 1
         }
     }
 }

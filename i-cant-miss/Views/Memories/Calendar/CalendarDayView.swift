@@ -17,7 +17,8 @@ struct CalendarDayView: View {
     let onToggleSelection: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
 
-    @StateObject private var scrollState: InfiniteScrollState<Date>
+    @State private var displayedWeekStart: Date
+    @State private var transitionDirection: PullDirection?
 
     private let calendar = Calendar.current
 
@@ -40,268 +41,204 @@ struct CalendarDayView: View {
         self.onToggleSelection = onToggleSelection
         self.onEditMemory = onEditMemory
 
-        // Initialize scroll state with current day centered
-        let centerDay = Calendar.current.startOfDay(for: currentDate.wrappedValue)
-
-        self._scrollState = StateObject(wrappedValue: InfiniteScrollState.days(
-            centerDay: centerDay,
-            range: 14,  // Increased from 7 for better initial loading
-            onLoadDay: { day in
-                // Ensure the month containing this day is loaded
-                let month = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: day)) ?? day
-                dataManager.ensureMonthLoaded(month)
-            }
-        ))
+        // Calculate the start of the week containing the current date
+        let weekStart = Calendar.current.date(
+            from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: currentDate.wrappedValue)
+        ) ?? currentDate.wrappedValue
+        self._displayedWeekStart = State(initialValue: weekStart)
     }
 
-    /// Groups days into display sections (empty week summaries or individual days with content)
-    private var displaySections: [DayDisplaySection] {
-        let days = scrollState.items
-        guard !days.isEmpty else { return [] }
-
-        var sections: [DayDisplaySection] = []
-        var currentWeekDays: [Date] = []
-        var currentWeekStart: Date?
-        var currentMonth: Int?
-
-        for day in days {
-            let dayMonth = calendar.component(.month, from: day)
-            let dayWeekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: day))
-
-            // Check if we're starting a new month
-            if currentMonth != dayMonth {
-                // Process the previous week before starting new month
-                if !currentWeekDays.isEmpty {
-                    sections.append(contentsOf: processWeek(currentWeekDays))
-                    currentWeekDays = []
-                    currentWeekStart = nil
-                }
-                // Add month header
-                let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: day)) ?? day
-                sections.append(.monthHeader(monthStart))
-                currentMonth = dayMonth
-            }
-
-            // Check if we're starting a new week
-            if currentWeekStart != dayWeekStart {
-                // Process the previous week
-                if !currentWeekDays.isEmpty {
-                    sections.append(contentsOf: processWeek(currentWeekDays))
-                }
-                currentWeekDays = [day]
-                currentWeekStart = dayWeekStart
-            } else {
-                currentWeekDays.append(day)
-            }
+    /// Get the 7 days of the displayed week
+    private var weekDays: [Date] {
+        (0..<7).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: displayedWeekStart)
         }
-
-        // Process the last week
-        if !currentWeekDays.isEmpty {
-            sections.append(contentsOf: processWeek(currentWeekDays))
-        }
-
-        return sections
     }
 
-    /// Process a week's worth of days and return appropriate sections
-    private func processWeek(_ days: [Date]) -> [DayDisplaySection] {
-        // Find days with memories in this week
-        let daysWithMemories = days.filter { !dataManager.memoriesForDate($0).isEmpty }
+    /// Get month name for header
+    private var weekMonthHeader: String {
+        let formatter = DateFormatter()
 
-        if daysWithMemories.isEmpty {
-            // No memories in this week - create a summary
-            guard let firstDay = days.first, let lastDay = days.last else { return [] }
-            return [.weekSummary(startDate: firstDay, endDate: lastDay)]
+        // Check if week spans two months
+        guard let firstDay = weekDays.first, let lastDay = weekDays.last else {
+            return ""
+        }
+
+        let firstMonth = calendar.component(.month, from: firstDay)
+        let lastMonth = calendar.component(.month, from: lastDay)
+        let firstYear = calendar.component(.year, from: firstDay)
+        let lastYear = calendar.component(.year, from: lastDay)
+
+        if firstYear != lastYear {
+            formatter.dateFormat = "MMM yyyy"
+            return "\(formatter.string(from: firstDay)) - \(formatter.string(from: lastDay))"
+        } else if firstMonth != lastMonth {
+            formatter.dateFormat = "MMM"
+            let firstMonthName = formatter.string(from: firstDay)
+            let lastMonthName = formatter.string(from: lastDay)
+            formatter.dateFormat = "yyyy"
+            let year = formatter.string(from: firstDay)
+            return "\(firstMonthName) - \(lastMonthName) \(year)"
         } else {
-            // Has memories - show only days with memories
-            return daysWithMemories.map { .day($0) }
-        }
-    }
-
-    /// Check if we need to pre-load more days based on which date is appearing
-    private func checkPreloadNeeded(for date: Date) {
-        let items = scrollState.items
-        guard items.count > 1 else { return }
-
-        // Check how far this date is from the edges of loaded items
-        let dayKey = calendar.startOfDay(for: date)
-
-        if let firstDay = items.first,
-           let daysSinceFirst = calendar.dateComponents([.day], from: firstDay, to: dayKey).day,
-           daysSinceFirst < 14 {
-            // Within 2 weeks of the start - load more backward
-            scrollState.loadMoreBackward()
-        }
-
-        if let lastDay = items.last,
-           let daysUntilLast = calendar.dateComponents([.day], from: dayKey, to: lastDay).day,
-           daysUntilLast < 14 {
-            // Within 2 weeks of the end - load more forward
-            scrollState.loadMoreForward()
+            formatter.dateFormat = "MMMM yyyy"
+            return formatter.string(from: firstDay)
         }
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 24) {
-                    // Top sentinel for loading more days backward
-                    InfiniteScrollSentinel {
-                        scrollState.loadMoreBackward()
-                    }
-
-                    ForEach(displaySections) { section in
-                        switch section {
-                        case .monthHeader(let date):
-                            MonthHeaderSection(date: date)
-                                .id(section.id)
-
-                        case .weekSummary(let startDate, let endDate):
-                            WeekSummarySection(startDate: startDate, endDate: endDate)
-                                .id(section.id)
-                                .onAppear {
-                                    // Use start date of the week summary to check preload
-                                    checkPreloadNeeded(for: startDate)
-                                }
-
-                        case .day(let date):
-                            DaySection(
-                                date: date,
-                                dataManager: dataManager,
-                                isMultiSelecting: isMultiSelecting,
-                                selectedMemoryIDs: selectedMemoryIDs,
-                                isPerformingBulkAction: isPerformingBulkAction,
-                                onSelectMemory: onSelectMemory,
-                                onToggleSelection: onToggleSelection,
-                                onEditMemory: onEditMemory
-                            )
-                            .id(section.id)
-                            .onAppear {
-                                // Ensure the month containing this day is loaded
-                                let month = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
-                                dataManager.ensureMonthLoaded(month)
-
-                                // Pre-load more days if near edges
-                                checkPreloadNeeded(for: date)
-                            }
-                        }
-                    }
-
-                    // Bottom sentinel for loading more days forward
-                    InfiniteScrollSentinel {
-                        scrollState.loadMoreForward()
-                    }
-                }
-                .padding(.vertical, 16)
+        PullToNavigateScrollView(
+            onPullUp: {
+                navigateToPreviousWeek()
+            },
+            onPullDown: {
+                navigateToNextWeek()
             }
-            .scrollIndicators(.hidden)
-            .onAppear {
-                // Ensure initial days' months are loaded
-                scrollState.items.forEach { day in
-                    let month = calendar.date(from: calendar.dateComponents([.year, .month], from: day)) ?? day
-                    dataManager.ensureMonthLoaded(month)
-                }
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Month header
+                Text(weekMonthHeader)
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
 
-                let normalizedCurrent = calendar.startOfDay(for: currentDate)
-                let targetID = "day-\(normalizedCurrent.timeIntervalSince1970)"
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.none) {
-                        proxy.scrollTo(targetID, anchor: .top)
-                    }
-                }
+                // Week content
+                WeekSection(
+                    weekDays: weekDays,
+                    dataManager: dataManager,
+                    isMultiSelecting: isMultiSelecting,
+                    selectedMemoryIDs: selectedMemoryIDs,
+                    isPerformingBulkAction: isPerformingBulkAction,
+                    onSelectMemory: onSelectMemory,
+                    onToggleSelection: onToggleSelection,
+                    onEditMemory: onEditMemory
+                )
             }
+            .padding(.vertical, 16)
+            .id(displayedWeekStart)
+        }
+        .onAppear {
+            ensureWeekDataLoaded()
+        }
+        .onChange(of: displayedWeekStart) { _, _ in
+            ensureWeekDataLoaded()
+            // Update currentDate to first day of week
+            if let firstDay = weekDays.first {
+                currentDate = firstDay
+            }
+        }
+    }
+
+    private func navigateToPreviousWeek() {
+        transitionDirection = .up
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            if let previousWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: displayedWeekStart) {
+                displayedWeekStart = previousWeek
+            }
+        }
+    }
+
+    private func navigateToNextWeek() {
+        transitionDirection = .down
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            if let nextWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: displayedWeekStart) {
+                displayedWeekStart = nextWeek
+            }
+        }
+    }
+
+    private func ensureWeekDataLoaded() {
+        // Load months for all days in the week
+        var monthsToLoad: Set<Date> = []
+        for day in weekDays {
+            let monthKey = calendar.date(from: calendar.dateComponents([.year, .month], from: day)) ?? day
+            monthsToLoad.insert(monthKey)
+        }
+        for month in monthsToLoad {
+            dataManager.ensureMonthLoaded(month)
         }
     }
 }
 
-// MARK: - Display Section Type
+// MARK: - Week Section
 
-private enum DayDisplaySection: Identifiable {
-    case monthHeader(Date)
-    case weekSummary(startDate: Date, endDate: Date)
-    case day(Date)
+private struct WeekSection: View {
+    let weekDays: [Date]
+    @ObservedObject var dataManager: CalendarDataManager
+    let isMultiSelecting: Bool
+    let selectedMemoryIDs: Set<MemoryModel.ID>
+    let isPerformingBulkAction: Bool
+    let onSelectMemory: (MemoryModel) -> Void
+    let onToggleSelection: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
 
-    var id: String {
-        switch self {
-        case .monthHeader(let date):
-            return "month-\(date.timeIntervalSince1970)"
-        case .weekSummary(let startDate, let endDate):
-            return "week-\(startDate.timeIntervalSince1970)-\(endDate.timeIntervalSince1970)"
-        case .day(let date):
-            return "day-\(date.timeIntervalSince1970)"
+    private let calendar = Calendar.current
+
+    /// Days with memories in this week
+    private var daysWithMemories: [(date: Date, memories: [MemoryModel])] {
+        weekDays.compactMap { day in
+            let memories = dataManager.memoriesForDate(day)
+            return memories.isEmpty ? nil : (date: day, memories: memories)
         }
     }
-}
 
-// MARK: - Month Header Section
+    /// Week date range text for empty weeks
+    private var weekRangeText: String {
+        guard let firstDay = weekDays.first, let lastDay = weekDays.last else {
+            return ""
+        }
 
-private struct MonthHeaderSection: View {
-    let date: Date
-
-    private var monthName: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM"
-        return formatter.string(from: date)
-    }
+        let firstMonth = calendar.component(.month, from: firstDay)
+        let lastMonth = calendar.component(.month, from: lastDay)
 
-    var body: some View {
-        Text(monthName)
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-    }
-}
-
-// MARK: - Week Summary Section
-
-private struct WeekSummarySection: View {
-    let startDate: Date
-    let endDate: Date
-
-    private var summaryText: String {
-        let formatter = DateFormatter()
-        let calendar = Calendar.current
-
-        let startMonth = calendar.component(.month, from: startDate)
-        let endMonth = calendar.component(.month, from: endDate)
-        let startYear = calendar.component(.year, from: startDate)
-        let endYear = calendar.component(.year, from: endDate)
-
-        if startYear != endYear {
-            // Different years: "Dec 28, 2024 - Jan 3, 2025"
-            formatter.dateFormat = "MMM d, yyyy"
-            return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
-        } else if startMonth != endMonth {
-            // Same year, different months: "Dec 28 - Jan 3"
+        if firstMonth != lastMonth {
             formatter.dateFormat = "MMM d"
-            return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
+            return "\(formatter.string(from: firstDay)) - \(formatter.string(from: lastDay))"
         } else {
-            // Same month: "December 7 - 13"
             formatter.dateFormat = "MMMM"
-            let monthName = formatter.string(from: startDate)
-            let startDay = calendar.component(.day, from: startDate)
-            let endDay = calendar.component(.day, from: endDate)
+            let monthName = formatter.string(from: firstDay)
+            let startDay = calendar.component(.day, from: firstDay)
+            let endDay = calendar.component(.day, from: lastDay)
             return "\(monthName) \(startDay) - \(endDay)"
         }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(summaryText)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 24) {
+            if daysWithMemories.isEmpty {
+                // Empty week summary
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(weekRangeText)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
 
-                Spacer()
+                        Spacer()
 
-                Text("No events")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                        Text("No events")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                }
+            } else {
+                // Show days with memories
+                ForEach(daysWithMemories, id: \.date) { dayData in
+                    DaySection(
+                        date: dayData.date,
+                        memories: dayData.memories,
+                        isMultiSelecting: isMultiSelecting,
+                        selectedMemoryIDs: selectedMemoryIDs,
+                        isPerformingBulkAction: isPerformingBulkAction,
+                        onSelectMemory: onSelectMemory,
+                        onToggleSelection: onToggleSelection,
+                        onEditMemory: onEditMemory
+                    )
+                }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
         }
     }
 }
@@ -310,7 +247,7 @@ private struct WeekSummarySection: View {
 
 private struct DaySection: View {
     let date: Date
-    @ObservedObject var dataManager: CalendarDataManager
+    let memories: [MemoryModel]
     let isMultiSelecting: Bool
     let selectedMemoryIDs: Set<MemoryModel.ID>
     let isPerformingBulkAction: Bool
@@ -324,10 +261,6 @@ private struct DaySection: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE d"
         return formatter.string(from: date)
-    }
-
-    private var memories: [MemoryModel] {
-        dataManager.memoriesForDate(date)
     }
 
     private var allDayMemories: [MemoryModel] {
@@ -366,7 +299,7 @@ private struct DaySection: View {
                     if isToday {
                         Text("Today")
                             .font(.caption)
-                            .foregroundStyle(Color.accent)
+                            .foregroundStyle(Color.accentColor)
                     }
                 }
 

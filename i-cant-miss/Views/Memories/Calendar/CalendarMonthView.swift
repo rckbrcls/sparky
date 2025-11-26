@@ -13,7 +13,8 @@ struct CalendarMonthView: View {
     let selectedDate: Date?
     let onSelectDay: (Date) -> Void
 
-    @StateObject private var scrollState: InfiniteScrollState<Date>
+    @State private var displayedMonth: Date
+    @State private var transitionDirection: PullDirection?
 
     private let calendar = Calendar.current
 
@@ -28,77 +29,54 @@ struct CalendarMonthView: View {
         self.selectedDate = selectedDate
         self.onSelectDay = onSelectDay
 
-        // Initialize scroll state with current month centered
-        let centerMonth = Calendar.current.date(
+        // Normalize to start of month
+        let normalized = Calendar.current.date(
             from: Calendar.current.dateComponents([.year, .month], from: currentMonth.wrappedValue)
         ) ?? currentMonth.wrappedValue
-
-        self._scrollState = StateObject(wrappedValue: InfiniteScrollState.months(
-            centerMonth: centerMonth,
-            range: 6,
-            onLoadMonth: { month in
-                dataManager.ensureMonthLoaded(month)
-            }
-        ))
-    }
-
-    /// Check if an index is near edges and should trigger pre-loading
-    private func checkPreloadNeeded(at index: Int, totalCount: Int) {
-        let preloadThreshold = 2
-
-        if index < preloadThreshold {
-            scrollState.loadMoreBackward()
-        }
-
-        if index >= totalCount - preloadThreshold {
-            scrollState.loadMoreForward()
-        }
+        self._displayedMonth = State(initialValue: normalized)
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 32) {
-                    // Top sentinel for loading more months backward
-                    InfiniteScrollSentinel {
-                        scrollState.loadMoreBackward()
-                    }
-
-                    let items = scrollState.items
-                    ForEach(Array(items.enumerated()), id: \.element) { index, month in
-                        MonthSection(
-                            month: month,
-                            dataManager: dataManager,
-                            selectedDate: selectedDate,
-                            onSelectDay: onSelectDay
-                        )
-                        .id(month)
-                        .onAppear {
-                            dataManager.ensureMonthLoaded(month)
-                            checkPreloadNeeded(at: index, totalCount: items.count)
-                        }
-                    }
-
-                    // Bottom sentinel for loading more months forward
-                    InfiniteScrollSentinel {
-                        scrollState.loadMoreForward()
-                    }
-                }
-                .padding(.vertical, 16)
+        PullToNavigateScrollView(
+            onPullUp: {
+                navigateToPreviousMonth()
+            },
+            onPullDown: {
+                navigateToNextMonth()
             }
-            .scrollIndicators(.hidden)
-            .onAppear {
-                // Ensure initial months are loaded
-                scrollState.items.forEach { month in
-                    dataManager.ensureMonthLoaded(month)
-                }
+        ) {
+            MonthSection(
+                month: displayedMonth,
+                dataManager: dataManager,
+                selectedDate: selectedDate,
+                onSelectDay: onSelectDay
+            )
+            .padding(.vertical, 16)
+            .id(displayedMonth)
+        }
+        .onAppear {
+            dataManager.ensureMonthLoaded(displayedMonth)
+        }
+        .onChange(of: displayedMonth) { _, newMonth in
+            dataManager.ensureMonthLoaded(newMonth)
+            currentMonth = newMonth
+        }
+    }
 
-                let normalizedCurrent = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) ?? currentMonth
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.none) {
-                        proxy.scrollTo(normalizedCurrent, anchor: .top)
-                    }
-                }
+    private func navigateToPreviousMonth() {
+        transitionDirection = .up
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            if let previousMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) {
+                displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: previousMonth)) ?? previousMonth
+            }
+        }
+    }
+
+    private func navigateToNextMonth() {
+        transitionDirection = .down
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            if let nextMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) {
+                displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: nextMonth)) ?? nextMonth
             }
         }
     }
