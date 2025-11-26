@@ -14,7 +14,7 @@ struct InfiniteScrollSentinel: View {
 
     var body: some View {
         Color.clear
-            .frame(height: 1)
+            .frame(height: 50)  // Larger area for better scroll detection
             .onAppear {
                 onAppear()
             }
@@ -45,9 +45,9 @@ struct InfiniteScrollConfig {
     )
 
     static let days = InfiniteScrollConfig(
-        backwardBatchSize: 14,
-        forwardBatchSize: 14,
-        debounceInterval: 0.1
+        backwardBatchSize: 21,  // Increased from 14 for smoother scrolling
+        forwardBatchSize: 21,   // Increased from 14 for smoother scrolling
+        debounceInterval: 0.05  // Reduced from 0.1 for faster loading
     )
 }
 

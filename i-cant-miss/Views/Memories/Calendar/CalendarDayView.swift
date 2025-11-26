@@ -45,7 +45,7 @@ struct CalendarDayView: View {
 
         self._scrollState = StateObject(wrappedValue: InfiniteScrollState.days(
             centerDay: centerDay,
-            range: 7,
+            range: 14,  // Increased from 7 for better initial loading
             onLoadDay: { day in
                 // Ensure the month containing this day is loaded
                 let month = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: day)) ?? day
@@ -103,6 +103,21 @@ struct CalendarDayView: View {
         }
     }
 
+    /// Check if a section index is near the edges and should trigger pre-loading
+    private func checkPreloadNeeded(at index: Int, totalCount: Int) {
+        let preloadThreshold = 3
+
+        // Near the beginning - pre-load backward
+        if index < preloadThreshold {
+            scrollState.loadMoreBackward()
+        }
+
+        // Near the end - pre-load forward
+        if index >= totalCount - preloadThreshold {
+            scrollState.loadMoreForward()
+        }
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -112,11 +127,15 @@ struct CalendarDayView: View {
                         scrollState.loadMoreBackward()
                     }
 
-                    ForEach(displaySections) { section in
+                    let sections = displaySections
+                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                         switch section {
                         case .weekSummary(let startDate, let endDate):
                             WeekSummarySection(startDate: startDate, endDate: endDate)
                                 .id(section.id)
+                                .onAppear {
+                                    checkPreloadNeeded(at: index, totalCount: sections.count)
+                                }
 
                         case .day(let date):
                             DaySection(
@@ -134,6 +153,9 @@ struct CalendarDayView: View {
                                 // Ensure the month containing this day is loaded
                                 let month = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
                                 dataManager.ensureMonthLoaded(month)
+
+                                // Pre-load more days if near edges
+                                checkPreloadNeeded(at: index, totalCount: sections.count)
                             }
                         }
                     }
@@ -145,6 +167,7 @@ struct CalendarDayView: View {
                 }
                 .padding(.vertical, 16)
             }
+            .scrollIndicators(.hidden)
             .onAppear {
                 // Ensure initial days' months are loaded
                 scrollState.items.forEach { day in
@@ -153,9 +176,10 @@ struct CalendarDayView: View {
                 }
 
                 let normalizedCurrent = calendar.startOfDay(for: currentDate)
+                let targetID = "day-\(normalizedCurrent.timeIntervalSince1970)"
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation(.none) {
-                        proxy.scrollTo(normalizedCurrent, anchor: .top)
+                        proxy.scrollTo(targetID, anchor: .top)
                     }
                 }
             }

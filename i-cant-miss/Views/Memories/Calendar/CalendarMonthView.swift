@@ -42,6 +42,19 @@ struct CalendarMonthView: View {
         ))
     }
 
+    /// Check if an index is near edges and should trigger pre-loading
+    private func checkPreloadNeeded(at index: Int, totalCount: Int) {
+        let preloadThreshold = 2
+
+        if index < preloadThreshold {
+            scrollState.loadMoreBackward()
+        }
+
+        if index >= totalCount - preloadThreshold {
+            scrollState.loadMoreForward()
+        }
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -51,7 +64,8 @@ struct CalendarMonthView: View {
                         scrollState.loadMoreBackward()
                     }
 
-                    ForEach(scrollState.items, id: \.self) { month in
+                    let items = scrollState.items
+                    ForEach(Array(items.enumerated()), id: \.element) { index, month in
                         MonthSection(
                             month: month,
                             dataManager: dataManager,
@@ -61,6 +75,7 @@ struct CalendarMonthView: View {
                         .id(month)
                         .onAppear {
                             dataManager.ensureMonthLoaded(month)
+                            checkPreloadNeeded(at: index, totalCount: items.count)
                         }
                     }
 
@@ -71,6 +86,7 @@ struct CalendarMonthView: View {
                 }
                 .padding(.vertical, 16)
             }
+            .scrollIndicators(.hidden)
             .onAppear {
                 // Ensure initial months are loaded
                 scrollState.items.forEach { month in
