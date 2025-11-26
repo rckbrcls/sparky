@@ -92,7 +92,7 @@ struct CalendarDayView: View {
             },
             onPullDown: {
                 navigateToNextWeek()
-            }
+                    }
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 // Month header
@@ -105,19 +105,19 @@ struct CalendarDayView: View {
                 // Week content
                 WeekSection(
                     weekDays: weekDays,
-                    dataManager: dataManager,
-                    isMultiSelecting: isMultiSelecting,
-                    selectedMemoryIDs: selectedMemoryIDs,
-                    isPerformingBulkAction: isPerformingBulkAction,
-                    onSelectMemory: onSelectMemory,
-                    onToggleSelection: onToggleSelection,
-                    onEditMemory: onEditMemory
-                )
+                                dataManager: dataManager,
+                                isMultiSelecting: isMultiSelecting,
+                                selectedMemoryIDs: selectedMemoryIDs,
+                                isPerformingBulkAction: isPerformingBulkAction,
+                                onSelectMemory: onSelectMemory,
+                                onToggleSelection: onToggleSelection,
+                                onEditMemory: onEditMemory
+                            )
             }
             .padding(.vertical, 16)
             .id(displayedWeekStart)
         }
-        .onAppear {
+                            .onAppear {
             ensureWeekDataLoaded()
         }
         .onChange(of: displayedWeekStart) { _, _ in
@@ -134,17 +134,17 @@ struct CalendarDayView: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             if let previousWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: displayedWeekStart) {
                 displayedWeekStart = previousWeek
-            }
-        }
-    }
+                            }
+                        }
+                    }
 
     private func navigateToNextWeek() {
         transitionDirection = .down
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             if let nextWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: displayedWeekStart) {
                 displayedWeekStart = nextWeek
-            }
-        }
+                    }
+                }
     }
 
     private func ensureWeekDataLoaded() {
@@ -153,7 +153,7 @@ struct CalendarDayView: View {
         for day in weekDays {
             let monthKey = calendar.date(from: calendar.dateComponents([.year, .month], from: day)) ?? day
             monthsToLoad.insert(monthKey)
-        }
+                }
         for month in monthsToLoad {
             dataManager.ensureMonthLoaded(month)
         }
@@ -179,8 +179,8 @@ private struct WeekSection: View {
         weekDays.compactMap { day in
             let memories = dataManager.memoriesForDate(day)
             return memories.isEmpty ? nil : (date: day, memories: memories)
-        }
     }
+}
 
     /// Week date range text for empty weeks
     private var weekRangeText: String {
@@ -208,21 +208,21 @@ private struct WeekSection: View {
         VStack(alignment: .leading, spacing: 24) {
             if daysWithMemories.isEmpty {
                 // Empty week summary
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
                         Text(weekRangeText)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
 
-                        Spacer()
+                Spacer()
 
-                        Text("No events")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
+                Text("No events")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
                 }
             } else {
                 // Show days with memories

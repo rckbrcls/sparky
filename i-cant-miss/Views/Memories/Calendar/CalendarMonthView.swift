@@ -18,6 +18,9 @@ struct CalendarMonthView: View {
 
     private let calendar = Calendar.current
 
+    /// Tab bar height (55pt) + extra padding for safety
+    private let bottomInset: CGFloat = 70
+
     init(
         dataManager: CalendarDataManager,
         currentMonth: Binding<Date>,
@@ -45,14 +48,19 @@ struct CalendarMonthView: View {
                 navigateToNextMonth()
             }
         ) {
-            MonthSection(
-                month: displayedMonth,
-                dataManager: dataManager,
-                selectedDate: selectedDate,
-                onSelectDay: onSelectDay
-            )
-            .padding(.vertical, 16)
-            .id(displayedMonth)
+            GeometryReader { geometry in
+                let safeHeight = max(400, geometry.size.height - bottomInset)
+
+                MonthSection(
+                    month: displayedMonth,
+                    dataManager: dataManager,
+                    selectedDate: selectedDate,
+                    onSelectDay: onSelectDay,
+                    availableHeight: safeHeight
+                )
+                .frame(minHeight: safeHeight)
+                .id(displayedMonth)
+            }
         }
         .onAppear {
             dataManager.ensureMonthLoaded(displayedMonth)
@@ -89,6 +97,7 @@ private struct MonthSection: View {
     @ObservedObject var dataManager: CalendarDataManager
     let selectedDate: Date?
     let onSelectDay: (Date) -> Void
+    let availableHeight: CGFloat
 
     private let calendar = Calendar.current
     private let weekdays = ["S", "M", "T", "W", "T", "F", "S"]
@@ -132,6 +141,23 @@ private struct MonthSection: View {
         return days
     }
 
+    /// Number of rows needed for this month
+    private var numberOfRows: Int {
+        let totalSlots = calendarDays.count
+        return (totalSlots + 6) / 7 // Ceiling division
+    }
+
+    /// Calculate day cell height based on available space
+    /// Layout: Header (~44pt) + Weekday headers (~24pt) + padding (~16pt) + 6 rows of days
+    private var dayCellHeight: CGFloat {
+        let headerHeight: CGFloat = 44
+        let weekdayHeaderHeight: CGFloat = 28
+        let topPadding: CGFloat = 12
+        let availableForDays = availableHeight - headerHeight - weekdayHeaderHeight - topPadding
+        // Always use 6 rows for consistent sizing across months
+        return max(50, availableForDays / 6)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Month header
@@ -139,8 +165,8 @@ private struct MonthSection: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
 
             // Weekday headers
             HStack(spacing: 0) {
@@ -152,8 +178,8 @@ private struct MonthSection: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
 
             // Calendar grid
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
@@ -163,15 +189,18 @@ private struct MonthSection: View {
                             date: date,
                             memories: dataManager.memoriesForDate(date),
                             isSelected: isDateSelected(date),
+                            cellHeight: dayCellHeight,
                             onSelect: { onSelectDay(date) }
                         )
                     } else {
                         Color.clear
-                            .frame(height: 60)
+                            .frame(height: dayCellHeight)
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
+
+            Spacer(minLength: 0)
         }
     }
 
@@ -187,6 +216,7 @@ private struct DayCell: View {
     let date: Date
     let memories: [MemoryModel]
     let isSelected: Bool
+    let cellHeight: CGFloat
     let onSelect: () -> Void
 
     private let calendar = Calendar.current
@@ -203,22 +233,32 @@ private struct DayCell: View {
         !memories.isEmpty
     }
 
+    /// Calculate circle size based on cell height
+    private var circleSize: CGFloat {
+        min(36, max(28, cellHeight * 0.55))
+    }
+
+    /// Calculate font size based on cell height
+    private var fontSize: CGFloat {
+        min(18, max(14, cellHeight * 0.28))
+    }
+
     var body: some View {
         Button(action: onSelect) {
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 ZStack {
                     if isToday {
                         Circle()
                             .fill(Color.accentColor)
-                            .frame(width: 32, height: 32)
+                            .frame(width: circleSize, height: circleSize)
                     } else if isSelected {
                         Circle()
                             .fill(Color.accentColor.opacity(0.2))
-                            .frame(width: 32, height: 32)
+                            .frame(width: circleSize, height: circleSize)
                     }
 
                     Text("\(dayNumber)")
-                        .font(.system(size: 16, weight: isToday ? .bold : .medium))
+                        .font(.system(size: fontSize, weight: isToday ? .bold : .medium))
                         .foregroundStyle(isToday ? .white : .primary)
                 }
 
@@ -227,7 +267,7 @@ private struct DayCell: View {
                         ForEach(Array(memories.prefix(3).enumerated()), id: \.offset) { _, memory in
                             Circle()
                                 .fill(CalendarColorHelper.color(for: memory))
-                                .frame(width: 4, height: 4)
+                                .frame(width: 5, height: 5)
                         }
                         if memories.count > 3 {
                             Text("+\(memories.count - 3)")
@@ -242,7 +282,7 @@ private struct DayCell: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .frame(height: cellHeight)
         }
         .buttonStyle(.plain)
     }

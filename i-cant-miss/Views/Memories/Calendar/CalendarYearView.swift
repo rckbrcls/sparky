@@ -17,6 +17,9 @@ struct CalendarYearView: View {
 
     private let calendar = Calendar.current
 
+    /// Tab bar height (55pt) + extra padding for safety
+    private let bottomInset: CGFloat = 70
+
     init(
         dataManager: CalendarDataManager,
         selectedYear: Binding<Int>,
@@ -37,13 +40,18 @@ struct CalendarYearView: View {
                 navigateToNextYear()
             }
         ) {
-            YearSection(
-                year: displayedYear,
-                dataManager: dataManager,
-                onSelectMonth: onSelectMonth
-            )
-            .padding(.vertical, 16)
-            .id(displayedYear)
+            GeometryReader { geometry in
+                let safeHeight = max(400, geometry.size.height - bottomInset)
+
+                YearSection(
+                    year: displayedYear,
+                    dataManager: dataManager,
+                    onSelectMonth: onSelectMonth,
+                    availableHeight: safeHeight
+                )
+                .frame(minHeight: safeHeight)
+                .id(displayedYear)
+            }
         }
         .onAppear {
             dataManager.ensureYearLoaded(displayedYear)
@@ -75,9 +83,10 @@ private struct YearSection: View {
     let year: Int
     @ObservedObject var dataManager: CalendarDataManager
     let onSelectMonth: (Date) -> Void
+    let availableHeight: CGFloat
 
     private let calendar = Calendar.current
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 3)
+    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
 
     private var months: [Date] {
         (1...12).compactMap { month in
@@ -85,27 +94,40 @@ private struct YearSection: View {
         }
     }
 
+    /// Calculate the height for each month cell based on available space
+    /// Layout: Year header (~36pt) + 4 rows of months + spacing + padding
+    private var monthCellHeight: CGFloat {
+        let headerHeight: CGFloat = 36
+        let topPadding: CGFloat = 8
+        let gridSpacing: CGFloat = 4 * 3 // 4 rows = 3 gaps
+        let horizontalPadding: CGFloat = 8 // padding around grid
+        let availableForGrid = availableHeight - headerHeight - topPadding - gridSpacing - horizontalPadding
+        return max(80, availableForGrid / 4) // 4 rows of months
+    }
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 4) {
             // Year header
             Text("\(year)")
-                .font(.title)
+                .font(.title3)
                 .fontWeight(.bold)
                 .monospacedDigit()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
 
             // Month grid
-            LazyVGrid(columns: gridColumns, spacing: 8) {
+            LazyVGrid(columns: gridColumns, spacing: 4) {
                 ForEach(months, id: \.self) { month in
                     MonthCell(
                         month: month,
                         dataManager: dataManager,
+                        cellHeight: monthCellHeight,
                         onSelect: { onSelectMonth(month) }
                     )
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 8)
         }
     }
 }
@@ -115,6 +137,7 @@ private struct YearSection: View {
 private struct MonthCell: View {
     let month: Date
     @ObservedObject var dataManager: CalendarDataManager
+    let cellHeight: CGFloat
     let onSelect: () -> Void
 
     private let calendar = Calendar.current
@@ -156,35 +179,42 @@ private struct MonthCell: View {
         return days
     }
 
+    /// Calculate day indicator size based on cell height
+    private var dayIndicatorSize: CGFloat {
+        let headerSpace: CGFloat = 20 // Month name height
+        let padding: CGFloat = 12 // Top + bottom padding
+        let availableForDays = cellHeight - headerSpace - padding
+        let rows: CGFloat = 6 // Max 6 rows in a month
+        return min(12, max(8, availableForDays / rows))
+    }
+
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(monthName)
-                    .font(.subheadline)
+                    .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7), spacing: 1) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
                     ForEach(Array(daySlots.enumerated()), id: \.offset) { _, day in
                         if let day = day {
                             MiniDayIndicator(
                                 day: day,
-                                memories: dataManager.memoriesForDay(monthKey: monthKey, day: day)
+                                memories: dataManager.memoriesForDay(monthKey: monthKey, day: day),
+                                size: dayIndicatorSize
                             )
                         } else {
                             Color.clear
-                                .frame(height: 16)
+                                .frame(height: dayIndicatorSize)
                         }
                     }
                 }
-                .frame(maxHeight: 90)
             }
-            .padding(10)
+            .padding(6)
             .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.secondary.opacity(0.08))
-            )
+            .frame(height: cellHeight)
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 24.0))
         }
         .buttonStyle(.plain)
     }
@@ -195,6 +225,7 @@ private struct MonthCell: View {
 private struct MiniDayIndicator: View {
     let day: Int
     let memories: [MemoryModel]
+    let size: CGFloat
 
     private var hasMemories: Bool {
         !memories.isEmpty
@@ -204,19 +235,23 @@ private struct MiniDayIndicator: View {
         hasMemories ? CalendarColorHelper.indicatorColor(for: memories) : .clear
     }
 
+    private var fontSize: CGFloat {
+        max(5, size * 0.55)
+    }
+
     var body: some View {
         ZStack {
             if hasMemories {
                 Circle()
                     .fill(indicatorColor)
-                    .frame(width: 16, height: 16)
+                    .frame(width: size, height: size)
             }
 
             Text("\(day)")
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: fontSize, weight: .medium))
                 .foregroundStyle(hasMemories ? .white : .secondary)
         }
-        .frame(height: 16)
+        .frame(height: size)
     }
 }
 

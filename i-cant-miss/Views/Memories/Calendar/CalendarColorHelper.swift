@@ -58,3 +58,4 @@ struct CalendarColorHelper {
         return .accent
     }
 }
+
