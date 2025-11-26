@@ -13,21 +13,104 @@ struct CalendarMonthView: View {
     let selectedDate: Date?
     let onSelectDay: (Date) -> Void
 
+    @StateObject private var scrollState: InfiniteScrollState<Date>
+
+    private let calendar = Calendar.current
+
+    init(
+        dataManager: CalendarDataManager,
+        currentMonth: Binding<Date>,
+        selectedDate: Date?,
+        onSelectDay: @escaping (Date) -> Void
+    ) {
+        self.dataManager = dataManager
+        self._currentMonth = currentMonth
+        self.selectedDate = selectedDate
+        self.onSelectDay = onSelectDay
+
+        // Initialize scroll state with current month centered
+        let centerMonth = Calendar.current.date(
+            from: Calendar.current.dateComponents([.year, .month], from: currentMonth.wrappedValue)
+        ) ?? currentMonth.wrappedValue
+
+        self._scrollState = StateObject(wrappedValue: InfiniteScrollState.months(
+            centerMonth: centerMonth,
+            range: 6,
+            onLoadMonth: { month in
+                dataManager.ensureMonthLoaded(month)
+            }
+        ))
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 32) {
+                    // Top sentinel for loading more months backward
+                    InfiniteScrollSentinel {
+                        scrollState.loadMoreBackward()
+                    }
+
+                    ForEach(scrollState.items, id: \.self) { month in
+                        MonthSection(
+                            month: month,
+                            dataManager: dataManager,
+                            selectedDate: selectedDate,
+                            onSelectDay: onSelectDay
+                        )
+                        .id(month)
+                        .onAppear {
+                            dataManager.ensureMonthLoaded(month)
+                        }
+                    }
+
+                    // Bottom sentinel for loading more months forward
+                    InfiniteScrollSentinel {
+                        scrollState.loadMoreForward()
+                    }
+                }
+                .padding(.vertical, 16)
+            }
+            .onAppear {
+                // Ensure initial months are loaded
+                scrollState.items.forEach { month in
+                    dataManager.ensureMonthLoaded(month)
+                }
+
+                let normalizedCurrent = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) ?? currentMonth
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.none) {
+                        proxy.scrollTo(normalizedCurrent, anchor: .top)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Month Section
+
+private struct MonthSection: View {
+    let month: Date
+    @ObservedObject var dataManager: CalendarDataManager
+    let selectedDate: Date?
+    let onSelectDay: (Date) -> Void
+
     private let calendar = Calendar.current
     private let weekdays = ["S", "M", "T", "W", "T", "F", "S"]
 
     private var monthKey: Date {
-        calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) ?? currentMonth
+        calendar.date(from: calendar.dateComponents([.year, .month], from: month)) ?? month
     }
 
     private var monthName: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: currentMonth)
+        return formatter.string(from: month)
     }
 
     private var firstDayOfMonth: Date {
-        calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) ?? currentMonth
+        calendar.date(from: calendar.dateComponents([.year, .month], from: month)) ?? month
     }
 
     private var calendarDays: [Date?] {
@@ -42,7 +125,7 @@ struct CalendarMonthView: View {
         }
 
         // Days of month
-        guard let range = calendar.range(of: .day, in: .month, for: currentMonth) else {
+        guard let range = calendar.range(of: .day, in: .month, for: month) else {
             return days
         }
 
@@ -57,10 +140,13 @@ struct CalendarMonthView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Month navigation header
-            monthNavigationHeader
+            // Month header
+            Text(monthName)
+                .font(.title2)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .padding(.bottom, 16)
 
             // Weekday headers
             HStack(spacing: 0) {
@@ -92,58 +178,12 @@ struct CalendarMonthView: View {
                 }
             }
             .padding(.horizontal, 20)
-
-            Spacer()
-        }
-    }
-
-    private var monthNavigationHeader: some View {
-        HStack {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    navigateToPreviousMonth()
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-            }
-
-            Spacer()
-
-            Text(monthName)
-                .font(.title2)
-                .fontWeight(.bold)
-
-            Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    navigateToNextMonth()
-                }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-            }
         }
     }
 
     private func isDateSelected(_ date: Date) -> Bool {
         guard let selectedDate = selectedDate else { return false }
         return calendar.isDate(date, equalTo: selectedDate, toGranularity: .day)
-    }
-
-    private func navigateToPreviousMonth() {
-        if let newMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) {
-            currentMonth = newMonth
-        }
-    }
-
-    private func navigateToNextMonth() {
-        if let newMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) {
-            currentMonth = newMonth
-        }
     }
 }
 

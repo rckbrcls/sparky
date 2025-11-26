@@ -52,15 +52,11 @@ struct MemoryTimelineView: View {
 
         switch viewMode {
         case .year:
-            return "\(selectedYear)"
-        case .month(let date):
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM yyyy"
-            return formatter.string(from: date)
-        case .day(let date):
-            let formatter = DateFormatter()
-            formatter.dateFormat = "EEEE - d MMM yyyy"
-            return formatter.string(from: date)
+            return "Timeline"
+        case .month:
+            return "Months"
+        case .day:
+            return "Days"
         }
     }
 
@@ -127,18 +123,6 @@ struct MemoryTimelineView: View {
                                 Label("Select", systemImage: "checkmark.circle")
                             }
                             .disabled(isPerformingBulkAction)
-                        }
-
-                        if viewMode == .year {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button {
-                                    navigateToToday()
-                                } label: {
-                                    Text("Today")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                }
-                            }
                         }
                     }
                 }
@@ -243,19 +227,6 @@ struct MemoryTimelineView: View {
             case .day:
                 viewMode = .month(selectedMonth)
             }
-        }
-    }
-
-    private func navigateToToday() {
-        let today = Date()
-        let calendar = Calendar.current
-        let todayMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
-
-        withAnimation(.easeInOut(duration: 0.25)) {
-            selectedYear = calendar.component(.year, from: today)
-            selectedMonth = todayMonth
-            selectedDate = today
-            viewMode = .month(todayMonth)
         }
     }
 

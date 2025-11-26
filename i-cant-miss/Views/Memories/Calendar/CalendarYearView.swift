@@ -12,69 +12,113 @@ struct CalendarYearView: View {
     @Binding var selectedYear: Int
     let onSelectMonth: (Date) -> Void
 
+    @StateObject private var scrollState: InfiniteScrollState<Int>
+
     private let calendar = Calendar.current
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
+
+    init(
+        dataManager: CalendarDataManager,
+        selectedYear: Binding<Int>,
+        onSelectMonth: @escaping (Date) -> Void
+    ) {
+        self.dataManager = dataManager
+        self._selectedYear = selectedYear
+        self.onSelectMonth = onSelectMonth
+
+        // Initialize scroll state with current year centered
+        let initialYear = selectedYear.wrappedValue
+        self._scrollState = StateObject(wrappedValue: InfiniteScrollState.years(
+            initialYear: initialYear,
+            range: 2,
+            onLoadYear: { year in
+                dataManager.ensureYearLoaded(year)
+            }
+        ))
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    // Top sentinel for loading more years backward
+                    InfiniteScrollSentinel {
+                        scrollState.loadMoreBackward()
+                    }
+
+                    ForEach(scrollState.items, id: \.self) { year in
+                        YearSection(
+                            year: year,
+                            dataManager: dataManager,
+                            onSelectMonth: onSelectMonth
+                        )
+                        .id(year)
+                        .onAppear {
+                            dataManager.ensureYearLoaded(year)
+                        }
+                    }
+
+                    // Bottom sentinel for loading more years forward
+                    InfiniteScrollSentinel {
+                        scrollState.loadMoreForward()
+                    }
+                }
+                .padding(.vertical, 16)
+            }
+            .onAppear {
+                // Ensure initial years are loaded
+                scrollState.items.forEach { year in
+                    dataManager.ensureYearLoaded(year)
+                }
+
+                // Scroll to selected year on appear
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.none) {
+                        proxy.scrollTo(selectedYear, anchor: .top)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Year Section
+
+private struct YearSection: View {
+    let year: Int
+    @ObservedObject var dataManager: CalendarDataManager
+    let onSelectMonth: (Date) -> Void
+
+    private let calendar = Calendar.current
+    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 3)
 
     private var months: [Date] {
         (1...12).compactMap { month in
-            calendar.date(from: DateComponents(year: selectedYear, month: month, day: 1))
+            calendar.date(from: DateComponents(year: year, month: month, day: 1))
         }
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Year navigation header
-                yearNavigationHeader
-
-                // Month grid
-                LazyVGrid(columns: gridColumns, spacing: 16) {
-                    ForEach(months, id: \.self) { month in
-                        MonthCell(
-                            month: month,
-                            dataManager: dataManager,
-                            onSelect: { onSelectMonth(month) }
-                        )
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-            .padding(.vertical, 16)
-        }
-    }
-
-    private var yearNavigationHeader: some View {
-        HStack {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedYear -= 1
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-            }
-
-            Spacer()
-
-            Text("\(selectedYear)")
+        VStack(spacing: 12) {
+            // Year header
+            Text("\(year)")
                 .font(.title)
                 .fontWeight(.bold)
                 .monospacedDigit()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
 
-            Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedYear += 1
+            // Month grid
+            LazyVGrid(columns: gridColumns, spacing: 8) {
+                ForEach(months, id: \.self) { month in
+                    MonthCell(
+                        month: month,
+                        dataManager: dataManager,
+                        onSelect: { onSelectMonth(month) }
+                    )
                 }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.title2)
-                    .fontWeight(.semibold)
             }
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 24)
     }
 }
 
@@ -150,7 +194,7 @@ private struct MonthCell: View {
             .padding(10)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 24)
                     .fill(Color.secondary.opacity(0.08))
             )
         }
