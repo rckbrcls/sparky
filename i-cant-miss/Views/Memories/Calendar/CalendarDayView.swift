@@ -62,10 +62,25 @@ struct CalendarDayView: View {
         var sections: [DayDisplaySection] = []
         var currentWeekDays: [Date] = []
         var currentWeekStart: Date?
+        var currentMonth: Int?
 
         for day in days {
-
+            let dayMonth = calendar.component(.month, from: day)
             let dayWeekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: day))
+
+            // Check if we're starting a new month
+            if currentMonth != dayMonth {
+                // Process the previous week before starting new month
+                if !currentWeekDays.isEmpty {
+                    sections.append(contentsOf: processWeek(currentWeekDays))
+                    currentWeekDays = []
+                    currentWeekStart = nil
+                }
+                // Add month header
+                let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: day)) ?? day
+                sections.append(.monthHeader(monthStart))
+                currentMonth = dayMonth
+            }
 
             // Check if we're starting a new week
             if currentWeekStart != dayWeekStart {
@@ -103,17 +118,25 @@ struct CalendarDayView: View {
         }
     }
 
-    /// Check if a section index is near the edges and should trigger pre-loading
-    private func checkPreloadNeeded(at index: Int, totalCount: Int) {
-        let preloadThreshold = 3
+    /// Check if we need to pre-load more days based on which date is appearing
+    private func checkPreloadNeeded(for date: Date) {
+        let items = scrollState.items
+        guard items.count > 1 else { return }
 
-        // Near the beginning - pre-load backward
-        if index < preloadThreshold {
+        // Check how far this date is from the edges of loaded items
+        let dayKey = calendar.startOfDay(for: date)
+
+        if let firstDay = items.first,
+           let daysSinceFirst = calendar.dateComponents([.day], from: firstDay, to: dayKey).day,
+           daysSinceFirst < 14 {
+            // Within 2 weeks of the start - load more backward
             scrollState.loadMoreBackward()
         }
 
-        // Near the end - pre-load forward
-        if index >= totalCount - preloadThreshold {
+        if let lastDay = items.last,
+           let daysUntilLast = calendar.dateComponents([.day], from: dayKey, to: lastDay).day,
+           daysUntilLast < 14 {
+            // Within 2 weeks of the end - load more forward
             scrollState.loadMoreForward()
         }
     }
@@ -127,14 +150,18 @@ struct CalendarDayView: View {
                         scrollState.loadMoreBackward()
                     }
 
-                    let sections = displaySections
-                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                    ForEach(displaySections) { section in
                         switch section {
+                        case .monthHeader(let date):
+                            MonthHeaderSection(date: date)
+                                .id(section.id)
+
                         case .weekSummary(let startDate, let endDate):
                             WeekSummarySection(startDate: startDate, endDate: endDate)
                                 .id(section.id)
                                 .onAppear {
-                                    checkPreloadNeeded(at: index, totalCount: sections.count)
+                                    // Use start date of the week summary to check preload
+                                    checkPreloadNeeded(for: startDate)
                                 }
 
                         case .day(let date):
@@ -155,7 +182,7 @@ struct CalendarDayView: View {
                                 dataManager.ensureMonthLoaded(month)
 
                                 // Pre-load more days if near edges
-                                checkPreloadNeeded(at: index, totalCount: sections.count)
+                                checkPreloadNeeded(for: date)
                             }
                         }
                     }
@@ -190,16 +217,39 @@ struct CalendarDayView: View {
 // MARK: - Display Section Type
 
 private enum DayDisplaySection: Identifiable {
+    case monthHeader(Date)
     case weekSummary(startDate: Date, endDate: Date)
     case day(Date)
 
     var id: String {
         switch self {
+        case .monthHeader(let date):
+            return "month-\(date.timeIntervalSince1970)"
         case .weekSummary(let startDate, let endDate):
             return "week-\(startDate.timeIntervalSince1970)-\(endDate.timeIntervalSince1970)"
         case .day(let date):
             return "day-\(date.timeIntervalSince1970)"
         }
+    }
+}
+
+// MARK: - Month Header Section
+
+private struct MonthHeaderSection: View {
+    let date: Date
+
+    private var monthName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        return formatter.string(from: date)
+    }
+
+    var body: some View {
+        Text(monthName)
+            .font(.largeTitle)
+            .fontWeight(.bold)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
     }
 }
 
@@ -275,7 +325,7 @@ private struct DaySection: View {
 
     private var dayTitle: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE - d MMM yyyy"
+        formatter.dateFormat = "EEE d"
         return formatter.string(from: date)
     }
 

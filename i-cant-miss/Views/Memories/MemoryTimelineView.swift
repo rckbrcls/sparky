@@ -42,24 +42,6 @@ struct MemoryTimelineView: View {
         self._selectedDate = State(initialValue: now)
     }
 
-    private var navigationTitleText: String {
-        if isMultiSelecting {
-            if selectedMemoryIDs.isEmpty {
-                return "Select Memories"
-            }
-            return "\(selectedMemoryIDs.count) Selected"
-        }
-
-        switch viewMode {
-        case .year:
-            return "Timeline"
-        case .month:
-            return "Months"
-        case .day:
-            return "Days"
-        }
-    }
-
     private var bulkActionSpaces: [SpaceModel] {
         environment.spaceService.spaces.filter { $0.id != SpaceModel.allSpacesIdentifier }
     }
@@ -88,8 +70,6 @@ struct MemoryTimelineView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             currentView
-                .navigationTitle(navigationTitleText)
-                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     if isMultiSelecting {
                         MemoryMultiSelectToolbarContent(
