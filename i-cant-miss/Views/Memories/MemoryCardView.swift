@@ -116,7 +116,8 @@ struct MemoryCardView: View {
     @ViewBuilder
     private func memoryContent(memory: MemoryModel) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            let hasMetaIndicators = memory.priority != nil || statusBadge != nil
+            let priorityToDisplay = memory.priority == .noPriority ? nil : memory.priority
+            let hasMetaIndicators = priorityToDisplay != nil || statusBadge != nil
             let hasSpaceBadge = memory.space != nil
 
             if hasSpaceBadge || hasMetaIndicators {
@@ -144,7 +145,7 @@ struct MemoryCardView: View {
 
                     if hasMetaIndicators {
                         HStack(spacing: 12) {
-                            if let priority = memory.priority {
+                            if let priority = priorityToDisplay {
                                 Image(systemName: priority.iconName)
                                     .font(.subheadline)
                                     .foregroundStyle(priorityColor(for: priority))

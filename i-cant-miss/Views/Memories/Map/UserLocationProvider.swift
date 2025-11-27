@@ -24,8 +24,14 @@ final class UserLocationProvider: NSObject, ObservableObject {
     }
 
     func refreshLocation() {
-        guard CLLocationManager.locationServicesEnabled() else { return }
-        manager.startUpdatingLocation()
+        switch authorizationStatus {
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.requestLocation()
+        default:
+            coordinate = nil
+        }
     }
 }
 
@@ -35,6 +41,8 @@ extension UserLocationProvider: CLLocationManagerDelegate {
             guard let self else { return }
             authorizationStatus = manager.authorizationStatus
             switch authorizationStatus {
+            case .notDetermined:
+                self.manager.requestWhenInUseAuthorization()
             case .authorizedAlways, .authorizedWhenInUse:
                 self.manager.requestLocation()
                 self.manager.startUpdatingLocation()

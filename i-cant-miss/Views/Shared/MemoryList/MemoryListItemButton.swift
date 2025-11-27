@@ -25,6 +25,8 @@ struct MemoryListItemButton: View {
                 }
                 .sheet(isPresented: $isShowingMoreActions) {
                     MemoryListMoreActionsSheet(
+                        memory: memory,
+                        spaces: environment.spaceService.spaces,
                         canEdit: onEdit != nil,
                         onEdit: {
                             guard let onEdit else { return }
@@ -34,9 +36,21 @@ struct MemoryListItemButton: View {
                         onDelete: {
                             isShowingMoreActions = false
                             Task { await deleteMemory() }
+                        },
+                        onTogglePin: {
+                            Task { await toggleMemoryPin() }
+                        },
+                        onMoveToSpace: { spaceID in
+                            Task { await moveMemory(to: spaceID) }
+                        },
+                        onUpdateStatus: { status in
+                            Task { await setMemoryStatus(status) }
+                        },
+                        onUpdatePriority: { priority in
+                            Task { await setMemoryPriority(priority) }
                         }
                     )
-                    .presentationDetents([.height(200)])
+                    .presentationDetents([.medium])
                 }
         }
     }
@@ -134,6 +148,41 @@ struct MemoryListItemButton: View {
     private func deleteMemory() async {
         do {
             try await environment.memoryService.deleteMemory(id: memory.id)
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func moveMemory(to spaceID: UUID?) async {
+        let currentID = memory.space?.id
+        guard currentID != spaceID else { return }
+
+        do {
+            let targetSpace = spaceID.flatMap { environment.spaceService.space(id: $0) }
+            try await environment.memoryService.moveMemory(memory.id, to: targetSpace)
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func setMemoryStatus(_ status: MemoryStatus) async {
+        guard status != memory.status else { return }
+        do {
+            try await environment.memoryService.setStatus(memoryID: memory.id, status: status)
+        } catch {
+            // Handle error silently for now
+        }
+    }
+
+    private func setMemoryPriority(_ priority: MemoryPriority?) async {
+        if priority == nil, memory.priority == nil {
+            return
+        }
+        if let current = memory.priority, let priority, current == priority {
+            return
+        }
+        do {
+            try await environment.memoryService.setPriority(memoryID: memory.id, priority: priority)
         } catch {
             // Handle error silently for now
         }
