@@ -126,6 +126,7 @@ struct MemoryTimelineView: View {
                     }
                 }
             }
+            .toolbarBackground(viewMode == .year ? .hidden : .automatic, for: .navigationBar)
             .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     performBulkDeletion()
