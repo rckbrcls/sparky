@@ -13,6 +13,7 @@ struct MemoryTriggersView: View {
     let onEditMemory: ((MemoryModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     @Binding var navigationPath: NavigationPath
+    var embedsInNavigationStack: Bool = true
 
     @EnvironmentObject private var environment: AppEnvironment
     @State private var searchText = ""
@@ -32,48 +33,35 @@ struct MemoryTriggersView: View {
         !searchText.isEmpty
     }
 
-    private var locationOnlyMemories: [MemoryModel] {
-        memoryService.memoriesWithLocationOnly()
-            .filter { isMemoryContentAndTriggerSelected($0) }
+    private struct FilteredData {
+        let pinned: [MemoryModel]
+        let nonPinned: [MemoryModel]
+        let isEmpty: Bool
     }
 
-    private var personOnlyMemories: [MemoryModel] {
-        memoryService.memoriesWithPersonOnly()
-            .filter { isMemoryContentAndTriggerSelected($0) }
-    }
+    private var filteredData: FilteredData {
+        let baseMemories = memoryService.nonScheduledMemories()
 
-    private var sequentialOnlyMemories: [MemoryModel] {
-        memoryService.memoriesWithSequentialOnly()
-            .filter { isMemoryContentAndTriggerSelected($0) }
-    }
+        let allTrigger = baseMemories.filter { memory in
+            let activeTriggers = memory.triggers.filter { $0.isActive }
+            guard !activeTriggers.isEmpty else { return false }
 
-    private var allTriggerMemories: [MemoryModel] {
-        let allMemories = locationOnlyMemories + personOnlyMemories + sequentialOnlyMemories
-        var seenIDs = Set<UUID>()
-        return allMemories.filter { memory in
-            if seenIDs.contains(memory.id) {
-                return false
-            } else {
-                seenIDs.insert(memory.id)
-                return true
-            }
+            let hasLocation = activeTriggers.contains { $0.type == .location }
+            let hasPerson = activeTriggers.contains { $0.type == .person }
+            let hasSequential = activeTriggers.contains { $0.type == .sequential }
+
+            return hasLocation || hasPerson || hasSequential
         }
-    }
+        .filter { isMemoryContentAndTriggerSelected($0) }
 
-    private var pinnedMemories: [MemoryModel] {
-        allTriggerMemories.filter { $0.isPinned }
-    }
+        let pinned = allTrigger.filter { $0.isPinned }
+        let nonPinned = allTrigger.filter { !$0.isPinned }
 
-    private var nonPinnedMemories: [MemoryModel] {
-        allTriggerMemories.filter { !$0.isPinned }
+        return FilteredData(pinned: pinned, nonPinned: nonPinned, isEmpty: allTrigger.isEmpty)
     }
 
     private var filteredMemories: [MemoryModel] {
         isSearching ? memoryService.searchMemories(query: searchText) : []
-    }
-
-    private var hasAnyContent: Bool {
-        !allTriggerMemories.isEmpty
     }
 
     private var navigationTitleText: String {
@@ -112,74 +100,85 @@ struct MemoryTriggersView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            triggersList
-                .navigationTitle(navigationTitleText)
-                .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
-                .toolbar {
-                    if isMultiSelecting {
-                        MemoryMultiSelectToolbarContent(
-                            availableSpaces: bulkActionSpaces,
-                            isPerformingBulkAction: isPerformingBulkAction,
-                            canPerformDeletion: canMoveSelection,
-                            isPriorityEnabled: canChangePriorityForSelection,
-                            isStatusEnabled: canMoveSelection,
-                            isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
-                            onSelectSpace: { space in performMove(to: space) },
-                            onSelectStatus: { status in performStatusUpdate(to: status) },
-                            onSelectPriority: { priority in performPriorityUpdate(to: priority) },
-                            onDelete: { showingDeleteConfirmation = true },
-                            onDone: { toggleMultiSelection() }
-                        )
-                    } else {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button {
-                                toggleMultiSelection()
-                            } label: {
-                                Label("Select", systemImage: "checkmark.circle")
-                            }
-                            .disabled(isPerformingBulkAction)
-                        }
-                    }
+        Group {
+            if embedsInNavigationStack {
+                NavigationStack(path: $navigationPath) {
+                    content
                 }
-                .sheet(isPresented: $showTriggerSheet) {
-                    TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
-                }
-                .sheet(isPresented: $showContentSheet) {
-                    ContentFilterSheetView(selectedContentTypes: $selectedContentTypes)
-                }
-                .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
-                    Button("Delete", role: .destructive) {
-                        performBulkDeletion()
-                    }
-                    .disabled(isPerformingBulkAction)
-
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text(deleteConfirmationMessage)
-                }
-                .alert("Unable to complete action", isPresented: Binding(
-                    get: { bulkActionErrorMessage != nil },
-                    set: { isPresented in
-                        if !isPresented {
-                            bulkActionErrorMessage = nil
-                        }
-                    }
-                )) {
-                    Button("OK", role: .cancel) {}
-                } message: {
-                    Text(bulkActionErrorMessage ?? "")
-                }
-                .onChange(of: isMultiSelecting) { _, newValue in
-                    onMultiSelectionChange(newValue)
-                }
-                .onAppear {
-                    onMultiSelectionChange(isMultiSelecting)
-                }
-                .onDisappear {
-                    onMultiSelectionChange(false)
-                }
+            } else {
+                content
+            }
         }
+    }
+
+    private var content: some View {
+        triggersList
+            .navigationTitle(navigationTitleText)
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
+            .toolbar {
+                if isMultiSelecting {
+                    MemoryMultiSelectToolbarContent(
+                        availableSpaces: bulkActionSpaces,
+                        isPerformingBulkAction: isPerformingBulkAction,
+                        canPerformDeletion: canMoveSelection,
+                        isPriorityEnabled: canChangePriorityForSelection,
+                        isStatusEnabled: canMoveSelection,
+                        isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
+                        onSelectSpace: { space in performMove(to: space) },
+                        onSelectStatus: { status in performStatusUpdate(to: status) },
+                        onSelectPriority: { priority in performPriorityUpdate(to: priority) },
+                        onDelete: { showingDeleteConfirmation = true },
+                        onDone: { toggleMultiSelection() }
+                    )
+                } else {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            toggleMultiSelection()
+                        } label: {
+                            Label("Select", systemImage: "checkmark.circle")
+                        }
+                        .disabled(isPerformingBulkAction)
+                    }
+                }
+            }
+            .sheet(isPresented: $showTriggerSheet) {
+                TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
+            }
+            .sheet(isPresented: $showContentSheet) {
+                ContentFilterSheetView(selectedContentTypes: $selectedContentTypes)
+            }
+            .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    performBulkDeletion()
+                }
+                .disabled(isPerformingBulkAction)
+
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(deleteConfirmationMessage)
+            }
+            .alert("Unable to complete action", isPresented: Binding(
+                get: { bulkActionErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        bulkActionErrorMessage = nil
+                    }
+                }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(bulkActionErrorMessage ?? "")
+            }
+            .onChange(of: isMultiSelecting) { _, newValue in
+                onMultiSelectionChange(newValue)
+            }
+            .onAppear {
+                onMultiSelectionChange(isMultiSelecting)
+            }
+            .onDisappear {
+                onMultiSelectionChange(false)
+            }
     }
 
     private var triggersList: some View {
@@ -199,10 +198,11 @@ struct MemoryTriggersView: View {
             if isSearching {
                 searchResultsList
             } else {
-                if hasAnyContent {
-                    pinnedSection
+                let data = filteredData
+                if !data.isEmpty {
+                    pinnedSection(data: data)
 
-                    ForEach(nonPinnedMemories) { memory in
+                    ForEach(data.nonPinned) { memory in
                         MemoryListItemButton(
                             memory: memory,
                             isMultiSelecting: isMultiSelecting,
@@ -260,10 +260,10 @@ struct MemoryTriggersView: View {
     }
 
     @ViewBuilder
-    private var pinnedSection: some View {
-        if !pinnedMemories.isEmpty {
+    private func pinnedSection(data: FilteredData) -> some View {
+        if !data.pinned.isEmpty {
             Section {
-                ForEach(pinnedMemories) { memory in
+                ForEach(data.pinned) { memory in
                     MemoryListItemButton(
                         memory: memory,
                         isMultiSelecting: isMultiSelecting,

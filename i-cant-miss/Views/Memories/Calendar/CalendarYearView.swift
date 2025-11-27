@@ -33,6 +33,7 @@ struct CalendarYearView: View {
 
     var body: some View {
         PullToNavigateScrollView(
+            bottomOverlayPadding: bottomInset,
             onPullUp: {
                 navigateToPreviousYear()
             },

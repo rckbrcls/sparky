@@ -41,6 +41,7 @@ struct CalendarMonthView: View {
 
     var body: some View {
         PullToNavigateScrollView(
+            bottomOverlayPadding: bottomInset,
             onPullUp: {
                 navigateToPreviousMonth()
             },

@@ -19,14 +19,17 @@ enum PullDirection {
 
 struct PullToNavigateScrollView<Content: View>: View {
     let content: Content
+    let bottomOverlayPadding: CGFloat
     let onPullUp: () -> Void
     let onPullDown: () -> Void
 
     init(
+        bottomOverlayPadding: CGFloat = 0,
         onPullUp: @escaping () -> Void,
         onPullDown: @escaping () -> Void,
         @ViewBuilder content: () -> Content
     ) {
+        self.bottomOverlayPadding = bottomOverlayPadding
         self.onPullUp = onPullUp
         self.onPullDown = onPullDown
         self.content = content()
@@ -34,6 +37,7 @@ struct PullToNavigateScrollView<Content: View>: View {
 
     var body: some View {
         PullNavigationScrollViewRepresentable(
+            bottomOverlayPadding: bottomOverlayPadding,
             onPullUp: onPullUp,
             onPullDown: onPullDown
         ) {
@@ -46,14 +50,17 @@ struct PullToNavigateScrollView<Content: View>: View {
 
 private struct PullNavigationScrollViewRepresentable<Content: View>: UIViewControllerRepresentable {
     let content: Content
+    let bottomOverlayPadding: CGFloat
     let onPullUp: () -> Void
     let onPullDown: () -> Void
 
     init(
+        bottomOverlayPadding: CGFloat = 0,
         onPullUp: @escaping () -> Void,
         onPullDown: @escaping () -> Void,
         @ViewBuilder content: () -> Content
     ) {
+        self.bottomOverlayPadding = bottomOverlayPadding
         self.onPullUp = onPullUp
         self.onPullDown = onPullDown
         self.content = content()
@@ -61,6 +68,7 @@ private struct PullNavigationScrollViewRepresentable<Content: View>: UIViewContr
 
     func makeUIViewController(context: Context) -> PullNavigationScrollViewController<Content> {
         let controller = PullNavigationScrollViewController<Content>()
+        controller.bottomOverlayPadding = bottomOverlayPadding
         controller.onPullUp = onPullUp
         controller.onPullDown = onPullDown
         controller.setContent(content)
@@ -68,6 +76,7 @@ private struct PullNavigationScrollViewRepresentable<Content: View>: UIViewContr
     }
 
     func updateUIViewController(_ uiViewController: PullNavigationScrollViewController<Content>, context: Context) {
+        uiViewController.bottomOverlayPadding = bottomOverlayPadding
         uiViewController.onPullUp = onPullUp
         uiViewController.onPullDown = onPullDown
         uiViewController.updateContent(content)
@@ -80,6 +89,9 @@ private class PullNavigationScrollViewController<Content: View>: UIViewControlle
 
     var onPullUp: (() -> Void)?
     var onPullDown: (() -> Void)?
+    var bottomOverlayPadding: CGFloat = 0 {
+        didSet { updateBottomIndicatorPadding() }
+    }
 
     private let scrollView = UIScrollView()
     private var hostingController: UIHostingController<Content>?
@@ -93,6 +105,7 @@ private class PullNavigationScrollViewController<Content: View>: UIViewControlle
     // Pull indicators
     private let topIndicatorView = PullIndicatorUIView()
     private let bottomIndicatorView = PullIndicatorUIView()
+    private var bottomIndicatorBottomConstraint: NSLayoutConstraint?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -130,17 +143,23 @@ private class PullNavigationScrollViewController<Content: View>: UIViewControlle
         view.addSubview(topIndicatorView)
         view.addSubview(bottomIndicatorView)
 
+        bottomIndicatorBottomConstraint = bottomIndicatorView.bottomAnchor.constraint(
+            equalTo: view.safeAreaLayoutGuide.bottomAnchor
+        )
+
         NSLayoutConstraint.activate([
             topIndicatorView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             topIndicatorView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             topIndicatorView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             topIndicatorView.heightAnchor.constraint(equalToConstant: 60),
 
-            bottomIndicatorView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             bottomIndicatorView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             bottomIndicatorView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             bottomIndicatorView.heightAnchor.constraint(equalToConstant: 60)
         ])
+
+        bottomIndicatorBottomConstraint?.isActive = true
+        updateBottomIndicatorPadding()
     }
 
     func setContent(_ content: Content) {
@@ -269,6 +288,14 @@ private class PullNavigationScrollViewController<Content: View>: UIViewControlle
     private func triggerHaptic() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
+    }
+
+    private func updateBottomIndicatorPadding() {
+        bottomIndicatorBottomConstraint?.constant = -bottomOverlayPadding
+
+        if isViewLoaded {
+            view.layoutIfNeeded()
+        }
     }
 }
 

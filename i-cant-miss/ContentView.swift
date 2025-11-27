@@ -9,17 +9,14 @@ import SwiftUI
 import Combine
 
 enum CustomTab: String, CaseIterable {
-    case home = "Timeline"
-    case triggers = "Triggers"
+    case memories = "Memories"
     case spaces = "Spaces"
     case settings = "Settings"
 
-    var symbol :String {
+    var symbol: String {
         switch self {
-        case .home:
-            return "list.bullet.rectangle"
-        case .triggers:
-            return "bolt.fill"
+        case .memories:
+            return "tray.full"
         case .spaces:
             return "square.grid.2x2"
         case .settings:
@@ -27,11 +24,9 @@ enum CustomTab: String, CaseIterable {
         }
     }
 
-    var actionSymbol :String {
+    var actionSymbol: String {
         switch self {
-        case .home:
-            return "plus"
-        case .triggers:
+        case .memories:
             return "plus"
         case .spaces:
             return "plus"
@@ -50,9 +45,9 @@ struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @State private var editorRoute: MemoryEditorRoute?
     @State private var spaceComposerRequest: SpaceComposerRequest?
-    @State private var activeTab: CustomTab = .home
-    @State private var homeNavigationPath = NavigationPath()
-    @State private var triggersNavigationPath = NavigationPath()
+    @State private var activeTab: CustomTab = .memories
+    @State private var memoriesCalendarNavigationPath = NavigationPath()
+    @State private var memoriesListNavigationPath = NavigationPath()
     @State private var spacesNavigationPath = NavigationPath()
     @State private var settingsNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
@@ -67,24 +62,14 @@ struct ContentView: View {
     var body: some View {
         VStack{
             TabView(selection: $activeTab){
-                Tab.init(value: .home){
-                    MemoryTimelineView(
+                Tab.init(value: .memories){
+                    MemoriesContainerView(
                         memoryService: environment.memoryService,
                         onSelectMemory: handleMemorySelection,
                         onEditMemory: handleMemoryEdit,
                         onMultiSelectionChange: handleMultiSelectionChange,
-                        navigationPath: $homeNavigationPath
-                    )
-                    .tabBarSpacer()
-                }
-
-                Tab.init(value: .triggers){
-                    MemoryTriggersView(
-                        memoryService: environment.memoryService,
-                        onSelectMemory: handleMemorySelection,
-                        onEditMemory: handleMemoryEdit,
-                        onMultiSelectionChange: handleMultiSelectionChange,
-                        navigationPath: $triggersNavigationPath
+                        listNavigationPath: $memoriesListNavigationPath,
+                        calendarNavigationPath: $memoriesCalendarNavigationPath
                     )
                     .tabBarSpacer()
                 }
@@ -252,10 +237,9 @@ struct ContentView: View {
 
     private func handleTabReselection(_ tab: CustomTab) {
         switch tab {
-        case .home:
-            homeNavigationPath = NavigationPath()
-        case .triggers:
-            triggersNavigationPath = NavigationPath()
+        case .memories:
+            memoriesCalendarNavigationPath = NavigationPath()
+            memoriesListNavigationPath = NavigationPath()
         case .spaces:
             spacesNavigationPath = NavigationPath()
         case .settings:

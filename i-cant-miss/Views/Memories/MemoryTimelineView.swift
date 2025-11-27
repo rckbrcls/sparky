@@ -13,6 +13,7 @@ struct MemoryTimelineView: View {
     let onEditMemory: ((MemoryModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     @Binding var navigationPath: NavigationPath
+    var embedsInNavigationStack: Bool = true
 
     @EnvironmentObject private var environment: AppEnvironment
     @StateObject private var calendarDataManager: CalendarDataManager
@@ -26,12 +27,20 @@ struct MemoryTimelineView: View {
     @State private var bulkActionErrorMessage: String?
     @State private var viewMode: CalendarViewMode = .year
 
-    init(memoryService: MemoryService, onSelectMemory: @escaping (MemoryModel) -> Void, onEditMemory: ((MemoryModel) -> Void)?, onMultiSelectionChange: @escaping (Bool) -> Void, navigationPath: Binding<NavigationPath>) {
+    init(
+        memoryService: MemoryService,
+        onSelectMemory: @escaping (MemoryModel) -> Void,
+        onEditMemory: ((MemoryModel) -> Void)?,
+        onMultiSelectionChange: @escaping (Bool) -> Void,
+        navigationPath: Binding<NavigationPath>,
+        embedsInNavigationStack: Bool = true
+    ) {
         self.memoryService = memoryService
         self.onSelectMemory = onSelectMemory
         self.onEditMemory = onEditMemory
         self.onMultiSelectionChange = onMultiSelectionChange
         self._navigationPath = navigationPath
+        self.embedsInNavigationStack = embedsInNavigationStack
         self._calendarDataManager = StateObject(wrappedValue: CalendarDataManager(memoryService: memoryService))
 
         // Initialize state with current date
@@ -68,79 +77,89 @@ struct MemoryTimelineView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            currentView
-                .toolbar {
-                    if isMultiSelecting {
-                        MemoryMultiSelectToolbarContent(
-                            availableSpaces: bulkActionSpaces,
-                            isPerformingBulkAction: isPerformingBulkAction,
-                            canPerformDeletion: canMoveSelection,
-                            isPriorityEnabled: canChangePriorityForSelection,
-                            isStatusEnabled: canMoveSelection,
-                            isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
-                            onSelectSpace: { space in performMove(to: space) },
-                            onSelectStatus: { status in performStatusUpdate(to: status) },
-                            onSelectPriority: { priority in performPriorityUpdate(to: priority) },
-                            onDelete: { showingDeleteConfirmation = true },
-                            onDone: { toggleMultiSelection() }
-                        )
-                    } else {
-                        ToolbarItemGroup(placement: .navigationBarLeading) {
-                            if viewMode != .year {
-                                Button {
-                                    navigateBack()
-                                } label: {
-                                    Label("Back", systemImage: "chevron.left")
-                                }
-                            }
-                        }
-
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button {
-                                toggleMultiSelection()
-                            } label: {
-                                Label("Select", systemImage: "checkmark.circle")
-                            }
-                            .disabled(isPerformingBulkAction)
-                        }
-                    }
+        Group {
+            if embedsInNavigationStack {
+                NavigationStack(path: $navigationPath) {
+                    content
                 }
-                .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
-                    Button("Delete", role: .destructive) {
-                        performBulkDeletion()
-                    }
-                    .disabled(isPerformingBulkAction)
-
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text(deleteConfirmationMessage)
-                }
-                .alert("Unable to complete action", isPresented: Binding(
-                    get: { bulkActionErrorMessage != nil },
-                    set: { isPresented in
-                        if !isPresented {
-                            bulkActionErrorMessage = nil
-                        }
-                    }
-                )) {
-                    Button("OK", role: .cancel) {}
-                } message: {
-                    Text(bulkActionErrorMessage ?? "")
-                }
-                .onChange(of: isMultiSelecting) { _, newValue in
-                    onMultiSelectionChange(newValue)
-                }
-                .onAppear {
-                    onMultiSelectionChange(isMultiSelecting)
-                }
-                .onDisappear {
-                    onMultiSelectionChange(false)
-                }
-                .onReceive(memoryService.$lastRefreshed) { _ in
-                    calendarDataManager.clearCache()
-                }
+            } else {
+                content
+            }
         }
+    }
+
+    private var content: some View {
+        currentView
+            .toolbar {
+                if isMultiSelecting {
+                    MemoryMultiSelectToolbarContent(
+                        availableSpaces: bulkActionSpaces,
+                        isPerformingBulkAction: isPerformingBulkAction,
+                        canPerformDeletion: canMoveSelection,
+                        isPriorityEnabled: canChangePriorityForSelection,
+                        isStatusEnabled: canMoveSelection,
+                        isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
+                        onSelectSpace: { space in performMove(to: space) },
+                        onSelectStatus: { status in performStatusUpdate(to: status) },
+                        onSelectPriority: { priority in performPriorityUpdate(to: priority) },
+                        onDelete: { showingDeleteConfirmation = true },
+                        onDone: { toggleMultiSelection() }
+                    )
+                } else {
+                    ToolbarItemGroup(placement: .navigationBarLeading) {
+                        if viewMode != .year {
+                            Button {
+                                navigateBack()
+                            } label: {
+                                Label("Back", systemImage: "chevron.left")
+                            }
+                        }
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            toggleMultiSelection()
+                        } label: {
+                            Label("Select", systemImage: "checkmark.circle")
+                        }
+                        .disabled(isPerformingBulkAction)
+                    }
+                }
+            }
+            .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    performBulkDeletion()
+                }
+                .disabled(isPerformingBulkAction)
+
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(deleteConfirmationMessage)
+            }
+            .alert("Unable to complete action", isPresented: Binding(
+                get: { bulkActionErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        bulkActionErrorMessage = nil
+                    }
+                }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(bulkActionErrorMessage ?? "")
+            }
+            .onChange(of: isMultiSelecting) { _, newValue in
+                onMultiSelectionChange(newValue)
+            }
+            .onAppear {
+                onMultiSelectionChange(isMultiSelecting)
+            }
+            .onDisappear {
+                onMultiSelectionChange(false)
+            }
+            .onReceive(memoryService.$lastRefreshed) { _ in
+                calendarDataManager.clearCache()
+            }
     }
 
     @ViewBuilder
