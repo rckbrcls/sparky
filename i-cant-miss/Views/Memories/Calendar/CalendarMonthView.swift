@@ -203,6 +203,7 @@ private struct MonthSection: View {
 
             Spacer(minLength: 0)
         }
+        .safeAreaPadding(.top)
     }
 
     private func isDateSelected(_ date: Date) -> Bool {

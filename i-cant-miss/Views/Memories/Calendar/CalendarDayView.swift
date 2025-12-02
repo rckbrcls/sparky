@@ -115,6 +115,7 @@ struct CalendarDayView: View {
                 )
             }
             .padding(.vertical, 16)
+            .safeAreaPadding(.top)
             .id(displayedMonthStart)
         }
         .onAppear {

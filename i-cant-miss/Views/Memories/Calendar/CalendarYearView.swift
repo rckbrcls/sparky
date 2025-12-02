@@ -42,9 +42,7 @@ struct CalendarYearView: View {
             }
         ) {
             GeometryReader { geometry in
-                let safeTop = geometry.safeAreaInsets.top
-                let safeBottom = geometry.safeAreaInsets.bottom
-                let safeHeight = max(400, geometry.size.height - bottomInset - safeTop - safeBottom)
+                let safeHeight = max(400, geometry.size.height - bottomInset)
 
                 YearSection(
                     year: displayedYear,
@@ -132,6 +130,7 @@ private struct YearSection: View {
             }
             .padding(.horizontal, 8)
         }
+        .safeAreaPadding(.top)
     }
 }
 

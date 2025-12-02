@@ -90,6 +90,7 @@ struct MemoryTimelineView: View {
 
     private var content: some View {
         currentView
+            .toolbarBackground(.clear, for: .navigationBar)
             .toolbar {
                 if isMultiSelecting {
                     MemoryMultiSelectToolbarContent(
@@ -126,7 +127,6 @@ struct MemoryTimelineView: View {
                     }
                 }
             }
-            .toolbarBackground(viewMode == .year ? .hidden : .automatic, for: .navigationBar)
             .alert("Delete selected memories?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     performBulkDeletion()
