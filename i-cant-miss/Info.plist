@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>NSContactsUsageDescription</key>
-	<string>This app needs access to your contacts to allow you to select people for person-based reminders.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Precisamos acessar a câmera para que você adicione fotos às memórias.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Precisamos do reconhecimento de voz para transcrever o áudio do título.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Precisamos acessar o microfone para que você grave áudios nas memórias.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Precisamos acessar suas fotos para que você anexe imagens às memórias.</string>
-	<key>NSFocusStatusUsageDescription</key>
-	<string>This app needs access to your focus status to trigger reminders when you activate specific focus modes.</string>
-</dict>
+<dict/>
 </plist>
