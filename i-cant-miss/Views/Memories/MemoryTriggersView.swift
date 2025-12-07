@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct MemoryTriggersView: View {
     @ObservedObject var memoryService: MemoryService
@@ -16,7 +17,6 @@ struct MemoryTriggersView: View {
     var embedsInNavigationStack: Bool = true
 
     @EnvironmentObject private var environment: AppEnvironment
-    @State private var searchText = ""
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
     @State private var showInbox = true
@@ -28,10 +28,6 @@ struct MemoryTriggersView: View {
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
-
-    private var isSearching: Bool {
-        !searchText.isEmpty
-    }
 
     private struct FilteredData {
         let pinned: [MemoryModel]
@@ -60,9 +56,6 @@ struct MemoryTriggersView: View {
         return FilteredData(pinned: pinned, nonPinned: nonPinned, isEmpty: allTrigger.isEmpty)
     }
 
-    private var filteredMemories: [MemoryModel] {
-        isSearching ? memoryService.searchMemories(query: searchText) : []
-    }
 
     private var navigationTitleText: String {
         if isMultiSelecting {
@@ -113,9 +106,6 @@ struct MemoryTriggersView: View {
 
     private var content: some View {
         triggersList
-            .navigationTitle(navigationTitleText)
-            .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
             .toolbar {
                 if isMultiSelecting {
                     MemoryMultiSelectToolbarContent(
@@ -183,6 +173,11 @@ struct MemoryTriggersView: View {
 
     private var triggersList: some View {
         List {
+            triggersListTitle
+                .listRowInsets(.init(top: 24, leading: 20, bottom: 4, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
             FilterBadgesBar(
                 selectedTriggerTypes: $selectedTriggerTypes,
                 selectedContentTypes: $selectedContentTypes,
@@ -195,39 +190,36 @@ struct MemoryTriggersView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 
-            if isSearching {
-                searchResultsList
-            } else {
-                let data = filteredData
-                if !data.isEmpty {
-                    pinnedSection(data: data)
+            let data = filteredData
+            if !data.isEmpty {
+                pinnedSection(data: data)
 
-                    ForEach(data.nonPinned) { memory in
-                        MemoryListItemButton(
-                            memory: memory,
-                            isMultiSelecting: isMultiSelecting,
-                            isSelected: isMemorySelected(memory),
-                            isDisabled: isPerformingBulkAction,
-                            onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:),
-                            onEdit: onEditMemory
-                        )
-                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
-                } else {
-                    MemoryEmptyStateCard(
-                        systemImage: "bolt.fill",
-                        title: "No triggers yet",
-                        message: "Create a memory with location, person, or sequential triggers to get started."
+                ForEach(data.nonPinned) { memory in
+                    MemoryListItemButton(
+                        memory: memory,
+                        isMultiSelecting: isMultiSelecting,
+                        isSelected: isMemorySelected(memory),
+                        isDisabled: isPerformingBulkAction,
+                        onSelect: onSelectMemory,
+                        onToggleSelection: toggleMemorySelection(_:),
+                        onEdit: onEditMemory
                     )
-                    .padding(.top, 16)
-                    .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
+            } else {
+                MemoryEmptyStateCard(
+                    systemImage: "bolt.fill",
+                    title: "No triggers yet",
+                    message: "Create a memory with location, person, or sequential triggers to get started."
+                )
+                .padding(.top, 16)
+                .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
+
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -240,23 +232,11 @@ struct MemoryTriggersView: View {
         .background(Color.clear)
     }
 
-    @ViewBuilder
-    private var searchResultsList: some View {
-        if filteredMemories.isEmpty {
-            MemoryEmptyStateCard(
-                systemImage: "magnifyingglass",
-                title: "No memories match your search",
-                message: "Try different keywords or reset filters to discover more memories."
-            )
-            .padding(.top, 16)
-            .listRowInsets(.init(top: 16, leading: 20, bottom: 24, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        } else {
-            ForEach(filteredMemories) { memory in
-                memoryRow(for: memory)
-            }
-        }
+    private var triggersListTitle: some View {
+        Text("Triggers")
+            .font(.custom("Vollkorn-Regular", size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize, relativeTo: .largeTitle))
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -379,7 +359,6 @@ struct MemoryTriggersView: View {
                 isMultiSelecting = true
             }
             selectedMemoryIDs.removeAll()
-            searchText = ""
         }
         showingDeleteConfirmation = false
     }

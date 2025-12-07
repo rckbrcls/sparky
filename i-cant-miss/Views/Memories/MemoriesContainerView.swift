@@ -101,7 +101,7 @@ struct MemoriesContainerView: View {
             }
         }
         .pickerStyle(.segmented)
-        .frame(width: 220)
+        .frame(width: 160)
     }
 
     private var listView: some View {

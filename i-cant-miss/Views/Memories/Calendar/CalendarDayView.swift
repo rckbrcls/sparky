@@ -17,16 +17,14 @@ struct CalendarDayView: View {
     let onToggleSelection: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
 
-    @State private var displayedMonthStart: Date
-    @State private var monthAnchor: Date
-
-    private var pages: [Date] {
-        generateMonthRange()
-    }
+    @State private var displayedDate: Date
+    @State private var dayAnchor: Date
 
     private let calendar = Calendar.current
-    /// Matches the custom tab bar height (55pt) plus extra spacing for safe overlap
-    private let bottomOverlayPadding: CGFloat = 70
+
+    private var pages: [Date] {
+        generateDayRange()
+    }
 
     init(
         dataManager: CalendarDataManager,
@@ -47,33 +45,22 @@ struct CalendarDayView: View {
         self.onToggleSelection = onToggleSelection
         self.onEditMemory = onEditMemory
 
-        // Calculate the start of the month containing the current date
-        let monthStart = Calendar.current.date(
-            from: Calendar.current.dateComponents([.year, .month], from: currentDate.wrappedValue)
-        ) ?? currentDate.wrappedValue
-        self._displayedMonthStart = State(initialValue: monthStart)
-        self._monthAnchor = State(initialValue: monthStart)
+        let startOfDay = Calendar.current.startOfDay(for: currentDate.wrappedValue)
+        self._displayedDate = State(initialValue: startOfDay)
+        self._dayAnchor = State(initialValue: startOfDay)
     }
 
     var body: some View {
         GeometryReader { proxy in
-            TabView(selection: $displayedMonthStart) {
-                ForEach(pages, id: \.self) { month in
-                    let monthWeeks = generateWeeksForMonth(month)
-                    let monthHeaderTitle = formatMonthTitle(month)
-
+            TabView(selection: $displayedDate) {
+                ForEach(pages, id: \.self) { day in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 24) {
-                            Text(monthHeaderTitle)
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .padding(.horizontal, 20)
-                                .padding(.top, 8)
+                            dayHeader(for: day)
 
-                            MonthWeeksSection(
-                                weeks: monthWeeks,
-                                monthReferenceDate: month,
-                                dataManager: dataManager,
+                            DaySection(
+                                date: day,
+                                memories: dataManager.memoriesForDate(day),
                                 isMultiSelecting: isMultiSelecting,
                                 selectedMemoryIDs: selectedMemoryIDs,
                                 isPerformingBulkAction: isPerformingBulkAction,
@@ -83,189 +70,92 @@ struct CalendarDayView: View {
                             )
                         }
                         .padding(.vertical, 16)
-                        .safeAreaPadding(.top)
-                        .id(month)
+                        .id(day)
                     }
                     .scrollIndicators(.hidden)
                     .scrollBounceBehavior(.basedOnSize)
                     .frame(width: proxy.size.width, height: proxy.size.height)
-                    .tag(month)
+                    .tag(day)
+                    .onAppear {
+                        ensureMonthDataLoaded(for: day)
+                    }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .onAppear {
-            ensureMonthDataLoaded()
+            ensureMonthDataLoaded(for: displayedDate)
         }
-        .onChange(of: displayedMonthStart) { _, _ in
-            ensureMonthDataLoaded()
-            currentDate = displayedMonthStart
+        .onChange(of: displayedDate) { _, newValue in
+            currentDate = newValue
+            ensureMonthDataLoaded(for: newValue)
+        }
+        .onChange(of: currentDate) { _, newValue in
+            displayedDate = calendar.startOfDay(for: newValue)
+            dayAnchor = displayedDate
         }
     }
 
-    private func generateMonthRange() -> [Date] {
-        let anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: monthAnchor)) ?? monthAnchor
+    private func dayHeader(for date: Date) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(primaryDateTitle(for: date))
+                .font(.largeTitle)
+                .fontWeight(.bold)
 
-        return (-12...12).compactMap { offset in
-            calendar.date(byAdding: .month, value: offset, to: anchor)
-                .flatMap { date in
-                    calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+            HStack(spacing: 10) {
+                Text(secondaryDateTitle(for: date))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                if let label = relativeLabel(for: date) {
+                    Text(label.uppercased())
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.12))
+                        .foregroundStyle(Color.accentColor)
+                        .clipShape(Capsule())
                 }
+            }
         }
+        .padding(.horizontal, 20)
     }
 
-    private func generateWeeksForMonth(_ month: Date) -> [[Date]] {
-        guard
-            let monthRange = calendar.range(of: .day, in: .month, for: month),
-            let monthEnd = calendar.date(byAdding: .day, value: monthRange.count - 1, to: month),
-            let firstWeekStart = calendar.dateInterval(of: .weekOfYear, for: month)?.start,
-            let lastWeekStart = calendar.dateInterval(of: .weekOfYear, for: monthEnd)?.start
-        else {
-            return []
-        }
-
-        var weeks: [[Date]] = []
-        var currentWeekStart = firstWeekStart
-
-        while currentWeekStart <= lastWeekStart {
-            let days = (0..<7).compactMap { offset in
-                calendar.date(byAdding: .day, value: offset, to: currentWeekStart)
-            }
-            weeks.append(days)
-
-            guard let nextWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeekStart) else {
-                break
-            }
-            currentWeekStart = nextWeek
-        }
-
-        return weeks
+    private func primaryDateTitle(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter.string(from: date)
     }
 
-    private func formatMonthTitle(_ month: Date) -> String {
+    private func secondaryDateTitle(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: month)
+        return formatter.string(from: date)
     }
 
-    private func ensureMonthDataLoaded() {
-        let monthKey = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonthStart)) ?? displayedMonthStart
+    private func relativeLabel(for date: Date) -> String? {
+        if calendar.isDateInToday(date) {
+            return "Today"
+        }
+        if calendar.isDateInTomorrow(date) {
+            return "Tomorrow"
+        }
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        }
+        return nil
+    }
+
+    private func ensureMonthDataLoaded(for date: Date) {
+        let monthKey = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
         dataManager.ensureMonthLoaded(monthKey)
     }
-}
 
-// MARK: - Month Weeks Section
-
-private struct MonthWeeksSection: View {
-    let weeks: [[Date]]
-    let monthReferenceDate: Date
-    @ObservedObject var dataManager: CalendarDataManager
-    let isMultiSelecting: Bool
-    let selectedMemoryIDs: Set<MemoryModel.ID>
-    let isPerformingBulkAction: Bool
-    let onSelectMemory: (MemoryModel) -> Void
-    let onToggleSelection: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 32) {
-            ForEach(Array(weeks.enumerated()), id: \.offset) { _, weekDays in
-                WeekSection(
-                    weekDays: weekDays,
-                    monthReferenceDate: monthReferenceDate,
-                    dataManager: dataManager,
-                    isMultiSelecting: isMultiSelecting,
-                    selectedMemoryIDs: selectedMemoryIDs,
-                    isPerformingBulkAction: isPerformingBulkAction,
-                    onSelectMemory: onSelectMemory,
-                    onToggleSelection: onToggleSelection,
-                    onEditMemory: onEditMemory
-                )
-            }
-        }
-    }
-}
-
-// MARK: - Week Section
-
-private struct WeekSection: View {
-    let weekDays: [Date]
-    let monthReferenceDate: Date
-    @ObservedObject var dataManager: CalendarDataManager
-    let isMultiSelecting: Bool
-    let selectedMemoryIDs: Set<MemoryModel.ID>
-    let isPerformingBulkAction: Bool
-    let onSelectMemory: (MemoryModel) -> Void
-    let onToggleSelection: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-
-    private let calendar = Calendar.current
-
-    private var relevantDays: [Date] {
-        let filteredDays = weekDays.filter {
-            calendar.isDate($0, equalTo: monthReferenceDate, toGranularity: .month)
-        }
-        return filteredDays.isEmpty ? weekDays : filteredDays
-    }
-
-    /// Days with memories in this week (bounded to the displayed month)
-    private var daysWithMemories: [(date: Date, memories: [MemoryModel])] {
-        relevantDays.compactMap { day in
-            let memories = dataManager.memoriesForDate(day)
-            return memories.isEmpty ? nil : (date: day, memories: memories)
-        }
-    }
-
-    /// Week date range text for empty weeks
-    private var weekRangeText: String {
-        guard let firstDay = relevantDays.first, let lastDay = relevantDays.last else {
-            return ""
-        }
-
-        let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "MMMM"
-        let dayFormatter = DateFormatter()
-        dayFormatter.dateFormat = "d"
-        let monthName = monthFormatter.string(from: firstDay)
-        let startDay = dayFormatter.string(from: firstDay)
-        let endDay = dayFormatter.string(from: lastDay)
-
-        return startDay == endDay ? "\(monthName) \(startDay)" : "\(monthName) \(startDay) - \(endDay)"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            if daysWithMemories.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(weekRangeText)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Text("No events")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                }
-            } else {
-                ForEach(daysWithMemories, id: \.date) { dayData in
-                    DaySection(
-                        date: dayData.date,
-                        memories: dayData.memories,
-                        isMultiSelecting: isMultiSelecting,
-                        selectedMemoryIDs: selectedMemoryIDs,
-                        isPerformingBulkAction: isPerformingBulkAction,
-                        onSelectMemory: onSelectMemory,
-                        onToggleSelection: onToggleSelection,
-                        onEditMemory: onEditMemory
-                    )
-                }
-            }
+    private func generateDayRange() -> [Date] {
+        let anchor = calendar.startOfDay(for: dayAnchor)
+        return (-15...15).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: anchor)
         }
     }
 }
@@ -283,12 +173,6 @@ private struct DaySection: View {
     let onEditMemory: ((MemoryModel) -> Void)?
 
     private let calendar = Calendar.current
-
-    private var dayTitle: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE d"
-        return formatter.string(from: date)
-    }
 
     private var allDayMemories: [MemoryModel] {
         memories.filter { memory in
@@ -310,40 +194,19 @@ private struct DaySection: View {
         }
     }
 
-    private var isToday: Bool {
-        calendar.isDateInToday(date)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Day header
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(dayTitle)
-                        .font(.title3)
-                        .fontWeight(.bold)
-
-                    if isToday {
-                        Text("Today")
-                            .font(.caption)
-                            .foregroundStyle(Color.accentColor)
+            if memories.isEmpty {
+                emptyState
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !allDayMemories.isEmpty {
+                        memoriesSection(title: "All Day", memories: allDayMemories)
                     }
-                }
 
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-
-            // Memory content
-            VStack(alignment: .leading, spacing: 16) {
-                // All day memories section
-                if !allDayMemories.isEmpty {
-                    memoriesSection(title: "All Day", memories: allDayMemories)
-                }
-
-                // Timed memories section
-                if !timedMemories.isEmpty {
-                    memoriesSection(title: "Timed Events", memories: timedMemories)
+                    if !timedMemories.isEmpty {
+                        memoriesSection(title: "Timed Events", memories: timedMemories)
+                    }
                 }
             }
         }
@@ -370,6 +233,22 @@ private struct DaySection: View {
                 .padding(.horizontal, 20)
             }
         }
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No events for this day")
+                .font(.headline)
+
+            Text("There are no memories scheduled on this date.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
