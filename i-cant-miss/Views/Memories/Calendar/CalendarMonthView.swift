@@ -14,7 +14,11 @@ struct CalendarMonthView: View {
     let onSelectDay: (Date) -> Void
 
     @State private var displayedMonth: Date
-    @State private var transitionDirection: PullDirection?
+    @State private var monthAnchor: Date
+
+    private var pages: [Date] {
+        generateMonthRange()
+    }
 
     private let calendar = Calendar.current
 
@@ -37,31 +41,33 @@ struct CalendarMonthView: View {
             from: Calendar.current.dateComponents([.year, .month], from: currentMonth.wrappedValue)
         ) ?? currentMonth.wrappedValue
         self._displayedMonth = State(initialValue: normalized)
+        self._monthAnchor = State(initialValue: normalized)
     }
 
     var body: some View {
-        PullToNavigateScrollView(
-            bottomOverlayPadding: bottomInset,
-            onPullUp: {
-                navigateToPreviousMonth()
-            },
-            onPullDown: {
-                navigateToNextMonth()
-            }
-        ) {
-            GeometryReader { geometry in
-                let safeHeight = max(400, geometry.size.height - bottomInset)
+        GeometryReader { proxy in
+            TabView(selection: $displayedMonth) {
+                ForEach(pages, id: \.self) { month in
+                    let safeHeight = max(400, proxy.size.height - bottomInset)
 
-                MonthSection(
-                    month: displayedMonth,
-                    dataManager: dataManager,
-                    selectedDate: selectedDate,
-                    onSelectDay: onSelectDay,
-                    availableHeight: safeHeight
-                )
-                .frame(minHeight: safeHeight)
-                .id(displayedMonth)
+                    ScrollView {
+                        MonthSection(
+                            month: month,
+                            dataManager: dataManager,
+                            selectedDate: selectedDate,
+                            onSelectDay: onSelectDay,
+                            availableHeight: safeHeight
+                        )
+                        .frame(minHeight: safeHeight)
+                        .id(month)
+                    }
+                    .scrollIndicators(.hidden)
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .tag(month)
+                }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .onAppear {
             dataManager.ensureMonthLoaded(displayedMonth)
@@ -72,21 +78,14 @@ struct CalendarMonthView: View {
         }
     }
 
-    private func navigateToPreviousMonth() {
-        transitionDirection = .up
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            if let previousMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) {
-                displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: previousMonth)) ?? previousMonth
-            }
-        }
-    }
+    private func generateMonthRange() -> [Date] {
+        let anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: monthAnchor)) ?? monthAnchor
 
-    private func navigateToNextMonth() {
-        transitionDirection = .down
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            if let nextMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) {
-                displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: nextMonth)) ?? nextMonth
-            }
+        return (-12...12).compactMap { offset in
+            calendar.date(byAdding: .month, value: offset, to: anchor)
+                .flatMap { date in
+                    calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+                }
         }
     }
 }

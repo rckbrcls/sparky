@@ -13,7 +13,11 @@ struct CalendarYearView: View {
     let onSelectMonth: (Date) -> Void
 
     @State private var displayedYear: Int
-    @State private var transitionDirection: PullDirection?
+    @State private var yearAnchor: Int
+
+    private var pages: [Int] {
+        generateYearRange()
+    }
 
     private let calendar = Calendar.current
 
@@ -29,30 +33,32 @@ struct CalendarYearView: View {
         self._selectedYear = selectedYear
         self.onSelectMonth = onSelectMonth
         self._displayedYear = State(initialValue: selectedYear.wrappedValue)
+        self._yearAnchor = State(initialValue: selectedYear.wrappedValue)
     }
 
     var body: some View {
-        PullToNavigateScrollView(
-            bottomOverlayPadding: bottomInset,
-            onPullUp: {
-                navigateToPreviousYear()
-            },
-            onPullDown: {
-                navigateToNextYear()
-            }
-        ) {
-            GeometryReader { geometry in
-                let safeHeight = max(400, geometry.size.height - bottomInset)
+        GeometryReader { proxy in
+            TabView(selection: $displayedYear) {
+                ForEach(pages, id: \.self) { year in
+                    let safeHeight = max(400, proxy.size.height - bottomInset)
 
-                YearSection(
-                    year: displayedYear,
-                    dataManager: dataManager,
-                    onSelectMonth: onSelectMonth,
-                    availableHeight: safeHeight
-                )
-                .frame(minHeight: safeHeight)
-                .id(displayedYear)
+                    ScrollView {
+                        YearSection(
+                            year: year,
+                            dataManager: dataManager,
+                            onSelectMonth: onSelectMonth,
+                            availableHeight: safeHeight
+                        )
+                        .frame(minHeight: safeHeight)
+                        .id(year)
+                    }
+                    .scrollIndicators(.hidden)
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .tag(year)
+                }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .onAppear {
             dataManager.ensureYearLoaded(displayedYear)
@@ -63,18 +69,10 @@ struct CalendarYearView: View {
         }
     }
 
-    private func navigateToPreviousYear() {
-        transitionDirection = .up
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            displayedYear -= 1
-        }
-    }
-
-    private func navigateToNextYear() {
-        transitionDirection = .down
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            displayedYear += 1
-        }
+    private func generateYearRange() -> [Int] {
+        let anchor = yearAnchor
+        // Generate ±20 anos para reduzir custo e evitar salto
+        return Array((anchor - 20)...(anchor + 20))
     }
 }
 

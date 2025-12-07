@@ -18,6 +18,11 @@ struct CalendarDayView: View {
     let onEditMemory: ((MemoryModel) -> Void)?
 
     @State private var displayedMonthStart: Date
+    @State private var monthAnchor: Date
+
+    private var pages: [Date] {
+        generateMonthRange()
+    }
 
     private let calendar = Calendar.current
     /// Matches the custom tab bar height (55pt) plus extra spacing for safe overlap
@@ -47,14 +52,73 @@ struct CalendarDayView: View {
             from: Calendar.current.dateComponents([.year, .month], from: currentDate.wrappedValue)
         ) ?? currentDate.wrappedValue
         self._displayedMonthStart = State(initialValue: monthStart)
+        self._monthAnchor = State(initialValue: monthStart)
     }
 
-    /// Weeks covering the displayed month (each entry holds seven consecutive days)
-    private var monthWeeks: [[Date]] {
+    var body: some View {
+        GeometryReader { proxy in
+            TabView(selection: $displayedMonthStart) {
+                ForEach(pages, id: \.self) { month in
+                    let monthWeeks = generateWeeksForMonth(month)
+                    let monthHeaderTitle = formatMonthTitle(month)
+
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text(monthHeaderTitle)
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
+
+                            MonthWeeksSection(
+                                weeks: monthWeeks,
+                                monthReferenceDate: month,
+                                dataManager: dataManager,
+                                isMultiSelecting: isMultiSelecting,
+                                selectedMemoryIDs: selectedMemoryIDs,
+                                isPerformingBulkAction: isPerformingBulkAction,
+                                onSelectMemory: onSelectMemory,
+                                onToggleSelection: onToggleSelection,
+                                onEditMemory: onEditMemory
+                            )
+                        }
+                        .padding(.vertical, 16)
+                        .safeAreaPadding(.top)
+                        .id(month)
+                    }
+                    .scrollIndicators(.hidden)
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .tag(month)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+        }
+        .onAppear {
+            ensureMonthDataLoaded()
+        }
+        .onChange(of: displayedMonthStart) { _, _ in
+            ensureMonthDataLoaded()
+            currentDate = displayedMonthStart
+        }
+    }
+
+    private func generateMonthRange() -> [Date] {
+        let anchor = calendar.date(from: calendar.dateComponents([.year, .month], from: monthAnchor)) ?? monthAnchor
+
+        return (-12...12).compactMap { offset in
+            calendar.date(byAdding: .month, value: offset, to: anchor)
+                .flatMap { date in
+                    calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+                }
+        }
+    }
+
+    private func generateWeeksForMonth(_ month: Date) -> [[Date]] {
         guard
-            let monthRange = calendar.range(of: .day, in: .month, for: displayedMonthStart),
-            let monthEnd = calendar.date(byAdding: .day, value: monthRange.count - 1, to: displayedMonthStart),
-            let firstWeekStart = calendar.dateInterval(of: .weekOfYear, for: displayedMonthStart)?.start,
+            let monthRange = calendar.range(of: .day, in: .month, for: month),
+            let monthEnd = calendar.date(byAdding: .day, value: monthRange.count - 1, to: month),
+            let firstWeekStart = calendar.dateInterval(of: .weekOfYear, for: month)?.start,
             let lastWeekStart = calendar.dateInterval(of: .weekOfYear, for: monthEnd)?.start
         else {
             return []
@@ -78,69 +142,10 @@ struct CalendarDayView: View {
         return weeks
     }
 
-    /// Month header title
-    private var monthHeaderTitle: String {
+    private func formatMonthTitle(_ month: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: displayedMonthStart)
-    }
-
-    var body: some View {
-        PullToNavigateScrollView(
-            bottomOverlayPadding: bottomOverlayPadding,
-            onPullUp: {
-                navigateToPreviousMonth()
-            },
-            onPullDown: {
-                navigateToNextMonth()
-            }
-        ) {
-            VStack(alignment: .leading, spacing: 24) {
-                Text(monthHeaderTitle)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-
-                MonthWeeksSection(
-                    weeks: monthWeeks,
-                    monthReferenceDate: displayedMonthStart,
-                    dataManager: dataManager,
-                    isMultiSelecting: isMultiSelecting,
-                    selectedMemoryIDs: selectedMemoryIDs,
-                    isPerformingBulkAction: isPerformingBulkAction,
-                    onSelectMemory: onSelectMemory,
-                    onToggleSelection: onToggleSelection,
-                    onEditMemory: onEditMemory
-                )
-            }
-            .padding(.vertical, 16)
-            .safeAreaPadding(.top)
-            .id(displayedMonthStart)
-        }
-        .onAppear {
-            ensureMonthDataLoaded()
-        }
-        .onChange(of: displayedMonthStart) { _, _ in
-            ensureMonthDataLoaded()
-            currentDate = displayedMonthStart
-        }
-    }
-
-    private func navigateToPreviousMonth() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            if let previousMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonthStart) {
-                displayedMonthStart = previousMonth
-            }
-        }
-    }
-
-    private func navigateToNextMonth() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            if let nextMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonthStart) {
-                displayedMonthStart = nextMonth
-            }
-        }
+        return formatter.string(from: month)
     }
 
     private func ensureMonthDataLoaded() {
