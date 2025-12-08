@@ -125,7 +125,7 @@ struct ContentView: View {
             if shouldShowAddButton {
                 addMemoryButton
                     .padding(.trailing, 16)
-                    .padding(.bottom, bottomSafeInset + 60)
+                    .padding(.bottom, bottomSafeInset + 24)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
