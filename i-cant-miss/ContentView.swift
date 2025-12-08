@@ -10,14 +10,20 @@ import Combine
 import UIKit
 
 enum CustomTab: String, CaseIterable {
-    case memories = "Memories"
+    case calendar = "Calendar"
+    case triggers = "Triggers"
+    case map = "Map"
     case spaces = "Spaces"
     case settings = "Settings"
 
     var symbol: String {
         switch self {
-        case .memories:
-            return "tray.full"
+        case .calendar:
+            return "calendar"
+        case .triggers:
+            return "bolt.circle"
+        case .map:
+            return "map"
         case .spaces:
             return "square.grid.2x2"
         case .settings:
@@ -35,9 +41,9 @@ struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @State private var editorRoute: MemoryEditorRoute?
     @State private var spaceComposerRequest: SpaceComposerRequest?
-    @State private var activeTab: CustomTab = .memories
-    @State private var memoriesCalendarNavigationPath = NavigationPath()
-    @State private var memoriesListNavigationPath = NavigationPath()
+    @State private var activeTab: CustomTab = .calendar
+    @State private var calendarNavigationPath = NavigationPath()
+    @State private var triggersNavigationPath = NavigationPath()
     @State private var spacesNavigationPath = NavigationPath()
     @State private var settingsNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
@@ -50,18 +56,40 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $activeTab) {
-            MemoriesContainerView(
+            MemoryTimelineView(
                 memoryService: environment.memoryService,
                 onSelectMemory: handleMemorySelection,
                 onEditMemory: handleMemoryEdit,
                 onMultiSelectionChange: handleMultiSelectionChange,
-                listNavigationPath: $memoriesListNavigationPath,
-                calendarNavigationPath: $memoriesCalendarNavigationPath
+                navigationPath: $calendarNavigationPath,
+                embedsInNavigationStack: true
             )
             .tabItem {
-                Label(CustomTab.memories.rawValue, systemImage: CustomTab.memories.symbol)
+                Label(CustomTab.calendar.rawValue, systemImage: CustomTab.calendar.symbol)
             }
-            .tag(CustomTab.memories)
+            .tag(CustomTab.calendar)
+
+            MemoryTriggersView(
+                memoryService: environment.memoryService,
+                onSelectMemory: handleMemorySelection,
+                onEditMemory: handleMemoryEdit,
+                onMultiSelectionChange: handleMultiSelectionChange,
+                navigationPath: $triggersNavigationPath,
+                embedsInNavigationStack: true
+            )
+            .tabItem {
+                Label(CustomTab.triggers.rawValue, systemImage: CustomTab.triggers.symbol)
+            }
+            .tag(CustomTab.triggers)
+
+            MemoriesMapView(
+                memories: environment.memoryService.memoriesWithLocationOnly(),
+                onSelectMemory: handleMemorySelection
+            )
+            .tabItem {
+                Label(CustomTab.map.rawValue, systemImage: CustomTab.map.symbol)
+            }
+            .tag(CustomTab.map)
 
             SpacesRootView(
                 spaceService: environment.spaceService,
