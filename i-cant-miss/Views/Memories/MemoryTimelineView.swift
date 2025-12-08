@@ -118,7 +118,14 @@ struct MemoryTimelineView: View {
                         }
                     }
 
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItemGroup(placement: .navigationBarTrailing) {
+                        if shouldShowTodayButton {
+                            Button {
+                                navigateToToday()
+                            } label: {
+                                Text("Today")
+                            }
+                        }
                         Button {
                             toggleMultiSelection()
                         } label: {
@@ -152,6 +159,11 @@ struct MemoryTimelineView: View {
             }
             .onChange(of: isMultiSelecting) { _, newValue in
                 onMultiSelectionChange(newValue)
+            }
+            .onChange(of: selectedDate) { _, newValue in
+                if case .day = viewMode {
+                    viewMode = .day(newValue)
+                }
             }
             .onAppear {
                 onMultiSelectionChange(isMultiSelecting)
@@ -239,6 +251,31 @@ struct MemoryTimelineView: View {
         formatter.setLocalizedDateFormatFromTemplate("MMM")
         return formatter
     }()
+
+    private var shouldShowTodayButton: Bool {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let currentDay = calendar.startOfDay(for: selectedDate)
+
+        if case .day = viewMode, calendar.isDate(currentDay, inSameDayAs: today) {
+            return false
+        }
+
+        return true
+    }
+
+    private func navigateToToday() {
+        let now = Date()
+        let calendar = Calendar.current
+        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+
+        withAnimation(.easeInOut(duration: 0.25)) {
+            selectedYear = calendar.component(.year, from: now)
+            selectedMonth = startOfMonth
+            selectedDate = now
+            viewMode = .day(now)
+        }
+    }
 
     private func navigateBack() {
         withAnimation(.easeInOut(duration: 0.25)) {
