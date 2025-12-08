@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import UIKit
 
 enum CustomTab: String, CaseIterable {
     case memories = "Memories"
@@ -21,17 +22,6 @@ enum CustomTab: String, CaseIterable {
             return "square.grid.2x2"
         case .settings:
             return "gearshape"
-        }
-    }
-
-    var actionSymbol: String {
-        switch self {
-        case .memories:
-            return "plus"
-        case .spaces:
-            return "plus"
-        case .settings:
-            return "plus"
         }
     }
 
@@ -56,66 +46,63 @@ struct ContentView: View {
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
-        UITabBar.appearance().isHidden = true
     }
 
     var body: some View {
-        VStack{
-            TabView(selection: $activeTab){
-                Tab.init(value: .memories){
-                    MemoriesContainerView(
-                        memoryService: environment.memoryService,
-                        onSelectMemory: handleMemorySelection,
-                        onEditMemory: handleMemoryEdit,
-                        onMultiSelectionChange: handleMultiSelectionChange,
-                        listNavigationPath: $memoriesListNavigationPath,
-                        calendarNavigationPath: $memoriesCalendarNavigationPath
-                    )
-                    .tabBarSpacer()
-                }
-
-                Tab.init(value: .spaces){
-                    SpacesRootView(
-                        spaceService: environment.spaceService,
-                        memoryService: environment.memoryService,
-                        navigationPath: $spacesNavigationPath,
-                        onSelectMemory: handleMemorySelection,
-                        onEditMemory: handleMemoryEdit,
-                        onCreateSpace: { parent in
-                            presentSpaceCreation(for: parent)
-                        },
-                        onEditSpace: { space in
-                            presentSpaceEdit(for: space)
-                        },
-                        onMultiSelectionChange: handleMultiSelectionChange,
-                        onSpaceContextChange: { space in
-                            // Update context immediately when space changes
-                            currentSpaceContext = space
-                        }
-                    )
-                    .tabBarSpacer()
-                }
-
-                Tab.init(value: .settings){
-                    SettingsView(environment: environment, navigationPath: $settingsNavigationPath)
-                        .tabBarSpacer()
-                }
+        TabView(selection: $activeTab) {
+            MemoriesContainerView(
+                memoryService: environment.memoryService,
+                onSelectMemory: handleMemorySelection,
+                onEditMemory: handleMemoryEdit,
+                onMultiSelectionChange: handleMultiSelectionChange,
+                listNavigationPath: $memoriesListNavigationPath,
+                calendarNavigationPath: $memoriesCalendarNavigationPath
+            )
+            .tabItem {
+                Label(CustomTab.memories.rawValue, systemImage: CustomTab.memories.symbol)
             }
-            .toolbar(.hidden, for: .tabBar)
-            .safeAreaBar(edge: .bottom, spacing: 0){
-                Group {
-                    if isMultiSelectionActive {
-                        Color.clear.frame(height: 0)
-                    } else {
-                CustomTabBarView()
-                    .padding(.horizontal, 20)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+            .tag(CustomTab.memories)
+
+            SpacesRootView(
+                spaceService: environment.spaceService,
+                memoryService: environment.memoryService,
+                navigationPath: $spacesNavigationPath,
+                onSelectMemory: handleMemorySelection,
+                onEditMemory: handleMemoryEdit,
+                onCreateSpace: { parent in
+                    presentSpaceCreation(for: parent)
+                },
+                onEditSpace: { space in
+                    presentSpaceEdit(for: space)
+                },
+                onMultiSelectionChange: handleMultiSelectionChange,
+                onSpaceContextChange: { space in
+                    // Update context immediately when space changes
+                    currentSpaceContext = space
                 }
+            )
+            .tabItem {
+                Label(CustomTab.spaces.rawValue, systemImage: CustomTab.spaces.symbol)
             }
-            .animation(.easeInOut(duration: 0.2), value: isMultiSelectionActive)
-            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .tag(CustomTab.spaces)
+
+            SettingsView(environment: environment, navigationPath: $settingsNavigationPath)
+                .tabItem {
+                    Label(CustomTab.settings.rawValue, systemImage: CustomTab.settings.symbol)
+                }
+                .tag(CustomTab.settings)
         }
+        .toolbar(tabBarVisibility, for: .tabBar)
+        .overlay(alignment: .bottomTrailing) {
+            if shouldShowAddButton {
+                addMemoryButton
+                    .padding(.trailing, 16)
+                    .padding(.bottom, bottomSafeInset + 60)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isMultiSelectionActive)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .fullScreenCover(item: $editorRoute) { route in
             switch route.mode {
             case let .create(space, template):
@@ -151,7 +138,6 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            UITabBar.appearance().isHidden = true
             showingOnboarding = !environment.hasCompletedOnboarding
         }
         .onChange(of: environment.hasCompletedOnboarding) { _, completed in
@@ -165,54 +151,6 @@ struct ContentView: View {
                 currentSpaceContext = nil
             }
         }
-    }
-
-    @ViewBuilder
-    func CustomTabBarView () -> some View {
-        GlassEffectContainer(spacing: 10){
-            HStack(spacing: 0){
-                GeometryReader{
-                    CustomTabBar(
-                        size: $0.size,
-                        activeTint: Color.accent,
-                        barTint: Color.gray.opacity(0.15),
-                        activeTab: $activeTab,
-                        tabItemView: { tab in
-                        VStack(spacing: 3){
-                            Image(systemName: tab.symbol)
-                                .font(.title3)
-
-                            Text(tab.rawValue)
-                                .font(.system(size: 10))
-                                .fontWeight(.medium)
-                        }
-                        .symbolVariant(.fill)
-                        .frame(maxWidth: .infinity)
-                    },
-                        onTabReselected: handleTabReselection
-                    )
-                    .glassEffect(.regular.interactive(), in: .capsule)
-                    .contentShape(Rectangle())
-                }
-
-                Color.clear
-                    .frame(width: 10)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                    }
-
-                Button(action: { prepareMemoryCreation(for: targetSpaceForCreation()) }) {
-                    Image("plus")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 60)
-                }
-                .buttonStyle(.plain)
-                .animation(.smooth(duration: 0.55 , extraBounce: 0), value: activeTab)
-                .contentShape(Rectangle())
-            }
-        }
-        .frame(height: 55)
     }
 
     private func prepareMemoryCreation(for space: SpaceModel?) {
@@ -235,16 +173,31 @@ struct ContentView: View {
         spaceComposerRequest = SpaceComposerRequest(parent: nil, spaceToEdit: space)
     }
 
-    private func handleTabReselection(_ tab: CustomTab) {
-        switch tab {
-        case .memories:
-            memoriesCalendarNavigationPath = NavigationPath()
-            memoriesListNavigationPath = NavigationPath()
-        case .spaces:
-            spacesNavigationPath = NavigationPath()
-        case .settings:
-            settingsNavigationPath = NavigationPath()
+    private var tabBarVisibility: Visibility {
+        isMultiSelectionActive ? .hidden : .visible
+    }
+
+    private var shouldShowAddButton: Bool {
+        !isMultiSelectionActive
+    }
+
+    private var bottomSafeInset: CGFloat {
+        guard
+            let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+            let window = scene.windows.first(where: { $0.isKeyWindow })
+        else { return 0 }
+        return window.safeAreaInsets.bottom
+    }
+
+    private var addMemoryButton: some View {
+        Button(action: { prepareMemoryCreation(for: targetSpaceForCreation()) }) {
+            Image("plus")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 60, height: 60)
         }
+        .buttonStyle(.plain)
+        .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
     }
 
     private func handleMultiSelectionChange(_ isSelecting: Bool) {
