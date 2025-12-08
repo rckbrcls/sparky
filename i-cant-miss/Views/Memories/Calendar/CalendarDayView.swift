@@ -92,8 +92,9 @@ struct CalendarDayView: View {
             ensureMonthDataLoaded(for: newValue)
         }
         .onChange(of: currentDate) { _, newValue in
-            displayedDate = calendar.startOfDay(for: newValue)
-            dayAnchor = displayedDate
+            let normalizedDate = calendar.startOfDay(for: newValue)
+            displayedDate = normalizedDate
+            updateDayAnchorIfNeeded(for: normalizedDate)
         }
     }
 
@@ -161,6 +162,18 @@ struct CalendarDayView: View {
         let anchor = calendar.startOfDay(for: dayAnchor)
         return (-15...15).compactMap { offset in
             calendar.date(byAdding: .day, value: offset, to: anchor)
+        }
+    }
+
+    private func updateDayAnchorIfNeeded(for date: Date) {
+        let daysFromAnchor = calendar.dateComponents([.day], from: dayAnchor, to: date).day ?? 0
+        let threshold = 10
+        let isDateInRange = pages.contains { page in
+            calendar.isDate(page, inSameDayAs: date)
+        }
+
+        if abs(daysFromAnchor) > threshold || !isDateInRange {
+            dayAnchor = calendar.startOfDay(for: date)
         }
     }
 }

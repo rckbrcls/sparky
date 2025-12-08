@@ -227,7 +227,6 @@ struct MemoryTimelineView: View {
             onToggleSelection: toggleMemorySelection(_:),
             onEditMemory: onEditMemory
         )
-        .id(day)
     }
 
     private var backButtonTitle: String {
