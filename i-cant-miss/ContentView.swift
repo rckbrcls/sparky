@@ -14,7 +14,7 @@ enum CustomTab: String, CaseIterable {
     case triggers = "Triggers"
     case map = "Map"
     case spaces = "Spaces"
-    case settings = "Settings"
+    case me = "Me"
 
     var symbol: String {
         switch self {
@@ -26,8 +26,8 @@ enum CustomTab: String, CaseIterable {
             return "map"
         case .spaces:
             return "square.grid.2x2"
-        case .settings:
-            return "gearshape"
+        case .me:
+            return "person.crop.circle"
         }
     }
 
@@ -45,7 +45,7 @@ struct ContentView: View {
     @State private var calendarNavigationPath = NavigationPath()
     @State private var triggersNavigationPath = NavigationPath()
     @State private var spacesNavigationPath = NavigationPath()
-    @State private var settingsNavigationPath = NavigationPath()
+    @State private var meNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
     @State private var isMultiSelectionActive = false
     @State private var currentSpaceContext: SpaceModel?
@@ -114,11 +114,11 @@ struct ContentView: View {
             }
             .tag(CustomTab.spaces)
 
-            SettingsView(environment: environment, navigationPath: $settingsNavigationPath)
+            MeView(environment: environment, settingsNavigationPath: $meNavigationPath)
                 .tabItem {
-                    Label(CustomTab.settings.rawValue, systemImage: CustomTab.settings.symbol)
+                    Label(CustomTab.me.rawValue, systemImage: CustomTab.me.symbol)
                 }
-                .tag(CustomTab.settings)
+                .tag(CustomTab.me)
         }
         .toolbar(tabBarVisibility, for: .tabBar)
         .overlay(alignment: .bottomTrailing) {

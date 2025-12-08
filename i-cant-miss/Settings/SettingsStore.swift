@@ -18,6 +18,7 @@ final class SettingsStore: ObservableObject {
         static let notificationSound = "settings.notificationSoundEnabled"
         static let locationAlways = "settings.locationAuthorizationAlways"
         static let onboardingCompleted = "settings.onboardingCompleted"
+        static let userDisplayName = "settings.userDisplayName"
     }
 
     private let defaults: UserDefaults
@@ -62,6 +63,12 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published var userDisplayName: String {
+        didSet {
+            defaults.set(userDisplayName, forKey: Keys.userDisplayName)
+        }
+    }
+
     @Published var preferAlwaysOnLocationAccess: Bool {
         didSet {
             defaults.set(preferAlwaysOnLocationAccess, forKey: Keys.locationAlways)
@@ -101,6 +108,8 @@ final class SettingsStore: ObservableObject {
         self.preferAlwaysOnLocationAccess = defaults.bool(forKey: Keys.locationAlways)
 
         self.hasCompletedOnboarding = defaults.bool(forKey: Keys.onboardingCompleted)
+
+        self.userDisplayName = defaults.string(forKey: Keys.userDisplayName) ?? ""
     }
 
     private static func clamp(minutes: Int, fallback: Int) -> Int {
