@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct CalendarYearView: View {
     @ObservedObject var dataManager: CalendarDataManager
@@ -85,7 +86,7 @@ private struct YearSection: View {
     let availableHeight: CGFloat
 
     private let calendar = Calendar.current
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
+    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     private var months: [Date] {
         (1...12).compactMap { month in
@@ -94,29 +95,33 @@ private struct YearSection: View {
     }
 
     /// Calculate the height for each month cell based on available space
-    /// Layout: Year header (~36pt) + 4 rows of months + spacing + padding
+    /// Layout: Year header + 4 rows of months + spacing + padding
     private var monthCellHeight: CGFloat {
-        let headerHeight: CGFloat = 36
-        let topPadding: CGFloat = 8
-        let gridSpacing: CGFloat = 4 * 3 // 4 rows = 3 gaps
-        let horizontalPadding: CGFloat = 8 // padding around grid
+        let headerHeight: CGFloat = 32
+        let topPadding: CGFloat = 2
+        let gridSpacing: CGFloat = 12 * 3 // 4 rows = 3 gaps
+        let horizontalPadding: CGFloat = 12 // padding around grid
         let availableForGrid = availableHeight - headerHeight - topPadding - gridSpacing - horizontalPadding
         return max(80, availableForGrid / 4) // 4 rows of months
     }
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 12) {
             // Year header
-            Text("\(year)")
-                .font(.title3)
+            Text(verbatim: String(year))
+                .font(.custom(
+                    "Vollkorn-Regular",
+                    size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize,
+                    relativeTo: .largeTitle
+                ))
                 .fontWeight(.bold)
                 .monospacedDigit()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
-                .padding(.top, 8)
+                .padding(.top, 0)
 
             // Month grid
-            LazyVGrid(columns: gridColumns, spacing: 4) {
+            LazyVGrid(columns: gridColumns, spacing: 12) {
                 ForEach(months, id: \.self) { month in
                     MonthCell(
                         month: month,
@@ -126,9 +131,8 @@ private struct YearSection: View {
                     )
                 }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 12)
         }
-        .safeAreaPadding(.top)
     }
 }
 
@@ -190,7 +194,7 @@ private struct MonthCell: View {
 
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(monthName)
                     .font(.caption2)
                     .fontWeight(.semibold)
@@ -211,10 +215,10 @@ private struct MonthCell: View {
                     }
                 }
             }
-            .padding(6)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
             .frame(maxWidth: .infinity)
             .frame(height: cellHeight)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 24.0))
         }
         .buttonStyle(.plain)
     }

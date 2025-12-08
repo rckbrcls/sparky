@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct CalendarDayView: View {
     @ObservedObject var dataManager: CalendarDataManager
@@ -99,7 +100,11 @@ struct CalendarDayView: View {
     private func dayHeader(for date: Date) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(primaryDateTitle(for: date))
-                .font(.largeTitle)
+                .font(.custom(
+                    "Vollkorn-Regular",
+                    size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize,
+                    relativeTo: .largeTitle
+                ))
                 .fontWeight(.bold)
 
             HStack(spacing: 10) {

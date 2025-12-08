@@ -202,12 +202,12 @@ struct ContentView: View {
                     }
 
                 Button(action: { prepareMemoryCreation(for: targetSpaceForCreation()) }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 22, weight: .medium))
+                    Image("plus")
+                        .resizable()
+                        .scaledToFit()
                         .frame(width: 60, height: 60)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.interactive().tint(Color.accent), in: .capsule)
                 .animation(.smooth(duration: 0.55 , extraBounce: 0), value: activeTab)
                 .contentShape(Rectangle())
             }

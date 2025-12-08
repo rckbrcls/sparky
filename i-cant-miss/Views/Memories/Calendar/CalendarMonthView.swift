@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct CalendarMonthView: View {
     @ObservedObject var dataManager: CalendarDataManager
@@ -162,7 +163,11 @@ private struct MonthSection: View {
         VStack(spacing: 0) {
             // Month header
             Text(monthName)
-                .font(.title2)
+                .font(.custom(
+                    "Vollkorn-Regular",
+                    size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize,
+                    relativeTo: .largeTitle
+                ))
                 .fontWeight(.bold)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)

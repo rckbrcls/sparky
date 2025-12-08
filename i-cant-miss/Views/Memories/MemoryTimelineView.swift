@@ -25,7 +25,7 @@ struct MemoryTimelineView: View {
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
-    @State private var viewMode: CalendarViewMode = .year
+    @State private var viewMode: CalendarViewMode
 
     init(
         memoryService: MemoryService,
@@ -49,6 +49,7 @@ struct MemoryTimelineView: View {
         self._selectedYear = State(initialValue: calendar.component(.year, from: now))
         self._selectedMonth = State(initialValue: calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now)
         self._selectedDate = State(initialValue: now)
+        self._viewMode = State(initialValue: .day(now))
     }
 
     private var bulkActionSpaces: [SpaceModel] {
@@ -112,7 +113,7 @@ struct MemoryTimelineView: View {
                             Button {
                                 navigateBack()
                             } label: {
-                                Label("Back", systemImage: "chevron.left")
+                                Text(backButtonTitle)
                             }
                         }
                     }
@@ -216,6 +217,28 @@ struct MemoryTimelineView: View {
         )
         .id(day)
     }
+
+    private var backButtonTitle: String {
+        switch viewMode {
+        case .year:
+            return ""
+        case .month(let month):
+            let year = Calendar.current.component(.year, from: month)
+            return String(year)
+        case .day(let day):
+            return monthAbbreviation(from: day)
+        }
+    }
+
+    private func monthAbbreviation(from date: Date) -> String {
+        Self.monthFormatter.string(from: date)
+    }
+
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("MMM")
+        return formatter
+    }()
 
     private func navigateBack() {
         withAnimation(.easeInOut(duration: 0.25)) {
