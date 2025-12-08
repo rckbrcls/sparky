@@ -15,6 +15,7 @@ struct SettingsView: View {
     @ObservedObject private var geofenceManager: LocationTriggerExecutor
     private let environment: AppEnvironment
     @Binding private var navigationPath: NavigationPath
+    private let embedsInNavigationStack: Bool
 
     private enum Route: Hashable {
         case reminders
@@ -26,63 +27,28 @@ struct SettingsView: View {
     @State private var isRequestingNotifications = false
     @State private var isRequestingLocation = false
 
-    init(environment: AppEnvironment, navigationPath: Binding<NavigationPath>) {
+    init(environment: AppEnvironment, navigationPath: Binding<NavigationPath>, embedsInNavigationStack: Bool = true) {
         self.environment = environment
         _settings = ObservedObject(wrappedValue: environment.settings)
         _geofenceManager = ObservedObject(wrappedValue: environment.geofenceManager)
         _navigationPath = navigationPath
+        self.embedsInNavigationStack = embedsInNavigationStack
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            List {
-                Section {
-                    NavigationLink(value: Route.reminders) {
-                        SettingsRow(
-                            iconName: "checklist",
-                            title: "Reminders"
-                        )
-                    }
-
-                    NavigationLink(value: Route.notifications) {
-                        SettingsRow(
-                            iconName: "bell.badge",
-                            title: "Notifications"
-                        )
-                    }
-
-                    NavigationLink(value: Route.location) {
-                        SettingsRow(
-                            iconName: "location.circle",
-                            title: "Location & Geofencing"
-                        )
-                    }
+        Group {
+            if embedsInNavigationStack {
+                NavigationStack(path: $navigationPath) {
+                    settingsList
+                        .navigationDestination(for: Route.self) { destination in
+                            destinationView(for: destination)
+                        }
                 }
-            }
-            .listStyle(.insetGrouped)
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height:  70)
-            }
-            .navigationTitle("Settings")
-            .navigationDestination(for: Route.self) { destination in
-                switch destination {
-                case .reminders:
-                    ReminderSettingsView(settings: settings)
-                case .notifications:
-                    NotificationSettingsView(
-                        settings: settings,
-                        notificationStatus: $notificationStatus,
-                        isRequestingNotifications: $isRequestingNotifications,
-                        requestAuthorization: { await requestNotificationAuthorization() }
-                    )
-                case .location:
-                    LocationSettingsView(
-                        settings: settings,
-                        geofenceManager: geofenceManager,
-                        isRequestingLocation: $isRequestingLocation,
-                        requestAuthorization: requestLocationAuthorization
-                    )
-                }
+            } else {
+                settingsList
+                    .navigationDestination(for: Route.self) { destination in
+                        destinationView(for: destination)
+                    }
             }
         }
         .task {
@@ -90,6 +56,62 @@ struct SettingsView: View {
         }
         .onChange(of: settings.preferAlwaysOnLocationAccess) { _, newValue in
             requestLocationAuthorization(always: newValue)
+        }
+    }
+}
+
+private extension SettingsView {
+    var settingsList: some View {
+        List {
+            Section {
+                NavigationLink(value: Route.reminders) {
+                    SettingsRow(
+                        iconName: "checklist",
+                        title: "Reminders"
+                    )
+                }
+
+                NavigationLink(value: Route.notifications) {
+                    SettingsRow(
+                        iconName: "bell.badge",
+                        title: "Notifications"
+                    )
+                }
+
+                NavigationLink(value: Route.location) {
+                    SettingsRow(
+                        iconName: "location.circle",
+                        title: "Location & Geofencing"
+                    )
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height:  70)
+        }
+        .navigationTitle("Settings")
+    }
+
+    @ViewBuilder
+    private func destinationView(for destination: Route) -> some View {
+        switch destination {
+        case .reminders:
+            ReminderSettingsView(settings: settings)
+        case .notifications:
+            NotificationSettingsView(
+                settings: settings,
+                notificationStatus: $notificationStatus,
+                isRequestingNotifications: $isRequestingNotifications,
+                requestAuthorization: { await requestNotificationAuthorization() }
+            )
+        case .location:
+            LocationSettingsView(
+                settings: settings,
+                geofenceManager: geofenceManager,
+                isRequestingLocation: $isRequestingLocation,
+                requestAuthorization: requestLocationAuthorization
+            )
         }
     }
 }

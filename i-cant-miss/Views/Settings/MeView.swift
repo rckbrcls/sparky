@@ -63,7 +63,11 @@ struct MeView: View {
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .settings:
-                    SettingsView(environment: environment, navigationPath: $settingsNavigationPath)
+                    SettingsView(
+                        environment: environment,
+                        navigationPath: $settingsNavigationPath,
+                        embedsInNavigationStack: false
+                    )
                 }
             }
             .onAppear {
