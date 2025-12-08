@@ -62,10 +62,11 @@ struct CalendarYearView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .onAppear {
-            dataManager.ensureYearLoaded(displayedYear)
+            preloadAdjacentYears(around: displayedYear)
         }
         .onChange(of: displayedYear) { _, newYear in
-            dataManager.ensureYearLoaded(newYear)
+            preloadAdjacentYears(around: newYear)
+            updateYearAnchorIfNeeded(for: newYear)
             selectedYear = newYear
         }
     }
@@ -74,6 +75,18 @@ struct CalendarYearView: View {
         let anchor = yearAnchor
         // Generate ±20 anos para reduzir custo e evitar salto
         return Array((anchor - 20)...(anchor + 20))
+    }
+
+    private func preloadAdjacentYears(around year: Int) {
+        dataManager.ensureYearsLoaded([year - 1, year, year + 1])
+    }
+
+    private func updateYearAnchorIfNeeded(for year: Int) {
+        let threshold = 10
+        let distance = abs(yearAnchor - year)
+        if distance > threshold {
+            yearAnchor = year
+        }
     }
 }
 
