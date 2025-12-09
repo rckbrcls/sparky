@@ -29,7 +29,7 @@ struct SpaceDetailView: View {
     @State private var showTriggerSheet = false
     @State private var showContentSheet = false
     @State private var filterSheetDetent: PresentationDetent = .large
-    @State private var searchText = ""
+
 
 
     @State private var isMultiSelecting = false
@@ -53,15 +53,7 @@ struct SpaceDetailView: View {
     }
 
     private var isFiltering: Bool {
-        activeFilterCount > 0 || isSearching
-    }
-
-    private var trimmedSearchText: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var isSearching: Bool {
-        !trimmedSearchText.isEmpty
+        activeFilterCount > 0
     }
 
     private var resolvedSpace: SpaceModel {
@@ -192,8 +184,6 @@ struct SpaceDetailView: View {
 
     private var baseView: some View {
         spaceDetailList
-            .navigationTitle(navigationTitleText)
-            .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
             .toolbar { toolbarContent }
             .sheet(isPresented: $showTriggerSheet) {
                 TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
@@ -264,6 +254,12 @@ struct SpaceDetailView: View {
 
     private var spaceDetailList: some View {
         List {
+            Text(navigationTitleText)
+                .appLargeTitleStyle()
+                .listRowInsets(.init(top: 24, leading: 20, bottom: 4, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
             subspacesSection
 
             FilterBadgesBar(
@@ -306,19 +302,7 @@ struct SpaceDetailView: View {
 
     @ViewBuilder
     private var mainListSection: some View {
-        if isSearching {
-            SpaceDetailSearchResultsView(
-                memories: filteredMemories,
-                isMultiSelecting: isMultiSelecting,
-                isPerformingBulkAction: isPerformingBulkAction,
-                isMemorySelected: isMemorySelected(_:),
-                onSelectMemory: onSelectMemory,
-                onEditMemory: onEditMemory,
-                onToggleSelection: toggleMemorySelection(_:)
-            )
-        } else {
-            timelineAndInboxSection
-        }
+        timelineAndInboxSection
     }
 
     @ViewBuilder
@@ -395,12 +379,9 @@ struct SpaceDetailView: View {
             sort: .updatedAtDescending
         )
 
-        let query = trimmedSearchText
-
         return base.filter { memory in
             matchesSelectedContentAndTrigger(memory) &&
-            (showInbox || !memory.isInbox) &&
-            matchesSearch(memory, query: query)
+            (showInbox || !memory.isInbox)
         }
     }
 
@@ -464,20 +445,6 @@ struct SpaceDetailView: View {
         }.count
     }
 
-    private func matchesSearch(_ memory: MemoryModel, query: String) -> Bool {
-        guard !query.isEmpty else { return true }
-
-        if memory.title.localizedCaseInsensitiveContains(query) {
-            return true
-        }
-
-        if let body = memory.body, body.localizedCaseInsensitiveContains(query) {
-            return true
-        }
-
-        return false
-    }
-
     private func isMemorySelected(_ memory: MemoryModel) -> Bool {
         selectedMemoryIDs.contains(memory.id)
     }
@@ -502,7 +469,6 @@ struct SpaceDetailView: View {
                 isMultiSelecting = true
             }
             selectedMemoryIDs.removeAll()
-            searchText = ""
         }
         showingFilterSheet = false
         showingDeleteConfirmation = false
