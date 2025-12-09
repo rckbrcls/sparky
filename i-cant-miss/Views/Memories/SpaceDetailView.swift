@@ -187,9 +187,15 @@ struct SpaceDetailView: View {
             .toolbar { toolbarContent }
             .sheet(isPresented: $showTriggerSheet) {
                 TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
+                    .presentationDetents([.medium])
+                    .presentationBackground(.clear)
+                    .presentationCornerRadius(32)
             }
             .sheet(isPresented: $showContentSheet) {
                 ContentFilterSheetView(selectedContentTypes: $selectedContentTypes)
+                    .presentationDetents([.medium])
+                    .presentationBackground(.clear)
+                    .presentationCornerRadius(32)
             }
             .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
     }

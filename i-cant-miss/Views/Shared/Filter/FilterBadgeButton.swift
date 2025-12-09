@@ -29,19 +29,25 @@ struct FilterBadgeButton<Content: View>: View {
             .padding(.horizontal)
             .frame(height: 40)
             .contentShape(Rectangle())
-            .applyGlassEffect(isToggle: isToggle, isActive: isActive)
+            .applySolidStyle(isToggle: isToggle, isActive: isActive)
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
     }
 }
 
 private extension View {
     @ViewBuilder
-    func applyGlassEffect(isToggle: Bool, isActive: Bool) -> some View {
-        if isToggle {
-            self.glassEffect(isActive ? .regular.tint(.accent).interactive() : .regular.interactive())
-        } else {
-            self.glassEffect(.regular.interactive())
-        }
+    func applySolidStyle(isToggle: Bool, isActive: Bool) -> some View {
+        let isSelected = isToggle && isActive
+        self
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.accent : Color.clear)
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(isSelected ? Color.clear : Color.primary.opacity(0.2), lineWidth: 1)
+            )
     }
 }

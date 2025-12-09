@@ -24,6 +24,8 @@ struct TriggerFilterSheetView: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .scrollContentBackground(.hidden)
+            .background(.clear)
             .navigationTitle("Filter Triggers")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

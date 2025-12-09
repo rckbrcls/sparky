@@ -16,9 +16,14 @@ struct FilterBadge: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
-            .foregroundStyle(isSelected ? Color.accent : .primary)
-            .glassEffect(
-                isSelected ? .regular.tint(Color.accent.opacity(0.2)) : .regular
+            .foregroundStyle(isSelected ? .white : .primary)
+            .background(
+                Capsule()
+                    .fill(isSelected ? Color.accent : Color.clear)
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(isSelected ? Color.clear : Color.primary.opacity(0.2), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

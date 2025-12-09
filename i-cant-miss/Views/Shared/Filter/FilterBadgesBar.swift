@@ -38,7 +38,7 @@ struct FilterBadgesBar: View {
                             .font(.caption2)
                     }
                     .font(.caption.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 }
 
                 FilterBadgeButton(
@@ -54,7 +54,7 @@ struct FilterBadgesBar: View {
                             .font(.caption2)
                     }
                     .font(.caption.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 }
 
                 FilterBadgeButton(
@@ -94,6 +94,7 @@ struct FilterBadgesBar: View {
                 }
             }
             .padding(.leading, 20)
+            .padding(.vertical, 1) // Prevent border clipping
         }
         .scrollIndicators(.hidden)
     }
