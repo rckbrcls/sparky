@@ -24,8 +24,6 @@ struct ContentFilterSheetView: View {
                 }
             }
             .scrollIndicators(.hidden)
-            .scrollContentBackground(.hidden)
-            .background(.clear)
             .navigationTitle("Filter Content")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
