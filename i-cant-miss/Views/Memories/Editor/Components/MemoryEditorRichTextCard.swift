@@ -11,7 +11,7 @@ struct MemoryEditorRichTextCard: View {
                     .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled(false)
                     .frame(minHeight: 160)
-                    .padding(.top, 4)
+                    .padding(.top, 0)
                     .padding(.horizontal, -4)
                     .disabled(!isEditable)
                     .scrollContentBackground(.hidden)
@@ -19,9 +19,9 @@ struct MemoryEditorRichTextCard: View {
 
                 if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(isEditable ? "Write something memorable…" : "No notes captured for this memory.")
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 12)
-                        .padding(.horizontal, 8)
+                        .foregroundStyle(Color(uiColor: .placeholderText))
+                        .padding(.top, 8)
+                        .padding(.horizontal, 0)
                 }
             }
         }

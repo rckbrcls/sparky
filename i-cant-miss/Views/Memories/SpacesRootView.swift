@@ -41,8 +41,12 @@ struct SpacesRootView: View {
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height:  70)
             }
-            .navigationTitle("Spaces")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Spaces")
+                        .appLargeTitleStyle()
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         onCreateSpace(nil)
@@ -52,6 +56,7 @@ struct SpacesRootView: View {
                     .accessibilityLabel("Create Space")
                 }
             }
+            .toolbarTitleDisplayMode(.inline)
             .refreshable {
                 await refresh()
             }

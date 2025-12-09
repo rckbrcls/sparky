@@ -49,8 +49,12 @@ struct MeView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
-            .navigationTitle("Me")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Me")
+                        .appLargeTitleStyle()
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         settingsNavigationPath.append(Route.settings)

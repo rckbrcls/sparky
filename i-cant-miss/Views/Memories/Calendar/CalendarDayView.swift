@@ -101,12 +101,7 @@ struct CalendarDayView: View {
     private func dayHeader(for date: Date) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(primaryDateTitle(for: date))
-                .font(.custom(
-                    "Vollkorn-Regular",
-                    size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize,
-                    relativeTo: .largeTitle
-                ))
-                .fontWeight(.bold)
+                .appLargeTitleStyle()
 
             HStack(spacing: 10) {
                 Text(secondaryDateTitle(for: date))

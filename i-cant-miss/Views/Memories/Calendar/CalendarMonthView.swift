@@ -163,12 +163,7 @@ private struct MonthSection: View {
         VStack(spacing: 0) {
             // Month header
             Text(monthName)
-                .font(.custom(
-                    "Vollkorn-Regular",
-                    size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize,
-                    relativeTo: .largeTitle
-                ))
-                .fontWeight(.bold)
+                .appLargeTitleStyle()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)

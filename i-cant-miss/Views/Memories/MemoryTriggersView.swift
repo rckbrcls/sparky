@@ -97,6 +97,7 @@ struct MemoryTriggersView: View {
             if embedsInNavigationStack {
                 NavigationStack(path: $navigationPath) {
                     content
+                        .toolbarTitleDisplayMode(.inline)
                 }
             } else {
                 content
@@ -234,7 +235,7 @@ struct MemoryTriggersView: View {
 
     private var triggersListTitle: some View {
         Text("Triggers")
-            .font(.custom("Vollkorn-Regular", size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize, relativeTo: .largeTitle))
+            .appLargeTitleStyle()
             .foregroundStyle(.primary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

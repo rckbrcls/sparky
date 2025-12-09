@@ -25,12 +25,13 @@ struct SpaceDetailView: View {
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
     @State private var showInbox = true
+    @State private var showPinned = true
+    @State private var showTriggerSheet = false
+    @State private var showContentSheet = false
     @State private var filterSheetDetent: PresentationDetent = .large
     @State private var searchText = ""
-    @State private var isInboxExpanded = true
-    @State private var isOtherExpanded = true
-    @State private var isPinnedExpanded = true
-    @State private var autoCollapsedInbox = false
+
+
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -71,12 +72,8 @@ struct SpaceDetailView: View {
         resolvedSpace.isAllSpaces
     }
 
-    private var nonInboxMemories: [MemoryModel] {
-        filteredMemories.filter { !$0.isInbox && !$0.isPinned }
-    }
-
-    private var inboxMemories: [MemoryModel] {
-        filteredMemories.filter { $0.isInbox && !$0.isPinned }
+    private var nonPinnedMemories: [MemoryModel] {
+        filteredMemories.filter { !$0.isPinned }
     }
 
     private var pinnedMemories: [MemoryModel] {
@@ -88,10 +85,17 @@ struct SpaceDetailView: View {
             }
     }
 
+    // Legacy helper - maintained for compatibility if needed, otherwise safe to remove if unused
+    private var inboxMemories: [MemoryModel] {
+        filteredMemories.filter { $0.isInbox && !$0.isPinned }
+    }
+
+    private var nonInboxMemories: [MemoryModel] {
+        filteredMemories.filter { !$0.isInbox && !$0.isPinned }
+    }
+
     private var shouldShowEmptyStateCard: Bool {
-        nonInboxMemories.isEmpty &&
-        pinnedMemories.isEmpty &&
-        (!showInbox || inboxMemories.isEmpty)
+        nonPinnedMemories.isEmpty && pinnedMemories.isEmpty
     }
 
     private var filterDescription: String {
@@ -191,14 +195,13 @@ struct SpaceDetailView: View {
             .navigationTitle(navigationTitleText)
             .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: "Search memories")
             .toolbar { toolbarContent }
+            .sheet(isPresented: $showTriggerSheet) {
+                TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
+            }
+            .sheet(isPresented: $showContentSheet) {
+                ContentFilterSheetView(selectedContentTypes: $selectedContentTypes)
+            }
             .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
-            .onAppear(perform: syncExpansionStates)
-            .onChange(of: inboxMemories.count) { _, _ in
-                syncExpansionStates()
-            }
-            .onChange(of: isInboxExpanded) { _, newValue in
-                autoCollapsedInbox = inboxMemories.isEmpty && !newValue
-            }
     }
 
     private func notifySpaceContextChange() {
@@ -230,19 +233,20 @@ struct SpaceDetailView: View {
                 onDone: { toggleMultiSelection() }
             )
         } else {
-            SpaceDetailToolbarContent(
-                activeFilterCount: activeFilterCount,
-                filterDescription: filterDescription,
-                isFilterSheetPresented: showingFilterSheet,
-                isMultiSelecting: isMultiSelecting,
-                isPerformingBulkAction: isPerformingBulkAction,
-                hasSelectedMemories: !selectedMemoryIDs.isEmpty,
-                canCreateSubspace: canCreateSubspace,
-                onShowFilters: presentFilterSheet,
-                onToggleMultiSelection: toggleMultiSelection,
-                onRequestDeletion: { showingDeleteConfirmation = true },
-                onCreateSpace: { onCreateSpace(isAllSpace ? nil : resolvedSpace) }
-            )
+             ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    toggleMultiSelection()
+                } label: {
+                    Label("Select", systemImage: "checkmark.circle")
+                }
+                .disabled(isPerformingBulkAction)
+
+                Button {
+                    onCreateSpace(isAllSpace ? nil : resolvedSpace)
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                }
+            }
         }
     }
 
@@ -261,6 +265,19 @@ struct SpaceDetailView: View {
     private var spaceDetailList: some View {
         List {
             subspacesSection
+
+            FilterBadgesBar(
+                selectedTriggerTypes: $selectedTriggerTypes,
+                selectedContentTypes: $selectedContentTypes,
+                showInbox: $showInbox,
+                showPinned: $showPinned,
+                showTriggerSheet: $showTriggerSheet,
+                showContentSheet: $showContentSheet
+            )
+            .listRowInsets(.init(top: 8, leading: 0, bottom: 8, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+
             mainListSection
         }
         .listStyle(.plain)
@@ -306,33 +323,58 @@ struct SpaceDetailView: View {
 
     @ViewBuilder
     private var timelineAndInboxSection: some View {
-        SpaceDetailTimelineContentView(
-            memories: nonInboxMemories,
-            pinnedMemories: pinnedMemories,
-            emptyStateTitle: emptyStateTitle,
-            emptyStateMessage: emptyStateMessage,
-            isMultiSelecting: isMultiSelecting,
-            selectedMemoryIDs: selectedMemoryIDs,
-            isPerformingBulkAction: isPerformingBulkAction,
-            isPinnedExpanded: $isPinnedExpanded,
-            isMemorySelected: isMemorySelected(_:),
-            onSelectMemory: onSelectMemory,
-            onEditMemory: onEditMemory,
-            onToggleSelection: toggleMemorySelection(_:),
-            shouldShowEmptyState: shouldShowEmptyStateCard
-        )
+        if !pinnedMemories.isEmpty && showPinned {
+            Section {
+                 ForEach(pinnedMemories) { memory in
+                    MemoryListItemButton(
+                        memory: memory,
+                        isMultiSelecting: isMultiSelecting,
+                        isSelected: isMemorySelected(memory),
+                        isDisabled: isPerformingBulkAction,
+                        onSelect: onSelectMemory,
+                        onToggleSelection: toggleMemorySelection(_:),
+                        onEdit: onEditMemory
+                    )
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            } header: {
+                 HStack(spacing: 12) {
+                    Label("Pinned Memories", systemImage: "pin.fill")
+                        .foregroundStyle(.white)
+                }
+                .padding(.vertical, 12)
+                .listRowInsets(.init(top: 24, leading: 20, bottom: 8, trailing: 20))
+            }
+             .listSectionSeparator(.hidden)
+        }
 
-        if showInbox {
-            SpaceDetailInboxSectionView(
-                inboxMemories: inboxMemories,
+        ForEach(nonPinnedMemories) { memory in
+            MemoryListItemButton(
+                memory: memory,
                 isMultiSelecting: isMultiSelecting,
-                selectedMemoryIDs: selectedMemoryIDs,
-                isPerformingBulkAction: isPerformingBulkAction,
-                isInboxExpanded: $isInboxExpanded,
-                onSelectMemory: onSelectMemory,
-                onEditMemory: onEditMemory,
-                onToggleSelection: toggleMemorySelection(_:)
+                isSelected: isMemorySelected(memory),
+                isDisabled: isPerformingBulkAction,
+                onSelect: onSelectMemory,
+                onToggleSelection: toggleMemorySelection(_:),
+                onEdit: onEditMemory
             )
+            .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+
+        if nonPinnedMemories.isEmpty && pinnedMemories.isEmpty {
+             MemoryEmptyStateCard(
+                systemImage: "bolt.fill",
+                title: emptyStateTitle,
+                message: emptyStateMessage
+            )
+            .padding(.top, 16)
+            .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -343,18 +385,6 @@ struct SpaceDetailView: View {
         }
     }
 
-    private func syncExpansionStates() {
-        let inboxIsEmpty = inboxMemories.isEmpty
-        if inboxIsEmpty {
-            if isInboxExpanded {
-                isInboxExpanded = false
-                autoCollapsedInbox = true
-            }
-        } else if autoCollapsedInbox && !isInboxExpanded {
-            isInboxExpanded = true
-            autoCollapsedInbox = false
-        }
-    }
     private var filteredMemories: [MemoryModel] {
         let targetSpace = isAllSpace ? nil : resolvedSpace
         let base = memoryService.memories(

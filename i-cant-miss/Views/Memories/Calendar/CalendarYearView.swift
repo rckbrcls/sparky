@@ -122,12 +122,7 @@ private struct YearSection: View {
         VStack(spacing: 12) {
             // Year header
             Text(verbatim: String(year))
-                .font(.custom(
-                    "Vollkorn-Regular",
-                    size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize,
-                    relativeTo: .largeTitle
-                ))
-                .fontWeight(.bold)
+                .appLargeTitleStyle()
                 .monospacedDigit()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)

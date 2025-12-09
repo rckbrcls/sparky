@@ -593,9 +593,6 @@ struct MemoryEditorView: View {
 
     private var titleSectionRow: some View {
         VStack(alignment: .leading, spacing: 16.0) {
-            titleSection
-                .padding(.horizontal, 20)
-
             if isEditingEnabled {
                 triggerButtonsBar(onAddTrigger: { showTriggerPickerSheet = true })
                     .transition(.asymmetric(
@@ -609,6 +606,8 @@ struct MemoryEditorView: View {
                         removal: .move(edge: .top).combined(with: .opacity)
                     ))
             }
+            titleSection
+                .padding(.horizontal, 20)
         }
         .listRowSeparator(.hidden)
         .listRowInsets(.init(top: 20, leading: 0, bottom: 16, trailing: 0))
@@ -663,7 +662,7 @@ struct MemoryEditorView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .center, spacing: 12) {
                         TextField("Memory", text: $viewModel.title, axis: .vertical)
-                            .font(.title3)
+                            .font(.custom("Vollkorn-Regular", size: 24))
                             .fontWeight(.bold)
                             .multilineTextAlignment(.leading)
                             .submitLabel(.done)
@@ -713,7 +712,10 @@ struct MemoryEditorView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
         .contentShape(Rectangle())
     }
 

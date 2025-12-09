@@ -11,21 +11,20 @@ import UIKit
 
 enum CustomTab: String, CaseIterable {
     case calendar = "Calendar"
-    case triggers = "Triggers"
+
     case map = "Map"
-    case spaces = "Spaces"
+    case spaces = "Memories"
     case me = "Me"
 
     var symbol: String {
         switch self {
         case .calendar:
             return "calendar"
-        case .triggers:
-            return "bolt.circle"
+
         case .map:
             return "map"
         case .spaces:
-            return "square.grid.2x2"
+            return "bolt.circle"
         case .me:
             return "person.crop.circle"
         }
@@ -69,18 +68,7 @@ struct ContentView: View {
             }
             .tag(CustomTab.calendar)
 
-            MemoryTriggersView(
-                memoryService: environment.memoryService,
-                onSelectMemory: handleMemorySelection,
-                onEditMemory: handleMemoryEdit,
-                onMultiSelectionChange: handleMultiSelectionChange,
-                navigationPath: $triggersNavigationPath,
-                embedsInNavigationStack: true
-            )
-            .tabItem {
-                Label(CustomTab.triggers.rawValue, systemImage: CustomTab.triggers.symbol)
-            }
-            .tag(CustomTab.triggers)
+
 
             MemoriesMapView(
                 memories: environment.memoryService.memoriesWithLocationOnly(),

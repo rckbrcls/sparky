@@ -82,6 +82,7 @@ struct MemoryTimelineView: View {
             if embedsInNavigationStack {
                 NavigationStack(path: $navigationPath) {
                     content
+                        .toolbarTitleDisplayMode(.inline)
                 }
             } else {
                 content
