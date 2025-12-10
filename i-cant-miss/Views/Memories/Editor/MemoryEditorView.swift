@@ -114,6 +114,7 @@ struct MemoryEditorView: View {
     @State private var selectedPhotoContentID: UUID?
     @State private var filePreviewItem: FilePreviewItem?
     @State private var isShowingFilePreview = false
+    @State private var isAudioCardVisible = false
     @State private var navigationPath = NavigationPath()
     @Namespace private var toolbarGlassNamespace
 
@@ -470,10 +471,6 @@ struct MemoryEditorView: View {
                 HStack {
                     if isEditingEnabled {
                         HStack {
-                            addRichTextButton
-                            Spacer()
-                            addChecklistButton
-                            Spacer()
                             addPhotoMenuButton
                             Spacer()
                             addLinkButton
@@ -832,33 +829,7 @@ struct MemoryEditorView: View {
 
     // MARK: - Obsolete card functions removed - now using fixed card views (noteCard, checklistCardView, etc.)
 
-    private var addRichTextButton: some View {
-        Button {
-            handleAddContentSelection(.richText)
-        } label: {
-            Image(systemName: MemoryEditorContentType.richText.iconName)
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(!viewModel.note.isEmpty ? Color.accentColor : .primary)
-        }
-        .accessibilityLabel("Add rich text")
-    }
-
-    private var addChecklistButton: some View {
-        Button {
-            handleAddContentSelection(.checklist)
-        } label: {
-            Image(systemName:  MemoryEditorContentType.checklist.iconName)
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(!viewModel.checkItems.isEmpty ? Color.accentColor : .primary)
-        }
-        .accessibilityLabel("Add checklist")
-    }
+    // Removed: addRichTextButton and addChecklistButton - these are now always visible as fixed cards
 
     private var addLinkButton: some View {
         Button {
@@ -953,8 +924,10 @@ struct MemoryEditorView: View {
             pendingLinkContentID = nil
             showAddLinkSheet = true
         case .audio:
-            // Audio is handled by the fixed card view
-            break
+            // Show the audio card when toolbar button is tapped
+            withAnimation(cardBounceAnimation) {
+                isAudioCardVisible = true
+            }
         case .files:
             pendingFileContentID = nil
             beginFileImportFixed()
@@ -1216,7 +1189,7 @@ struct MemoryEditorView: View {
     }
 
     private var shouldShowAudioCard: Bool {
-        !viewModel.audioAttachments.isEmpty
+        !viewModel.audioAttachments.isEmpty || isAudioCardVisible
     }
 
     private var canEnableEditing: Bool {
