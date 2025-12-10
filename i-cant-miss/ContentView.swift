@@ -69,18 +69,7 @@ struct ContentView: View {
             }
             .tag(CustomTab.calendar)
 
-
-
-            MemoriesMapView(
-                memories: environment.memoryService.memoriesWithLocationOnly(),
-                onSelectMemory: handleMemorySelection
-            )
-            .tabItem {
-                Label(CustomTab.map.rawValue, systemImage: CustomTab.map.symbol)
-            }
-            .tag(CustomTab.map)
-
-            SpacesRootView(
+  SpacesRootView(
                 spaceService: environment.spaceService,
                 memoryService: environment.memoryService,
                 navigationPath: $spacesNavigationPath,
@@ -102,6 +91,15 @@ struct ContentView: View {
                 Label(CustomTab.spaces.rawValue, systemImage: CustomTab.spaces.symbol)
             }
             .tag(CustomTab.spaces)
+
+            MemoriesMapView(
+                memories: environment.memoryService.memoriesWithLocationOnly(),
+                onSelectMemory: handleMemorySelection
+            )
+            .tabItem {
+                Label(CustomTab.map.rawValue, systemImage: CustomTab.map.symbol)
+            }
+            .tag(CustomTab.map)
 
             MeView(environment: environment, settingsNavigationPath: $meNavigationPath)
                 .tabItem {
