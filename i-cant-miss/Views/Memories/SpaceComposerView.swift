@@ -15,27 +15,11 @@ struct SpaceComposerView: View {
     @State private var selectedColorHex: String = Color.PresetColors.all.first?.hex ?? "#6366F1"
     @State private var isSaving = false
     @State private var errorMessage: String?
-    private let selectedParentID: UUID?
-    private let parentSpaceName: String?
     private let spaceToEdit: SpaceModel?
 
-    init(environment: AppEnvironment, defaultParent: SpaceModel? = nil, spaceToEdit: SpaceModel? = nil) {
+    init(environment: AppEnvironment, spaceToEdit: SpaceModel? = nil) {
         self.environment = environment
         self.spaceToEdit = spaceToEdit
-
-        if let spaceToEdit = spaceToEdit {
-            self.selectedParentID = spaceToEdit.parentID
-            // Look up parent name from service
-            if let parentID = spaceToEdit.parentID,
-               let parent = environment.spaceService.space(id: parentID) {
-                self.parentSpaceName = parent.name
-            } else {
-                self.parentSpaceName = nil
-            }
-        } else {
-            self.selectedParentID = defaultParent?.id
-            self.parentSpaceName = defaultParent?.name
-        }
     }
 
     var body: some View {
@@ -46,17 +30,6 @@ struct SpaceComposerView: View {
                         .textInputAutocapitalization(.words)
                         .disableAutocorrection(true)
                         .accessibilityLabel("Space name")
-
-                    if let parentSpaceName {
-                        HStack {
-                            Label("Parent", systemImage: "folder")
-                            Spacer()
-                            Text(parentSpaceName)
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.subheadline)
-                        .accessibilityElement(children: .combine)
-                    }
 
                     if isSaving {
                         ProgressView()
@@ -210,12 +183,6 @@ struct SpaceComposerView: View {
             return
         }
 
-        if let parentID = selectedParentID,
-           environment.spaceService.space(id: parentID) == nil {
-            errorMessage = "Parent space is unavailable. Refresh and try again."
-            return
-        }
-
         errorMessage = nil
         isSaving = true
 
@@ -227,7 +194,6 @@ struct SpaceComposerView: View {
                     updatedSpace.name = trimmedName
                     updatedSpace.colorHex = selectedColorHex
                     updatedSpace.iconName = selectedIcon
-                    updatedSpace.parentID = selectedParentID
 
                     _ = try await environment.spaceService.updateSpace(updatedSpace)
                 } else {
@@ -236,8 +202,7 @@ struct SpaceComposerView: View {
                         name: trimmedName,
                         colorHex: selectedColorHex,
                         iconName: selectedIcon,
-                        isDefault: false,
-                        parentID: selectedParentID
+                        isDefault: false
                     )
                 }
 

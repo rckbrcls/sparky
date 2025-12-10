@@ -14,7 +14,7 @@ struct SpacesRootView: View {
 
     let onSelectMemory: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
-    let onCreateSpace: (SpaceModel?) -> Void
+    let onCreateSpace: () -> Void
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
@@ -30,7 +30,6 @@ struct SpacesRootView: View {
                                 count: memoryCount(for: space),
                                 spaceService: spaceService,
                                 memoryService: memoryService,
-                                parentLookup: spaceService.space(id:),
                                 onEdit: onEditSpace
                             )
                         }
@@ -49,7 +48,7 @@ struct SpacesRootView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        onCreateSpace(nil)
+                        onCreateSpace()
                     } label: {
                         Image(systemName: "folder.badge.plus")
                     }
@@ -95,24 +94,23 @@ struct SpacesRootView: View {
     }
 
     private var displaySpaces: [SpaceModel] {
-        let rootSpaces = spaceService.rootSpaces()
+        let sortedSpaces = spaceService.spaces
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [SpaceModel.allSpaces] + rootSpaces
+        return [SpaceModel.allSpaces] + sortedSpaces
     }
 
     private func memoryCount(for space: SpaceModel) -> Int {
         if space.isAllSpaces {
             return memoryService.memories.count
         }
-        let ids = spaceService.descendantIDs(of: space)
         return memoryService.memories.filter { memory in
             guard let spaceID = memory.space?.id else { return false }
-            return ids.contains(spaceID)
+            return spaceID == space.id
         }.count
     }
 
@@ -132,7 +130,7 @@ struct SpacesRootView: View {
         navigationPath: .constant(NavigationPath()),
         onSelectMemory: { _ in },
         onEditMemory: nil,
-        onCreateSpace: { _ in },
+        onCreateSpace: { },
         onEditSpace: nil,
         onMultiSelectionChange: { _ in },
         onSpaceContextChange: { _ in }

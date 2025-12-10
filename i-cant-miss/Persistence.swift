@@ -135,15 +135,6 @@ private extension PersistenceController {
         workSpace.isDefault = false
         workSpace.sortOrder = 1
 
-        let errandsSubspace = Space(context: context)
-        errandsSubspace.id = UUID()
-        errandsSubspace.name = "Weekend Projects"
-        errandsSubspace.iconName = "hammer.fill"
-        errandsSubspace.colorHex = "#F59E0B"
-        errandsSubspace.isDefault = false
-        errandsSubspace.parent = defaultSpace
-        errandsSubspace.sortOrder = 0
-
         let swiftTag = Tag(context: context)
         swiftTag.id = UUID()
         swiftTag.name = "SwiftUI"

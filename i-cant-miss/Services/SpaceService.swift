@@ -69,7 +69,6 @@ final class SpaceService: ObservableObject {
                 NSSortDescriptor(keyPath: \Space.name, ascending: true)
             ]
             spaceRequest.returnsObjectsAsFaults = false
-            spaceRequest.relationshipKeyPathsForPrefetching = ["parent", "children"]
             let spaceResults = try context.fetch(spaceRequest)
 
             for space in spaceResults {
@@ -103,21 +102,8 @@ final class SpaceService: ObservableObject {
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
 
-        // Build child relationships
-        var childRelationships: [UUID: [UUID]] = [:]
-        for space in orderedSpaces {
-            guard let parentID = space.parentID else { continue }
-            childRelationships[parentID, default: []].append(space.id)
-        }
-
-        let resolvedSpaces = orderedSpaces.map { space -> SpaceModel in
-            var mutableSpace = space
-            mutableSpace.childIDs = childRelationships[space.id] ?? []
-            return mutableSpace
-        }
-
         // Update properties directly - we're already on MainActor
-        self.spaces = resolvedSpaces
+        self.spaces = Array(orderedSpaces)
         self.tags = tagModels
         self.lastRefreshed = Date()
         self.lastTagsRefresh = Date()
@@ -151,7 +137,6 @@ final class SpaceService: ObservableObject {
             NSSortDescriptor(keyPath: \Space.name, ascending: true)
         ]
         request.returnsObjectsAsFaults = false
-        request.relationshipKeyPathsForPrefetching = ["parent", "children"]
 
         do {
             let spaces = try context.fetch(request)
@@ -176,22 +161,10 @@ final class SpaceService: ObservableObject {
                     return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
                 }
 
-            var childRelationships: [UUID: [UUID]] = [:]
-            for space in orderedSpaces {
-                guard let parentID = space.parentID else { continue }
-                childRelationships[parentID, default: []].append(space.id)
-            }
-
-            let resolvedSpaces = orderedSpaces.map { space -> SpaceModel in
-                var mutableSpace = space
-                mutableSpace.childIDs = childRelationships[space.id] ?? []
-                return mutableSpace
-            }
-
-            self.spaces = resolvedSpaces
+            self.spaces = Array(orderedSpaces)
             lastRefreshed = Date()
             rebuildIndex()
-            return resolvedSpaces
+            return Array(orderedSpaces)
         } catch {
             logger.error("Failed to refresh spaces: \(error.localizedDescription)")
             return spaces
@@ -237,42 +210,7 @@ final class SpaceService: ObservableObject {
         spaces.first(where: { $0.isDefault })
     }
 
-    func rootSpaces() -> [SpaceModel] {
-        spaces.filter { $0.parentID == nil }
-    }
 
-    func children(of parent: SpaceModel) -> [SpaceModel] {
-        guard let resolvedParent = spaceIndex[parent.id] else { return [] }
-        return resolvedParent.childIDs.compactMap { spaceIndex[$0] }
-            .sorted { lhs, rhs in
-                if lhs.sortOrder != rhs.sortOrder {
-                    return lhs.sortOrder < rhs.sortOrder
-                }
-                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-            }
-    }
-
-    func isValidMove(space: SpaceModel, targetParentID: UUID?) -> Bool {
-        guard let targetParentID else { return true }
-        guard let target = spaceIndex[targetParentID] else { return false }
-        return !target.isAncestor(of: space) { [weak self] id in
-            self?.spaceIndex[id]
-        }
-    }
-
-    func descendantIDs(of space: SpaceModel) -> Set<UUID> {
-        var visited: Set<UUID> = []
-        var stack: [UUID] = [space.id]
-
-        while let currentID = stack.popLast() {
-            guard !visited.contains(currentID) else { continue }
-            visited.insert(currentID)
-            guard let node = spaceIndex[currentID] else { continue }
-            stack.append(contentsOf: node.childIDs)
-        }
-
-        return visited
-    }
 
     func memoryIDs(in space: SpaceModel) -> [UUID] {
         let context = persistence.container.viewContext
@@ -294,8 +232,7 @@ final class SpaceService: ObservableObject {
         name: String,
         colorHex: String?,
         iconName: String?,
-        isDefault: Bool,
-        parentID: UUID? = nil
+        isDefault: Bool
     ) async throws -> SpaceModel {
         let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
@@ -315,17 +252,8 @@ final class SpaceService: ObservableObject {
                     space.iconName = iconName
                     space.isDefault = isDefault
 
-                    if let parentID {
-                        guard let parentSpace = try self.fetchSpace(by: parentID, context: context) else {
-                            throw SpaceServiceError.spaceNotFound
-                        }
-                        space.parent = parentSpace
-                        let siblingCount = parentSpace.children?.count ?? 0
-                        space.sortOrder = Int16(siblingCount)
-                    } else {
-                        let rootCount = try self.countRootSpaces(in: context)
-                        space.sortOrder = Int16(rootCount)
-                    }
+                    let spaceCount = try self.countSpaces(in: context)
+                    space.sortOrder = Int16(spaceCount)
 
                     try context.save()
                     continuation.resume(returning: space.objectID)
@@ -360,18 +288,7 @@ final class SpaceService: ObservableObject {
                     space.isDefault = model.isDefault
                     space.sortOrder = Int16(model.sortOrder)
 
-                    if let parentID = model.parentID {
-                        guard parentID != model.id else {
-                            throw SpaceServiceError.validationFailed("A space cannot be its own parent.")
-                        }
-                        if let parentSpace = try self.fetchSpace(by: parentID, context: context) {
-                            space.parent = parentSpace
-                        } else {
-                            throw SpaceServiceError.spaceNotFound
-                        }
-                    } else {
-                        space.parent = nil
-                    }
+
 
                     try context.save()
                     continuation.resume(returning: space.objectID)
@@ -563,9 +480,8 @@ final class SpaceService: ObservableObject {
         }
     }
 
-    private func countRootSpaces(in context: NSManagedObjectContext) throws -> Int {
+    private func countSpaces(in context: NSManagedObjectContext) throws -> Int {
         let request: NSFetchRequest<Space> = Space.fetchRequest()
-        request.predicate = NSPredicate(format: "parent == nil")
         let result = try context.count(for: request)
         return max(result, 0)
     }
@@ -581,8 +497,6 @@ extension Space {
             colorHex: colorHex,
             iconName: iconName,
             sortOrder: Int(sortOrder),
-            parentID: parent?.id,
-            childIDs: [], // Will be populated by SpaceService
             isDefault: isDefault
         )
     }

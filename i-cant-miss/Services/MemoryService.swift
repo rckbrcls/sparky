@@ -123,7 +123,6 @@ final class MemoryService: ObservableObject {
     }
 
     func memories(in space: SpaceModel?,
-                  includeDescendants: Bool = true,
                   statuses: Set<MemoryStatus> = [],
                   includeCompleted: Bool = true,
                   sort: SortStrategy = .updatedAtDescending) -> [MemoryModel] {
@@ -131,8 +130,6 @@ final class MemoryService: ObservableObject {
         if let space {
             if space.isAllSpaces {
                 spaceIDs = []
-            } else if includeDescendants {
-                spaceIDs = spaceService.descendantIDs(of: space)
             } else {
                 spaceIDs = [space.id]
             }

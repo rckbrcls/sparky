@@ -85,8 +85,8 @@ struct ContentView: View {
                 navigationPath: $spacesNavigationPath,
                 onSelectMemory: handleMemorySelection,
                 onEditMemory: handleMemoryEdit,
-                onCreateSpace: { parent in
-                    presentSpaceCreation(for: parent)
+                onCreateSpace: {
+                    presentSpaceCreation()
                 },
                 onEditSpace: { space in
                     presentSpaceEdit(for: space)
@@ -143,7 +143,6 @@ struct ContentView: View {
         }) { request in
             SpaceComposerView(
                 environment: environment,
-                defaultParent: request.parent,
                 spaceToEdit: request.spaceToEdit
             )
         }
@@ -181,12 +180,12 @@ struct ContentView: View {
         editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 
-    private func presentSpaceCreation(for parent: SpaceModel?) {
-        spaceComposerRequest = SpaceComposerRequest(parent: parent, spaceToEdit: nil)
+    private func presentSpaceCreation() {
+        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: nil)
     }
 
     private func presentSpaceEdit(for space: SpaceModel) {
-        spaceComposerRequest = SpaceComposerRequest(parent: nil, spaceToEdit: space)
+        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: space)
     }
 
     private var tabBarVisibility: Visibility {
@@ -255,7 +254,6 @@ private struct MemoryEditorRoute: Identifiable {
 
 private struct SpaceComposerRequest: Identifiable {
     let id = UUID()
-    let parent: SpaceModel?
     let spaceToEdit: SpaceModel?
 }
 

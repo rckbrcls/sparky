@@ -20,14 +20,12 @@ struct SpaceRowView: View {
         count: Int,
         spaceService: SpaceService? = nil,
         memoryService: MemoryService? = nil,
-        parentLookup: ((UUID) -> SpaceModel?)? = nil,
         onEdit: ((SpaceModel) -> Void)? = nil
     ) {
         self.space = space
         self.count = count
         self.spaceService = spaceService
         self.memoryService = memoryService
-        self.parentLookup = parentLookup
         self.onEdit = onEdit
     }
 
@@ -43,13 +41,6 @@ struct SpaceRowView: View {
                 Text(space.name)
                     .font(.headline)
                     .foregroundStyle(.primary)
-
-                if let parentID = space.parentID,
-                   let parent = parentLookup?(parentID) {
-                    Text(parent.name)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
             }
 
             Spacer()
@@ -98,9 +89,6 @@ struct SpaceRowView: View {
             }
         }
     }
-
-    /// Optional closure used to render breadcrumb context while the hierarchy is still evolving.
-    var parentLookup: ((UUID) -> SpaceModel?)?
 
     /// Optional closure called when user taps edit swipe action
     var onEdit: ((SpaceModel) -> Void)?

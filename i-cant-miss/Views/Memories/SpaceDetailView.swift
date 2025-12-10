@@ -17,7 +17,7 @@ struct SpaceDetailView: View {
 
     let onSelectMemory: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
-    let onCreateSpace: (SpaceModel?) -> Void
+    let onCreateSpace: () -> Void
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
@@ -160,10 +160,6 @@ struct SpaceDetailView: View {
         return "This will permanently remove \(count) memories."
     }
 
-    private var canCreateSubspace: Bool {
-        !resolvedSpace.isAllSpaces
-    }
-
     var body: some View {
         baseView
             .modifier(SpaceDetailModifiers(
@@ -204,13 +200,6 @@ struct SpaceDetailView: View {
         onSpaceContextChange(resolvedSpace)
     }
 
-    private var childSpaces: [SpaceModel] {
-        if isAllSpace {
-            return []
-        }
-        return spaceService.children(of: resolvedSpace)
-    }
-
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if isMultiSelecting {
@@ -245,7 +234,7 @@ struct SpaceDetailView: View {
                 .disabled(isPerformingBulkAction)
 
                 Button {
-                    onCreateSpace(isAllSpace ? nil : resolvedSpace)
+                    onCreateSpace()
                 } label: {
                     Image(systemName: "folder.badge.plus")
                 }
@@ -273,8 +262,6 @@ struct SpaceDetailView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-            subspacesSection
-
             FilterBadgesBar(
                 selectedTriggerTypes: $selectedTriggerTypes,
                 selectedContentTypes: $selectedContentTypes,
@@ -298,19 +285,6 @@ struct SpaceDetailView: View {
         }
         .listRowSeparator(.hidden)
         .background(Color.clear)
-    }
-
-    @ViewBuilder
-    private var subspacesSection: some View {
-        if !childSpaces.isEmpty {
-            SpaceDetailSubspacesSection(
-                childSpaces: childSpaces,
-                spaceService: spaceService,
-                memoryService: memoryService,
-                memoryCountProvider: memoryCount(for:),
-                onEditSpace: onEditSpace
-            )
-        }
     }
 
     @ViewBuilder
@@ -379,7 +353,6 @@ struct SpaceDetailView: View {
         let targetSpace = isAllSpace ? nil : resolvedSpace
         let base = memoryService.memories(
             in: targetSpace,
-            includeDescendants: false,
             statuses: [],
             includeCompleted: true,
             sort: .updatedAtDescending
@@ -426,14 +399,6 @@ struct SpaceDetailView: View {
         }
 
         return contentMatches && triggerMatches
-    }
-
-    private func memoryCount(for space: SpaceModel) -> Int {
-        let ids = spaceService.descendantIDs(of: space)
-        return memoryService.memories.filter { memory in
-            guard let spaceID = memory.space?.id else { return false }
-            return ids.contains(spaceID)
-        }.count
     }
 
     private func isMemorySelected(_ memory: MemoryModel) -> Bool {
