@@ -90,6 +90,19 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
         updatedTriggers.append(scheduledTrigger)
 
         // Criar draft com triggers atualizados
+        // Convert checkItems to CheckItemDrafts
+        let checkItemDrafts = memory.checkItems.map { item in
+            CheckItemDraft(
+                id: item.id,
+                title: item.title,
+                detail: item.detail ?? "",
+                isCompleted: item.isCompleted,
+                sortOrder: item.sortOrder,
+                createdAt: item.createdAt,
+                completedAt: item.completedAt
+            )
+        }
+
         let draft = MemoryDraft(
             id: memory.id,
             title: memory.title,
@@ -99,7 +112,12 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             dueDate: memory.dueDate,
             spaceID: memory.space?.id,
             triggers: updatedTriggers,
-            contents: memory.contents,
+            note: memory.note,
+            checkItems: checkItemDrafts,
+            photoAttachmentIDs: memory.photoAttachmentIDs,
+            linkAttachmentIDs: memory.linkAttachmentIDs,
+            audioAttachmentIDs: memory.audioAttachmentIDs,
+            fileAttachmentIDs: memory.fileAttachmentIDs,
             attachments: memory.attachments,
             autoCompleteOnChecklistCompletion: memory.autoCompleteOnChecklistCompletion
         )

@@ -22,13 +22,13 @@ struct SpaceDetailView: View {
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
 
-    @State private var showingFilterSheet = false
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
     @State private var showInbox = true
     @State private var showPinned = true
     @State private var showTriggerSheet = false
     @State private var showContentSheet = false
+    @State private var showingFilterSheet = false
     @State private var filterSheetDetent: PresentationDetent = .large
 
 
@@ -191,15 +191,12 @@ struct SpaceDetailView: View {
                 TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
                     .presentationDetents([.medium])
                     .presentationBackground(.clear)
-                    .presentationCornerRadius(32)
             }
             .sheet(isPresented: $showContentSheet) {
                 ContentFilterSheetView(selectedContentTypes: $selectedContentTypes)
                     .presentationDetents([.medium])
                     .presentationBackground(.clear)
-                    .presentationCornerRadius(32)
             }
-            .sheet(isPresented: $showingFilterSheet, content: filterSheetContent)
     }
 
     private func notifySpaceContextChange() {
@@ -378,13 +375,6 @@ struct SpaceDetailView: View {
         }
     }
 
-    private func presentFilterSheet() {
-        filterSheetDetent = .large
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showingFilterSheet = true
-        }
-    }
-
     private var filteredMemories: [MemoryModel] {
         let targetSpace = isAllSpace ? nil : resolvedSpace
         let base = memoryService.memories(
@@ -410,32 +400,17 @@ struct SpaceDetailView: View {
             contentMatches = selectedContentTypes.contains { contentType in
                 switch contentType {
                 case .richText:
-                    return memory.contents.contains {
-                        if case .richText = $0 { return true }
-                        return false
-                    }
+                    return memory.note != nil && !memory.note!.isEmpty
                 case .checklist:
                     return memory.hasChecklist
                 case .photos:
-                    return memory.contents.contains {
-                        if case .photos = $0 { return true }
-                        return false
-                    }
+                    return !memory.photoAttachmentIDs.isEmpty
                 case .links:
-                    return memory.contents.contains {
-                        if case .links = $0 { return true }
-                        return false
-                    }
+                    return !memory.linkAttachmentIDs.isEmpty
                 case .audio:
-                    return memory.contents.contains {
-                        if case .audio = $0 { return true }
-                        return false
-                    }
+                    return !memory.audioAttachmentIDs.isEmpty
                 case .files:
-                    return memory.contents.contains {
-                        if case .files = $0 { return true }
-                        return false
-                    }
+                    return !memory.fileAttachmentIDs.isEmpty
                 }
             }
         }

@@ -23,7 +23,13 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var isPinned: Bool = false
     @Published var autoCompleteChecklist: Bool
     @Published var triggers: [MemoryTriggerDraft] = []
-    @Published var contentQueue: [MemoryEditorContentItem] = []
+    // Fixed content properties (replacing dynamic contentQueue)
+    @Published var note: String = ""
+    @Published var checkItems: [CheckItemDraft] = []
+    @Published var photoAttachments: [MemoryModel.Attachment] = []
+    @Published var linkAttachments: [MemoryModel.Attachment] = []
+    @Published var audioAttachments: [MemoryModel.Attachment] = []
+    @Published var fileAttachments: [MemoryModel.Attachment] = []
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
 
@@ -69,7 +75,7 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     var canToggleAutoComplete: Bool {
-        !allChecklistItems.isEmpty
+        !checkItems.isEmpty
     }
 
     var sequentialTrigger: MemoryTriggerDraft? {
@@ -77,36 +83,11 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     var aggregatedBody: String {
-        contentQueue.compactMap { item -> String? in
-            guard let richText = item.richTextContent else { return nil }
-            let trimmed = richText.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
-        }
-        .joined(separator: "\n\n")
-    }
-
-    var allChecklistItems: [CheckItemDraft] {
-        contentQueue.flatMap { $0.checklistContent?.items ?? [] }
-    }
-
-    var allPhotoAttachments: [MemoryModel.Attachment] {
-        contentQueue.flatMap { $0.photosContent?.attachments ?? [] }
-    }
-
-    var allLinkAttachments: [MemoryModel.Attachment] {
-        contentQueue.flatMap { $0.linksContent?.links ?? [] }
-    }
-
-    var allAudioAttachments: [MemoryModel.Attachment] {
-        contentQueue.flatMap { $0.audioContent?.clips ?? [] }
-    }
-
-    var allFileAttachments: [MemoryModel.Attachment] {
-        contentQueue.flatMap { $0.filesContent?.files ?? [] }
+        note.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var allAttachments: [MemoryModel.Attachment] {
-        allPhotoAttachments + allLinkAttachments + allAudioAttachments + allFileAttachments
+        photoAttachments + linkAttachments + audioAttachments + fileAttachments
     }
 
     func loadLatestDataIfNeeded() async {
@@ -115,223 +96,138 @@ final class MemoryEditorViewModel: ObservableObject {
         apply(memory: latest)
     }
 
-    @discardableResult
-    func appendContent(_ type: MemoryEditorContentType) -> UUID {
-        let item: MemoryEditorContentItem
-        switch type {
-        case .richText:
-            item = .richText(MemoryEditorRichTextContent())
-        case .checklist:
-            item = .checklist(MemoryEditorChecklistContent())
-        case .photos:
-            if let existingPhotos = contentQueue.first(where: { $0.contentType == .photos }) {
-                return existingPhotos.id
-            }
-            item = .photos(MemoryEditorPhotosContent())
-        case .links:
-            item = .links(MemoryEditorLinksContent())
-        case .audio:
-            item = .audio(MemoryEditorAudioContent())
-        case .files:
-            item = .files(MemoryEditorFilesContent())
-        }
-        contentQueue.append(item)
-        return item.id
-    }
+    // MARK: - Checklist Methods
 
-    func removeContent(id: UUID) {
-        contentQueue.removeAll { $0.id == id }
-    }
-
-    func updateRichText(id: UUID, text: String) {
-        guard let index = contentQueue.firstIndex(where: { $0.id == id }) else { return }
-        contentQueue[index].mutateRichText { richText in
-            richText.text = text
-        }
-    }
-
-    func addChecklistItem(to contentID: UUID, title: String, detail: String = "") {
+    func addChecklistItem(title: String, detail: String = "") {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
         let trimmedDetail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
-        contentQueue[index].mutateChecklist { checklist in
-            let nextOrder = (checklist.items.map(\.sortOrder).max() ?? -1) + 1
-            let item = CheckItemDraft(
-                title: trimmedTitle,
-                detail: trimmedDetail,
-                sortOrder: nextOrder
-            )
-            checklist.items.append(item)
-        }
+        let nextOrder = (checkItems.map(\.sortOrder).max() ?? -1) + 1
+        let item = CheckItemDraft(
+            title: trimmedTitle,
+            detail: trimmedDetail,
+            sortOrder: nextOrder
+        )
+        checkItems.append(item)
     }
 
-    func removeChecklistItem(contentID: UUID, itemID: UUID) {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
-        contentQueue[index].mutateChecklist { checklist in
-            checklist.items.removeAll { $0.id == itemID }
-            reindexChecklist(in: &checklist)
-        }
+    func removeChecklistItem(itemID: UUID) {
+        checkItems.removeAll { $0.id == itemID }
+        reindexCheckItems()
     }
 
     func toggleChecklistCompletion(for itemID: UUID) {
-        guard let index = contentQueue.firstIndex(where: { item in
-            item.checklistContent?.items.contains(where: { $0.id == itemID }) ?? false
-        }) else { return }
-        contentQueue[index].mutateChecklist { checklist in
-            guard let itemIndex = checklist.items.firstIndex(where: { $0.id == itemID }) else { return }
-            checklist.items[itemIndex].isCompleted.toggle()
-            checklist.items[itemIndex].completedAt = checklist.items[itemIndex].isCompleted
-                ? (checklist.items[itemIndex].completedAt ?? Date())
-                : nil
+        guard let index = checkItems.firstIndex(where: { $0.id == itemID }) else { return }
+        checkItems[index].isCompleted.toggle()
+        checkItems[index].completedAt = checkItems[index].isCompleted
+            ? (checkItems[index].completedAt ?? Date())
+            : nil
+    }
+
+    private func reindexCheckItems() {
+        for i in checkItems.indices {
+            checkItems[i].sortOrder = i
         }
+    }
+
+    // MARK: - Photo Attachment Methods
+
+    @MainActor
+    func addPhotoAttachment(data: Data) -> MemoryModel.Attachment {
+        let attachment = MemoryModel.Attachment(
+            id: UUID(),
+            kind: .photo,
+            data: data,
+            createdAt: Date()
+        )
+        photoAttachments.append(attachment)
+        return attachment
     }
 
     @MainActor
-    func addPhotoAttachment(data: Data, to contentID: UUID) -> MemoryModel.Attachment? {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return nil }
-        var addedAttachment: MemoryModel.Attachment?
-        contentQueue[index].mutatePhotos { photos in
-            let attachment = MemoryModel.Attachment(
-                id: UUID(),
-                kind: .photo,
-                data: data,
-                createdAt: Date()
-            )
-            photos.attachments.append(attachment)
-            addedAttachment = attachment
-        }
-        return addedAttachment
+    func removePhotoAttachment(id: UUID) {
+        photoAttachments.removeAll { $0.id == id }
+    }
+
+    // MARK: - Link Attachment Methods
+
+    @MainActor
+    func addLinkAttachment(url: URL) -> MemoryModel.Attachment? {
+        let alreadyExists = linkAttachments.contains { $0.url?.absoluteString == url.absoluteString }
+        guard !alreadyExists else { return nil }
+
+        let attachment = MemoryModel.Attachment(
+            id: UUID(),
+            kind: .link,
+            data: Data(),
+            createdAt: Date(),
+            url: url
+        )
+        linkAttachments.append(attachment)
+        return attachment
     }
 
     @MainActor
-    func addLinkAttachment(url: URL, to contentID: UUID) -> MemoryModel.Attachment? {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return nil }
-        var addedAttachment: MemoryModel.Attachment?
-        contentQueue[index].mutateLinks { linksContent in
-            let alreadyExists = linksContent.links.contains { $0.url?.absoluteString == url.absoluteString }
-            guard !alreadyExists else { return }
+    func removeLinkAttachment(id: UUID) {
+        linkAttachments.removeAll { $0.id == id }
+    }
 
-            let attachment = MemoryModel.Attachment(
-                id: UUID(),
-                kind: .link,
-                data: Data(),
-                createdAt: Date(),
-                url: url
-            )
-            linksContent.links.append(attachment)
-            addedAttachment = attachment
-        }
-        return addedAttachment
+    // MARK: - Audio Attachment Methods
+
+    @MainActor
+    func addAudioAttachment(data: Data, sourceURL: URL?) -> MemoryModel.Attachment {
+        let attachment = MemoryModel.Attachment(
+            id: UUID(),
+            kind: .audio,
+            data: data,
+            createdAt: Date(),
+            url: sourceURL
+        )
+        audioAttachments.append(attachment)
+        return attachment
     }
 
     @MainActor
-    func removePhotoAttachment(id: UUID, from contentID: UUID) {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
-        contentQueue[index].mutatePhotos { photos in
-            photos.attachments.removeAll { $0.id == id }
-        }
+    func removeAudioAttachment(id: UUID) {
+        audioAttachments.removeAll { $0.id == id }
+    }
+
+    // MARK: - File Attachment Methods
+
+    @MainActor
+    func addFileAttachment(data: Data, filename: String?, sourceURL: URL?) -> MemoryModel.Attachment {
+        let attachment = MemoryModel.Attachment(
+            id: UUID(),
+            kind: .file,
+            data: data,
+            createdAt: Date(),
+            url: sourceURL,
+            filename: filename
+        )
+        fileAttachments.append(attachment)
+        return attachment
     }
 
     @MainActor
-    func removeLinkAttachment(id: UUID, from contentID: UUID) {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
-        contentQueue[index].mutateLinks { linksContent in
-            linksContent.links.removeAll { $0.id == id }
-        }
+    func removeFileAttachment(id: UUID) {
+        fileAttachments.removeAll { $0.id == id }
     }
 
-    @MainActor
-    func addAudioAttachment(data: Data, sourceURL: URL?, to contentID: UUID) -> MemoryModel.Attachment? {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return nil }
-        var addedAttachment: MemoryModel.Attachment?
-        contentQueue[index].mutateAudio { audioContent in
-            let attachment = MemoryModel.Attachment(
-                id: UUID(),
-                kind: .audio,
-                data: data,
-                createdAt: Date(),
-                url: sourceURL
-            )
-            audioContent.clips.append(attachment)
-            addedAttachment = attachment
-        }
-        return addedAttachment
-    }
-
-    @MainActor
-    func removeAudioAttachment(id: UUID, from contentID: UUID) {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
-        contentQueue[index].mutateAudio { audioContent in
-            audioContent.clips.removeAll { $0.id == id }
-        }
-    }
-
-    @MainActor
-    func addFileAttachment(data: Data, filename: String?, sourceURL: URL?, to contentID: UUID) -> MemoryModel.Attachment? {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return nil }
-        var addedAttachment: MemoryModel.Attachment?
-        contentQueue[index].mutateFiles { filesContent in
-            let attachment = MemoryModel.Attachment(
-                id: UUID(),
-                kind: .file,
-                data: data,
-                createdAt: Date(),
-                url: sourceURL,
-                filename: filename
-            )
-            filesContent.files.append(attachment)
-            addedAttachment = attachment
-        }
-        return addedAttachment
-    }
-
-    @MainActor
-    func removeFileAttachment(id: UUID, from contentID: UUID) {
-        guard let index = contentQueue.firstIndex(where: { $0.id == contentID }) else { return }
-        contentQueue[index].mutateFiles { filesContent in
-            filesContent.files.removeAll { $0.id == id }
-        }
-    }
+    // MARK: - Sync Attachments
 
     @MainActor
     func syncAttachments(withReferencedIDs ids: Set<UUID>) {
         guard !ids.isEmpty else {
-            contentQueue = contentQueue.map { item in
-            switch item {
-            case .photos:
-                return .photos(MemoryEditorPhotosContent(id: item.id, attachments: []))
-            case .links:
-                return .links(MemoryEditorLinksContent(id: item.id, links: []))
-            case .audio:
-                return .audio(MemoryEditorAudioContent(id: item.id, clips: []))
-            case .files:
-                return .files(MemoryEditorFilesContent(id: item.id, files: []))
-            default:
-                return item
-            }
+            photoAttachments = []
+            linkAttachments = []
+            audioAttachments = []
+            fileAttachments = []
+            return
         }
-        return
-        }
-
-        contentQueue = contentQueue.map { item in
-            switch item {
-            case .photos(var content):
-                content.attachments.removeAll { !ids.contains($0.id) }
-                return .photos(content)
-            case .links(var content):
-                content.links.removeAll { !ids.contains($0.id) }
-                return .links(content)
-            case .audio(var content):
-                content.clips.removeAll { !ids.contains($0.id) }
-                return .audio(content)
-            case .files(var content):
-                content.files.removeAll { !ids.contains($0.id) }
-                return .files(content)
-            default:
-                return item
-            }
-        }
+        photoAttachments.removeAll { !ids.contains($0.id) }
+        linkAttachments.removeAll { !ids.contains($0.id) }
+        audioAttachments.removeAll { !ids.contains($0.id) }
+        fileAttachments.removeAll { !ids.contains($0.id) }
     }
 
     func updateSchedule(
@@ -455,8 +351,7 @@ final class MemoryEditorViewModel: ObservableObject {
             return false
         }
 
-        let contents = contentsRepresentation()
-        let attachments = allAttachments
+        let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let triggerModels = triggers.map { $0.toModel() }
 
         let draft = MemoryDraft(
@@ -468,8 +363,13 @@ final class MemoryEditorViewModel: ObservableObject {
             dueDate: nil,
             spaceID: selectedSpaceID,
             triggers: triggerModels,
-            contents: contents,
-            attachments: attachments,
+            note: trimmedNote.isEmpty ? nil : trimmedNote,
+            checkItems: checkItems,
+            photoAttachmentIDs: photoAttachments.map(\.id),
+            linkAttachmentIDs: linkAttachments.map(\.id),
+            audioAttachmentIDs: audioAttachments.map(\.id),
+            fileAttachmentIDs: fileAttachments.map(\.id),
+            attachments: allAttachments,
             autoCompleteOnChecklistCompletion: autoCompleteChecklist
         )
 
@@ -501,8 +401,7 @@ final class MemoryEditorViewModel: ObservableObject {
             return false
         }
 
-        let contents = contentsRepresentation()
-        let attachments = allAttachments
+        let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let triggerModels = triggers.map { $0.toModel() }
 
         let draft = MemoryDraft(
@@ -514,8 +413,13 @@ final class MemoryEditorViewModel: ObservableObject {
             dueDate: nil,
             spaceID: selectedSpaceID,
             triggers: triggerModels,
-            contents: contents,
-            attachments: attachments,
+            note: trimmedNote.isEmpty ? nil : trimmedNote,
+            checkItems: checkItems,
+            photoAttachmentIDs: photoAttachments.map(\.id),
+            linkAttachmentIDs: linkAttachments.map(\.id),
+            audioAttachmentIDs: audioAttachments.map(\.id),
+            fileAttachmentIDs: fileAttachments.map(\.id),
+            attachments: allAttachments,
             autoCompleteOnChecklistCompletion: autoCompleteChecklist
         )
 
@@ -544,7 +448,6 @@ private extension MemoryEditorViewModel {
             // When creating a new memory, prefer the provided defaultSpace (if any)
             // so that creations from a specific space/subspace are scoped correctly.
             selectedSpaceID = defaultSpace?.id
-            contentQueue = []
             applyTemplate(template)
         }
     }
@@ -559,10 +462,26 @@ private extension MemoryEditorViewModel {
         triggers = memory.triggers.map { draft(from: $0) }
         autoCompleteChecklist = memory.autoCompleteOnChecklistCompletion
 
-        let attachments = memory.attachments
-        let contents = memory.contents
+        // Load fixed content fields
+        note = memory.note ?? ""
+        checkItems = memory.checkItems.sorted(by: { $0.sortOrder < $1.sortOrder }).map { item in
+            CheckItemDraft(
+                id: item.id,
+                title: item.title,
+                detail: item.detail ?? "",
+                isCompleted: item.isCompleted,
+                sortOrder: item.sortOrder,
+                createdAt: item.createdAt,
+                completedAt: item.completedAt
+            )
+        }
 
-        rebuildContentQueue(from: contents, attachments: attachments)
+        // Load attachments by type
+        let attachmentLookup = Dictionary(uniqueKeysWithValues: memory.attachments.map { ($0.id, $0) })
+        photoAttachments = memory.photoAttachmentIDs.compactMap { attachmentLookup[$0] }
+        linkAttachments = memory.linkAttachmentIDs.compactMap { attachmentLookup[$0] }
+        audioAttachments = memory.audioAttachmentIDs.compactMap { attachmentLookup[$0] }
+        fileAttachments = memory.fileAttachmentIDs.compactMap { attachmentLookup[$0] }
     }
 
     func applyTemplate(_ template: MemoryEditorTemplate) {
@@ -570,9 +489,8 @@ private extension MemoryEditorViewModel {
         case .blank:
             break
         case .checklist:
-            if !contentQueue.contains(where: { $0.contentType == .checklist }) {
-                contentQueue.append(.checklist(MemoryEditorChecklistContent()))
-            }
+            // No need to add anything - checklist will be shown if checkItems exist or in editing mode
+            break
         case .quickReminder:
             let fireDate = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date()) ?? Date().addingTimeInterval(3600)
             let trigger = MemoryTriggerDraft(
@@ -584,12 +502,6 @@ private extension MemoryEditorViewModel {
                 isActive: true
             )
             triggers = [trigger]
-        }
-    }
-
-    func reindexChecklist(in content: inout MemoryEditorChecklistContent) {
-        for index in content.items.indices {
-            content.items[index].sortOrder = index
         }
     }
 
@@ -648,86 +560,4 @@ private extension MemoryEditorViewModel {
             triggers.append(draft)
         }
     }
-
-
-    func rebuildContentQueue(from contents: [MemoryContent],
-                             attachments: [MemoryModel.Attachment]) {
-        let attachmentLookup = Dictionary(uniqueKeysWithValues: attachments.map { ($0.id, $0) })
-        var queue: [MemoryEditorContentItem] = []
-        queue.reserveCapacity(contents.count)
-
-        for content in contents {
-            switch content {
-            case .richText(let text):
-                queue.append(.richText(MemoryEditorRichTextContent(id: UUID(), text: text)))
-            case .checklist(let items):
-                let drafts = items.sorted(by: { $0.sortOrder < $1.sortOrder }).map { item in
-                    CheckItemDraft(
-                        id: item.id,
-                        title: item.title,
-                        detail: item.detail ?? "",
-                        isCompleted: item.isCompleted,
-                        sortOrder: item.sortOrder,
-                        createdAt: item.createdAt,
-                        completedAt: item.completedAt
-                    )
-                }
-                queue.append(.checklist(MemoryEditorChecklistContent(id: UUID(), items: drafts)))
-            case .photos(let attachmentIDs):
-                let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
-                if let existingIndex = queue.firstIndex(where: { $0.contentType == .photos }) {
-                    queue[existingIndex].mutatePhotos { photos in
-                        let existingIDs = Set(photos.attachments.map(\.id))
-                        let newOnes = attachmentsForContent.filter { !existingIDs.contains($0.id) }
-                        photos.attachments.append(contentsOf: newOnes)
-                    }
-                } else {
-                    queue.append(.photos(MemoryEditorPhotosContent(id: UUID(), attachments: attachmentsForContent)))
-                }
-            case .links(let attachmentIDs):
-                let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
-                queue.append(.links(MemoryEditorLinksContent(id: UUID(), links: attachmentsForContent)))
-            case .audio(let attachmentIDs):
-                let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
-                queue.append(.audio(MemoryEditorAudioContent(id: UUID(), clips: attachmentsForContent)))
-            case .files(let attachmentIDs):
-                let attachmentsForContent = attachmentIDs.compactMap { attachmentLookup[$0] }
-                queue.append(.files(MemoryEditorFilesContent(id: UUID(), files: attachmentsForContent)))
-            }
-        }
-
-        contentQueue = queue
-    }
-
-    func contentsRepresentation() -> [MemoryContent] {
-        contentQueue.map { item in
-            switch item {
-            case .richText(let content):
-                return .richText(content.text)
-            case .checklist(let content):
-                let items = content.items.enumerated().map { index, draft in
-                    CheckItemModel(
-                        id: draft.id,
-                        title: draft.title,
-                        detail: draft.detail.isEmpty ? nil : draft.detail,
-                        isCompleted: draft.isCompleted,
-                        sortOrder: index,
-                        createdAt: draft.createdAt,
-                        updatedAt: draft.completedAt ?? draft.createdAt,
-                        completedAt: draft.completedAt
-                    )
-                }
-                return .checklist(items)
-            case .photos(let content):
-                return .photos(content.attachments.map(\.id))
-            case .links(let content):
-                return .links(content.links.map(\.id))
-            case .audio(let content):
-                return .audio(content.clips.map(\.id))
-            case .files(let content):
-                return .files(content.files.map(\.id))
-            }
-        }
-    }
-
 }

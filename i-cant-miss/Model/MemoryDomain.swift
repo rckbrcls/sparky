@@ -869,8 +869,31 @@ extension Array where Element == MemoryContent {
 // MARK: - Content Helpers
 
 struct MemoryDomain {
+    /// New content bundle with fixed fields (used for persistence)
     struct MemoryContentBundle: Codable {
-        let contents: [MemoryContent]
+        var note: String?
+        var checkItems: [CheckItemModel]?
+        var photoAttachmentIDs: [UUID]?
+        var linkAttachmentIDs: [UUID]?
+        var audioAttachmentIDs: [UUID]?
+        var fileAttachmentIDs: [UUID]?
+        // Legacy field for backwards compatibility during migration
+        var contents: [MemoryContent]?
+
+        init(note: String? = nil,
+             checkItems: [CheckItemModel]? = nil,
+             photoAttachmentIDs: [UUID]? = nil,
+             linkAttachmentIDs: [UUID]? = nil,
+             audioAttachmentIDs: [UUID]? = nil,
+             fileAttachmentIDs: [UUID]? = nil) {
+            self.note = note
+            self.checkItems = checkItems
+            self.photoAttachmentIDs = photoAttachmentIDs
+            self.linkAttachmentIDs = linkAttachmentIDs
+            self.audioAttachmentIDs = audioAttachmentIDs
+            self.fileAttachmentIDs = fileAttachmentIDs
+            self.contents = nil
+        }
     }
 }
 
@@ -934,7 +957,12 @@ struct MemoryModel: Identifiable, Hashable {
     var triggers: [MemoryTriggerModel]
     var checkItems: [CheckItemModel]
     var autoCompleteOnChecklistCompletion: Bool
-    var contents: [MemoryContent]
+    // Fixed content attributes (replacing dynamic contents array)
+    var note: String?
+    var photoAttachmentIDs: [UUID]
+    var linkAttachmentIDs: [UUID]
+    var audioAttachmentIDs: [UUID]
+    var fileAttachmentIDs: [UUID]
     var attachments: [Attachment]
 
     var hasChecklist: Bool {
@@ -1019,7 +1047,13 @@ struct MemoryDraft: Identifiable, Hashable {
     var dueDate: Date?
     var spaceID: UUID?
     var triggers: [MemoryTriggerModel]
-    var contents: [MemoryContent]
+    // Fixed content attributes (replacing dynamic contents array)
+    var note: String?
+    var checkItems: [CheckItemDraft]
+    var photoAttachmentIDs: [UUID]
+    var linkAttachmentIDs: [UUID]
+    var audioAttachmentIDs: [UUID]
+    var fileAttachmentIDs: [UUID]
     var attachments: [MemoryModel.Attachment]
     var autoCompleteOnChecklistCompletion: Bool
 
@@ -1031,7 +1065,12 @@ struct MemoryDraft: Identifiable, Hashable {
          dueDate: Date? = nil,
          spaceID: UUID? = nil,
          triggers: [MemoryTriggerModel] = [],
-         contents: [MemoryContent] = [],
+         note: String? = nil,
+         checkItems: [CheckItemDraft] = [],
+         photoAttachmentIDs: [UUID] = [],
+         linkAttachmentIDs: [UUID] = [],
+         audioAttachmentIDs: [UUID] = [],
+         fileAttachmentIDs: [UUID] = [],
          attachments: [MemoryModel.Attachment] = [],
          autoCompleteOnChecklistCompletion: Bool = false) {
         self.id = id
@@ -1042,7 +1081,12 @@ struct MemoryDraft: Identifiable, Hashable {
         self.dueDate = dueDate
         self.spaceID = spaceID
         self.triggers = triggers
-        self.contents = contents
+        self.note = note
+        self.checkItems = checkItems
+        self.photoAttachmentIDs = photoAttachmentIDs
+        self.linkAttachmentIDs = linkAttachmentIDs
+        self.audioAttachmentIDs = audioAttachmentIDs
+        self.fileAttachmentIDs = fileAttachmentIDs
         self.attachments = attachments
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
     }

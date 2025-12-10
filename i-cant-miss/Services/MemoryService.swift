@@ -483,9 +483,32 @@ private extension MemoryService {
         entity.updatedAt = Date()
 
         entity.triggersData = try jsonEncoder.encode(draft.triggers)
-        let bundle = MemoryDomain.MemoryContentBundle(contents: draft.contents)
+
+        // Convert CheckItemDrafts to CheckItemModels for persistence
+        let checkItemModels = draft.checkItems.enumerated().map { index, item in
+            CheckItemModel(
+                id: item.id,
+                title: item.title,
+                detail: item.detail.isEmpty ? nil : item.detail,
+                isCompleted: item.isCompleted,
+                sortOrder: index,
+                createdAt: item.createdAt,
+                updatedAt: item.completedAt ?? item.createdAt,
+                completedAt: item.completedAt
+            )
+        }
+
+        // Create the new content bundle with fixed fields
+        let bundle = MemoryDomain.MemoryContentBundle(
+            note: draft.note,
+            checkItems: checkItemModels.isEmpty ? nil : checkItemModels,
+            photoAttachmentIDs: draft.photoAttachmentIDs.isEmpty ? nil : draft.photoAttachmentIDs,
+            linkAttachmentIDs: draft.linkAttachmentIDs.isEmpty ? nil : draft.linkAttachmentIDs,
+            audioAttachmentIDs: draft.audioAttachmentIDs.isEmpty ? nil : draft.audioAttachmentIDs,
+            fileAttachmentIDs: draft.fileAttachmentIDs.isEmpty ? nil : draft.fileAttachmentIDs
+        )
         entity.contentsData = try jsonEncoder.encode(bundle)
-        entity.body = draft.contents.aggregatedBodyText()
+        entity.body = draft.note
 
         if let spaceID = draft.spaceID,
            spaceID != SpaceModel.allSpacesIdentifier,
@@ -548,26 +571,122 @@ private extension MemoryService {
             triggers: triggers,
             checkItems: decoded.checkItems,
             autoCompleteOnChecklistCompletion: entity.autoCompleteOnChecklistCompletion,
-            contents: decoded.contents,
+            note: decoded.note,
+            photoAttachmentIDs: decoded.photoAttachmentIDs,
+            linkAttachmentIDs: decoded.linkAttachmentIDs,
+            audioAttachmentIDs: decoded.audioAttachmentIDs,
+            fileAttachmentIDs: decoded.fileAttachmentIDs,
             attachments: decoded.attachments
         )
 
         return memory
     }
 
+    struct DecodedContents {
+        var note: String?
+        var checkItems: [CheckItemModel]
+        var photoAttachmentIDs: [UUID]
+        var linkAttachmentIDs: [UUID]
+        var audioAttachmentIDs: [UUID]
+        var fileAttachmentIDs: [UUID]
+        var attachments: [MemoryModel.Attachment]
+        var body: String?
+    }
+
     func decodeContents(for entity: Memory,
-                        attachments: [MemoryModel.Attachment]) -> (contents: [MemoryContent], attachments: [MemoryModel.Attachment], checkItems: [CheckItemModel], body: String?) {
+                        attachments: [MemoryModel.Attachment]) -> DecodedContents {
         guard let data = entity.contentsData,
               let bundle = try? jsonDecoder.decode(MemoryDomain.MemoryContentBundle.self, from: data) else {
-            return ([], attachments, [], nil)
+            return DecodedContents(
+                note: nil,
+                checkItems: [],
+                photoAttachmentIDs: [],
+                linkAttachmentIDs: [],
+                audioAttachmentIDs: [],
+                fileAttachmentIDs: [],
+                attachments: attachments,
+                body: nil
+            )
         }
 
-        let contents = bundle.contents
+        // Check if this is new format (has fixed fields) or legacy format (has contents array)
+        if bundle.contents != nil {
+            // Legacy migration: convert from contents array to fixed fields
+            return migrateLegacyContents(bundle: bundle, attachments: attachments)
+        }
+
+        // New format: use fixed fields directly
+        let allReferencedIDs = Set(
+            (bundle.photoAttachmentIDs ?? []) +
+            (bundle.linkAttachmentIDs ?? []) +
+            (bundle.audioAttachmentIDs ?? []) +
+            (bundle.fileAttachmentIDs ?? [])
+        )
+        let filteredAttachments = allReferencedIDs.isEmpty ? attachments : attachments.filter { allReferencedIDs.contains($0.id) }
+
+        return DecodedContents(
+            note: bundle.note,
+            checkItems: bundle.checkItems ?? [],
+            photoAttachmentIDs: bundle.photoAttachmentIDs ?? [],
+            linkAttachmentIDs: bundle.linkAttachmentIDs ?? [],
+            audioAttachmentIDs: bundle.audioAttachmentIDs ?? [],
+            fileAttachmentIDs: bundle.fileAttachmentIDs ?? [],
+            attachments: filteredAttachments,
+            body: bundle.note
+        )
+    }
+
+    /// Migrates legacy contents array format to new fixed fields format
+    func migrateLegacyContents(bundle: MemoryDomain.MemoryContentBundle,
+                               attachments: [MemoryModel.Attachment]) -> DecodedContents {
+        guard let contents = bundle.contents else {
+            return DecodedContents(
+                note: nil, checkItems: [], photoAttachmentIDs: [],
+                linkAttachmentIDs: [], audioAttachmentIDs: [], fileAttachmentIDs: [],
+                attachments: attachments, body: nil
+            )
+        }
+
+        // Extract note from richText contents (combine multiple into one)
+        let note = contents.aggregatedBodyText()
+
+        // Extract checklist items
+        let checkItems = contents.flattenedChecklistItems()
+
+        // Extract attachment IDs by type
+        var photoIDs: [UUID] = []
+        var linkIDs: [UUID] = []
+        var audioIDs: [UUID] = []
+        var fileIDs: [UUID] = []
+
+        for content in contents {
+            switch content {
+            case .photos(let ids):
+                photoIDs.append(contentsOf: ids)
+            case .links(let ids):
+                linkIDs.append(contentsOf: ids)
+            case .audio(let ids):
+                audioIDs.append(contentsOf: ids)
+            case .files(let ids):
+                fileIDs.append(contentsOf: ids)
+            default:
+                break
+            }
+        }
+
         let referencedIDs = Set(contents.referencedAttachmentIDs())
         let filteredAttachments = referencedIDs.isEmpty ? attachments : attachments.filter { referencedIDs.contains($0.id) }
-        let body = contents.aggregatedBodyText()
-        let checkItems = contents.flattenedChecklistItems()
-        return (contents, filteredAttachments, checkItems, body)
+
+        return DecodedContents(
+            note: note,
+            checkItems: checkItems,
+            photoAttachmentIDs: photoIDs,
+            linkAttachmentIDs: linkIDs,
+            audioAttachmentIDs: audioIDs,
+            fileAttachmentIDs: fileIDs,
+            attachments: filteredAttachments,
+            body: note
+        )
     }
 
     func decodeTriggers(from data: Data?) -> [MemoryTriggerModel] {
