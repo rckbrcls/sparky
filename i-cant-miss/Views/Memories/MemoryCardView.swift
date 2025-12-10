@@ -167,31 +167,45 @@ struct MemoryCardView: View {
             if sequentialSummary != nil || scheduledDateText != nil || checklistProgressText != nil {
                 HStack(spacing: 12) {
                     if let sequentialSummary {
-                        Label(sequentialSummary, systemImage: "arrowshape.turn.up.right.circle")
-                            .font(.caption)
-                            .lineLimit(1)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(Color.gray.opacity(0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrowshape.turn.up.right.circle")
+                            Text(sequentialSummary)
+                        }
+                        .font(.caption)
+                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.gray.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
 
                     if let scheduledDateText {
-                        Label(scheduledDateText, systemImage: "calendar")
-                            .font(.caption)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(Color.gray.opacity(0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar")
+                            Text(scheduledDateText)
+                        }
+                        .font(.caption)
+                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.gray.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
 
                     if let checklistProgressText {
-                        Label(checklistProgressText, systemImage: "checklist")
-                            .font(.caption)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(Color.gray.opacity(0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                        HStack(spacing: 4) {
+                            Image(systemName: "checklist")
+                            Text(checklistProgressText)
+                        }
+                        .font(.caption)
+                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.gray.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
                 }
             }
