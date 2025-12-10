@@ -118,13 +118,14 @@ struct MemoryEditorView: View {
     @State private var navigationPath = NavigationPath()
     @Namespace private var toolbarGlassNamespace
 
-
     private let mode: Mode
     private let environment: AppEnvironment
+    private let initialTitle: String
 
-    init(environment: AppEnvironment, mode: Mode) {
+    init(environment: AppEnvironment, mode: Mode, initialTitle: String = "") {
         self.mode = mode
         self.environment = environment
+        self.initialTitle = initialTitle
         switch mode {
         case let .create(space, template):
             _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
@@ -132,7 +133,8 @@ struct MemoryEditorView: View {
                 attachmentStore: environment.attachmentStore,
                 memory: nil,
                 defaultSpace: space,
-                template: template
+                template: template,
+                initialTitle: initialTitle
             ))
             _isEditingEnabled = State(initialValue: true)
         case let .edit(memory):

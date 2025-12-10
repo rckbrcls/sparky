@@ -48,6 +48,7 @@ struct ContentView: View {
     @State private var showingOnboarding = false
     @State private var isMultiSelectionActive = false
     @State private var currentSpaceContext: SpaceModel?
+    @State private var quickMemoryRequest: QuickMemoryRequest?
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -124,7 +125,8 @@ struct ContentView: View {
             case let .create(space, template):
                 MemoryEditorView(
                     environment: environment,
-                    mode: .create(space: space, template: template)
+                    mode: .create(space: space, template: template),
+                    initialTitle: route.initialTitle
                 )
             case let .edit(memory):
                 MemoryEditorView(
@@ -144,6 +146,20 @@ struct ContentView: View {
             SpaceComposerView(
                 environment: environment,
                 spaceToEdit: request.spaceToEdit
+            )
+        }
+        .sheet(item: $quickMemoryRequest, onDismiss: {
+            quickMemoryRequest = nil
+        }) { request in
+            QuickMemorySheet(
+                environment: environment,
+                space: request.space,
+                onExpandToEditor: { space, title in
+                    editorRoute = MemoryEditorRoute(
+                        mode: .create(space: space, template: .blank),
+                        initialTitle: title
+                    )
+                }
             )
         }
         .fullScreenCover(isPresented: $showingOnboarding) {
@@ -169,7 +185,7 @@ struct ContentView: View {
     }
 
     private func prepareMemoryCreation(for space: SpaceModel?) {
-        editorRoute = MemoryEditorRoute(mode: .create(space: space, template: .blank))
+        quickMemoryRequest = QuickMemoryRequest(space: space)
     }
 
     private func handleMemorySelection(_ memory: MemoryModel) {
@@ -250,11 +266,17 @@ private struct MemoryEditorRoute: Identifiable {
 
     let id = UUID()
     let mode: Mode
+    var initialTitle: String = ""
 }
 
 private struct SpaceComposerRequest: Identifiable {
     let id = UUID()
     let spaceToEdit: SpaceModel?
+}
+
+private struct QuickMemoryRequest: Identifiable {
+    let id = UUID()
+    let space: SpaceModel?
 }
 
 extension View{

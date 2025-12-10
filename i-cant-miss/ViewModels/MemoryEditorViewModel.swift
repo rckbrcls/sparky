@@ -44,7 +44,8 @@ final class MemoryEditorViewModel: ObservableObject {
          attachmentStore: MemoryAttachmentStore,
          memory: MemoryModel?,
          defaultSpace: SpaceModel?,
-         template: MemoryEditorTemplate) {
+         template: MemoryEditorTemplate,
+         initialTitle: String = "") {
         self.environment = environment
         self.attachmentStore = attachmentStore
         self.existingMemory = memory
@@ -52,6 +53,7 @@ final class MemoryEditorViewModel: ObservableObject {
         self.defaultSpace = defaultSpace
         self.autoCompleteChecklist = memory?.autoCompleteOnChecklistCompletion ?? false
         self.persistedMemoryID = memory?.id
+        self.title = initialTitle
         configureInitialState()
     }
 
