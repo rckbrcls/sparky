@@ -1,0 +1,145 @@
+//
+//  MemoryModel.swift
+//  i-cant-miss
+//
+
+import Foundation
+
+struct MemoryModel: Identifiable, Hashable {
+    struct AttachmentKind: RawRepresentable, Hashable, Codable {
+        let rawValue: String
+
+        init(rawValue: String) {
+            self.rawValue = rawValue
+        }
+
+        static let photo = AttachmentKind(rawValue: "photo")
+        static let link = AttachmentKind(rawValue: "link")
+        static let audio = AttachmentKind(rawValue: "audio")
+        static let file = AttachmentKind(rawValue: "file")
+    }
+
+    struct Attachment: Identifiable, Hashable {
+        let id: UUID
+        var kind: AttachmentKind
+        var data: Data
+        var createdAt: Date
+        var url: URL?
+        var filename: String?
+
+        init(id: UUID = UUID(),
+             kind: AttachmentKind,
+             data: Data,
+             createdAt: Date,
+             url: URL? = nil,
+             filename: String? = nil) {
+            self.id = id
+            self.kind = kind
+            self.data = data
+            self.createdAt = createdAt
+            self.url = url
+            self.filename = filename
+        }
+
+        static func == (lhs: Attachment, rhs: Attachment) -> Bool {
+            lhs.id == rhs.id
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+        }
+    }
+
+    let id: UUID
+    var title: String
+    var body: String?
+    var createdAt: Date
+    var updatedAt: Date
+    var status: MemoryStatus
+    var isPinned: Bool
+    var priority: MemoryPriority?
+    var dueDate: Date?
+    var space: SpaceModel?
+    var triggers: [MemoryTriggerModel]
+    var checkItems: [CheckItemModel]
+    var autoCompleteOnChecklistCompletion: Bool
+    // Fixed content attributes (replacing dynamic contents array)
+    var note: String?
+    var photoAttachmentIDs: [UUID]
+    var linkAttachmentIDs: [UUID]
+    var audioAttachmentIDs: [UUID]
+    var fileAttachmentIDs: [UUID]
+    var attachments: [Attachment]
+
+    var hasChecklist: Bool {
+        !checkItems.isEmpty
+    }
+
+    var hasTriggers: Bool {
+        triggers.contains { $0.isActive }
+    }
+
+    var hasRecurringTriggers: Bool {
+        triggers.contains { $0.recurrenceRule != nil }
+    }
+
+    var hasAttachments: Bool {
+        !attachments.isEmpty
+    }
+
+    var isCompleted: Bool {
+        status == .completed
+    }
+
+    var isInbox: Bool {
+        status == .active && !hasTriggers && space == nil
+    }
+
+    nonisolated func nextFireDate(referenceDate: Date = Date()) -> Date? {
+        let activeTriggers = triggers.filter { $0.isActive }
+        guard !activeTriggers.isEmpty else { return nil }
+
+        var nextDates: [Date] = []
+        for trigger in activeTriggers {
+            if let date = trigger.nextFireDate(after: referenceDate) {
+                nextDates.append(date)
+            }
+        }
+
+        return nextDates.min()
+    }
+
+    /// Returns all occurrence dates for this memory within the specified date range
+    /// This is essential for calendar views that need to show all occurrences of recurring events
+    nonisolated func dates(from startDate: Date, to endDate: Date) -> [Date] {
+        let activeTriggers = triggers.filter { $0.isActive }
+        guard !activeTriggers.isEmpty else { return [] }
+
+        var allDates: Set<Date> = []
+
+        for trigger in activeTriggers {
+            guard trigger.type == .scheduled else { continue }
+            let triggerDates = trigger.dates(from: startDate, to: endDate)
+            allDates.formUnion(triggerDates)
+        }
+
+        return Array(allDates).sorted()
+    }
+
+    /// Returns all occurrence dates for this memory within the specified date range (Range<Date> version)
+    nonisolated func dates(within range: Range<Date>) -> [Date] {
+        return dates(from: range.lowerBound, to: range.upperBound)
+    }
+
+    func shouldAutoCompleteChecklist(autoCompleteEnabled: Bool) -> Bool {
+        autoCompleteOnChecklistCompletion || autoCompleteEnabled
+    }
+
+    static func == (lhs: MemoryModel, rhs: MemoryModel) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
