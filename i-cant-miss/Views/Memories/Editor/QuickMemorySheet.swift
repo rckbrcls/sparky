@@ -130,6 +130,7 @@ struct QuickMemorySheet: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("More options")
+                .contentShape(Rectangle())
             }
             .padding(20)
 
