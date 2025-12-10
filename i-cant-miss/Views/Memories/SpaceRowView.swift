@@ -109,7 +109,7 @@ struct SpaceRowView: View {
         if let hex = space.colorHex, let color = Color(hex: hex) {
             return color
         }
-        return .accentColor
+        return .gray
     }
 
     private var canEditSpace: Bool {

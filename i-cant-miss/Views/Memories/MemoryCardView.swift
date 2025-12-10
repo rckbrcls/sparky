@@ -115,35 +115,23 @@ struct MemoryCardView: View {
 
     @ViewBuilder
     private func memoryContent(memory: MemoryModel) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            let priorityToDisplay = memory.priority == .noPriority ? nil : memory.priority
-            let hasMetaIndicators = priorityToDisplay != nil || statusBadge != nil
-            let hasSpaceBadge = memory.space != nil
+        HStack(alignment: .center, spacing: 12) {
+            let spaceIcon = memory.space?.iconName ?? "square.grid.2x2"
+            let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
-            if hasSpaceBadge || hasMetaIndicators {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    if let space = memory.space {
-                        HStack(spacing: 8) {
-                            if let icon = space.iconName {
-                                Image(systemName: icon)
-                                    .font(.caption)
-                                    .foregroundStyle(spaceAccent)
-                            }
-                            Text(space.name)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(spaceAccent)
-                        }
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .glassEffect(in: .rect(cornerRadius: 8.0))
-                        .glassEffect(.regular.tint(spaceAccent.opacity(0.15)))
-                    }
+            Image(systemName: spaceIcon)
+                .foregroundStyle(spaceColor)
+                .frame(width: 36, height: 36)
+                .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
 
-                    if hasSpaceBadge && hasMetaIndicators {
+            VStack(alignment: .leading, spacing: 10) {
+                let priorityToDisplay = memory.priority == .noPriority ? nil : memory.priority
+                let hasMetaIndicators = priorityToDisplay != nil || statusBadge != nil
+
+                if hasMetaIndicators {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Spacer()
-                    }
 
-                    if hasMetaIndicators {
                         HStack(spacing: 12) {
                             if let priority = priorityToDisplay {
                                 Image(systemName: priority.iconName)
@@ -165,7 +153,6 @@ struct MemoryCardView: View {
                         }
                     }
                 }
-            }
 
             VStack (alignment: .leading, spacing: 6){
                 Text(title)
@@ -185,8 +172,6 @@ struct MemoryCardView: View {
             }
 
             if sequentialSummary != nil || nextTriggerText != nil || dueDateText != nil || checklistProgressText != nil {
-                Divider()
-
                 HStack(spacing: 12) {
                     if let sequentialSummary {
                         Label(sequentialSummary, systemImage: "arrowshape.turn.up.right.circle")
@@ -223,9 +208,10 @@ struct MemoryCardView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .glassEffect(in: .rect(cornerRadius: 24))
+        .background(RoundedRectangle(cornerRadius: 24).fill(Color(.secondarySystemBackground)))
         .contentShape(Rectangle())
     }
 
