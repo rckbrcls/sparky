@@ -144,25 +144,14 @@ struct QuickMemorySheet: View {
 
     private var spaceIconMenu: some View {
         Menu {
-            Button {
-                selectedSpaceID = nil
-            } label: {
-                if selectedSpaceID == nil {
-                    Label("No Space", systemImage: "checkmark")
-                } else {
-                    Text("No Space")
-                }
-            }
+            Picker("Space", selection: $selectedSpaceID) {
+                Label("No Space", systemImage: "square.grid.2x2")
+                    .tag(nil as UUID?)
 
-            ForEach(availableSpaces) { space in
-                Button {
-                    selectedSpaceID = space.id
-                } label: {
-                    if selectedSpaceID == space.id {
-                        Label(space.name, systemImage: "checkmark")
-                    } else {
-                        Text(space.name)
-                    }
+                ForEach(availableSpaces) { space in
+                    // Use the space's icon
+                    Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
+                        .tag(Optional(space.id))
                 }
             }
         } label: {

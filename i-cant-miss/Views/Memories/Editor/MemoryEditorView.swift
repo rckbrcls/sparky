@@ -720,25 +720,13 @@ struct MemoryEditorView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .center, spacing: 12) {
                     Menu {
-                        Button {
-                            viewModel.selectedSpaceID = nil
-                        } label: {
-                            if viewModel.selectedSpaceID == nil {
-                                Label("No Space", systemImage: "checkmark")
-                            } else {
-                                Text("No Space")
-                            }
-                        }
+                        Picker("Space", selection: $viewModel.selectedSpaceID) {
+                            Label("No Space", systemImage: "square.grid.2x2")
+                                .tag(nil as UUID?)
 
-                        ForEach(spacesForPicker) { space in
-                            Button {
-                                viewModel.selectedSpaceID = space.id
-                            } label: {
-                                if viewModel.selectedSpaceID == space.id {
-                                    Label(space.name, systemImage: "checkmark")
-                                } else {
-                                    Text(space.name)
-                                }
+                            ForEach(spacesForPicker) { space in
+                                Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
+                                    .tag(Optional(space.id))
                             }
                         }
                     } label: {
