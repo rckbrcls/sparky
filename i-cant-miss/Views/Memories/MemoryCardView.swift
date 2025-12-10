@@ -149,7 +149,7 @@ struct MemoryCardView: View {
 
             VStack (alignment: .leading, spacing: 6){
                 Text(title)
-                    .font(.title3)
+                    .font(.headline)
                     .fontWeight(.bold)
                     .foregroundStyle(.primary)
 
