@@ -268,7 +268,6 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showDateAndTimeSheet, content: dateAndTimeSheet)
             .sheet(isPresented: $showTriggerPickerSheet) {
                 TriggerPickerSheet(viewModel: viewModel)
-                    .presentationDetents([.large])
             }
             .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
