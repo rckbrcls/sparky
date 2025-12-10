@@ -82,7 +82,6 @@ struct MemoryEditorView: View {
     enum Mode {
         case create(space: SpaceModel?, template: MemoryEditorTemplate)
         case edit(memory: MemoryModel)
-        case view(memory: MemoryModel)
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -146,15 +145,6 @@ struct MemoryEditorView: View {
                 template: .blank
             ))
             _isEditingEnabled = State(initialValue: true)
-        case let .view(memory):
-            _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
-                environment: environment,
-                attachmentStore: environment.attachmentStore,
-                memory: memory,
-                defaultSpace: memory.space,
-                template: .blank
-            ))
-            _isEditingEnabled = State(initialValue: false)
         }
     }
 
@@ -321,10 +311,6 @@ struct MemoryEditorView: View {
         ZStack {
             baseBackground
                 .ignoresSafeArea()
-            readOnlyGradient
-                .opacity(isReadOnly ? 1 : 0)
-                .animation(.easeInOut(duration: 0.35), value: isReadOnly)
-                .allowsHitTesting(false)
 
             editorContent
         }
@@ -338,8 +324,8 @@ struct MemoryEditorView: View {
         switch mode {
         case .create:
             return "New Memory"
-        case .edit, .view:
-            return isEditingEnabled ? "Edit Memory" : "Memory"
+        case .edit:
+            return "Edit Memory"
         }
     }
 
@@ -347,7 +333,7 @@ struct MemoryEditorView: View {
         switch mode {
         case .create:
             return "Create"
-        case .edit, .view:
+        case .edit:
             return "Save"
         }
     }
@@ -402,33 +388,23 @@ struct MemoryEditorView: View {
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                if isEditingEnabled {
-                    Button(role: .confirm) {
-                        commitChecklistDrafts()
-                        Task {
-                            let success = await viewModel.save()
-                            if success {
-                                await MainActor.run {
-                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                    isTitleFocused = false
-                                    focusedDraftID = nil
-                                    withAnimation(.easeInOut(duration: 0.35)) {
-                                        isEditingEnabled = false
-                                    }
-                                }
+                Button(role: .confirm) {
+                    commitChecklistDrafts()
+                    Task {
+                        let success = await viewModel.save()
+                        if success {
+                            await MainActor.run {
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                isTitleFocused = false
+                                focusedDraftID = nil
+                                dismiss()
                             }
                         }
-                    } label: {
-                        Label(saveButtonTitle, systemImage: "checkmark")
                     }
-                    .disabled(isSaveDisabled)
-                } else if canEnableEditing {
-                    Button {
-                        enableEditing()
-                    } label: {
-                        Text("Edit")
-                    }
+                } label: {
+                    Label(saveButtonTitle, systemImage: "checkmark")
                 }
+                .disabled(isSaveDisabled)
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -471,17 +447,13 @@ struct MemoryEditorView: View {
         .safeAreaInset(edge: .bottom) {
             GlassEffectContainer(spacing: 10) {
                 HStack {
-                    if isEditingEnabled {
-                        HStack {
-                            addPhotoMenuButton
-                            Spacer()
-                            addLinkButton
-                            Spacer()
-                            addFilesButton
-                            Spacer()
-                            addAudioButton
-                        }
-                    }
+                    addPhotoMenuButton
+                    Spacer()
+                    addLinkButton
+                    Spacer()
+                    addFilesButton
+                    Spacer()
+                    addAudioButton
                 }
             }
             .padding(.horizontal, 24)
@@ -504,19 +476,11 @@ struct MemoryEditorView: View {
 
     private var titleSectionRow: some View {
         VStack(alignment: .leading, spacing: 16.0) {
-            if isEditingEnabled {
-                triggerButtonsBar(onAddTrigger: { showTriggerPickerSheet = true })
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .move(edge: .top).combined(with: .opacity)
-                    ))
-            } else if !viewModel.triggers.isEmpty {
-                triggerButtonsBar(onAddTrigger: nil)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .move(edge: .top).combined(with: .opacity)
-                    ))
-            }
+            triggerButtonsBar(onAddTrigger: { showTriggerPickerSheet = true })
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
             titleSection
                 .padding(.horizontal, 20)
         }
@@ -753,72 +717,60 @@ struct MemoryEditorView: View {
 
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if isEditingEnabled {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .center, spacing: 12) {
-                        Menu {
-                            Button {
-                                viewModel.selectedSpaceID = nil
-                            } label: {
-                                if viewModel.selectedSpaceID == nil {
-                                    Label("No Space", systemImage: "checkmark")
-                                } else {
-                                    Text("No Space")
-                                }
-                            }
-
-                            ForEach(spacesForPicker) { space in
-                                Button {
-                                    viewModel.selectedSpaceID = space.id
-                                } label: {
-                                    if viewModel.selectedSpaceID == space.id {
-                                        Label(space.name, systemImage: "checkmark")
-                                    } else {
-                                        Text(space.name)
-                                    }
-                                }
-                            }
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 12) {
+                    Menu {
+                        Button {
+                            viewModel.selectedSpaceID = nil
                         } label: {
-                            Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
-                                .foregroundStyle(selectedSpaceColor)
-                                .frame(width: 36, height: 36)
-                                .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
+                            if viewModel.selectedSpaceID == nil {
+                                Label("No Space", systemImage: "checkmark")
+                            } else {
+                                Text("No Space")
+                            }
                         }
 
-                        TextField("Memory", text: $viewModel.title, axis: .vertical)
-                            .font(.custom("Vollkorn-Regular", size: 24))
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.leading)
-                            .submitLabel(.done)
-                            .focused($isTitleFocused)
-                            .onSubmit {
-                                isTitleFocused = false
-                            }
-                            .onChange(of: viewModel.title) { _, newValue in
-                                guard newValue.contains(where: { $0.isNewline }) else { return }
-                                let sanitized = newValue
-                                    .split(whereSeparator: \.isNewline)
-                                    .joined(separator: " ")
-                                if sanitized != newValue {
-                                    viewModel.title = sanitized
-                                }
-                                DispatchQueue.main.async {
-                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                    isTitleFocused = false
+                        ForEach(spacesForPicker) { space in
+                            Button {
+                                viewModel.selectedSpaceID = space.id
+                            } label: {
+                                if viewModel.selectedSpaceID == space.id {
+                                    Label(space.name, systemImage: "checkmark")
+                                } else {
+                                    Text(space.name)
                                 }
                             }
-
+                        }
+                    } label: {
+                        Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
+                            .foregroundStyle(selectedSpaceColor)
+                            .frame(width: 36, height: 36)
+                            .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
                     }
 
-
+                    TextField("Memory", text: $viewModel.title, axis: .vertical)
+                        .font(.custom("Vollkorn-Regular", size: 24))
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.leading)
+                        .submitLabel(.done)
+                        .focused($isTitleFocused)
+                        .onSubmit {
+                            isTitleFocused = false
+                        }
+                        .onChange(of: viewModel.title) { _, newValue in
+                            guard newValue.contains(where: { $0.isNewline }) else { return }
+                            let sanitized = newValue
+                                .split(whereSeparator: \.isNewline)
+                                .joined(separator: " ")
+                            if sanitized != newValue {
+                                viewModel.title = sanitized
+                            }
+                            DispatchQueue.main.async {
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                isTitleFocused = false
+                            }
+                        }
                 }
-            } else {
-                Text(displayTitle)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.leading)
-                    .foregroundStyle(isTitlePlaceholder ? Color.secondary : Color.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding()
@@ -1138,37 +1090,7 @@ struct MemoryEditorView: View {
         Color(.systemBackground)
     }
 
-    private var readOnlyGradient: some View {
-        let accent = currentSpaceAccent
-        return LinearGradient(
-            colors: [
-                accent.opacity(0.45),
-                accent.opacity(0.2),
-                Color.clear
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.08),
-                    Color.clear
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .ignoresSafeArea()
-    }
 
-    private var currentSpaceAccent: Color {
-        if let hex = viewModel.selectedSpace?.colorHex,
-           let color = Color(hex: hex) {
-            return color
-        }
-        return .accentColor
-    }
 
     private var shouldShowRichTextCard: Bool {
         !viewModel.note.isEmpty || isEditingEnabled
@@ -1194,15 +1116,7 @@ struct MemoryEditorView: View {
         !viewModel.audioAttachments.isEmpty || isAudioCardVisible
     }
 
-    private var canEnableEditing: Bool {
-        !isEditingEnabled && !viewModel.isSaving
-    }
 
-    private func enableEditing() {
-        withAnimation(.easeInOut(duration: 0.35)) {
-            isEditingEnabled = true
-        }
-    }
 
     private var cardBounceAnimation: Animation {
         .interpolatingSpring(stiffness: 240, damping: 18, initialVelocity: 0.35)
@@ -1217,19 +1131,7 @@ struct MemoryEditorView: View {
         )
     }
 
-    private var isReadOnly: Bool {
-        !isEditingEnabled
-    }
 
-    private var displayTitle: String {
-        let trimmed = viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "Untitled Memory" }
-        return trimmed
-    }
-
-    private var isTitlePlaceholder: Bool {
-        viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
 
 
 

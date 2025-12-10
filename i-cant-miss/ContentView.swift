@@ -131,11 +131,6 @@ struct ContentView: View {
                     environment: environment,
                     mode: .edit(memory: memory)
                 )
-            case let .view(memory):
-                MemoryEditorView(
-                    environment: environment,
-                    mode: .view(memory: memory)
-                )
             }
         }
         .sheet(item: $spaceComposerRequest, onDismiss: {
@@ -210,7 +205,7 @@ struct ContentView: View {
     }
 
     private func handleMemorySelection(_ memory: MemoryModel) {
-        editorRoute = MemoryEditorRoute(mode: .view(memory: memory))
+        editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 
     private func handleMemoryEdit(_ memory: MemoryModel) {
@@ -282,7 +277,6 @@ private struct MemoryEditorRoute: Identifiable {
     enum Mode {
         case create(space: SpaceModel?, template: MemoryEditorTemplate)
         case edit(memory: MemoryModel)
-        case view(memory: MemoryModel)
     }
 
     let id = UUID()
