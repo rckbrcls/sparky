@@ -225,11 +225,13 @@ struct SpaceDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
-                    TextField("Search memories", text: $searchText)
+                    TextField("Search memories...", text: $searchText)
                         .textFieldStyle(.plain)
                         .focused($isSearchFieldFocused)
                         .submitLabel(.search)
 
+                    Spacer()
+                    
                     if !searchText.isEmpty {
                         Button {
                             searchText = ""
