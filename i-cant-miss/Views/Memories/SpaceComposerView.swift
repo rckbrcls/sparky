@@ -114,23 +114,7 @@ struct SpaceComposerView: View {
                 )
                 .frame(height: 30)
 
-                if isSaving {
-                    ProgressView()
-                        .frame(width: 36, height: 36)
-                } else {
-                    Button {
-                        saveSpace()
-                    } label: {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(canSave ? .primary : .secondary)
-                            .frame(width: 36, height: 36)
-                            .glassEffect(.regular)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!canSave)
-                    .accessibilityLabel(spaceToEdit == nil ? "Create" : "Save")
-                }
+
             }
             .padding(20)
 
