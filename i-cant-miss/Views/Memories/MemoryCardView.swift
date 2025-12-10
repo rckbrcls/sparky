@@ -28,12 +28,7 @@ struct MemoryCardView: View {
         return formatter
     }()
 
-    private static let dueDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
+
 
     private var title: String {
         guard let memory = memory else { return "Untitled" }
@@ -48,17 +43,15 @@ struct MemoryCardView: View {
         return body
     }
 
-    private var nextTriggerText: String? {
+    private var scheduledDateText: String? {
         guard let memory = memory,
-              let fireDate = memory.nextFireDate() else { return nil }
-        let now = Date()
-        return Self.relativeFormatter.localizedString(for: fireDate, relativeTo: now)
-    }
+              let trigger = memory.triggers.first(where: { $0.type == .scheduled }),
+              let fireDate = trigger.fireDate else { return nil }
 
-    private var dueDateText: String? {
-        guard let memory = memory,
-              let dueDate = memory.dueDate else { return nil }
-        return Self.dueDateFormatter.string(from: dueDate)
+        if trigger.weekdayMask != 0 {
+            return fireDate.formatted(date: .omitted, time: .shortened)
+        }
+        return fireDate.formatted(date: .abbreviated, time: .shortened)
     }
 
     private var checklistProgressText: String? {
@@ -171,7 +164,7 @@ struct MemoryCardView: View {
 
             }
 
-            if sequentialSummary != nil || nextTriggerText != nil || dueDateText != nil || checklistProgressText != nil {
+            if sequentialSummary != nil || scheduledDateText != nil || checklistProgressText != nil {
                 HStack(spacing: 12) {
                     if let sequentialSummary {
                         Label(sequentialSummary, systemImage: "arrowshape.turn.up.right.circle")
@@ -179,23 +172,17 @@ struct MemoryCardView: View {
                             .lineLimit(1)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .glassEffect()
+                            .background(Color.gray.opacity(0.2))
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
 
-                    if let nextTriggerText {
-                        Label(nextTriggerText, systemImage: "alarm")
+                    if let scheduledDateText {
+                        Label(scheduledDateText, systemImage: "calendar")
                             .font(.caption)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .glassEffect()
-                    }
-
-                    if let dueDateText {
-                        Label(dueDateText, systemImage: "calendar")
-                            .font(.caption)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .glassEffect()
+                            .background(Color.gray.opacity(0.2))
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
 
                     if let checklistProgressText {
@@ -203,7 +190,8 @@ struct MemoryCardView: View {
                             .font(.caption)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .glassEffect()
+                            .background(Color.gray.opacity(0.2))
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
                 }
             }

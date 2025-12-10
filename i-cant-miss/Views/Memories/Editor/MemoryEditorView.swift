@@ -523,11 +523,6 @@ struct MemoryEditorView: View {
                     .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
 
                     Section("Details") {
-                        SpacePicker(selection: Binding(
-                            get: { viewModel.selectedSpaceID },
-                            set: { viewModel.selectedSpaceID = $0 }
-                        ), spaces: spacesForPicker)
-
                         Picker(selection: $viewModel.status) {
                             ForEach(MemoryStatus.allCases) { status in
                                 Text(status.rawValue.capitalized).tag(status)
@@ -661,6 +656,18 @@ struct MemoryEditorView: View {
             if isEditingEnabled {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .center, spacing: 12) {
+                        Menu {
+                            SpacePicker(selection: Binding(
+                                get: { viewModel.selectedSpaceID },
+                                set: { viewModel.selectedSpaceID = $0 }
+                            ), spaces: spacesForPicker)
+                        } label: {
+                            Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
+                                .foregroundStyle(selectedSpaceColor)
+                                .frame(width: 36, height: 36)
+                                .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
+                        }
+
                         TextField("Memory", text: $viewModel.title, axis: .vertical)
                             .font(.custom("Vollkorn-Regular", size: 24))
                             .fontWeight(.bold)
@@ -1418,6 +1425,14 @@ struct MemoryEditorView: View {
 
     private var spacesForPicker: [SpaceModel] {
         viewModel.availableSpaces
+    }
+
+    private var selectedSpaceColor: Color {
+        if let hex = viewModel.selectedSpace?.colorHex,
+           let color = Color(hex: hex) {
+            return color
+        }
+        return .gray
     }
 
     private var baseBackground: Color {
