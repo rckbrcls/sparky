@@ -216,7 +216,6 @@ final class MemoryService: ObservableObject {
         return memories
             .filter { memory in
                 guard memory.status == .active else { return false }
-                guard memory.space == nil else { return false } // Memórias com space não aparecem na Timeline
                 guard memory.nextFireDate(referenceDate: referenceDate) != nil else { return false }
 
                 // Deve ter pelo menos um trigger scheduled ativo
