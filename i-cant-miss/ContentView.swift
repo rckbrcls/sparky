@@ -159,6 +159,29 @@ struct ContentView: View {
                         mode: .create(space: space, template: .blank),
                         initialTitle: title
                     )
+                },
+                onQuickCreate: { space, title in
+                    Task {
+                        let draft = MemoryDraft(
+                            id: UUID(),
+                            title: title,
+                            status: .active,
+                            priority: .noPriority,
+                            isPinned: false,
+                            dueDate: nil,
+                            spaceID: space?.id,
+                            triggers: [],
+                            note: nil,
+                            checkItems: [],
+                            photoAttachmentIDs: [],
+                            linkAttachmentIDs: [],
+                            audioAttachmentIDs: [],
+                            fileAttachmentIDs: [],
+                            attachments: [],
+                            autoCompleteOnChecklistCompletion: false
+                        )
+                        _ = try? await environment.memoryService.createMemory(from: draft)
+                    }
                 }
             )
         }

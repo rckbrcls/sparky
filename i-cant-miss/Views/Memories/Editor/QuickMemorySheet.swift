@@ -6,6 +6,63 @@
 //
 
 import SwiftUI
+import UIKit
+
+// MARK: - Auto Focus TextField
+
+private struct AutoFocusTextField: UIViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    let font: UIFont
+    let onSubmit: () -> Void
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.placeholder = placeholder
+        textField.font = font
+        textField.delegate = context.coordinator
+        textField.returnKeyType = .done
+        textField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        // Focus immediately
+        DispatchQueue.main.async {
+            textField.becomeFirstResponder()
+        }
+
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: AutoFocusTextField
+
+        init(_ parent: AutoFocusTextField) {
+            self.parent = parent
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            parent.text = textField.text ?? ""
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            textField.resignFirstResponder()
+            parent.onSubmit()
+            return true
+        }
+    }
+}
+
+// MARK: - Quick Memory Sheet
 
 struct QuickMemorySheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -13,10 +70,10 @@ struct QuickMemorySheet: View {
     let environment: AppEnvironment
     let space: SpaceModel?
     let onExpandToEditor: (SpaceModel?, String) -> Void
+    let onQuickCreate: (SpaceModel?, String) -> Void
 
     @State private var title: String = ""
     @State private var selectedSpaceID: UUID?
-    @FocusState private var isTitleFocused: Bool
 
     private var availableSpaces: [SpaceModel] {
         environment.spaceService.spaces
@@ -35,30 +92,30 @@ struct QuickMemorySheet: View {
         return .gray
     }
 
+    private var titleFont: UIFont {
+        guard let font = UIFont(name: "Vollkorn-Regular", size: 20) else {
+            return .systemFont(ofSize: 20, weight: .bold)
+        }
+        let descriptor = font.fontDescriptor.withSymbolicTraits(.traitBold)
+        return UIFont(descriptor: descriptor ?? font.fontDescriptor, size: 20)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 spaceIconMenu
 
-                TextField("Memory", text: $title, axis: .vertical)
-                    .font(.custom("Vollkorn-Regular", size: 20))
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.leading)
-                    .submitLabel(.done)
-                    .focused($isTitleFocused)
-                    .onSubmit {
-                        isTitleFocused = false
+                AutoFocusTextField(
+                    text: $title,
+                    placeholder: "Memory",
+                    font: titleFont,
+                    onSubmit: {
+                        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                        dismiss()
+                        onQuickCreate(selectedSpace, title)
                     }
-                    .onChange(of: title) { _, newValue in
-                        guard newValue.contains(where: { $0.isNewline }) else { return }
-                        let sanitized = newValue
-                            .split(whereSeparator: \.isNewline)
-                            .joined(separator: " ")
-                        if sanitized != newValue {
-                            title = sanitized
-                        }
-                        isTitleFocused = false
-                    }
+                )
+                .frame(height: 30)
 
                 Button {
                     dismiss()
@@ -71,17 +128,17 @@ struct QuickMemorySheet: View {
                         .frame(width: 36, height: 36)
                         .glassEffect(.regular)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("More options")
             }
             .padding(20)
 
             Spacer()
         }
-        .presentationDetents([.height(100)])
+        .presentationDetents([.height(90)])
         .presentationBackground(.regularMaterial)
         .onAppear {
             selectedSpaceID = space?.id
-            isTitleFocused = true
         }
     }
 
@@ -125,6 +182,7 @@ struct QuickMemorySheet: View {
             return env
         }(),
         space: nil,
-        onExpandToEditor: { _, _ in }
+        onExpandToEditor: { _, _ in },
+        onQuickCreate: { _, _ in }
     )
 }
