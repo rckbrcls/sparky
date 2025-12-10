@@ -1098,7 +1098,7 @@ extension SpaceModel {
             id: allSpacesIdentifier,
             name: "All",
             colorHex: nil,
-            iconName: "square.grid.2x2",
+            iconName: "square.grid.2x2.fill",
             sortOrder: Int.min,
             parentID: nil,
             childIDs: [],

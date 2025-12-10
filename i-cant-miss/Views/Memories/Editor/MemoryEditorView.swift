@@ -195,8 +195,7 @@ struct MemoryEditorView: View {
     @State private var isShowingFilePreview = false
     @State private var navigationPath = NavigationPath()
     @Namespace private var toolbarGlassNamespace
-    @State private var titleTranscriber: SpeechTranscriber?
-    @State private var titleTranscriptionPrefix = ""
+
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -391,17 +390,7 @@ struct MemoryEditorView: View {
             }
 
         return metadataSaveConfigured
-            .onChange(of: isEditingEnabled) { _, newValue in
-                if !newValue {
-                    titleTranscriber?.stop()
-                }
-            }
-            .onDisappear {
-                titleTranscriber?.stop()
-            }
-            .background(
-                transcriptObserver
-            )
+
     }
 
     private func handleMetadataSaveIfNeeded() {
@@ -411,17 +400,7 @@ struct MemoryEditorView: View {
         }
     }
 
-    private func handleTitleTranscript(_ transcript: String) {
-        guard let transcriber = titleTranscriber, transcriber.isRecording else { return }
-        let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = titleTranscriptionPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
-        let combined = [base, trimmedTranscript]
-            .filter { !$0.isEmpty }
-            .joined(separator: base.isEmpty || trimmedTranscript.isEmpty ? "" : " ")
-        if !combined.isEmpty {
-            viewModel.title = combined
-        }
-    }
+
 
     private var baseEditorContainer: some View {
         ZStack {
@@ -706,23 +685,10 @@ struct MemoryEditorView: View {
                                     isTitleFocused = false
                                 }
                             }
-                        Spacer(minLength: 0)
-                        Button {
-                            toggleTitleTranscription()
-                        } label: {
-                            Image(systemName: titleTranscriber?.isRecording == true ? "mic.fill" : "mic")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(titleTranscriber?.isRecording == true ? .red : .secondary)
-                        }
-                        .accessibilityLabel(titleTranscriber?.isRecording == true ? "Parar transcrição do título" : "Transcrever áudio para o título")
-                        .disabled(viewModel.isSaving)
+
                     }
 
-                    if let errorMessage = titleTranscriber?.errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
+
                 }
             } else {
                 Text(displayTitle)
@@ -741,33 +707,7 @@ struct MemoryEditorView: View {
         .contentShape(Rectangle())
     }
 
-    private func toggleTitleTranscription() {
-        guard isEditingEnabled else { return }
 
-        // Se já existe um transcriber e está gravando, desativa imediatamente
-        if let transcriber = titleTranscriber, transcriber.isRecording {
-            transcriber.stop()
-            titleTranscriptionPrefix = viewModel.title
-            // Remove o foco do título ao parar
-            isTitleFocused = false
-            return
-        }
-
-        // Se não está gravando, inicia a transcrição
-        Task {
-            // Cria o transcriber apenas quando necessário (na primeira vez que clicar)
-            if titleTranscriber == nil {
-                titleTranscriber = SpeechTranscriber()
-            }
-
-            guard let transcriber = titleTranscriber else { return }
-
-            titleTranscriptionPrefix = viewModel.title
-            // Foca no título quando começar a transcrição
-            isTitleFocused = true
-            await transcriber.start()
-        }
-    }
 
     private func checklistCard(for item: Binding<MemoryEditorContentItem>, content: MemoryEditorChecklistContent) -> some View {
         MemoryEditorChecklistCard {
@@ -1547,17 +1487,7 @@ struct MemoryEditorView: View {
         viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    @ViewBuilder
-    private var transcriptObserver: some View {
-        if let transcriber = titleTranscriber {
-            Color.clear
-                .onReceive(transcriber.$transcript) { transcript in
-                    handleTitleTranscript(transcript)
-                }
-        } else {
-            Color.clear
-        }
-    }
+
 
     @ViewBuilder
     private var photoViewerContent: some View {

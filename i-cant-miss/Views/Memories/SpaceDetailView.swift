@@ -11,6 +11,7 @@ struct SpaceDetailView: View {
     let space: SpaceModel
 
     @EnvironmentObject private var environment: AppEnvironment
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var spaceService: SpaceService
     @ObservedObject var memoryService: MemoryService
 
@@ -184,6 +185,7 @@ struct SpaceDetailView: View {
 
     private var baseView: some View {
         spaceDetailList
+            .navigationBarBackButtonHidden(true)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showTriggerSheet) {
                 TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
@@ -229,6 +231,14 @@ struct SpaceDetailView: View {
                 onDone: { toggleMultiSelection() }
             )
         } else {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "square.grid.2x2")
+                }
+            }
+
              ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     toggleMultiSelection()

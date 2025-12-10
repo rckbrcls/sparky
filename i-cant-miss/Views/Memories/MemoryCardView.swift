@@ -109,7 +109,7 @@ struct MemoryCardView: View {
     @ViewBuilder
     private func memoryContent(memory: MemoryModel) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            let spaceIcon = memory.space?.iconName ?? "square.grid.2x2"
+            let spaceIcon = memory.space?.iconName ?? "square.grid.2x2.fill"
             let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
             Image(systemName: spaceIcon)
