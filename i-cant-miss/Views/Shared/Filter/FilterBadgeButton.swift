@@ -43,11 +43,11 @@ private extension View {
         self
             .background(
                 Capsule()
-                    .fill(isSelected ? Color.accent : Color.clear)
+                    .fill(isSelected ? Color(uiColor: .systemGray6) : Color.clear)
             )
             .overlay(
                 Capsule()
-                    .strokeBorder(isSelected ? Color.clear : Color.primary.opacity(0.2), lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.clear : Color(uiColor: .systemGray6), lineWidth: 1)
             )
     }
 }
