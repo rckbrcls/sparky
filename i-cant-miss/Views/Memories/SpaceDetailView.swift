@@ -240,6 +240,7 @@ struct SpaceDetailView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+                .glassEffect()
                 .frame(maxWidth: .infinity)
             }
 
