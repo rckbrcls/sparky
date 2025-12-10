@@ -47,6 +47,7 @@ struct ContentView: View {
     @State private var meNavigationPath = NavigationPath()
     @State private var showingOnboarding = false
     @State private var isMultiSelectionActive = false
+    @State private var isSearchActive = false
     @State private var currentSpaceContext: SpaceModel?
     @State private var quickMemoryRequest: QuickMemoryRequest?
 
@@ -85,7 +86,8 @@ struct ContentView: View {
                 onSpaceContextChange: { space in
                     // Update context immediately when space changes
                     currentSpaceContext = space
-                }
+                },
+                onSearchActiveChange: handleSearchActiveChange
             )
             .tabItem {
                 Label(CustomTab.spaces.rawValue, systemImage: CustomTab.spaces.symbol)
@@ -117,6 +119,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isMultiSelectionActive)
+        .animation(.easeInOut(duration: 0.2), value: isSearchActive)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .fullScreenCover(item: $editorRoute) { route in
             switch route.mode {
@@ -221,11 +224,11 @@ struct ContentView: View {
     }
 
     private var tabBarVisibility: Visibility {
-        isMultiSelectionActive ? .hidden : .visible
+        (isMultiSelectionActive || isSearchActive) ? .hidden : .visible
     }
 
     private var shouldShowAddButton: Bool {
-        !isMultiSelectionActive
+        !isMultiSelectionActive && !isSearchActive
     }
 
     private var bottomSafeInset: CGFloat {
@@ -250,6 +253,12 @@ struct ContentView: View {
     private func handleMultiSelectionChange(_ isSelecting: Bool) {
         withAnimation(.easeInOut(duration: 0.2)) {
             isMultiSelectionActive = isSelecting
+        }
+    }
+
+    private func handleSearchActiveChange(_ isSearching: Bool) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isSearchActive = isSearching
         }
     }
 

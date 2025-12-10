@@ -17,10 +17,10 @@ struct SpaceDetailView: View {
 
     let onSelectMemory: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
-    let onCreateSpace: () -> Void
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
+    let onSearchActiveChange: (Bool) -> Void
 
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
@@ -38,6 +38,10 @@ struct SpaceDetailView: View {
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
+
+    @State private var isSearching = false
+    @State private var searchText = ""
+    @FocusState private var isSearchFieldFocused: Bool
 
     private var activeFilterCount: Int {
         var count = 0
@@ -216,6 +220,37 @@ struct SpaceDetailView: View {
                 onDelete: { showingDeleteConfirmation = true },
                 onDone: { toggleMultiSelection() }
             )
+        } else if isSearching {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search memories...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .focused($isSearchFieldFocused)
+                        .submitLabel(.search)
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isSearching = false
+                    }
+                }
+                .fontWeight(.semibold)
+            }
         } else {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
@@ -225,20 +260,25 @@ struct SpaceDetailView: View {
                 }
             }
 
-             ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    toggleSearch()
+                } label: {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+                .disabled(isPerformingBulkAction)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     toggleMultiSelection()
                 } label: {
                     Label("Select", systemImage: "checkmark.circle")
                 }
                 .disabled(isPerformingBulkAction)
-
-                Button {
-                    onCreateSpace()
-                } label: {
-                    Image(systemName: "folder.badge.plus")
-                }
             }
+
+
         }
     }
 
@@ -285,6 +325,14 @@ struct SpaceDetailView: View {
         }
         .listRowSeparator(.hidden)
         .background(Color.clear)
+        .onChange(of: isSearching) { _, newValue in
+            onSearchActiveChange(newValue)
+            if newValue {
+                isSearchFieldFocused = true
+            } else {
+                searchText = ""
+            }
+        }
     }
 
     @ViewBuilder
@@ -360,7 +408,33 @@ struct SpaceDetailView: View {
 
         return base.filter { memory in
             matchesSelectedContentAndTrigger(memory) &&
-            (showInbox || !memory.isInbox)
+            (showInbox || !memory.isInbox) &&
+            matchesSearchText(memory)
+        }
+    }
+
+    private func matchesSearchText(_ memory: MemoryModel) -> Bool {
+        guard !searchText.isEmpty else { return true }
+        let lowercasedSearch = searchText.lowercased()
+
+        // Search in title
+        if memory.title.lowercased().contains(lowercasedSearch) {
+            return true
+        }
+
+        // Search in note/body
+        if let note = memory.note, note.lowercased().contains(lowercasedSearch) {
+            return true
+        }
+
+        return false
+    }
+
+
+
+    private func toggleSearch() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isSearching.toggle()
         }
     }
 

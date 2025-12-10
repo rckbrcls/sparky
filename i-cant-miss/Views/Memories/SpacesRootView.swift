@@ -18,6 +18,7 @@ struct SpacesRootView: View {
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
+    let onSearchActiveChange: (Bool) -> Void
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -66,13 +67,14 @@ struct SpacesRootView: View {
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     onEditMemory: onEditMemory,
-                    onCreateSpace: onCreateSpace,
+
                     onEditSpace: onEditSpace,
                     onMultiSelectionChange: onMultiSelectionChange,
                     onSpaceContextChange: { newSpace in
                         // Immediately notify when space context changes
                         onSpaceContextChange(newSpace)
-                    }
+                    },
+                    onSearchActiveChange: onSearchActiveChange
                 )
                 .onAppear {
                     // Ensure context is set immediately when destination appears
@@ -133,6 +135,7 @@ struct SpacesRootView: View {
         onCreateSpace: { },
         onEditSpace: nil,
         onMultiSelectionChange: { _ in },
-        onSpaceContextChange: { _ in }
+        onSpaceContextChange: { _ in },
+        onSearchActiveChange: { _ in }
     )
 }
