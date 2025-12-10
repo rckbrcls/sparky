@@ -139,7 +139,11 @@ struct QuickMemorySheet: View {
         .presentationDetents([.height(90)])
         .presentationBackground(.regularMaterial)
         .onAppear {
-            selectedSpaceID = space?.id
+            if space?.isAllSpaces == true {
+                selectedSpaceID = nil
+            } else {
+                selectedSpaceID = space?.id
+            }
         }
     }
 

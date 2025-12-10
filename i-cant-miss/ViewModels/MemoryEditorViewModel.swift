@@ -449,7 +449,12 @@ private extension MemoryEditorViewModel {
         } else {
             // When creating a new memory, prefer the provided defaultSpace (if any)
             // so that creations from a specific space/subspace are scoped correctly.
-            selectedSpaceID = defaultSpace?.id
+            // If it's the "All" space, default to no space (nil)
+            if defaultSpace?.isAllSpaces == true {
+                selectedSpaceID = nil
+            } else {
+                selectedSpaceID = defaultSpace?.id
+            }
             applyTemplate(template)
         }
     }
