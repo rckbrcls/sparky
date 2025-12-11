@@ -20,6 +20,7 @@ struct CalendarDayView: View {
 
     @State private var displayedDate: Date
     @State private var dayAnchor: Date
+    @State private var expandedPeriods: Set<TimePeriod> = Set(TimePeriod.allCases)
 
     private let calendar = Calendar.current
 
@@ -57,7 +58,7 @@ struct CalendarDayView: View {
                 ForEach(pages, id: \.self) { day in
                     List {
                         dayHeader(for: day)
-                            .listRowInsets(.init(top: 20, leading: 0, bottom: 0, trailing: 0))
+                            .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
 
@@ -96,30 +97,60 @@ struct CalendarDayView: View {
                                 }
                             }
 
-                            if !timedMemories(from: memories, date: day).isEmpty {
-                                Section {
-                                    ForEach(timedMemories(from: memories, date: day)) { memory in
-                                        MemoryListItemButton(
-                                            memory: memory,
-                                            isMultiSelecting: isMultiSelecting,
-                                            isSelected: selectedMemoryIDs.contains(memory.id),
-                                            isDisabled: isPerformingBulkAction,
-                                            onSelect: onSelectMemory,
-                                            onToggleSelection: onToggleSelection,
-                                            onEdit: onEditMemory
-                                        )
+                            ForEach(TimePeriod.allCases, id: \.self) { period in
+                                let periodMemories = memoriesForPeriod(period, from: memories, date: day)
+                                if !periodMemories.isEmpty {
+                                    Section {
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                if expandedPeriods.contains(period) {
+                                                    expandedPeriods.remove(period)
+                                                } else {
+                                                    expandedPeriods.insert(period)
+                                                }
+                                            }
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: period.iconName)
+                                                    .foregroundStyle(period.color)
+                                                Text(period.title)
+                                                    .font(.subheadline)
+                                                    .fontWeight(.medium)
+                                                    .foregroundStyle(.primary)
+                                                Spacer()
+                                                Text("\(periodMemories.count)")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                Image(systemName: "chevron.right")
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                    .foregroundStyle(.secondary)
+                                                    .rotationEffect(.degrees(expandedPeriods.contains(period) ? 90 : 0))
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
                                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
+
+                                        if expandedPeriods.contains(period) {
+                                            ForEach(periodMemories) { memory in
+                                                MemoryListItemButton(
+                                                    memory: memory,
+                                                    isMultiSelecting: isMultiSelecting,
+                                                    isSelected: selectedMemoryIDs.contains(memory.id),
+                                                    isDisabled: isPerformingBulkAction,
+                                                    onSelect: onSelectMemory,
+                                                    onToggleSelection: onToggleSelection,
+                                                    onEdit: onEditMemory
+                                                )
+                                                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                                                .listRowBackground(Color.clear)
+                                                .listRowSeparator(.hidden)
+                                            }
+                                        }
                                     }
-                                } header: {
-                                    Text("Timed Events")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 20)
-                                        .listRowInsets(.init(top: 0, leading: 0, bottom: 8, trailing: 0))
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(Color.clear)
+                                    .padding(.bottom, 16)
                                 }
                             }
                         }
@@ -245,6 +276,63 @@ struct CalendarDayView: View {
             }
             let components = calendar.dateComponents([.hour, .minute], from: fireDate)
             return (components.hour ?? 0) != 0 || (components.minute ?? 0) != 0
+        }
+    }
+
+    private enum TimePeriod: CaseIterable {
+        case morning    // 06:00 - 12:00
+        case afternoon  // 12:00 - 18:00
+        case evening    // 18:00 - 22:00
+        case night      // 22:00 - 06:00
+
+        var title: String {
+            switch self {
+            case .morning: return "Morning"
+            case .afternoon: return "Afternoon"
+            case .evening: return "Evening"
+            case .night: return "Night"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .morning: return "sunrise.fill"
+            case .afternoon: return "sun.max.fill"
+            case .evening: return "sunset.fill"
+            case .night: return "moon.stars.fill"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .morning: return .orange
+            case .afternoon: return .yellow
+            case .evening: return .pink
+            case .night: return .indigo
+            }
+        }
+
+        func contains(hour: Int) -> Bool {
+            switch self {
+            case .morning:
+                return hour >= 6 && hour < 12
+            case .afternoon:
+                return hour >= 12 && hour < 18
+            case .evening:
+                return hour >= 18 && hour < 22
+            case .night:
+                return hour >= 22 || hour < 6
+            }
+        }
+    }
+
+    private func memoriesForPeriod(_ period: TimePeriod, from memories: [MemoryModel], date: Date) -> [MemoryModel] {
+        timedMemories(from: memories, date: date).filter { memory in
+            guard let fireDate = memory.nextFireDate(referenceDate: date) else {
+                return false
+            }
+            let hour = calendar.component(.hour, from: fireDate)
+            return period.contains(hour: hour)
         }
     }
 
