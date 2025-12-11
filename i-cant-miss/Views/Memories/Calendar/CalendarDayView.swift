@@ -58,7 +58,7 @@ struct CalendarDayView: View {
                 ForEach(pages, id: \.self) { day in
                     List {
                         dayHeader(for: day)
-                            .listRowInsets(.init(top: 24, leading: 0, bottom: 28, trailing: 0))
+                            .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
 
@@ -113,11 +113,11 @@ struct CalendarDayView: View {
                                             HStack {
                                                 Image(systemName: period.iconName)
                                                     .foregroundStyle(period.color)
-                                                Text(period.title)
                                                     .font(.subheadline)
+                                                Text(period.title)
+                                                    .font(.caption)
                                                     .fontWeight(.medium)
                                                     .foregroundStyle(.primary)
-                                                Spacer()
                                                 Text("\(periodMemories.count)")
                                                     .font(.caption)
                                                     .foregroundStyle(.secondary)
@@ -127,13 +127,13 @@ struct CalendarDayView: View {
                                                     .foregroundStyle(.secondary)
                                                     .rotationEffect(.degrees(expandedPeriods.contains(period) ? 90 : 0))
                                             }
-                                            .padding(.horizontal, 14)
-                                            .padding(.vertical, 10)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
                                             .background(period.color.opacity(0.20))
                                             .clipShape(RoundedRectangle(cornerRadius: 24))
                                         }
                                         .buttonStyle(.plain)
-                                        .listRowInsets(.init(top: 12, leading: 20, bottom: 4, trailing: 20))
+                                        .listRowInsets(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
 
