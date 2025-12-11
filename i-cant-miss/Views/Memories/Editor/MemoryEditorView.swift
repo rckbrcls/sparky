@@ -290,9 +290,6 @@ struct MemoryEditorView: View {
             .onChange(of: viewModel.status) { _, _ in
                 handleMetadataSaveIfNeeded()
             }
-            .onChange(of: viewModel.priority) { _, _ in
-                handleMetadataSaveIfNeeded()
-            }
             .onChange(of: viewModel.autoCompleteChecklist) { _, _ in
                 handleMetadataSaveIfNeeded()
             }
@@ -428,16 +425,6 @@ struct MemoryEditorView: View {
                             }
                         } label: {
                             Label(viewModel.status.rawValue.capitalized, systemImage: "circle.circle")
-                        }
-                        .pickerStyle(.menu)
-
-                        Picker(selection: $viewModel.priority) {
-                            ForEach(MemoryPriority.allCases) { priority in
-                                Label(priorityLabel(for: priority), systemImage: priority.iconName)
-                                    .tag(priority)
-                            }
-                        } label: {
-                            Label(viewModel.priority.displayName, systemImage: "flag.fill")
                         }
                         .pickerStyle(.menu)
                     }
@@ -1065,15 +1052,6 @@ struct MemoryEditorView: View {
         }
 
         cleanupPendingContentTargets()
-    }
-
-    private func priorityLabel(for priority: MemoryPriority) -> String {
-        switch priority {
-        case .noPriority: return "No Priority"
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
-        }
     }
 
     private var spacesForPicker: [SpaceModel] {

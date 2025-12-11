@@ -10,39 +10,9 @@ struct MemoryListItemButton: View {
     let onEdit: ((MemoryModel) -> Void)?
 
     @EnvironmentObject private var environment: AppEnvironment
-    @State private var isShowingMoreActions = false
 
     var body: some View {
         listButton
-            .sheet(isPresented: $isShowingMoreActions) {
-                MemoryListMoreActionsSheet(
-                    memory: memory,
-                    spaces: environment.spaceService.spaces,
-                    canEdit: onEdit != nil,
-                    onEdit: {
-                        guard let onEdit else { return }
-                        isShowingMoreActions = false
-                        onEdit(memory)
-                    },
-                    onDelete: {
-                        isShowingMoreActions = false
-                        Task { await deleteMemory() }
-                    },
-                    onTogglePin: {
-                        Task { await toggleMemoryPin() }
-                    },
-                    onMoveToSpace: { spaceID in
-                        Task { await moveMemory(to: spaceID) }
-                    },
-                    onUpdateStatus: { status in
-                        Task { await setMemoryStatus(status) }
-                    },
-                    onUpdatePriority: { priority in
-                        Task { await setMemoryPriority(priority) }
-                    }
-                )
-                .presentationDetents([.medium])
-            }
     }
 
     @ViewBuilder
@@ -94,7 +64,8 @@ struct MemoryListItemButton: View {
                     onToggleCompletion: { Task { await toggleMemoryCompletion() } },
                     onDelete: { Task { await deleteMemory() } },
                     onEdit: onEdit != nil ? { onEdit?(memory) } : nil,
-                    onShowMoreActions: { isShowingMoreActions = true }
+                    onMoveToSpace: { spaceID in Task { await moveMemory(to: spaceID) } },
+                    onUpdateStatus: { status in Task { await setMemoryStatus(status) } }
                 )
                 .overlay(selectionOverlay)
                 .overlay(alignment: .topTrailing) {
@@ -146,20 +117,6 @@ struct MemoryListItemButton: View {
         guard status != memory.status else { return }
         do {
             try await environment.memoryService.setStatus(memoryID: memory.id, status: status)
-        } catch {
-            // Handle error silently for now
-        }
-    }
-
-    private func setMemoryPriority(_ priority: MemoryPriority?) async {
-        if priority == nil, memory.priority == nil {
-            return
-        }
-        if let current = memory.priority, let priority, current == priority {
-            return
-        }
-        do {
-            try await environment.memoryService.setPriority(memoryID: memory.id, priority: priority)
         } catch {
             // Handle error silently for now
         }

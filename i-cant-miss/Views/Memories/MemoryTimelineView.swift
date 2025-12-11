@@ -64,11 +64,6 @@ struct MemoryTimelineView: View {
         !selectedMemoryIDs.isEmpty
     }
 
-    private var canChangePriorityForSelection: Bool {
-        guard canMoveSelection else { return false }
-        return selectedMemories.allSatisfy { memorySupportsPriorityChange($0) }
-    }
-
     private var deleteConfirmationMessage: String {
         let count = selectedMemoryIDs.count
         if count == 1 {
@@ -99,12 +94,10 @@ struct MemoryTimelineView: View {
                         availableSpaces: bulkActionSpaces,
                         isPerformingBulkAction: isPerformingBulkAction,
                         canPerformDeletion: canMoveSelection,
-                        isPriorityEnabled: canChangePriorityForSelection,
                         isStatusEnabled: canMoveSelection,
                         isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
                         onSelectSpace: { space in performMove(to: space) },
                         onSelectStatus: { status in performStatusUpdate(to: status) },
-                        onSelectPriority: { priority in performPriorityUpdate(to: priority) },
                         onDelete: { showingDeleteConfirmation = true },
                         onDone: { toggleMultiSelection() }
                     )
@@ -326,12 +319,6 @@ struct MemoryTimelineView: View {
         }
     }
 
-    private func performPriorityUpdate(to priority: MemoryPriority) {
-        performBulkAction { processor, ids in
-            await processor.updatePriority(of: ids, to: priority)
-        }
-    }
-
     private func performBulkAction(
         _ action: @escaping (MemoryBulkActionProcessor, Set<MemoryModel.ID>) async -> MemoryBulkActionProcessor.MemoryBulkActionResult
     ) {
@@ -370,10 +357,6 @@ struct MemoryTimelineView: View {
         }
 
         return "\(failures.count) memories failed to update. \(firstError.localizedDescription)"
-    }
-
-    private func memorySupportsPriorityChange(_ memory: MemoryModel) -> Bool {
-        true
     }
 
     private func performBulkDeletion() {

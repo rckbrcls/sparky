@@ -11,12 +11,10 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
     let availableSpaces: [SpaceModel]
     let isPerformingBulkAction: Bool
     let canPerformDeletion: Bool
-    let isPriorityEnabled: Bool
     let isStatusEnabled: Bool
     let isSpaceEnabled: Bool
     let onSelectSpace: (SpaceModel) -> Void
     let onSelectStatus: (MemoryStatus) -> Void
-    let onSelectPriority: (MemoryPriority) -> Void
     let onDelete: () -> Void
     let onDone: () -> Void
 
@@ -28,7 +26,6 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
             .disabled(!canPerformDeletion || isPerformingBulkAction)
             .accessibilityLabel("Delete selected memories")
 
-            priorityMenu
             statusMenu
             spaceMenu
 
@@ -72,22 +69,6 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
         .accessibilityLabel("Change status")
     }
 
-    private var priorityMenu: some View {
-        Menu {
-            ForEach(MemoryPriority.allCases) { priority in
-                Button {
-                    onSelectPriority(priority)
-                } label: {
-                    Label(priorityLabel(for: priority), systemImage: priority.iconName)
-                }
-            }
-        } label: {
-            Label("Priority", systemImage: "flag.fill")
-        }
-        .disabled(!isPriorityEnabled || isPerformingBulkAction)
-        .accessibilityLabel("Change priority")
-    }
-
     private func title(for status: MemoryStatus) -> String {
         switch status {
         case .active: return "Active"
@@ -99,15 +80,6 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
         switch status {
         case .active: return "play.circle"
         case .completed: return "checkmark.circle"
-        }
-    }
-
-    private func priorityLabel(for priority: MemoryPriority) -> String {
-        switch priority {
-        case .noPriority: return "No Priority"
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
         }
     }
 }

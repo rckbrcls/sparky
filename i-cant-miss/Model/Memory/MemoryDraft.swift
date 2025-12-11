@@ -9,7 +9,6 @@ struct MemoryDraft: Identifiable, Hashable {
     let id: UUID
     var title: String
     var status: MemoryStatus
-    var priority: MemoryPriority?
     var isPinned: Bool
     var dueDate: Date?
     var spaceID: UUID?
@@ -27,7 +26,6 @@ struct MemoryDraft: Identifiable, Hashable {
     init(id: UUID = UUID(),
          title: String,
          status: MemoryStatus = .active,
-         priority: MemoryPriority? = nil,
          isPinned: Bool = false,
          dueDate: Date? = nil,
          spaceID: UUID? = nil,
@@ -43,7 +41,6 @@ struct MemoryDraft: Identifiable, Hashable {
         self.id = id
         self.title = title
         self.status = status
-        self.priority = priority
         self.isPinned = isPinned
         self.dueDate = dueDate
         self.spaceID = spaceID

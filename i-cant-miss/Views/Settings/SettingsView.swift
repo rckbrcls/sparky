@@ -130,13 +130,6 @@ private struct ReminderSettingsView: View {
                     }
                 }
 
-                Picker("Default memory priority", selection: $settings.defaultMemoryPriority) {
-                    ForEach(MemoryPriority.allCases, id: \.self) { priority in
-                        Label(priority.displayName, systemImage: priority.iconName)
-                            .tag(priority)
-                    }
-                }
-
                 Stepper(value: $settings.defaultSnoozeMinutes, in: 5...180, step: 5) {
                     Text("Snooze duration: \(durationDescription(minutes: settings.defaultSnoozeMinutes))")
                 }

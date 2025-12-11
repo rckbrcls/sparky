@@ -49,12 +49,6 @@ final class MemoryBulkActionProcessor {
         }
     }
 
-    func updatePriority(of ids: Set<UUID>, to priority: MemoryPriority) async -> MemoryBulkActionResult {
-        await process(ids: ids) { memory in
-            try await self.environment.memoryService.setPriority(memoryID: memory.id, priority: priority)
-        }
-    }
-
     // MARK: - Helpers
 
     private func process(

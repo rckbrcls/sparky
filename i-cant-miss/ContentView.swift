@@ -162,7 +162,6 @@ struct ContentView: View {
                             id: UUID(),
                             title: title,
                             status: .active,
-                            priority: .noPriority,
                             isPinned: false,
                             dueDate: nil,
                             spaceID: space?.id,

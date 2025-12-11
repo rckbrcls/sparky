@@ -9,11 +9,9 @@ struct MemoryListMoreActionsSheet: View {
     let onTogglePin: () -> Void
     let onMoveToSpace: (UUID?) -> Void
     let onUpdateStatus: (MemoryStatus) -> Void
-    let onUpdatePriority: (MemoryPriority?) -> Void
 
     @State private var selectedSpaceID: UUID?
     @State private var selectedStatus: MemoryStatus
-    @State private var selectedPriority: MemoryPriority
 
     init(memory: MemoryModel,
          spaces: [SpaceModel],
@@ -22,8 +20,7 @@ struct MemoryListMoreActionsSheet: View {
          onDelete: @escaping () -> Void,
          onTogglePin: @escaping () -> Void,
          onMoveToSpace: @escaping (UUID?) -> Void,
-         onUpdateStatus: @escaping (MemoryStatus) -> Void,
-         onUpdatePriority: @escaping (MemoryPriority?) -> Void) {
+         onUpdateStatus: @escaping (MemoryStatus) -> Void) {
         self.memory = memory
         self.spaces = spaces
         self.canEdit = canEdit
@@ -32,11 +29,9 @@ struct MemoryListMoreActionsSheet: View {
         self.onTogglePin = onTogglePin
         self.onMoveToSpace = onMoveToSpace
         self.onUpdateStatus = onUpdateStatus
-        self.onUpdatePriority = onUpdatePriority
 
         _selectedSpaceID = State(initialValue: memory.space?.id)
         _selectedStatus = State(initialValue: memory.status)
-        _selectedPriority = State(initialValue: memory.priority ?? .noPriority)
     }
 
     var body: some View {
@@ -54,16 +49,6 @@ struct MemoryListMoreActionsSheet: View {
                 }
             } label: {
                 Label(selectedStatus.rawValue.capitalized, systemImage: "circle.circle")
-            }
-            .pickerStyle(.menu)
-
-            Picker(selection: $selectedPriority) {
-                ForEach(MemoryPriority.allCases) { priority in
-                    Label(priority.displayName, systemImage: priority.iconName)
-                        .tag(priority)
-                }
-            } label: {
-                Label(selectedPriority.displayName, systemImage: selectedPriority.iconName)
             }
             .pickerStyle(.menu)
 
@@ -91,10 +76,6 @@ struct MemoryListMoreActionsSheet: View {
         }
         .onChange(of: selectedStatus) { _, newValue in
             onUpdateStatus(newValue)
-        }
-        .onChange(of: selectedPriority) { _, newValue in
-            let resolvedPriority = newValue == .noPriority ? nil : newValue
-            onUpdatePriority(resolvedPriority)
         }
     }
 }

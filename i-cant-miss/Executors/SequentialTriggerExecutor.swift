@@ -107,7 +107,6 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             id: memory.id,
             title: memory.title,
             status: .active, // Garantir que está ativa
-            priority: memory.priority,
             isPinned: memory.isPinned,
             dueDate: memory.dueDate,
             spaceID: memory.space?.id,

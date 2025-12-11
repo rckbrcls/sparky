@@ -189,11 +189,6 @@ final class MemoryService: ObservableObject {
                 if lhsDate != rhsDate {
                     return lhsDate < rhsDate
                 }
-                if lhs.priority != rhs.priority {
-                    let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-                    let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-                    return lhsPriority > rhsPriority
-                }
                 return lhs.updatedAt > rhs.updatedAt
             }
     }
@@ -216,11 +211,6 @@ final class MemoryService: ObservableObject {
                 let rhsDate = rhs.nextFireDate(referenceDate: referenceDate) ?? .distantFuture
                 if lhsDate != rhsDate {
                     return lhsDate < rhsDate
-                }
-                if lhs.priority != rhs.priority {
-                    let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-                    let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-                    return lhsPriority > rhsPriority
                 }
                 return lhs.updatedAt > rhs.updatedAt
             }
@@ -390,16 +380,6 @@ final class MemoryService: ObservableObject {
         }
     }
 
-    func setPriority(memoryID: UUID, priority: MemoryPriority?) async throws {
-        try await mutateMemory(memoryID: memoryID) { memory in
-            if let priority {
-                memory.priorityRaw = NSNumber(value: priority.rawValue)
-            } else {
-                memory.priorityRaw = nil
-            }
-        }
-    }
-
     func moveMemory(_ id: UUID, to space: SpaceModel?) async throws {
         try await mutateMemory(memoryID: id) { memory in
             if let space,
@@ -459,7 +439,6 @@ private extension MemoryService {
         entity.title = sanitizedTitle
         entity.statusRaw = draft.status.rawValue
         entity.isPinned = draft.isPinned
-        entity.priorityRaw = draft.priority.map { NSNumber(value: $0.rawValue) }
         entity.dueDate = draft.dueDate
         entity.autoCompleteOnChecklistCompletion = draft.autoCompleteOnChecklistCompletion
         entity.updatedAt = Date()
@@ -547,7 +526,6 @@ private extension MemoryService {
             updatedAt: entity.updatedAt ?? Date(),
             status: MemoryStatus(rawValue: entity.statusRaw ?? MemoryStatus.active.rawValue) ?? .active,
             isPinned: entity.isPinned,
-            priority: entity.priorityRaw.map { MemoryPriority(rawValue: Int16(truncating: $0)) }.flatMap { $0 },
             dueDate: entity.dueDate,
             space: entity.space?.toModel(),
             triggers: triggers,
@@ -785,11 +763,6 @@ private extension MemoryService {
                 let lhsDate = lhs.nextFireDate() ?? .distantFuture
                 let rhsDate = rhs.nextFireDate() ?? .distantFuture
                 if lhsDate != rhsDate { return lhsDate < rhsDate }
-                if lhs.priority != rhs.priority {
-                    let lhsPriority = lhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-                    let rhsPriority = rhs.priority?.rawValue ?? MemoryPriority.noPriority.rawValue
-                    return lhsPriority > rhsPriority
-                }
                 return lhs.updatedAt > rhs.updatedAt
             }
         }

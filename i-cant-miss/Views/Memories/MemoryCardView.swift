@@ -11,18 +11,19 @@ struct MemoryCardView: View {
     let memoryID: UUID
     @ObservedObject var memoryService: MemoryService
     @EnvironmentObject private var environment: AppEnvironment
-    
+
     // Context menu action callbacks (optional - if nil, context menu is disabled)
     var onTogglePin: (() -> Void)?
     var onToggleCompletion: (() -> Void)?
     var onDelete: (() -> Void)?
     var onEdit: (() -> Void)?
-    var onShowMoreActions: (() -> Void)?
-    
+    var onMoveToSpace: ((UUID?) -> Void)?
+    var onUpdateStatus: ((MemoryStatus) -> Void)?
+
     private var isContextMenuEnabled: Bool {
-        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onEdit != nil || onShowMoreActions != nil
+        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onEdit != nil || onMoveToSpace != nil || onUpdateStatus != nil
     }
-    
+
     init(
         memoryID: UUID,
         memoryService: MemoryService,
@@ -30,7 +31,8 @@ struct MemoryCardView: View {
         onToggleCompletion: (() -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
         onEdit: (() -> Void)? = nil,
-        onShowMoreActions: (() -> Void)? = nil
+        onMoveToSpace: ((UUID?) -> Void)? = nil,
+        onUpdateStatus: ((MemoryStatus) -> Void)? = nil
     ) {
         self.memoryID = memoryID
         self._memoryService = ObservedObject(wrappedValue: memoryService)
@@ -38,46 +40,47 @@ struct MemoryCardView: View {
         self.onToggleCompletion = onToggleCompletion
         self.onDelete = onDelete
         self.onEdit = onEdit
-        self.onShowMoreActions = onShowMoreActions
+        self.onMoveToSpace = onMoveToSpace
+        self.onUpdateStatus = onUpdateStatus
     }
-    
+
     private var memory: MemoryModel? {
         memoryService.memory(id: memoryID)
     }
-    
+
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .named
         formatter.unitsStyle = .abbreviated
         return formatter
     }()
-    
-    
-    
+
+
+
     private var title: String {
         guard let memory = memory else { return "Untitled" }
         let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "Untitled" : trimmed
     }
-    
+
     private var bodyPreview: String? {
         guard let memory = memory,
               let body = memory.body?.trimmingCharacters(in: .whitespacesAndNewlines),
               !body.isEmpty else { return nil }
         return body
     }
-    
+
     private var scheduledDateText: String? {
         guard let memory = memory,
               let trigger = memory.triggers.first(where: { $0.type == .scheduled }),
               let fireDate = trigger.fireDate else { return nil }
-        
+
         if trigger.weekdayMask != 0 {
             return fireDate.formatted(date: .omitted, time: .shortened)
         }
         return fireDate.formatted(date: .abbreviated, time: .shortened)
     }
-    
+
     private var checklistProgressText: String? {
         guard let memory = memory,
               memory.hasChecklist else { return nil }
@@ -86,13 +89,13 @@ struct MemoryCardView: View {
         let completed = memory.checkItems.filter(\.isCompleted).count
         return "\(completed)/\(total)"
     }
-    
+
     private var sequentialSummary: String? {
         guard let memory = memory,
               let sequential = memory.triggers.first(where: { $0.type == .sequential })?.sequential else {
             return nil
         }
-        
+
         var parts: [String] = []
         if let previous = sequential.previousMemoryID {
             parts.append("After \(sequentialLabel(for: previous))")
@@ -102,7 +105,7 @@ struct MemoryCardView: View {
         }
         return parts.isEmpty ? nil : parts.joined(separator: " • ")
     }
-    
+
     private var statusBadge: (text: String, systemImage: String, color: Color)? {
         guard let memory = memory else { return nil }
         switch memory.status {
@@ -112,7 +115,7 @@ struct MemoryCardView: View {
             return ("Completed", "checkmark.circle.fill", .green)
         }
     }
-    
+
     private var spaceAccent: Color {
         guard let memory = memory,
               let hex = memory.space?.colorHex,
@@ -121,7 +124,7 @@ struct MemoryCardView: View {
         }
         return color
     }
-    
+
     var body: some View {
         if let memory = memory {
             memoryContent(memory: memory)
@@ -129,63 +132,50 @@ struct MemoryCardView: View {
             EmptyView()
         }
     }
-    
+
     @ViewBuilder
     private func memoryContent(memory: MemoryModel) -> some View {
         HStack(alignment: .center, spacing: 12) {
             let spaceIcon = memory.space?.iconName ?? "square.grid.2x2.fill"
             let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
-            
+
             Image(systemName: spaceIcon)
                 .foregroundStyle(spaceColor)
                 .frame(width: 36, height: 36)
                 .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
-            
+
             VStack(alignment: .leading, spacing: 6) {
-                let priorityToDisplay = memory.priority == .noPriority ? nil : memory.priority
-                let hasMetaIndicators = priorityToDisplay != nil || statusBadge != nil
-                
-                if hasMetaIndicators {
+                if let statusBadge {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Spacer()
-                        
-                        HStack(spacing: 12) {
-                            if let priority = priorityToDisplay {
-                                Image(systemName: priority.iconName)
-                                    .font(.subheadline)
-                                    .foregroundStyle(priorityColor(for: priority))
-                            }
-                            
-                            if let statusBadge {
-                                Label {
-                                    Text(statusBadge.text)
-                                } icon: {
-                                    Image(systemName: statusBadge.systemImage)
-                                }
-                                .font(.caption)
-                                .labelStyle(.iconOnly)
-                                .foregroundStyle(statusBadge.color)
-                                .padding(.leading, 4)
-                            }
+
+                        Label {
+                            Text(statusBadge.text)
+                        } icon: {
+                            Image(systemName: statusBadge.systemImage)
                         }
+                        .font(.caption)
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(statusBadge.color)
+                        .padding(.leading, 4)
                     }
                 }
-                
+
                 VStack (alignment: .leading, spacing: 6){
                     Text(title)
                         .font(.headline)
-                        .fontWeight(.bold)
+                        .fontWeight(.medium)
                         .foregroundStyle(.primary)
-                    
-                    
+
+
                     if let bodyPreview {
                         Text(bodyPreview)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                 }
-                
+
                 if sequentialSummary != nil || scheduledDateText != nil || checklistProgressText != nil {
                     HStack(spacing: 12) {
                         if let sequentialSummary {
@@ -201,7 +191,7 @@ struct MemoryCardView: View {
                             .background(Color.gray.opacity(0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
-                        
+
                         if let scheduledDateText {
                             HStack(spacing: 4) {
                                 Image(systemName: "calendar")
@@ -215,7 +205,7 @@ struct MemoryCardView: View {
                             .background(Color.gray.opacity(0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
-                        
+
                         if let checklistProgressText {
                             HStack(spacing: 4) {
                                 Image(systemName: "checklist")
@@ -255,7 +245,7 @@ struct MemoryCardView: View {
                               systemImage: memory.isPinned ? "pin.slash.fill" : "pin.fill")
                     }
                 }
-                
+
                 if let onToggleCompletion = onToggleCompletion {
                     Button {
                         onToggleCompletion()
@@ -264,7 +254,7 @@ struct MemoryCardView: View {
                               systemImage: memory.status == .completed ? "arrow.uturn.backward.circle" : "checkmark.circle.fill")
                     }
                 }
-                
+
                 if let onEdit = onEdit {
                     Button {
                         onEdit()
@@ -272,15 +262,41 @@ struct MemoryCardView: View {
                         Label("Edit", systemImage: "pencil")
                     }
                 }
-                
-                if let onShowMoreActions = onShowMoreActions {
-                    Button {
-                        onShowMoreActions()
+
+                if let onMoveToSpace = onMoveToSpace {
+                    Menu {
+                        Button {
+                            onMoveToSpace(nil)
+                        } label: {
+                            Label("No Space", systemImage: "tray")
+                        }
+
+                        ForEach(environment.spaceService.spaces.filter { $0.id != SpaceModel.allSpacesIdentifier }, id: \.id) { space in
+                            Button {
+                                onMoveToSpace(space.id)
+                            } label: {
+                                Label(space.name, systemImage: space.iconName ?? "folder")
+                            }
+                        }
                     } label: {
-                        Label("More Options", systemImage: "ellipsis.circle")
+                        Label("Move to Space", systemImage: "folder")
                     }
                 }
-                
+
+                if let onUpdateStatus = onUpdateStatus {
+                    Menu {
+                        ForEach(MemoryStatus.allCases) { status in
+                            Button {
+                                onUpdateStatus(status)
+                            } label: {
+                                Label(status.rawValue.capitalized, systemImage: status == .active ? "play.circle" : "checkmark.circle")
+                            }
+                        }
+                    } label: {
+                        Label("Status", systemImage: "circle.circle")
+                    }
+                }
+
                 if let onDelete = onDelete {
                     Divider()
                     Button(role: .destructive) {
@@ -292,16 +308,7 @@ struct MemoryCardView: View {
             }
         }
     }
-    
-    private func priorityColor(for priority: MemoryPriority) -> Color {
-        switch priority {
-        case .noPriority: return .gray
-        case .low: return .blue
-        case .medium: return .orange
-        case .high: return .red
-        }
-    }
-    
+
     private func sequentialLabel(for id: UUID) -> String {
         if let memory = environment.memoryService.memory(id: id) {
             let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)

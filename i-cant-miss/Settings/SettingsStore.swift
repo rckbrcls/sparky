@@ -12,7 +12,6 @@ import Combine
 final class SettingsStore: ObservableObject {
     private enum Keys {
         static let timelineFilter = "settings.defaultTimelineFilter"
-        static let reminderPriority = "settings.defaultReminderPriority"
         static let snoozeMinutes = "settings.defaultSnoozeMinutes"
         static let postponeMinutes = "settings.defaultPostponeMinutes"
         static let notificationSound = "settings.notificationSoundEnabled"
@@ -26,12 +25,6 @@ final class SettingsStore: ObservableObject {
     @Published var defaultTimelineFilter: MemoryTimelineFilter {
         didSet {
             defaults.set(defaultTimelineFilter.storageKey, forKey: Keys.timelineFilter)
-        }
-    }
-
-    @Published var defaultMemoryPriority: MemoryPriority {
-        didSet {
-            defaults.set(Int(defaultMemoryPriority.rawValue), forKey: Keys.reminderPriority)
         }
     }
 
@@ -87,9 +80,6 @@ final class SettingsStore: ObservableObject {
         let storedFilter = defaults.string(forKey: Keys.timelineFilter) ?? MemoryTimelineFilter.today.storageKey
         let filter = MemoryTimelineFilter(storageKey: storedFilter) ?? .today
         self.defaultTimelineFilter = filter
-
-        let storedPriority = defaults.integer(forKey: Keys.reminderPriority)
-        self.defaultMemoryPriority = MemoryPriority(rawValue: Int16(storedPriority)) ?? .noPriority
 
         let snoozeMinutes = defaults.object(forKey: Keys.snoozeMinutes) as? Int ?? 15
         self.defaultSnoozeMinutes = SettingsStore.clamp(minutes: snoozeMinutes, fallback: 15)

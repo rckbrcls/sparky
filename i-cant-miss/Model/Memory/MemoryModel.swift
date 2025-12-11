@@ -57,7 +57,6 @@ struct MemoryModel: Identifiable, Hashable {
     var updatedAt: Date
     var status: MemoryStatus
     var isPinned: Bool
-    var priority: MemoryPriority?
     var dueDate: Date?
     var space: SpaceModel?
     var triggers: [MemoryTriggerModel]
