@@ -150,7 +150,6 @@ struct CalendarDayView: View {
                                             }
                                         }
                                     }
-                                    .padding(.bottom, 16)
                                 }
                             }
                         }
