@@ -27,8 +27,7 @@ struct SpaceDetailView: View {
     @State private var showPinned = true
     @State private var showTriggerSheet = false
     @State private var showContentSheet = false
-    @State private var showingFilterSheet = false
-    @State private var filterSheetDetent: PresentationDetent = .large
+
 
 
 
@@ -269,16 +268,7 @@ struct SpaceDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private func filterSheetContent() -> some View {
-        FilterSheetView(
-            selectedContentTypes: $selectedContentTypes,
-            selectedTriggerTypes: $selectedTriggerTypes,
-            detentSelection: $filterSheetDetent
-        )
-        .onAppear { filterSheetDetent = .large }
-        .presentationDetents([.large], selection: $filterSheetDetent)
-    }
+
 
     private var spaceDetailList: some View {
         List {
@@ -479,7 +469,6 @@ struct SpaceDetailView: View {
             }
             selectedMemoryIDs.removeAll()
         }
-        showingFilterSheet = false
         showingDeleteConfirmation = false
     }
 
