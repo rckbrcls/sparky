@@ -47,7 +47,7 @@ private extension View {
             )
             .overlay(
                 Capsule()
-                    .strokeBorder(isSelected ? Color.clear : Color(uiColor: .systemGray6), lineWidth: 1)
+                    .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
             )
     }
 }
