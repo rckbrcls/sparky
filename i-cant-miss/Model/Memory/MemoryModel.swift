@@ -91,10 +91,6 @@ struct MemoryModel: Identifiable, Hashable {
         status == .completed
     }
 
-    var isInbox: Bool {
-        status == .active && !hasTriggers && space == nil
-    }
-
     nonisolated func nextFireDate(referenceDate: Date = Date()) -> Date? {
         let activeTriggers = triggers.filter { $0.isActive }
         guard !activeTriggers.isEmpty else { return nil }

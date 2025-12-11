@@ -5,7 +5,6 @@ struct FilterSheetView: View {
 
     @Binding var selectedContentTypes: Set<MemoryContentFilterType>
     @Binding var selectedTriggerTypes: Set<MemoryTriggerType>
-    @Binding var showInbox: Bool
     @Binding var detentSelection: PresentationDetent
 
     var body: some View {
@@ -14,7 +13,6 @@ struct FilterSheetView: View {
                 VStack(spacing: 24) {
                     contentsSection
                     triggersSection
-                    inboxSection
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -29,7 +27,6 @@ struct FilterSheetView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedContentTypes.removeAll()
                             selectedTriggerTypes.removeAll()
-                            showInbox = true
                         }
                         dismiss()
                     } label: {
@@ -42,7 +39,6 @@ struct FilterSheetView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedContentTypes.removeAll()
                             selectedTriggerTypes.removeAll()
-                            showInbox = true
                         }
                     } label: {
                         Label("Reset", systemImage: "arrow.counterclockwise")
@@ -101,29 +97,6 @@ struct FilterSheetView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             toggleTriggerType(triggerType)
                         }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(16)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-
-    private var inboxSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Inbox")
-                .font(.headline)
-                .foregroundStyle(.primary)
-
-            FlowLayoutView(spacing: 8) {
-                FilterBadge(
-                    label: "Show Inbox",
-                    systemImage: "tray.fill",
-                    isSelected: showInbox
-                ) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        showInbox.toggle()
                     }
                 }
             }

@@ -3,7 +3,6 @@ import SwiftUI
 struct FilterBadgesBar: View {
     @Binding var selectedTriggerTypes: Set<MemoryTriggerType>
     @Binding var selectedContentTypes: Set<MemoryContentFilterType>
-    @Binding var showInbox: Bool
     @Binding var showPinned: Bool
     @Binding var showTriggerSheet: Bool
     @Binding var showContentSheet: Bool
@@ -55,24 +54,6 @@ struct FilterBadgesBar: View {
                     }
                     .font(.caption.bold())
                     .foregroundStyle(.primary)
-                }
-
-                FilterBadgeButton(
-                    isToggle: true,
-                    isActive: showInbox,
-                    accessibilityLabel: showInbox ? "Hide inbox" : "Show inbox",
-                    action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            showInbox.toggle()
-                        }
-                    }
-                ) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "tray.fill")
-                        Text("Show Inbox")
-                    }
-                    .font(.caption.bold())
-                    .foregroundStyle(showInbox ? .white : .primary)
                 }
 
                 FilterBadgeButton(

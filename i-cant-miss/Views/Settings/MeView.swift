@@ -175,7 +175,6 @@ struct MeView: View {
         let memories = memoryService.memories
         let activeMemories = memories.filter { $0.status == .active }
         let completedMemories = memories.filter { $0.status == .completed }
-        let inboxMemories = memories.filter { $0.isInbox }
         let spacesCount = spaceService.spaces.count
         let activeTriggers = memories.reduce(into: 0) { result, memory in
             result += memory.triggers.filter { $0.isActive }.count
@@ -184,7 +183,6 @@ struct MeView: View {
         return [
             Stat(title: "Memories", value: "\(memories.count)", detail: "Active: \(activeMemories.count)", systemImage: "square.and.pencil"),
             Stat(title: "Completed", value: "\(completedMemories.count)", detail: "Done", systemImage: "checkmark.circle"),
-            Stat(title: "Inbox", value: "\(inboxMemories.count)", detail: "No triggers", systemImage: "tray"),
             Stat(title: "Spaces", value: "\(spacesCount)", detail: "Organization", systemImage: "square.grid.2x2"),
             Stat(title: "Triggers", value: "\(activeTriggers)", detail: "Active", systemImage: "bolt.circle"),
         ]

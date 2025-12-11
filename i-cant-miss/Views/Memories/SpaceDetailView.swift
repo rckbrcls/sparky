@@ -24,7 +24,6 @@ struct SpaceDetailView: View {
 
     @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
-    @State private var showInbox = true
     @State private var showPinned = true
     @State private var showTriggerSheet = false
     @State private var showContentSheet = false
@@ -50,9 +49,6 @@ struct SpaceDetailView: View {
         }
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
             count += selectedTriggerTypes.count
-        }
-        if !showInbox {
-            count += 1
         }
         return count
     }
@@ -82,15 +78,6 @@ struct SpaceDetailView: View {
             }
     }
 
-    // Legacy helper - maintained for compatibility if needed, otherwise safe to remove if unused
-    private var inboxMemories: [MemoryModel] {
-        filteredMemories.filter { $0.isInbox && !$0.isPinned }
-    }
-
-    private var nonInboxMemories: [MemoryModel] {
-        filteredMemories.filter { !$0.isInbox && !$0.isPinned }
-    }
-
     private var shouldShowEmptyStateCard: Bool {
         nonPinnedMemories.isEmpty && pinnedMemories.isEmpty
     }
@@ -110,10 +97,6 @@ struct SpaceDetailView: View {
                 .map(\.label)
                 .sorted()
             parts.append(triggerTypeLabels.joined(separator: ", "))
-        }
-
-        if !showInbox {
-            parts.append("No Inbox")
         }
 
         return parts.isEmpty ? "All" : parts.joined(separator: " • ")
@@ -231,7 +214,7 @@ struct SpaceDetailView: View {
                         .submitLabel(.search)
 
                     Spacer()
-                    
+
                     if !searchText.isEmpty {
                         Button {
                             searchText = ""
@@ -291,7 +274,6 @@ struct SpaceDetailView: View {
         FilterSheetView(
             selectedContentTypes: $selectedContentTypes,
             selectedTriggerTypes: $selectedTriggerTypes,
-            showInbox: $showInbox,
             detentSelection: $filterSheetDetent
         )
         .onAppear { filterSheetDetent = .large }
@@ -309,7 +291,6 @@ struct SpaceDetailView: View {
             FilterBadgesBar(
                 selectedTriggerTypes: $selectedTriggerTypes,
                 selectedContentTypes: $selectedContentTypes,
-                showInbox: $showInbox,
                 showPinned: $showPinned,
                 showTriggerSheet: $showTriggerSheet,
                 showContentSheet: $showContentSheet
@@ -407,7 +388,6 @@ struct SpaceDetailView: View {
 
         return base.filter { memory in
             matchesSelectedContentAndTrigger(memory) &&
-            (showInbox || !memory.isInbox) &&
             matchesSearchText(memory)
         }
     }

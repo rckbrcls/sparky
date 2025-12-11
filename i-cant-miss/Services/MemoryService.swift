@@ -178,20 +178,6 @@ final class MemoryService: ObservableObject {
         return sorted
     }
 
-    func inboxMemories() -> [MemoryModel] {
-        memories
-            .filter { $0.isInbox }
-            .sorted { lhs, rhs in
-                if lhs.isPinned != rhs.isPinned {
-                    return lhs.isPinned && !rhs.isPinned
-                }
-                if let lhsDue = lhs.dueDate, let rhsDue = rhs.dueDate, lhsDue != rhsDue {
-                    return lhsDue < rhsDue
-                }
-                return lhs.updatedAt > rhs.updatedAt
-            }
-    }
-
     func timelineMemories(referenceDate: Date = Date()) -> [MemoryModel] {
         memories
             .filter { memory in
