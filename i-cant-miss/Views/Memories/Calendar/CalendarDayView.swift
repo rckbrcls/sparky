@@ -57,7 +57,7 @@ struct CalendarDayView: View {
                 ForEach(pages, id: \.self) { day in
                     List {
                         dayHeader(for: day)
-                            .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowInsets(.init(top: 20, leading: 0, bottom: 0, trailing: 0))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
 

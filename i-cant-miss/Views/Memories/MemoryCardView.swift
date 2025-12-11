@@ -12,9 +12,33 @@ struct MemoryCardView: View {
     @ObservedObject var memoryService: MemoryService
     @EnvironmentObject private var environment: AppEnvironment
 
-    init(memoryID: UUID, memoryService: MemoryService) {
+    // Context menu action callbacks (optional - if nil, context menu is disabled)
+    var onTogglePin: (() -> Void)?
+    var onToggleCompletion: (() -> Void)?
+    var onDelete: (() -> Void)?
+    var onEdit: (() -> Void)?
+    var onShowMoreActions: (() -> Void)?
+
+    private var isContextMenuEnabled: Bool {
+        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onEdit != nil || onShowMoreActions != nil
+    }
+
+    init(
+        memoryID: UUID,
+        memoryService: MemoryService,
+        onTogglePin: (() -> Void)? = nil,
+        onToggleCompletion: (() -> Void)? = nil,
+        onDelete: (() -> Void)? = nil,
+        onEdit: (() -> Void)? = nil,
+        onShowMoreActions: (() -> Void)? = nil
+    ) {
         self.memoryID = memoryID
         self._memoryService = ObservedObject(wrappedValue: memoryService)
+        self.onTogglePin = onTogglePin
+        self.onToggleCompletion = onToggleCompletion
+        self.onDelete = onDelete
+        self.onEdit = onEdit
+        self.onShowMoreActions = onShowMoreActions
     }
 
     private var memory: MemoryModel? {
@@ -206,10 +230,10 @@ struct MemoryCardView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
                 }
+                }
             }
         }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 24)
@@ -221,6 +245,52 @@ struct MemoryCardView: View {
                 .stroke(Color.primary.opacity(0.1), lineWidth: 1)
         )
         .contentShape(Rectangle())
+        .contextMenu {
+            if isContextMenuEnabled {
+                if let onTogglePin = onTogglePin {
+                    Button {
+                        onTogglePin()
+                    } label: {
+                        Label(memory.isPinned ? "Unpin" : "Pin",
+                              systemImage: memory.isPinned ? "pin.slash.fill" : "pin.fill")
+                    }
+                }
+
+                if let onToggleCompletion = onToggleCompletion {
+                    Button {
+                        onToggleCompletion()
+                    } label: {
+                        Label(memory.status == .completed ? "Mark Active" : "Mark Completed",
+                              systemImage: memory.status == .completed ? "arrow.uturn.backward.circle" : "checkmark.circle.fill")
+                    }
+                }
+
+                if let onEdit = onEdit {
+                    Button {
+                        onEdit()
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                }
+
+                if let onShowMoreActions = onShowMoreActions {
+                    Button {
+                        onShowMoreActions()
+                    } label: {
+                        Label("More Options", systemImage: "ellipsis.circle")
+                    }
+                }
+
+                if let onDelete = onDelete {
+                    Divider()
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        }
     }
 
     private func priorityColor(for priority: MemoryPriority) -> Color {

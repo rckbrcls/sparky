@@ -318,7 +318,7 @@ struct SpaceDetailView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 
-            mainListSection
+            timelineAndInboxSection
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -337,11 +337,6 @@ struct SpaceDetailView: View {
                 searchText = ""
             }
         }
-    }
-
-    @ViewBuilder
-    private var mainListSection: some View {
-        timelineAndInboxSection
     }
 
     @ViewBuilder

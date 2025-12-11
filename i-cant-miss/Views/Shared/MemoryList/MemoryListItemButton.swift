@@ -13,46 +13,36 @@ struct MemoryListItemButton: View {
     @State private var isShowingMoreActions = false
 
     var body: some View {
-        if isMultiSelecting || isDisabled {
-            listButton
-        } else {
-            listButton
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    trailingSwipeActions()
-                }
-                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                    leadingSwipeActions()
-                }
-                .sheet(isPresented: $isShowingMoreActions) {
-                    MemoryListMoreActionsSheet(
-                        memory: memory,
-                        spaces: environment.spaceService.spaces,
-                        canEdit: onEdit != nil,
-                        onEdit: {
-                            guard let onEdit else { return }
-                            isShowingMoreActions = false
-                            onEdit(memory)
-                        },
-                        onDelete: {
-                            isShowingMoreActions = false
-                            Task { await deleteMemory() }
-                        },
-                        onTogglePin: {
-                            Task { await toggleMemoryPin() }
-                        },
-                        onMoveToSpace: { spaceID in
-                            Task { await moveMemory(to: spaceID) }
-                        },
-                        onUpdateStatus: { status in
-                            Task { await setMemoryStatus(status) }
-                        },
-                        onUpdatePriority: { priority in
-                            Task { await setMemoryPriority(priority) }
-                        }
-                    )
-                    .presentationDetents([.medium])
-                }
-        }
+        listButton
+            .sheet(isPresented: $isShowingMoreActions) {
+                MemoryListMoreActionsSheet(
+                    memory: memory,
+                    spaces: environment.spaceService.spaces,
+                    canEdit: onEdit != nil,
+                    onEdit: {
+                        guard let onEdit else { return }
+                        isShowingMoreActions = false
+                        onEdit(memory)
+                    },
+                    onDelete: {
+                        isShowingMoreActions = false
+                        Task { await deleteMemory() }
+                    },
+                    onTogglePin: {
+                        Task { await toggleMemoryPin() }
+                    },
+                    onMoveToSpace: { spaceID in
+                        Task { await moveMemory(to: spaceID) }
+                    },
+                    onUpdateStatus: { status in
+                        Task { await setMemoryStatus(status) }
+                    },
+                    onUpdatePriority: { priority in
+                        Task { await setMemoryPriority(priority) }
+                    }
+                )
+                .presentationDetents([.medium])
+            }
     }
 
     @ViewBuilder
@@ -89,44 +79,31 @@ struct MemoryListItemButton: View {
                 onSelect(memory)
             }
         } label: {
-            MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService)
+            // Pass context menu callbacks only when not in multi-selecting or disabled mode
+            if isMultiSelecting || isDisabled {
+                MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService)
+                    .overlay(selectionOverlay)
+                    .overlay(alignment: .topTrailing) {
+                        selectionBadge
+                    }
+            } else {
+                MemoryCardView(
+                    memoryID: memory.id,
+                    memoryService: environment.memoryService,
+                    onTogglePin: { Task { await toggleMemoryPin() } },
+                    onToggleCompletion: { Task { await toggleMemoryCompletion() } },
+                    onDelete: { Task { await deleteMemory() } },
+                    onEdit: onEdit != nil ? { onEdit?(memory) } : nil,
+                    onShowMoreActions: { isShowingMoreActions = true }
+                )
                 .overlay(selectionOverlay)
                 .overlay(alignment: .topTrailing) {
                     selectionBadge
                 }
+            }
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
-    }
-
-    @ViewBuilder
-    private func trailingSwipeActions() -> some View {
-        // Completed action first (for fullSwipe)
-        Button {
-            Task { await toggleMemoryCompletion() }
-        } label: {
-            Label(memory.status == .completed ? "Mark Active" : "Mark Completed",
-                  systemImage: memory.status == .completed ? "arrow.uturn.backward.circle" : "checkmark.circle")
-        }
-        .tint(.green)
-
-        Button {
-            isShowingMoreActions = true
-        } label: {
-            Label("More", systemImage: "ellipsis")
-        }
-        .tint(.gray)
-    }
-
-    @ViewBuilder
-    private func leadingSwipeActions() -> some View {
-        Button {
-            Task { await toggleMemoryPin() }
-        } label: {
-            Label(memory.isPinned ? "Unpin" : "Pin",
-                  systemImage: memory.isPinned ? "pin.fill" : "pin")
-        }
-        .tint(.yellow)
     }
 
     private func toggleMemoryCompletion() async {

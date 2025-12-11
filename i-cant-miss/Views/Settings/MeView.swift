@@ -43,6 +43,8 @@ struct MeView: View {
         NavigationStack(path: $settingsNavigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    Text("Me")
+                        .appLargeTitleStyle()
                     profileCard
                     statsCard
                 }
@@ -50,11 +52,6 @@ struct MeView: View {
                 .padding(.vertical, 16)
             }
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Me")
-                        .appLargeTitleStyle()
-                }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         settingsNavigationPath.append(Route.settings)

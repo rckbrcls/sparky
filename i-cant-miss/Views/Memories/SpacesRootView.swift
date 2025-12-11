@@ -23,6 +23,12 @@ struct SpacesRootView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             List {
+                Text("Spaces")
+                    .appLargeTitleStyle()
+                    .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
                 Section {
                     ForEach(displaySpaces) { space in
                         NavigationLink(value: space) {
@@ -38,15 +44,13 @@ struct SpacesRootView: View {
                     }
                 }
             }
+            .listSectionSpacing(.compact)
+            .contentMargins(.top, 0, for: .scrollContent)
+            .environment(\.defaultMinListRowHeight, 0)
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height:  70)
             }
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Spaces")
-                        .appLargeTitleStyle()
-                }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         onCreateSpace()
@@ -57,9 +61,6 @@ struct SpacesRootView: View {
                 }
             }
             .toolbarTitleDisplayMode(.inline)
-            .refreshable {
-                await refresh()
-            }
             .navigationDestination(for: SpaceModel.self) { space in
                 SpaceDetailView(
                     space: space,
