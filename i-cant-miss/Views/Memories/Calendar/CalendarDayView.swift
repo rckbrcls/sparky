@@ -55,26 +55,82 @@ struct CalendarDayView: View {
         GeometryReader { proxy in
             TabView(selection: $displayedDate) {
                 ForEach(pages, id: \.self) { day in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            dayHeader(for: day)
+                    List {
+                        dayHeader(for: day)
+                            .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
 
-                            DaySection(
-                                date: day,
-                                memories: dataManager.memoriesForDate(day),
-                                isMultiSelecting: isMultiSelecting,
-                                selectedMemoryIDs: selectedMemoryIDs,
-                                isPerformingBulkAction: isPerformingBulkAction,
-                                onSelectMemory: onSelectMemory,
-                                onToggleSelection: onToggleSelection,
-                                onEditMemory: onEditMemory
-                            )
+                        let memories = dataManager.memoriesForDate(day)
+
+                        if memories.isEmpty {
+                            emptyState
+                                .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                        } else {
+                            if !allDayMemories(from: memories, date: day).isEmpty {
+                                Section {
+                                    ForEach(allDayMemories(from: memories, date: day)) { memory in
+                                        MemoryListItemButton(
+                                            memory: memory,
+                                            isMultiSelecting: isMultiSelecting,
+                                            isSelected: selectedMemoryIDs.contains(memory.id),
+                                            isDisabled: isPerformingBulkAction,
+                                            onSelect: onSelectMemory,
+                                            onToggleSelection: onToggleSelection,
+                                            onEdit: onEditMemory
+                                        )
+                                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                    }
+                                } header: {
+                                    Text("All Day")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 20)
+                                        .listRowInsets(.init(top: 0, leading: 0, bottom: 8, trailing: 0))
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color.clear)
+                                }
+                            }
+
+                            if !timedMemories(from: memories, date: day).isEmpty {
+                                Section {
+                                    ForEach(timedMemories(from: memories, date: day)) { memory in
+                                        MemoryListItemButton(
+                                            memory: memory,
+                                            isMultiSelecting: isMultiSelecting,
+                                            isSelected: selectedMemoryIDs.contains(memory.id),
+                                            isDisabled: isPerformingBulkAction,
+                                            onSelect: onSelectMemory,
+                                            onToggleSelection: onToggleSelection,
+                                            onEdit: onEditMemory
+                                        )
+                                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                    }
+                                } header: {
+                                    Text("Timed Events")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 20)
+                                        .listRowInsets(.init(top: 0, leading: 0, bottom: 8, trailing: 0))
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color.clear)
+                                }
+                            }
                         }
-                        .padding(.vertical, 16)
-                        .id(day)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .scrollIndicators(.hidden)
-                    .scrollBounceBehavior(.basedOnSize)
+                    .environment(\.defaultMinListRowHeight, 0)
+                    .safeAreaInset(edge: .bottom) {
+                        Color.clear.frame(height: 70)
+                    }
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .tag(day)
                     .onAppear {
@@ -125,13 +181,13 @@ struct CalendarDayView: View {
 
     private func primaryDateTitle(for date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
+        formatter.dateFormat = "EEEE"
         return formatter.string(from: date)
     }
 
     private func secondaryDateTitle(for date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
+        formatter.dateFormat = "MMMM dd, yyyy"
         return formatter.string(from: date)
     }
 
@@ -171,23 +227,8 @@ struct CalendarDayView: View {
             dayAnchor = calendar.startOfDay(for: date)
         }
     }
-}
 
-// MARK: - Day Section
-
-private struct DaySection: View {
-    let date: Date
-    let memories: [MemoryModel]
-    let isMultiSelecting: Bool
-    let selectedMemoryIDs: Set<MemoryModel.ID>
-    let isPerformingBulkAction: Bool
-    let onSelectMemory: (MemoryModel) -> Void
-    let onToggleSelection: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-
-    private let calendar = Calendar.current
-
-    private var allDayMemories: [MemoryModel] {
+    private func allDayMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         memories.filter { memory in
             guard let fireDate = memory.nextFireDate(referenceDate: date) else {
                 return false
@@ -197,54 +238,13 @@ private struct DaySection: View {
         }
     }
 
-    private var timedMemories: [MemoryModel] {
+    private func timedMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         memories.filter { memory in
             guard let fireDate = memory.nextFireDate(referenceDate: date) else {
                 return false
             }
             let components = calendar.dateComponents([.hour, .minute], from: fireDate)
             return (components.hour ?? 0) != 0 || (components.minute ?? 0) != 0
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if memories.isEmpty {
-                emptyState
-            } else {
-                VStack(alignment: .leading, spacing: 16) {
-                    if !allDayMemories.isEmpty {
-                        memoriesSection(title: "All Day", memories: allDayMemories)
-                    }
-
-                    if !timedMemories.isEmpty {
-                        memoriesSection(title: "Timed Events", memories: timedMemories)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func memoriesSection(title: String, memories: [MemoryModel]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
-            ForEach(memories) { memory in
-                MemoryListItemButton(
-                    memory: memory,
-                    isMultiSelecting: isMultiSelecting,
-                    isSelected: selectedMemoryIDs.contains(memory.id),
-                    isDisabled: isPerformingBulkAction,
-                    onSelect: onSelectMemory,
-                    onToggleSelection: onToggleSelection,
-                    onEdit: onEditMemory
-                )
-                .padding(.horizontal, 20)
-            }
         }
     }
 
