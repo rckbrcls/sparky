@@ -66,6 +66,7 @@ private struct AutoFocusTextField: UIViewRepresentable {
 
 struct QuickMemorySheet: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var spaceService: SpaceService
 
     let environment: AppEnvironment
     let space: SpaceModel?
@@ -74,9 +75,18 @@ struct QuickMemorySheet: View {
 
     @State private var title: String = ""
     @State private var selectedSpaceID: UUID?
+    @State private var showSpaceComposer = false
+
+    init(environment: AppEnvironment, space: SpaceModel?, onExpandToEditor: @escaping (SpaceModel?, String) -> Void, onQuickCreate: @escaping (SpaceModel?, String) -> Void) {
+        self.environment = environment
+        self.spaceService = environment.spaceService
+        self.space = space
+        self.onExpandToEditor = onExpandToEditor
+        self.onQuickCreate = onQuickCreate
+    }
 
     private var availableSpaces: [SpaceModel] {
-        environment.spaceService.spaces
+        spaceService.spaces
     }
 
     private var selectedSpace: SpaceModel? {
@@ -159,11 +169,22 @@ struct QuickMemorySheet: View {
                         .tag(Optional(space.id))
                 }
             }
+
+            Divider()
+
+            Button {
+                showSpaceComposer = true
+            } label: {
+                Label("Create New Space", systemImage: "plus.circle")
+            }
         } label: {
             Image(systemName: selectedSpace?.iconName ?? "square.grid.2x2")
                 .foregroundStyle(spaceColor)
                 .frame(width: 36, height: 36)
                 .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
+        }
+        .sheet(isPresented: $showSpaceComposer) {
+            SpaceComposerView(environment: environment)
         }
     }
 }

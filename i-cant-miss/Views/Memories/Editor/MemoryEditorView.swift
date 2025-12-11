@@ -115,7 +115,9 @@ struct MemoryEditorView: View {
     @State private var isShowingFilePreview = false
     @State private var isAudioCardVisible = false
     @State private var navigationPath = NavigationPath()
+    @State private var showSpaceComposer = false
     @Namespace private var toolbarGlassNamespace
+    @ObservedObject private var spaceService: SpaceService
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -125,6 +127,7 @@ struct MemoryEditorView: View {
         self.mode = mode
         self.environment = environment
         self.initialTitle = initialTitle
+        self.spaceService = environment.spaceService
         switch mode {
         case let .create(space, template):
             _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
@@ -729,11 +732,22 @@ struct MemoryEditorView: View {
                                     .tag(Optional(space.id))
                             }
                         }
+
+                        Divider()
+
+                        Button {
+                            showSpaceComposer = true
+                        } label: {
+                            Label("Create New Space", systemImage: "plus.circle")
+                        }
                     } label: {
                         Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
                             .foregroundStyle(selectedSpaceColor)
                             .frame(width: 36, height: 36)
                             .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
+                    }
+                    .sheet(isPresented: $showSpaceComposer) {
+                        SpaceComposerView(environment: environment)
                     }
 
                     TextField("Memory", text: $viewModel.title, axis: .vertical)
@@ -1063,7 +1077,7 @@ struct MemoryEditorView: View {
     }
 
     private var spacesForPicker: [SpaceModel] {
-        viewModel.availableSpaces
+        spaceService.spaces
     }
 
     private var selectedSpaceColor: Color {
