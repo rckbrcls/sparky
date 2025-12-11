@@ -58,7 +58,7 @@ struct CalendarDayView: View {
                 ForEach(pages, id: \.self) { day in
                     List {
                         dayHeader(for: day)
-                            .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
+                            .listRowInsets(.init(top: 24, leading: 0, bottom: 28, trailing: 0))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
 
@@ -127,9 +127,13 @@ struct CalendarDayView: View {
                                                     .foregroundStyle(.secondary)
                                                     .rotationEffect(.degrees(expandedPeriods.contains(period) ? 90 : 0))
                                             }
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 10)
+                                            .background(period.color.opacity(0.20))
+                                            .clipShape(RoundedRectangle(cornerRadius: 24))
                                         }
                                         .buttonStyle(.plain)
-                                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                                        .listRowInsets(.init(top: 12, leading: 20, bottom: 4, trailing: 20))
                                         .listRowBackground(Color.clear)
                                         .listRowSeparator(.hidden)
 
