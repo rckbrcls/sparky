@@ -2,60 +2,12 @@ import SwiftUI
 
 struct FilterBadgesBar: View {
     @Binding var selectedTriggerTypes: Set<MemoryTriggerType>
-    @Binding var selectedContentTypes: Set<MemoryContentFilterType>
     @Binding var showPinned: Bool
-    @Binding var showTriggerSheet: Bool
-    @Binding var showContentSheet: Bool
-
-    private var activeTriggerCount: Int {
-        if selectedTriggerTypes.isEmpty {
-            return MemoryTriggerType.allCases.count
-        }
-        return selectedTriggerTypes.count
-    }
-
-    private var activeContentCount: Int {
-        if selectedContentTypes.isEmpty {
-            return MemoryContentFilterType.allCases.count
-        }
-        return selectedContentTypes.count
-    }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .center, spacing: 10) {
-                FilterBadgeButton(
-                    accessibilityLabel: "Filter triggers",
-                    action: {
-                        showTriggerSheet = true
-                    }
-                ) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "bolt.fill")
-                        Text("Triggers")
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                    }
-                    .font(.caption.bold())
-                    .foregroundStyle(.primary)
-                }
-
-                FilterBadgeButton(
-                    accessibilityLabel: "Filter content",
-                    action: {
-                        showContentSheet = true
-                    }
-                ) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "doc.text")
-                        Text("Content")
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                    }
-                    .font(.caption.bold())
-                    .foregroundStyle(.primary)
-                }
-
+                // Pinned toggle
                 FilterBadgeButton(
                     isToggle: true,
                     isActive: showPinned,
@@ -73,6 +25,27 @@ struct FilterBadgesBar: View {
                     .font(.caption.bold())
                     .foregroundStyle(showPinned ? .white : .primary)
                 }
+
+                // Individual trigger type toggles
+                ForEach(MemoryTriggerType.allCases) { triggerType in
+                    FilterBadgeButton(
+                        isToggle: true,
+                        isActive: isTriggerTypeActive(triggerType),
+                        accessibilityLabel: triggerType.label,
+                        action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                toggleTriggerType(triggerType)
+                            }
+                        }
+                    ) {
+                        HStack(spacing: 4) {
+                            Image(systemName: triggerType.systemImage)
+                            Text(triggerType.label)
+                        }
+                        .font(.caption.bold())
+                        .foregroundStyle(isTriggerTypeActive(triggerType) ? .white : .primary)
+                    }
+                }
             }
             .padding(.leading, 20)
             .padding(.vertical, 1) // Prevent border clipping
@@ -80,11 +53,22 @@ struct FilterBadgesBar: View {
         .scrollIndicators(.hidden)
     }
 
-    private var hasActiveTriggerFilter: Bool {
-        !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count
+    private func isTriggerTypeActive(_ type: MemoryTriggerType) -> Bool {
+        // When set is empty, all types are considered active (no filter)
+        // When set has items, only those items are active
+        selectedTriggerTypes.isEmpty || selectedTriggerTypes.contains(type)
     }
 
-    private var hasActiveContentFilter: Bool {
-        !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count
+    private func toggleTriggerType(_ type: MemoryTriggerType) {
+        if selectedTriggerTypes.isEmpty {
+            // First toggle: select only this type (deselect all others)
+            selectedTriggerTypes = [type]
+        } else if selectedTriggerTypes.contains(type) {
+            selectedTriggerTypes.remove(type)
+            // If removing the last one, reset to empty (show all)
+            // This is optional behavior - could also leave it empty to show none
+        } else {
+            selectedTriggerTypes.insert(type)
+        }
     }
 }

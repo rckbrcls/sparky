@@ -22,11 +22,8 @@ struct SpaceDetailView: View {
     let onSpaceContextChange: (SpaceModel?) -> Void
     let onSearchActiveChange: (Bool) -> Void
 
-    @State private var selectedContentTypes: Set<MemoryContentFilterType> = []
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
     @State private var showPinned = true
-    @State private var showTriggerSheet = false
-    @State private var showContentSheet = false
 
 
 
@@ -42,14 +39,10 @@ struct SpaceDetailView: View {
     @FocusState private var isSearchFieldFocused: Bool
 
     private var activeFilterCount: Int {
-        var count = 0
-        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
-            count += selectedContentTypes.count
-        }
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
-            count += selectedTriggerTypes.count
+            return selectedTriggerTypes.count
         }
-        return count
+        return 0
     }
 
     private var isFiltering: Bool {
@@ -82,23 +75,13 @@ struct SpaceDetailView: View {
     }
 
     private var filterDescription: String {
-        var parts: [String] = []
-
-        if !selectedContentTypes.isEmpty && selectedContentTypes.count < MemoryContentFilterType.allCases.count {
-            let contentTypeLabels = selectedContentTypes
-                .map(\.label)
-                .sorted()
-            parts.append(contentTypeLabels.joined(separator: ", "))
-        }
-
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
             let triggerTypeLabels = selectedTriggerTypes
                 .map(\.label)
                 .sorted()
-            parts.append(triggerTypeLabels.joined(separator: ", "))
+            return triggerTypeLabels.joined(separator: ", ")
         }
-
-        return parts.isEmpty ? "All" : parts.joined(separator: " • ")
+        return "All"
     }
 
     private var emptyStateTitle: String {
@@ -169,16 +152,6 @@ struct SpaceDetailView: View {
         spaceDetailList
             .navigationBarBackButtonHidden(true)
             .toolbar { toolbarContent }
-            .sheet(isPresented: $showTriggerSheet) {
-                TriggerFilterSheetView(selectedTriggerTypes: $selectedTriggerTypes)
-                    .presentationDetents([.medium])
-                    .presentationBackground(.clear)
-            }
-            .sheet(isPresented: $showContentSheet) {
-                ContentFilterSheetView(selectedContentTypes: $selectedContentTypes)
-                    .presentationDetents([.medium])
-                    .presentationBackground(.clear)
-            }
     }
 
     private func notifySpaceContextChange() {
@@ -280,10 +253,7 @@ struct SpaceDetailView: View {
 
             FilterBadgesBar(
                 selectedTriggerTypes: $selectedTriggerTypes,
-                selectedContentTypes: $selectedContentTypes,
-                showPinned: $showPinned,
-                showTriggerSheet: $showTriggerSheet,
-                showContentSheet: $showContentSheet
+                showPinned: $showPinned
             )
             .listRowInsets(.init(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
@@ -377,7 +347,7 @@ struct SpaceDetailView: View {
         )
 
         return base.filter { memory in
-            matchesSelectedContentAndTrigger(memory) &&
+            matchesSelectedTrigger(memory) &&
             matchesSearchText(memory)
         }
     }
@@ -407,41 +377,14 @@ struct SpaceDetailView: View {
         }
     }
 
-    private func matchesSelectedContentAndTrigger(_ memory: MemoryModel) -> Bool {
-        // Check content types
-        let contentMatches: Bool
-        if selectedContentTypes.isEmpty {
-            contentMatches = true
-        } else {
-            contentMatches = selectedContentTypes.contains { contentType in
-                switch contentType {
-                case .richText:
-                    return memory.note != nil && !memory.note!.isEmpty
-                case .checklist:
-                    return memory.hasChecklist
-                case .photos:
-                    return !memory.photoAttachmentIDs.isEmpty
-                case .links:
-                    return !memory.linkAttachmentIDs.isEmpty
-                case .audio:
-                    return !memory.audioAttachmentIDs.isEmpty
-                case .files:
-                    return !memory.fileAttachmentIDs.isEmpty
-                }
-            }
-        }
-
+    private func matchesSelectedTrigger(_ memory: MemoryModel) -> Bool {
         // Check trigger types
-        let triggerMatches: Bool
         if selectedTriggerTypes.isEmpty {
-            triggerMatches = true
-        } else {
-            triggerMatches = selectedTriggerTypes.contains { triggerType in
-                memory.triggers.contains { $0.type == triggerType && $0.isActive }
-            }
+            return true
         }
-
-        return contentMatches && triggerMatches
+        return selectedTriggerTypes.contains { triggerType in
+            memory.triggers.contains { $0.type == triggerType && $0.isActive }
+        }
     }
 
     private func isMemorySelected(_ memory: MemoryModel) -> Bool {
