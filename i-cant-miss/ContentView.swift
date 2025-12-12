@@ -19,7 +19,7 @@ enum CustomTab: String, CaseIterable {
         case .calendar:
             return "calendar"
         case .memories:
-            return "bolt.circle"
+            return "memory"
         case .me:
             return "person.crop.circle"
         }
@@ -204,8 +204,16 @@ struct ContentView: View {
                         activeTab: $activeTab,
                         tabItemView: { tab in
                         VStack(spacing: 3){
-                            Image(systemName: tab.symbol)
-                                .font(.title3)
+                            if tab == .memories {
+                                Image(tab.symbol)
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 24)
+                            } else {
+                                Image(systemName: tab.symbol)
+                                    .font(.title3)
+                            }
 
                             Text(tab.rawValue)
                                 .font(.system(size: 10))
