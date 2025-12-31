@@ -160,12 +160,9 @@ final class CalendarDataManager: ObservableObject {
     }
 
     private func handleMemoryServiceRefresh() {
-        print("📅 CalendarDataManager: Handling refresh notification")
         // Re-load all currently loaded years/months with fresh data
         let years = loadedYears
         let months = loadedMonths
-
-        print("  - Clearing cache and reloading \(years.count) years, \(months.count) months")
 
         memoriesByDay.removeAll()
         monthsWithMemories.removeAll()
@@ -228,20 +225,8 @@ final class CalendarDataManager: ObservableObject {
     private func loadMemoriesForRange(from startDate: Date, to endDate: Date) {
         let scheduled = memoryService.scheduledMemories()
 
-        print("📅 CalendarDataManager: Loading range")
-        print("  - Start: \(startDate)")
-        print("  - End: \(endDate)")
-        print("  - Total scheduled memories: \(scheduled.count)")
-
         for memory in scheduled {
             let occurrences = memory.dates(from: startDate, to: endDate)
-
-            if !occurrences.isEmpty {
-                print("  ✅ Memory '\(memory.title)' has \(occurrences.count) occurrences")
-                for occ in occurrences {
-                    print("    - \(occ)")
-                }
-            }
 
             for occurrence in occurrences {
                 let dayKey = calendar.startOfDay(for: occurrence)

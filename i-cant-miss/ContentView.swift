@@ -155,7 +155,6 @@ struct ContentView: View {
                                 fromDate: Date()
                             )
                             triggers.append(alarmTrigger)
-                            print("🔔 Alarm created - Fire date: \(alarmTrigger.fireDate!), Minutes: \(minutes)")
                         }
 
                         let draft = MemoryDraft(

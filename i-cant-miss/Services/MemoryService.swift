@@ -111,8 +111,6 @@ final class MemoryService: ObservableObject {
             cache.removeAll()
             cacheTimestamps.removeAll()
 
-            print("🔄 MemoryService.refresh() completed - \(combined.count) memories loaded")
-
             if let coordinator = triggerExecutorCoordinator {
                 await coordinator.sync(memories: combined)
             }
@@ -196,9 +194,6 @@ final class MemoryService: ObservableObject {
     }
 
     func scheduledMemories(referenceDate: Date = Date()) -> [MemoryModel] {
-        print("🔍 MemoryService.scheduledMemories() called")
-        print("  - Total memories: \(memories.count)")
-
         let result = memories
             .filter { memory in
                 guard memory.status == .active else {
@@ -213,10 +208,6 @@ final class MemoryService: ObservableObject {
                     $0.type == .scheduled && $0.isActive
                 }
 
-                if hasScheduled {
-                    print("  ✅ '\(memory.title)' - nextFire: \(memory.nextFireDate(referenceDate: referenceDate)!)")
-                }
-
                 return hasScheduled
             }
             .sorted { lhs, rhs in
@@ -228,7 +219,6 @@ final class MemoryService: ObservableObject {
                 return lhs.updatedAt > rhs.updatedAt
             }
 
-        print("  - Scheduled memories found: \(result.count)")
         return result
     }
 
