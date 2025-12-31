@@ -71,13 +71,14 @@ struct QuickMemorySheet: View {
     let environment: AppEnvironment
     let space: SpaceModel?
     let onExpandToEditor: (SpaceModel?, String) -> Void
-    let onQuickCreate: (SpaceModel?, String) -> Void
+    let onQuickCreate: (SpaceModel?, String, Int?) -> Void // Added Int? for reminder minutes
 
     @State private var title: String = ""
     @State private var selectedSpaceID: UUID?
     @State private var showSpaceComposer = false
+    @State private var selectedReminderMinutes: Int? = nil // nil means no reminder selected
 
-    init(environment: AppEnvironment, space: SpaceModel?, onExpandToEditor: @escaping (SpaceModel?, String) -> Void, onQuickCreate: @escaping (SpaceModel?, String) -> Void) {
+    init(environment: AppEnvironment, space: SpaceModel?, onExpandToEditor: @escaping (SpaceModel?, String) -> Void, onQuickCreate: @escaping (SpaceModel?, String, Int?) -> Void) {
         self.environment = environment
         self.spaceService = environment.spaceService
         self.space = space
@@ -122,7 +123,7 @@ struct QuickMemorySheet: View {
                     onSubmit: {
                         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         dismiss()
-                        onQuickCreate(selectedSpace, title)
+                        onQuickCreate(selectedSpace, title, selectedReminderMinutes)
                     }
                 )
                 .frame(height: 30)
@@ -142,11 +143,18 @@ struct QuickMemorySheet: View {
                 .accessibilityLabel("More options")
                 .contentShape(Rectangle())
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
 
+            // Reminder row
+            HStack(spacing: 8) {
+                reminderMenu
+                Spacer()
+            }
+            .padding(.horizontal, 20)
             Spacer()
         }
-        .presentationDetents([.height(90)])
+        .presentationDetents([.height(128)])
         .presentationBackground(.regularMaterial)
         .onAppear {
             if space?.isAllSpaces == true {
@@ -187,6 +195,53 @@ struct QuickMemorySheet: View {
             SpaceComposerView(environment: environment)
         }
     }
+
+    private var reminderMenu: some View {
+        Menu {
+            Button {
+                selectedReminderMinutes = nil
+            } label: {
+                Label("No Reminder", systemImage: selectedReminderMinutes == nil ? "checkmark" : "")
+            }
+
+            Divider()
+
+            // Quick minute options
+            ForEach([5, 10, 15, 30, 60], id: \.self) { minutes in
+                Button {
+                    selectedReminderMinutes = minutes
+                } label: {
+                    let isSelected = selectedReminderMinutes == minutes
+                    let displayText = "in \(minutes) min"
+                    Label(displayText, systemImage: isSelected ? "checkmark" : "")
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(selectedReminderMinutes != nil ? .orange : .secondary)
+
+                if let minutes = selectedReminderMinutes {
+                    Text("Remind me in \(minutes) min")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("Remind me in")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(selectedReminderMinutes != nil ? Color.orange.opacity(0.1) : Color(.systemGray6))
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Quick reminder")
+    }
 }
 
 #Preview {
@@ -198,6 +253,6 @@ struct QuickMemorySheet: View {
         }(),
         space: nil,
         onExpandToEditor: { _, _ in },
-        onQuickCreate: { _, _ in }
+        onQuickCreate: { _, _, _ in }
     )
 }

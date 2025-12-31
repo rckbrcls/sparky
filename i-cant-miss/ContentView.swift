@@ -19,9 +19,9 @@ enum CustomTab: String, CaseIterable {
         case .calendar:
             return "calendar"
         case .memories:
-            return "memory"
+            return "mind"
         case .me:
-            return "person.crop.circle"
+            return "me"
         }
     }
 
@@ -145,8 +145,18 @@ struct ContentView: View {
                         initialTitle: title
                     )
                 },
-                onQuickCreate: { space, title in
+                onQuickCreate: { space, title, reminderMinutes in
                     Task {
+                        // Create triggers array with single alarm if selected
+                        var triggers: [MemoryTriggerModel] = []
+                        if let minutes = reminderMinutes {
+                            let alarmTrigger = MemoryModel.createSingleAlarmTrigger(
+                                minutes: minutes,
+                                fromDate: Date()
+                            )
+                            triggers.append(alarmTrigger)
+                        }
+
                         let draft = MemoryDraft(
                             id: UUID(),
                             title: title,
@@ -154,7 +164,7 @@ struct ContentView: View {
                             isPinned: false,
                             dueDate: nil,
                             spaceID: space?.id,
-                            triggers: [],
+                            triggers: triggers,
                             note: nil,
                             checkItems: [],
                             photoAttachmentIDs: [],
@@ -204,7 +214,7 @@ struct ContentView: View {
                         activeTab: $activeTab,
                         tabItemView: { tab in
                         VStack(spacing: 3){
-                            if tab == .memories {
+                            if tab == .memories || tab == .me {
                                 Image(tab.symbol)
                                     .renderingMode(.template)
                                     .resizable()

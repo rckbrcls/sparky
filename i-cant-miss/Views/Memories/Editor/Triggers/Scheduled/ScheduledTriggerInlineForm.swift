@@ -102,6 +102,10 @@ struct ScheduledTriggerInlineForm: View {
 
     private func recurrenceSummary(_ recurrence: RecurrenceRule) -> String {
         switch recurrence.frequency {
+        case .minutely:
+            return recurrence.interval == 1 ? "Every minute" : "Every \(recurrence.interval) minutes"
+        case .hourly:
+            return recurrence.interval == 1 ? "Every hour" : "Every \(recurrence.interval) hours"
         case .daily:
             return recurrence.interval == 1 ? "Daily" : "Every \(recurrence.interval) days"
         case .weekly:

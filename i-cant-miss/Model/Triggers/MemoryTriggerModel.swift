@@ -102,6 +102,32 @@ extension MemoryTriggerModel {
 
         // Use mathematical calculation instead of loop (O(1) instead of O(N))
         switch recurrence.frequency {
+        case .minutely:
+            let minutesDiff = calendar.dateComponents([.minute], from: fireDate, to: reference).minute ?? 0
+            let intervalsPassed = (minutesDiff / recurrence.interval) + 1
+            let totalMinutes = intervalsPassed * recurrence.interval
+            guard let nextDate = calendar.date(byAdding: .minute, value: totalMinutes, to: fireDate) else {
+                return nil
+            }
+            // Verify endDate if exists
+            if let endDate = recurrence.endDate, nextDate > endDate {
+                return nil
+            }
+            return nextDate
+
+        case .hourly:
+            let hoursDiff = calendar.dateComponents([.hour], from: fireDate, to: reference).hour ?? 0
+            let intervalsPassed = (hoursDiff / recurrence.interval) + 1
+            let totalHours = intervalsPassed * recurrence.interval
+            guard let nextDate = calendar.date(byAdding: .hour, value: totalHours, to: fireDate) else {
+                return nil
+            }
+            // Verify endDate if exists
+            if let endDate = recurrence.endDate, nextDate > endDate {
+                return nil
+            }
+            return nextDate
+
         case .daily:
             let daysDiff = calendar.dateComponents([.day], from: fireDate, to: reference).day ?? 0
             let intervalsPassed = (daysDiff / recurrence.interval) + 1
@@ -313,6 +339,12 @@ extension MemoryTriggerModel {
             // Calculate how many intervals to skip to reach or exceed startDate
             let intervalsToSkip: Int
             switch recurrence.frequency {
+            case .minutely:
+                let minutesDiff = calendar.dateComponents([.minute], from: fireDate, to: startDate).minute ?? 0
+                intervalsToSkip = max(0, Int(ceil(Double(minutesDiff) / Double(recurrence.interval))))
+            case .hourly:
+                let hoursDiff = calendar.dateComponents([.hour], from: fireDate, to: startDate).hour ?? 0
+                intervalsToSkip = max(0, Int(ceil(Double(hoursDiff) / Double(recurrence.interval))))
             case .daily:
                 let daysDiff = calendar.dateComponents([.day], from: fireDate, to: startDate).day ?? 0
                 intervalsToSkip = max(0, Int(ceil(Double(daysDiff) / Double(recurrence.interval))))

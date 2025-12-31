@@ -138,3 +138,37 @@ struct MemoryModel: Identifiable, Hashable {
         hasher.combine(id)
     }
 }
+
+// MARK: - Reminder Trigger Convenience Methods
+
+extension MemoryModel {
+    /// Creates a single-time alarm trigger that fires once after X minutes
+    /// - Parameters:
+    ///   - minutes: The number of minutes from now when the alarm should fire (default: 15)
+    ///   - fromDate: The reference date to calculate from (default: now)
+    /// - Returns: A configured MemoryTriggerModel for a single alarm notification
+    static func createSingleAlarmTrigger(
+        minutes: Int = 15,
+        fromDate: Date = Date()
+    ) -> MemoryTriggerModel {
+        let fireDate = fromDate.addingTimeInterval(TimeInterval(minutes * 60))
+
+        return MemoryTriggerModel(
+            id: UUID(),
+            type: .scheduled,
+            fireDate: fireDate,
+            startDate: nil,
+            recurrenceRule: nil, // No recurrence - single alarm only
+            timeZoneIdentifier: TimeZone.current.identifier,
+            weekdayMask: 0,
+            isActive: true,
+            location: nil,
+            person: nil,
+            sequential: nil,
+            focus: nil,
+            spacedStage: 0,
+            lastReviewDate: nil,
+            ignoreCount: 0
+        )
+    }
+}

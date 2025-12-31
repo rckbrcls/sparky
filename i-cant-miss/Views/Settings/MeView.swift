@@ -43,7 +43,7 @@ struct MeView: View {
         NavigationStack(path: $settingsNavigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Me")
+                    Text("Hello")
                         .appLargeTitleStyle()
                     profileCard
                     statsCard
@@ -134,7 +134,8 @@ struct MeView: View {
             }
         }
         .padding(16)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var statsCard: some View {
@@ -161,12 +162,14 @@ struct MeView: View {
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .liquidGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color(.tertiarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
         }
         .padding(16)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
 
