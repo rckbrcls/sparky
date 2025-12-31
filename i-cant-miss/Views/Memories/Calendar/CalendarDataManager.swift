@@ -160,9 +160,12 @@ final class CalendarDataManager: ObservableObject {
     }
 
     private func handleMemoryServiceRefresh() {
+        print("📅 CalendarDataManager: Handling refresh notification")
         // Re-load all currently loaded years/months with fresh data
         let years = loadedYears
         let months = loadedMonths
+
+        print("  - Clearing cache and reloading \(years.count) years, \(months.count) months")
 
         memoriesByDay.removeAll()
         monthsWithMemories.removeAll()
@@ -192,7 +195,8 @@ final class CalendarDataManager: ObservableObject {
         guard !loadedYears.contains(year) else { return }
 
         guard let yearStart = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
-              let yearEnd = calendar.date(from: DateComponents(year: year, month: 12, day: 31)) else {
+              let yearEndDay = calendar.date(from: DateComponents(year: year, month: 12, day: 31)),
+              let yearEnd = calendar.date(byAdding: .day, value: 1, to: yearEndDay)?.addingTimeInterval(-1) else {
             return
         }
 
@@ -212,7 +216,8 @@ final class CalendarDataManager: ObservableObject {
 
         guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: monthKey)),
               let range = calendar.range(of: .day, in: .month, for: monthKey),
-              let monthEnd = calendar.date(byAdding: .day, value: range.count - 1, to: monthStart) else {
+              let lastDay = calendar.date(byAdding: .day, value: range.count - 1, to: monthStart),
+              let monthEnd = calendar.date(byAdding: .day, value: 1, to: lastDay)?.addingTimeInterval(-1) else {
             return
         }
 
@@ -223,8 +228,20 @@ final class CalendarDataManager: ObservableObject {
     private func loadMemoriesForRange(from startDate: Date, to endDate: Date) {
         let scheduled = memoryService.scheduledMemories()
 
+        print("📅 CalendarDataManager: Loading range")
+        print("  - Start: \(startDate)")
+        print("  - End: \(endDate)")
+        print("  - Total scheduled memories: \(scheduled.count)")
+
         for memory in scheduled {
             let occurrences = memory.dates(from: startDate, to: endDate)
+
+            if !occurrences.isEmpty {
+                print("  ✅ Memory '\(memory.title)' has \(occurrences.count) occurrences")
+                for occ in occurrences {
+                    print("    - \(occ)")
+                }
+            }
 
             for occurrence in occurrences {
                 let dayKey = calendar.startOfDay(for: occurrence)

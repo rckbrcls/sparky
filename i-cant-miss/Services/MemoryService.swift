@@ -111,6 +111,8 @@ final class MemoryService: ObservableObject {
             cache.removeAll()
             cacheTimestamps.removeAll()
 
+            print("🔄 MemoryService.refresh() completed - \(combined.count) memories loaded")
+
             if let coordinator = triggerExecutorCoordinator {
                 await coordinator.sync(memories: combined)
             }
@@ -194,14 +196,25 @@ final class MemoryService: ObservableObject {
     }
 
     func scheduledMemories(referenceDate: Date = Date()) -> [MemoryModel] {
-        return memories
+        print("🔍 MemoryService.scheduledMemories() called")
+        print("  - Total memories: \(memories.count)")
+
+        let result = memories
             .filter { memory in
-                guard memory.status == .active else { return false }
-                guard memory.nextFireDate(referenceDate: referenceDate) != nil else { return false }
+                guard memory.status == .active else {
+                    return false
+                }
+                guard memory.nextFireDate(referenceDate: referenceDate) != nil else {
+                    return false
+                }
 
                 // Deve ter pelo menos um trigger scheduled ativo
                 let hasScheduled = memory.triggers.contains {
                     $0.type == .scheduled && $0.isActive
+                }
+
+                if hasScheduled {
+                    print("  ✅ '\(memory.title)' - nextFire: \(memory.nextFireDate(referenceDate: referenceDate)!)")
                 }
 
                 return hasScheduled
@@ -214,6 +227,9 @@ final class MemoryService: ObservableObject {
                 }
                 return lhs.updatedAt > rhs.updatedAt
             }
+
+        print("  - Scheduled memories found: \(result.count)")
+        return result
     }
 
     func nonScheduledMemories() -> [MemoryModel] {

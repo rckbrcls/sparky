@@ -63,6 +63,12 @@ struct SettingsView: View {
 private extension SettingsView {
     var settingsList: some View {
         List {
+            Text("Settings")
+                .appLargeTitleStyle()
+                .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            
             Section {
                 NavigationLink(value: Route.reminders) {
                     SettingsRow(
@@ -86,11 +92,12 @@ private extension SettingsView {
                 }
             }
         }
+        .listSectionSpacing(.compact)
+        .contentMargins(.top, 0, for: .scrollContent)
         .listStyle(.insetGrouped)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height:  70)
         }
-        .navigationTitle("Settings")
     }
 
     @ViewBuilder
