@@ -116,6 +116,7 @@ struct MemoryEditorView: View {
     @State private var isAudioCardVisible = false
     @State private var navigationPath = NavigationPath()
     @State private var showSpaceComposer = false
+    @State private var isContentCollapsed = false
     @Namespace private var toolbarGlassNamespace
     @ObservedObject private var spaceService: SpaceService
 
@@ -346,17 +347,6 @@ struct MemoryEditorView: View {
         List {
             titleSectionRow
 
-            // Fixed content sections - always show in this order when content exists or editing
-            if shouldShowRichTextCard {
-                noteCard
-                    .transition(cardBounceTransition)
-            }
-
-            if shouldShowChecklistCard {
-                checklistCardView
-                    .transition(cardBounceTransition)
-            }
-
             if shouldShowPhotosCard {
                 photosCardView
                     .transition(cardBounceTransition)
@@ -418,6 +408,34 @@ struct MemoryEditorView: View {
                     }
                     .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
 
+                    Section("Attachments") {
+                        Button {
+                            showPhotoOptionsSheet = true
+                        } label: {
+                            Label("Add Photo", systemImage: "photo")
+                        }
+                        .disabled(!isPhotoActionsEnabled)
+
+                        Button {
+                            handleAddContentSelection(.links)
+                        } label: {
+                            Label("Add Link", systemImage: MemoryEditorContentType.links.iconName)
+                        }
+
+                        Button {
+                            handleAddContentSelection(.files)
+                        } label: {
+                            Label("Add File", systemImage: MemoryEditorContentType.files.iconName)
+                        }
+                        .disabled(viewModel.isSaving || isPresentingFileImporter || !fileImportingContentIDs.isEmpty)
+
+                        Button {
+                            handleAddContentSelection(.audio)
+                        } label: {
+                            Label("Add Audio", systemImage: MemoryEditorContentType.audio.iconName)
+                        }
+                    }
+
                     Section("Details") {
                         Picker(selection: $viewModel.status) {
                             ForEach(MemoryStatus.allCases) { status in
@@ -433,21 +451,6 @@ struct MemoryEditorView: View {
                     Image(systemName: "ellipsis")
                 }
             }
-        }
-        .safeAreaInset(edge: .bottom) {
-            GlassEffectContainer(spacing: 10) {
-                HStack {
-                    addPhotoMenuButton
-                    Spacer()
-                    addLinkButton
-                    Spacer()
-                    addFilesButton
-                    Spacer()
-                    addAudioButton
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 10)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -471,8 +474,15 @@ struct MemoryEditorView: View {
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
                 ))
-            titleSection
-                .padding(.horizontal, 20)
+
+            VStack(alignment: .leading, spacing: 12) {
+                titleCard
+
+                if shouldShowRichTextCard || shouldShowChecklistCard {
+                    collapsibleContentCard
+                }
+            }
+            .padding(.horizontal, 20)
         }
         .listRowSeparator(.hidden)
         .listRowInsets(.init(top: 20, leading: 0, bottom: 16, trailing: 0))
@@ -705,69 +715,172 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var titleSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .center, spacing: 12) {
-                    Menu {
-                        Picker("Space", selection: $viewModel.selectedSpaceID) {
-                            Label("No Space", systemImage: "square.grid.2x2")
-                                .tag(nil as UUID?)
 
-                            ForEach(spacesForPicker) { space in
-                                Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
-                                    .tag(Optional(space.id))
-                            }
-                        }
+    // MARK: - Title Card (Independent)
 
-                        Divider()
+    private var titleCard: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Menu {
+                Picker("Space", selection: $viewModel.selectedSpaceID) {
+                    Label("No Space", systemImage: "square.grid.2x2")
+                        .tag(nil as UUID?)
 
-                        Button {
-                            showSpaceComposer = true
-                        } label: {
-                            Label("Create New Space", systemImage: "plus.circle")
-                        }
-                    } label: {
-                        Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
-                            .foregroundStyle(selectedSpaceColor)
-                            .frame(width: 36, height: 36)
-                            .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
+                    ForEach(spacesForPicker) { space in
+                        Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
+                            .tag(Optional(space.id))
                     }
-                    .sheet(isPresented: $showSpaceComposer) {
-                        SpaceComposerView(environment: environment)
-                    }
-
-                    TextField("Memory", text: $viewModel.title, axis: .vertical)
-                        .font(.custom("Vollkorn-Regular", size: 24))
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.leading)
-                        .submitLabel(.done)
-                        .focused($isTitleFocused)
-                        .onSubmit {
-                            isTitleFocused = false
-                        }
-                        .onChange(of: viewModel.title) { _, newValue in
-                            guard newValue.contains(where: { $0.isNewline }) else { return }
-                            let sanitized = newValue
-                                .split(whereSeparator: \.isNewline)
-                                .joined(separator: " ")
-                            if sanitized != newValue {
-                                viewModel.title = sanitized
-                            }
-                            DispatchQueue.main.async {
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                isTitleFocused = false
-                            }
-                        }
                 }
+
+                Divider()
+
+                Button {
+                    showSpaceComposer = true
+                } label: {
+                    Label("Create New Space", systemImage: "plus.circle")
+                }
+            } label: {
+                Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
+                    .foregroundStyle(selectedSpaceColor)
+                    .frame(width: 36, height: 36)
+                    .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
             }
+            .sheet(isPresented: $showSpaceComposer) {
+                SpaceComposerView(environment: environment)
+            }
+
+            TextField("Memory", text: $viewModel.title, axis: .vertical)
+                .font(.custom("Vollkorn-Regular", size: 24))
+                .fontWeight(.bold)
+                .multilineTextAlignment(.leading)
+                .submitLabel(.done)
+                .focused($isTitleFocused)
+                .onSubmit {
+                    isTitleFocused = false
+                }
+                .onChange(of: viewModel.title) { _, newValue in
+                    guard newValue.contains(where: { $0.isNewline }) else { return }
+                    let sanitized = newValue
+                        .split(whereSeparator: \.isNewline)
+                        .joined(separator: " ")
+                    if sanitized != newValue {
+                        viewModel.title = sanitized
+                    }
+                    DispatchQueue.main.async {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        isTitleFocused = false
+                    }
+                }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
-        .contentShape(Rectangle())
+    }
+
+    // MARK: - Collapsible Content Card (Independent)
+
+    private var collapsibleContentCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Dropdown header
+            HStack {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
+                    .rotationEffect(.degrees(isContentCollapsed ? 0 : 90))
+                    .animation(.spring(response: 0.35, dampingFraction: 0.75), value: isContentCollapsed)
+
+                Text("Content")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+
+                if shouldShowChecklistCard, let subtitle = checklistSubtitle {
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
+                Spacer()
+            }
+            .contentShape(.interaction, Rectangle())
+            .onTapGesture {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0)) {
+                    isContentCollapsed.toggle()
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+
+            if !isContentCollapsed {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Body Section
+                    if shouldShowRichTextCard {
+                        ZStack(alignment: .topLeading) {
+                            TextEditor(text: $viewModel.note)
+                                .textInputAutocapitalization(.sentences)
+                                .autocorrectionDisabled(false)
+                                .frame(minHeight: 120)
+                                .padding(.top, 0)
+                                .padding(.horizontal, 12)
+                                .disabled(!isEditingEnabled)
+                                .scrollContentBackground(.hidden)
+                                .background(Color.clear)
+
+                            if viewModel.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text(isEditingEnabled ? "Write something memorable…" : "No notes captured for this memory.")
+                                    .foregroundStyle(Color(uiColor: .placeholderText))
+                                    .padding(.top, 8)
+                                    .padding(.horizontal, 16)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    }
+
+                    // Checklist Section
+                    if shouldShowChecklistCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach($viewModel.checkItems) { $item in
+                                ChecklistItemEditor(
+                                    item: $item,
+                                    isEditable: isEditingEnabled,
+                                    onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
+                                    onDelete: { viewModel.removeChecklistItem(itemID: item.id) }
+                                )
+                            }
+                            if isEditingEnabled {
+                                ForEach(checklistDraftRowsBinding) { $draft in
+                                    ChecklistNewItemRow(
+                                        draft: $draft,
+                                        focus: $focusedDraftID,
+                                        onSubmit: { handleChecklistDraftSubmit($0) },
+                                        onTitleChange: { draftID, text in handleChecklistDraftTitleChange(draftID, text) }
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.bottom, 12)
+                .transition(
+                    .asymmetric(
+                        insertion: .scale(scale: 0.95, anchor: .top)
+                            .combined(with: .opacity)
+                            .combined(with: .move(edge: .top)),
+                        removal: .scale(scale: 0.95, anchor: .top)
+                            .combined(with: .opacity)
+                    )
+                )
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
     }
 
     // MARK: - Obsolete card functions removed - now using fixed card views (noteCard, checklistCardView, etc.)
