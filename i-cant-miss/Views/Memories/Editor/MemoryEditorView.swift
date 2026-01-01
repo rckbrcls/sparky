@@ -314,6 +314,30 @@ struct MemoryEditorView: View {
                 .ignoresSafeArea()
 
             editorContent
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 80)
+                }
+
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button {
+                        showTriggerPickerSheet = true
+                    } label: {
+                        Image(systemName: "bolt.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.accentColor)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 20)
+                }
+            }
+            .ignoresSafeArea(.keyboard)
         }
     }
 
@@ -469,7 +493,7 @@ struct MemoryEditorView: View {
 
     private var titleSectionRow: some View {
         VStack(alignment: .leading, spacing: 16.0) {
-            triggerButtonsBar(onAddTrigger: { showTriggerPickerSheet = true })
+            triggerButtonsBar(onAddTrigger: nil)
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
@@ -749,7 +773,7 @@ struct MemoryEditorView: View {
             }
 
             TextField("Memory", text: $viewModel.title, axis: .vertical)
-                .font(.custom("Vollkorn-Regular", size: 24))
+                .font(.custom("Vollkorn-Regular", size: 22))
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
