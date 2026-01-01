@@ -1265,6 +1265,7 @@ struct MemoryEditorView: View {
         NavigationStack {
             ScheduledTriggerEditorScreen(viewModel: viewModel)
         }
+        .presentationDetents([.medium])
     }
 
     @ViewBuilder

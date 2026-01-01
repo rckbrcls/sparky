@@ -1,19 +1,50 @@
 import SwiftUI
 
-enum ScheduleType: String, CaseIterable {
-    case weekdays = "Weekdays"
-    case exactDate = "Date"
+// MARK: - Time of Day Type
+
+enum TimeOfDayType: String, CaseIterable {
+    case allDay = "All Day"
+    case specificTime = "Specific Time"
 }
+
+// MARK: - Repeat Type
+
+enum RepeatType: String, CaseIterable, Identifiable {
+    case never = "Never"
+    case daily = "Daily"
+    case weekly = "Weekly"
+    case yearly = "Yearly"
+    case custom = "Custom"
+
+    var id: String { rawValue }
+}
+
+// MARK: - Custom Repeat Type
+
+enum CustomRepeatType: String, CaseIterable, Identifiable {
+    case weekly = "Every Week"
+    case monthly = "Every Month"
+
+    var id: String { rawValue }
+}
+
+// MARK: - Main View
 
 struct ScheduledTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     private let showsCloseButton: Bool
+
+    // State
     @State private var fireDate: Date
-    @State private var scheduleType: ScheduleType
-    @State private var selectedFrequency: RecurrenceFrequency?
-    @State private var repeatInterval: Int
-    @State private var selectedDays: Set<Int>
+    @State private var timeOfDayType: TimeOfDayType
+    @State private var repeatType: RepeatType
+    @State private var showCustomRepeatSheet: Bool = false
+
+    // Custom repeat state
+    @State private var customRepeatType: CustomRepeatType = .weekly
+    @State private var selectedWeekdays: Set<Int>
+    @State private var selectedMonthDays: Set<Int>
 
     private var existingTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .scheduled })
@@ -22,139 +53,81 @@ struct ScheduledTriggerEditorScreen: View {
     init(viewModel: MemoryEditorViewModel, showsCloseButton: Bool = true) {
         self.viewModel = viewModel
         self.showsCloseButton = showsCloseButton
+
         let scheduledTrigger = viewModel.triggers.first(where: { $0.type == .scheduled })
         let defaultDate = scheduledTrigger?.fireDate ?? Date().addingTimeInterval(3600)
         _fireDate = State(initialValue: defaultDate)
 
-        // Detect schedule type based on existing trigger
-        let hasWeekdayMask = (scheduledTrigger?.weekdayMask ?? 0) != 0
-        let detectedType: ScheduleType = scheduledTrigger != nil
-            ? (hasWeekdayMask ? .weekdays : .exactDate)
-            : .weekdays
-        _scheduleType = State(initialValue: detectedType)
+        // Detect time of day type - check if time is midnight (all day indicator)
+        let detectedTimeOfDay: TimeOfDayType = {
+            guard let fire = scheduledTrigger?.fireDate else { return .specificTime }
+            let calendar = Calendar.current
+            let hour = calendar.component(.hour, from: fire)
+            let minute = calendar.component(.minute, from: fire)
+            return (hour == 0 && minute == 0) ? .allDay : .specificTime
+        }()
+        _timeOfDayType = State(initialValue: detectedTimeOfDay)
 
-        // Initialize frequency and interval
-        _selectedFrequency = State(initialValue: scheduledTrigger?.recurrenceRule?.frequency)
-        _repeatInterval = State(initialValue: max(scheduledTrigger?.recurrenceRule?.interval ?? 1, 1))
+        // Detect repeat type from existing trigger
+        let detectedRepeatType = Self.detectRepeatType(from: scheduledTrigger)
+        _repeatType = State(initialValue: detectedRepeatType)
 
         // Initialize weekday selection
-        let initialSelection = Self.initialWeekdaySelection(from: scheduledTrigger?.weekdayMask ?? 0)
-        _selectedDays = State(initialValue: initialSelection)
+        let initialWeekdays = Self.weekdaySet(from: scheduledTrigger?.weekdayMask ?? 0)
+        _selectedWeekdays = State(initialValue: initialWeekdays)
+
+        // Initialize month day selection (stored in recurrence interval for monthly custom)
+        _selectedMonthDays = State(initialValue: [])
+
+        // Set custom repeat type based on existing data
+        if !initialWeekdays.isEmpty {
+            _customRepeatType = State(initialValue: .weekly)
+        } else {
+            _customRepeatType = State(initialValue: .weekly)
+        }
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Summary Card
-            summaryCard
-                .padding()
-
-            Form {
-                // Section 1: Time
-                Section("Time") {
-                    DatePicker("Time", selection: $fireDate, displayedComponents: [.hourAndMinute])
-                }
-
-                // Section 2: Schedule Type
-                Section {
-                    Picker("Type", selection: $scheduleType) {
-                        ForEach(ScheduleType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: scheduleType) { oldValue, newValue in
-                        // Reset states when switching types
-                        if newValue == .exactDate {
-                            selectedDays.removeAll()
-                            // If switching to exact date, keep frequency if it's monthly/yearly
-                            if let freq = selectedFrequency, freq != .monthly && freq != .yearly {
-                                selectedFrequency = nil
-                            }
-                        } else if newValue == .weekdays {
-                            // If switching to weekdays, clear frequency but keep interval for weeks
-                            selectedFrequency = nil
-                            if selectedDays.isEmpty {
-                                selectedDays.insert(Calendar.current.component(.weekday, from: Date()))
-                            }
-                        }
+        Form {
+            Section {
+                // Time of Day
+                Picker("Time of Day", selection: $timeOfDayType) {
+                    ForEach(TimeOfDayType.allCases, id: \.self) { type in
+                        Text(type.rawValue).tag(type)
                     }
                 }
 
-                // Section 3: Weekdays or Date
-                if scheduleType == .weekdays {
-                    Section("Weekdays") {
-                        MemoryWeekdaySelectionView(selectedDays: $selectedDays)
-
-                        if selectedDays.isEmpty {
-                            Text("Select at least one weekday to keep this trigger active.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        // Interval for weekdays (weeks)
-                        Stepper(value: $repeatInterval, in: 1...30) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Every \(repeatInterval) week\(repeatInterval == 1 ? "" : "s")")
-                                    .font(.body)
-                                Text(repeatInterval == 1
-                                    ? "Triggers every week"
-                                    : "Skips \(repeatInterval - 1) week\(repeatInterval == 2 ? "" : "s") between reminders")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
+                // Date & Time (depends on time of day type)
+                if timeOfDayType == .specificTime {
+                    DatePicker("Date & Time", selection: $fireDate, displayedComponents: [.date, .hourAndMinute])
                 } else {
-                    Section("Date") {
-                        DatePicker("Date", selection: $fireDate, displayedComponents: [.date])
+                    DatePicker("Date", selection: $fireDate, displayedComponents: [.date])
+                }
+
+                // Repeat
+                Picker("Repeat", selection: $repeatType) {
+                    ForEach(RepeatType.allCases) { type in
+                        Text(type.rawValue).tag(type)
+                    }
+                }
+                .onChange(of: repeatType) { _, newValue in
+                    if newValue == .custom {
+                        showCustomRepeatSheet = true
                     }
                 }
 
-                // Section 4: Repeat (only for Exact Date)
-                if scheduleType == .exactDate {
-                    Section("Repeat") {
-                        Picker("Repeat", selection: $selectedFrequency) {
-                            Text("Never").tag(nil as RecurrenceFrequency?)
-                            Text("Monthly").tag(Optional(RecurrenceFrequency.monthly))
-                            Text("Yearly").tag(Optional(RecurrenceFrequency.yearly))
-                        }
-
-                        if selectedFrequency != nil {
-                            let intervalLabel: String = {
-                                switch selectedFrequency {
-                                case .monthly:
-                                    return "Every \(repeatInterval) month\(repeatInterval == 1 ? "" : "s")"
-                                case .yearly:
-                                    return "Every \(repeatInterval) year\(repeatInterval == 1 ? "" : "s")"
-                                default:
-                                    return ""
-                                }
-                            }()
-
-                            let intervalDescription: String = {
-                                switch selectedFrequency {
-                                case .monthly:
-                                    return repeatInterval == 1
-                                        ? "Triggers every month on the same date"
-                                        : "Skips \(repeatInterval - 1) month\(repeatInterval == 2 ? "" : "s") between reminders"
-                                case .yearly:
-                                    return repeatInterval == 1
-                                        ? "Triggers every year on the same date"
-                                        : "Skips \(repeatInterval - 1) year\(repeatInterval == 2 ? "" : "s") between reminders"
-                                default:
-                                    return ""
-                                }
-                            }()
-
-                            Stepper(value: $repeatInterval, in: 1...30) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(intervalLabel)
-                                        .font(.body)
-                                    Text(intervalDescription)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
+                // Show custom repeat summary if custom is selected
+                if repeatType == .custom {
+                    Button {
+                        showCustomRepeatSheet = true
+                    } label: {
+                        HStack {
+                            Text(customRepeatSummary)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
                     }
                 }
@@ -173,10 +146,10 @@ struct ScheduledTriggerEditorScreen: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(role: .confirm, action: applyChanges) {
-                    Image(systemName: confirmationIconName)
+                    Image(systemName: "checkmark")
                 }
-                .disabled(scheduleType == .weekdays && selectedDays.isEmpty)
-                .accessibilityLabel(confirmationAccessibilityLabel)
+                .disabled(!isValid)
+                .accessibilityLabel(existingTrigger == nil ? "Add" : "Save")
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 if existingTrigger != nil {
@@ -187,91 +160,49 @@ struct ScheduledTriggerEditorScreen: View {
                 }
             }
         }
+        .sheet(isPresented: $showCustomRepeatSheet) {
+            CustomRepeatSheet(
+                customRepeatType: $customRepeatType,
+                selectedWeekdays: $selectedWeekdays,
+                selectedMonthDays: $selectedMonthDays
+            )
+        }
     }
 
-    // MARK: - Summary View
+    // MARK: - Validation
 
-    private var summaryCard: some View {
-        summaryText
-            .font(.subheadline)
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemBackground))
-            .cornerRadius(24)
-            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+    private var isValid: Bool {
+        if repeatType == .custom {
+            switch customRepeatType {
+            case .weekly:
+                return !selectedWeekdays.isEmpty
+            case .monthly:
+                return !selectedMonthDays.isEmpty
+            }
+        }
+        return true
     }
 
-    private var summaryText: Text {
-        if scheduleType == .weekdays {
-            let mask = selectedDays.reduce(into: Int16(0)) { partialResult, day in
-                partialResult |= Int16(1 << day)
+
+    private var customRepeatSummary: String {
+        switch customRepeatType {
+        case .weekly:
+            if selectedWeekdays.isEmpty {
+                return "Select weekdays"
             }
-            let weekdaySummary = weekdayMaskSummary(mask: mask)
-            let timeText = fireDate.formatted(date: .omitted, time: .shortened)
-            let frequencyText = selectedDays.isEmpty ? "" : " • Every \(repeatInterval) week\(repeatInterval == 1 ? "" : "s")"
-
-            let fullText = "\(scheduleType.rawValue) • \(weekdaySummary) • \(timeText)\(frequencyText)"
-            var attributedString = AttributedString(fullText)
-
-            // Apply accent color and bold to weekdaySummary
-            if let range = attributedString.range(of: weekdaySummary) {
-                attributedString[range].foregroundColor = .accentColor
-                attributedString[range].font = .subheadline.bold()
+            let mask = selectedWeekdays.reduce(into: Int16(0)) { result, day in
+                result |= Int16(1 << day)
             }
-
-            // Apply accent color and bold to frequencyText if present
-            if !frequencyText.isEmpty {
-                let freqOnly = String(frequencyText.dropFirst(3)) // Remove " • "
-                if let range = attributedString.range(of: freqOnly) {
-                    attributedString[range].foregroundColor = .accentColor
-                    attributedString[range].font = .subheadline.bold()
-                }
+            return weekdayMaskSummary(mask: mask)
+        case .monthly:
+            if selectedMonthDays.isEmpty {
+                return "Select days of month"
             }
-
-            return Text(attributedString)
-        } else {
-            let dateText = fireDate.formatted(date: .abbreviated, time: .omitted)
-            let timeText = fireDate.formatted(date: .omitted, time: .shortened)
-
-            if let frequency = selectedFrequency {
-                let frequencyText: String = {
-                    switch frequency {
-                    case .monthly:
-                        return "Every \(repeatInterval) month\(repeatInterval == 1 ? "" : "s")"
-                    case .yearly:
-                        return "Every \(repeatInterval) year\(repeatInterval == 1 ? "" : "s")"
-                    default:
-                        return frequency.rawValue.capitalized
-                    }
-                }()
-
-                let fullText = "\(scheduleType.rawValue) • \(dateText) • \(timeText) • \(frequencyText)"
-                var attributedString = AttributedString(fullText)
-
-                // Apply accent color and bold to dateText
-                if let range = attributedString.range(of: dateText) {
-                    attributedString[range].foregroundColor = .accentColor
-                    attributedString[range].font = .subheadline.bold()
-                }
-
-                // Apply accent color and bold to frequencyText
-                if let range = attributedString.range(of: frequencyText) {
-                    attributedString[range].foregroundColor = .accentColor
-                    attributedString[range].font = .subheadline.bold()
-                }
-
-                return Text(attributedString)
+            let sortedDays = selectedMonthDays.sorted()
+            if sortedDays.count <= 3 {
+                return "Day \(sortedDays.map(String.init).joined(separator: ", "))"
             } else {
-                let fullText = "\(scheduleType.rawValue) • \(dateText) • \(timeText)"
-                var attributedString = AttributedString(fullText)
-
-                // Apply accent color and bold to dateText
-                if let range = attributedString.range(of: dateText) {
-                    attributedString[range].foregroundColor = .accentColor
-                    attributedString[range].font = .subheadline.bold()
-                }
-
-                return Text(attributedString)
+                return "\(sortedDays.count) days of month"
             }
         }
     }
@@ -279,27 +210,56 @@ struct ScheduledTriggerEditorScreen: View {
     // MARK: - Actions
 
     private func applyChanges() {
-        guard !(scheduleType == .weekdays && selectedDays.isEmpty) else { return }
+        guard isValid else { return }
+
+        // Adjust fireDate based on time of day type
+        var adjustedFireDate = fireDate
+        if timeOfDayType == .allDay {
+            // Set time to start of day for all-day events
+            let calendar = Calendar.current
+            adjustedFireDate = calendar.startOfDay(for: fireDate)
+        }
 
         let recurrence: RecurrenceRule?
-        let weekdaySelection: Set<Int>
+        var weekdaySelection: Set<Int> = []
 
-        if scheduleType == .weekdays {
-            // For weekdays, we use weekly recurrence with the interval
-            // and set the weekday selection
-            recurrence = RecurrenceRule(frequency: .weekly, interval: repeatInterval)
-            weekdaySelection = selectedDays
-        } else {
-            // For exact date, use the selected frequency (if any)
-            recurrence = selectedFrequency.map { RecurrenceRule(frequency: $0, interval: repeatInterval) }
-            weekdaySelection = []
+        switch repeatType {
+        case .never:
+            recurrence = nil
+        case .daily:
+            recurrence = RecurrenceRule(frequency: .daily, interval: 1)
+        case .weekly:
+            recurrence = RecurrenceRule(frequency: .weekly, interval: 1)
+        case .yearly:
+            recurrence = RecurrenceRule(frequency: .yearly, interval: 1)
+        case .custom:
+            switch customRepeatType {
+            case .weekly:
+                recurrence = RecurrenceRule(frequency: .weekly, interval: 1)
+                weekdaySelection = selectedWeekdays
+            case .monthly:
+                // For monthly, we store the day selection in a different way
+                // Using the fire date's day as the monthly recurrence day
+                recurrence = RecurrenceRule(frequency: .monthly, interval: 1)
+                // Note: For multiple days per month, this would need model changes
+                // For now, we'll use the first selected day
+                if let firstDay = selectedMonthDays.sorted().first {
+                    var calendar = Calendar.current
+                    calendar.timeZone = TimeZone.current
+                    var components = calendar.dateComponents([.year, .month, .hour, .minute], from: adjustedFireDate)
+                    components.day = firstDay
+                    if let newDate = calendar.date(from: components) {
+                        adjustedFireDate = newDate
+                    }
+                }
+            }
         }
 
         viewModel.setScheduledTrigger(
-            fireDate: fireDate,
+            fireDate: adjustedFireDate,
             recurrence: recurrence,
             weekdaySelection: weekdaySelection,
-            referenceTime: fireDate
+            referenceTime: adjustedFireDate
         )
         dismiss()
     }
@@ -310,20 +270,30 @@ struct ScheduledTriggerEditorScreen: View {
         dismiss()
     }
 
-    private var confirmationIconName: String { "checkmark" }
-
-    private var confirmationAccessibilityLabel: String {
-        existingTrigger == nil ? "Add" : "Save"
-    }
-
     // MARK: - Helper Methods
 
-    private static func initialWeekdaySelection(from mask: Int16) -> Set<Int> {
-        var set = weekdaySet(from: mask)
-        if set.isEmpty {
-            set.insert(currentWeekday())
+    private static func detectRepeatType(from trigger: MemoryTriggerDraft?) -> RepeatType {
+        guard let trigger = trigger, let recurrence = trigger.recurrenceRule else {
+            return .never
         }
-        return set
+
+        // Check if it's a custom repeat (has weekday selection)
+        if trigger.weekdayMask != 0 {
+            return .custom
+        }
+
+        switch recurrence.frequency {
+        case .daily:
+            return .daily
+        case .weekly:
+            return .weekly
+        case .yearly:
+            return .yearly
+        case .monthly:
+            return .custom
+        default:
+            return .never
+        }
     }
 
     private static func weekdaySet(from mask: Int16) -> Set<Int> {
@@ -336,8 +306,99 @@ struct ScheduledTriggerEditorScreen: View {
         }
         return set
     }
+}
 
-    private static func currentWeekday() -> Int {
-        Calendar.current.component(.weekday, from: Date())
+// MARK: - Custom Repeat Sheet
+
+struct CustomRepeatSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var customRepeatType: CustomRepeatType
+    @Binding var selectedWeekdays: Set<Int>
+    @Binding var selectedMonthDays: Set<Int>
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Repeat Every", selection: $customRepeatType) {
+                        ForEach(CustomRepeatType.allCases) { type in
+                            Text(type.rawValue).tag(type)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    if customRepeatType == .weekly {
+                        MemoryWeekdaySelectionView(selectedDays: $selectedWeekdays)
+                    } else {
+                        MonthDaySelectionView(selectedDays: $selectedMonthDays)
+                    }
+                }
+            }
+            .navigationTitle("Custom Repeat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Month Day Selection View
+
+struct MonthDaySelectionView: View {
+    @Binding var selectedDays: Set<Int>
+    private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(1...31, id: \.self) { day in
+                    let isSelected = selectedDays.contains(day)
+                    Button {
+                        toggle(day)
+                    } label: {
+                        Text("\(day)")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(isSelected ? Color(.systemBackground) : .primary)
+                            .frame(width: 36, height: 36)
+                            .background(isSelected ? Color.accentColor : Color(.tertiarySystemFill))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Day \(day)")
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                }
+            }
+
+            Text(summaryText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var summaryText: String {
+        if selectedDays.isEmpty {
+            return "No days selected."
+        }
+        let sortedDays = selectedDays.sorted()
+        if sortedDays.count <= 5 {
+            return "Day \(sortedDays.map(String.init).joined(separator: ", "))"
+        } else {
+            return "\(sortedDays.count) days selected"
+        }
+    }
+
+    private func toggle(_ day: Int) {
+        if selectedDays.contains(day) {
+            selectedDays.remove(day)
+        } else {
+            selectedDays.insert(day)
+        }
     }
 }
