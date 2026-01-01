@@ -85,10 +85,7 @@ struct TriggerPickerSheet: View {
             }
             .sheet(isPresented: $showSequentialSheet) {
                 NavigationStack {
-                    SequentialTriggerEditorScreen(
-                        viewModel: viewModel,
-                        excludedMemoryID: viewModel.editingMemoryID
-                    )
+                    SequentialTriggerEditorScreen(viewModel: viewModel)
                 }
                 .presentationDetents([.large])
             }

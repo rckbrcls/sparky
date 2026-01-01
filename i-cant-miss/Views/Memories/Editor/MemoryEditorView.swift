@@ -1296,7 +1296,6 @@ struct MemoryEditorView: View {
         NavigationStack {
             SequentialTriggerEditorScreen(
                 viewModel: viewModel,
-                excludedMemoryID: viewModel.editingMemoryID
             )
         }
         .presentationDetents([.large])

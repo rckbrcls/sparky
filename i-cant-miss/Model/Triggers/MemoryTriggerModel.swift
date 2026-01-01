@@ -36,8 +36,50 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     }
 
     struct TriggerSequential: Hashable, Codable {
-        var previousMemoryID: UUID?
-        var nextMemoryID: UUID?
+        var previousMemoryIDs: [UUID]
+        var nextMemoryIDs: [UUID]
+
+        // Backward compatibility - single ID access
+        var previousMemoryID: UUID? {
+            get { previousMemoryIDs.first }
+            set {
+                if let id = newValue {
+                    if previousMemoryIDs.isEmpty {
+                        previousMemoryIDs = [id]
+                    } else {
+                        previousMemoryIDs[0] = id
+                    }
+                } else {
+                    previousMemoryIDs = []
+                }
+            }
+        }
+
+        var nextMemoryID: UUID? {
+            get { nextMemoryIDs.first }
+            set {
+                if let id = newValue {
+                    if nextMemoryIDs.isEmpty {
+                        nextMemoryIDs = [id]
+                    } else {
+                        nextMemoryIDs[0] = id
+                    }
+                } else {
+                    nextMemoryIDs = []
+                }
+            }
+        }
+
+        init(previousMemoryIDs: [UUID] = [], nextMemoryIDs: [UUID] = []) {
+            self.previousMemoryIDs = previousMemoryIDs
+            self.nextMemoryIDs = nextMemoryIDs
+        }
+
+        // Convenience init for backward compatibility
+        init(previousMemoryID: UUID?, nextMemoryID: UUID?) {
+            self.previousMemoryIDs = previousMemoryID.map { [$0] } ?? []
+            self.nextMemoryIDs = nextMemoryID.map { [$0] } ?? []
+        }
     }
 
     struct TriggerFocus: Hashable, Codable {

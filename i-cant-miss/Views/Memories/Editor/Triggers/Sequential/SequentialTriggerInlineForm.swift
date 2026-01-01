@@ -57,24 +57,35 @@ struct SequentialTriggerInlineForm: View {
 
     private var hasConfiguration: Bool {
         guard let configuration else { return false }
-        return configuration.previousMemoryID != nil || configuration.nextMemoryID != nil
+        return !configuration.previousMemoryIDs.isEmpty || !configuration.nextMemoryIDs.isEmpty
     }
 
     private var summaryText: String {
         guard let configuration else { return "Sequential trigger" }
-        let previous = configuration.previousMemoryID.flatMap { name(for: $0) }
-        let next = configuration.nextMemoryID.flatMap { name(for: $0) }
 
-        switch (previous, next) {
-        case let (prev?, next?):
-            return "\(prev) → \(next)"
-        case let (prev?, nil):
-            return "After \(prev)"
-        case let (nil, next?):
-            return "Activates \(next)"
-        default:
-            return "Sequential trigger"
+        let prevCount = configuration.previousMemoryIDs.count
+        let nextCount = configuration.nextMemoryIDs.count
+
+        if prevCount > 0 && nextCount > 0 {
+            if prevCount == 1 && nextCount == 1 {
+                let prev = name(for: configuration.previousMemoryIDs[0])
+                let next = name(for: configuration.nextMemoryIDs[0])
+                return "\(prev) → \(next)"
+            }
+            return "\(prevCount) previous → \(nextCount) next"
+        } else if prevCount > 0 {
+            if prevCount == 1 {
+                return "After \(name(for: configuration.previousMemoryIDs[0]))"
+            }
+            return "After \(prevCount) memories"
+        } else if nextCount > 0 {
+            if nextCount == 1 {
+                return "Activates \(name(for: configuration.nextMemoryIDs[0]))"
+            }
+            return "Activates \(nextCount) memories"
         }
+
+        return "Sequential trigger"
     }
 
     private func name(for id: UUID) -> String {

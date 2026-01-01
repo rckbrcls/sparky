@@ -58,8 +58,8 @@ enum TriggerFactory {
             )
         case .sequential:
             let sequentialData = SequentialTrigger.SequentialData(
-                previousMemoryID: model.sequential?.previousMemoryID,
-                nextMemoryID: model.sequential?.nextMemoryID
+                previousMemoryIDs: model.sequential?.previousMemoryIDs ?? [],
+                nextMemoryIDs: model.sequential?.nextMemoryIDs ?? []
             )
             return SequentialTrigger(
                 id: model.id,
@@ -169,8 +169,8 @@ enum TriggerFactory {
                 fatalError("Trigger type mismatch")
             }
             let sequentialModel = MemoryTriggerModel.TriggerSequential(
-                previousMemoryID: sequential.sequential.previousMemoryID,
-                nextMemoryID: sequential.sequential.nextMemoryID
+                previousMemoryIDs: sequential.sequential.previousMemoryIDs,
+                nextMemoryIDs: sequential.sequential.nextMemoryIDs
             )
             return MemoryTriggerModel(
                 id: sequential.id,

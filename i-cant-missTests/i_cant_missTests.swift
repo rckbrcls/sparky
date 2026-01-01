@@ -76,14 +76,16 @@ struct i_cant_missTests {
         let previous = UUID()
         let next = UUID()
 
-        viewModel.updateSequentialTrigger(previousMemoryID: previous, nextMemoryID: next)
+        viewModel.updateSequentialTrigger(previousMemoryIDs: [previous], nextMemoryIDs: [next])
 
         let sequentialTrigger = viewModel.sequentialTrigger
         #expect(sequentialTrigger != nil)
         #expect(sequentialTrigger?.sequential?.previousMemoryID == previous)
         #expect(sequentialTrigger?.sequential?.nextMemoryID == next)
+        #expect(sequentialTrigger?.sequential?.previousMemoryIDs.contains(previous) == true)
+        #expect(sequentialTrigger?.sequential?.nextMemoryIDs.contains(next) == true)
 
-        viewModel.updateSequentialTrigger(previousMemoryID: nil, nextMemoryID: nil)
+        viewModel.updateSequentialTrigger(previousMemoryIDs: [], nextMemoryIDs: [])
         #expect(viewModel.sequentialTrigger == nil)
     }
 }

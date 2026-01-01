@@ -1,279 +1,223 @@
+//
+//  SequentialTriggerEditorScreen.swift
+//  i-cant-miss
+//
+//  Created by Codex on 13/10/25.
+//
+
 import SwiftUI
 
 struct SequentialTriggerEditorScreen: View {
-    @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
-    let excludedMemoryID: UUID?
-    private let showsCloseButton: Bool
-    @State private var selectedPrevious: UUID?
-    @State private var selectedNext: UUID?
-    @State private var searchText: String = ""
+    @Environment(\.dismiss) private var dismiss
 
-    private var existingTrigger: MemoryTriggerDraft? {
-        viewModel.sequentialTrigger
-    }
+    @State private var beforeMemoryIDs: [UUID] = []
+    @State private var nextMemoryIDs: [UUID] = []
 
-    init(viewModel: MemoryEditorViewModel,
-         excludedMemoryID: UUID?,
-         showsCloseButton: Bool = true) {
-        self.viewModel = viewModel
-        self.excludedMemoryID = excludedMemoryID
-        self.showsCloseButton = showsCloseButton
-        let configuration = viewModel.sequentialTrigger?.sequential
-        _selectedPrevious = State(initialValue: configuration?.previousMemoryID)
-        _selectedNext = State(initialValue: configuration?.nextMemoryID)
+    @State private var showingPicker = false
+    @State private var pickerMode: PickerMode = .before
+
+    // For drag and drop
+    @State private var isDragging = false
+
+    private enum PickerMode {
+        case before
+        case after
     }
 
     var body: some View {
-        List {
-            infoSection
-            selectionSection(kind: .previous)
-            selectionSection(kind: .next)
-        }
-        .listStyle(.insetGrouped)
-        .searchable(text: $searchText, prompt: "Search memories")
-        .navigationTitle("Sequential Trigger")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if showsCloseButton {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "xmark")
-                    }
-                    .accessibilityLabel("Close")
-                }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button(role: .confirm, action: confirmChanges) {
-                    Image(systemName: "checkmark")
-                }
-                .accessibilityLabel("Save")
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if existingTrigger != nil {
-                    Button(role: .destructive, action: removeSequentialTrigger) {
-                        Image(systemName: "trash")
-                    }
-                    .accessibilityLabel("Remove sequential trigger")
-                }
-            }
-        }
-    }
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Explanatory Text
+                    Text("Choose memories that should happen before or after this one. When you complete the previous memory, this one will become active. When you complete this one, the next one will become active.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
 
-    private var infoSection: some View {
-        Section {
-            Text("Choose which memory unlocks this one and which should be scheduled afterwards. When the previous memory completes, the next memory will be scheduled for the following day.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.vertical, 4)
-        }
-    }
+                    VStack(spacing: 32) {
+                        // Before Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            SectionHeader(title: "Previous Memories", icon: "arrow.up.circle.fill", color: .orange)
 
-    private func selectionSection(kind: SelectionKind) -> some View {
-        Section(kind.title) {
-            selectionSummary(kind: kind)
-            let sections = spaceSections(filteredBy: searchText)
-            if sections.isEmpty {
-                Text("No memories available.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 4)
-            } else {
-                ForEach(sections) { section in
-                    if !section.memories.isEmpty {
-                        DisclosureGroup(section.displayName) {
-                            ForEach(section.memories) { memory in
-                                selectableRow(for: memory, kind: kind)
+                            VStack(spacing: 12) {
+                                // Add Button at Top
+                                SequentialAddButton(title: "Add Previous Memory") {
+                                    pickerMode = .before
+                                    showingPicker = true
+                                }
+
+                                if !beforeMemoryIDs.isEmpty {
+                                    ForEach(beforeMemoryIDs, id: \.self) { id in
+                                        if let memory = viewModel.environment.memoryService.memory(id: id) {
+                                            SequentialMemoryCard(memory: memory) {
+                                                withAnimation {
+                                                    if let index = beforeMemoryIDs.firstIndex(of: id) {
+                                                        beforeMemoryIDs.remove(at: index)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .onMove { from, to in
+                                        beforeMemoryIDs.move(fromOffsets: from, toOffset: to)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Current Memory Indicator
+                        VStack(spacing: 8) {
+                            Image(systemName: "arrow.down")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            HStack {
+                                Spacer()
+                                Text("Current Memory")
+                                    .font(.caption.smallCaps())
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(Color(.secondarySystemBackground))
+                            )
+
+                            Image(systemName: "arrow.down")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 40)
+
+                        // After Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            SectionHeader(title: "Next Memories", icon: "arrow.down.circle.fill", color: .blue)
+
+                            VStack(spacing: 12) {
+                                if !nextMemoryIDs.isEmpty {
+                                    ForEach(nextMemoryIDs, id: \.self) { id in
+                                        if let memory = viewModel.environment.memoryService.memory(id: id) {
+                                            SequentialMemoryCard(memory: memory) {
+                                                withAnimation {
+                                                    if let index = nextMemoryIDs.firstIndex(of: id) {
+                                                        nextMemoryIDs.remove(at: index)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .onMove { from, to in
+                                        nextMemoryIDs.move(fromOffsets: from, toOffset: to)
+                                    }
+                                }
+
+                                // Add Button at Bottom
+                                SequentialAddButton(title: "Add Next Memory") {
+                                    pickerMode = .after
+                                    showingPicker = true
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal)
                 }
+                .padding(.vertical)
             }
-        }
-    }
-
-    @ViewBuilder
-    private func selectionSummary(kind: SelectionKind) -> some View {
-        let selectionID = kind == .previous ? selectedPrevious : selectedNext
-        if let selectionID, let memory = memoryLookup[selectionID] {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(memory.title)
-                    .font(.callout.weight(.semibold))
-                HStack(spacing: 6) {
-                    Image(systemName: "folder")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(memory.space?.name ?? "No Space")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    statusBadge(for: memory)
-                }
-                Button("Clear selection") {
-                    if kind == .previous {
-                        selectedPrevious = nil
-                    } else {
-                        selectedNext = nil
+            .navigationTitle("Sequential Trigger")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
-                .font(.footnote)
-                .buttonStyle(.borderless)
-            }
-            .padding(.vertical, 4)
-        } else {
-            Text(kind.emptyMessage)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-    }
 
-    private func selectableRow(for memory: MemoryModel, kind: SelectionKind) -> some View {
-        let currentSelection = kind == .previous ? selectedPrevious : selectedNext
-        let isSelected = currentSelection == memory.id
-        let isDisabled: Bool = {
-            switch kind {
-            case .previous:
-                return selectedNext == memory.id
-            case .next:
-                return selectedPrevious == memory.id
-            }
-        }()
-
-        return Button {
-            toggleSelection(for: memory.id, kind: kind)
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(memory.title)
-                        .font(.subheadline.weight(isSelected ? .semibold : .regular))
-                        .foregroundColor(isDisabled ? .secondary : .primary)
-                    HStack(spacing: 6) {
-                        Text(memory.space?.name ?? "No Space")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        statusBadge(for: memory)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        save()
                     }
-                }
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.accentColor)
-                } else if isDisabled {
-                    Image(systemName: "slash.circle")
-                        .foregroundStyle(.tertiary)
+                    .fontWeight(.semibold)
                 }
             }
-            .padding(.vertical, 4)
-        }
-        .disabled(isDisabled)
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func statusBadge(for memory: MemoryModel) -> some View {
-        switch memory.status {
-        case .active:
-            EmptyView()
-        case .completed:
-            Image(systemName: "checkmark.circle.fill")
-                .font(.caption2)
-                .foregroundStyle(.green)
-        }
-    }
-
-    private func toggleSelection(for id: UUID, kind: SelectionKind) {
-        switch kind {
-        case .previous:
-            if selectedPrevious == id {
-                selectedPrevious = nil
-            } else {
-                selectedPrevious = id
-                if selectedNext == id {
-                    selectedNext = nil
-                }
+            .sheet(isPresented: $showingPicker) {
+                SequentialMemoryPickerSheet(
+                    viewModel: viewModel,
+                    excludedMemoryIDs: excludedIDs,
+                    onSelect: { memory in
+                        withAnimation {
+                            switch pickerMode {
+                            case .before:
+                                beforeMemoryIDs.append(memory.id)
+                            case .after:
+                                nextMemoryIDs.append(memory.id)
+                            }
+                        }
+                    }
+                )
             }
-        case .next:
-            if selectedNext == id {
-                selectedNext = nil
-            } else {
-                selectedNext = id
-                if selectedPrevious == id {
-                    selectedPrevious = nil
-                }
+            .onAppear {
+                loadExistingConfiguration()
             }
         }
     }
 
-    private func confirmChanges() {
+    private var excludedIDs: Set<UUID> {
+        var ids = Set(beforeMemoryIDs)
+        ids.formUnion(nextMemoryIDs)
+        if let currentID = viewModel.editingMemoryID {
+            ids.insert(currentID)
+        }
+        return ids
+    }
+
+    private func loadExistingConfiguration() {
+        if let existing = viewModel.sequentialTrigger?.sequential {
+            self.beforeMemoryIDs = existing.previousMemoryIDs
+            self.nextMemoryIDs = existing.nextMemoryIDs
+        }
+    }
+
+    private func save() {
         viewModel.updateSequentialTrigger(
-            previousMemoryID: selectedPrevious,
-            nextMemoryID: selectedNext
+            previousMemoryIDs: beforeMemoryIDs,
+            nextMemoryIDs: nextMemoryIDs
         )
         dismiss()
     }
+}
 
-    private func removeSequentialTrigger() {
-        viewModel.removeSequentialTrigger()
-        selectedPrevious = nil
-        selectedNext = nil
-        dismiss()
-    }
+private struct SectionHeader: View {
+    let title: String
+    let icon: String
+    let color: Color
 
-    private func spaceSections(filteredBy query: String) -> [SpaceSection] {
-        let candidates = filteredCandidates(query: query)
-        let grouped = Dictionary(grouping: candidates, by: \.space)
-        return grouped
-            .map { SpaceSection(space: $0.key, memories: $0.value.sorted(by: { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending })) }
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-    }
-
-    private func filteredCandidates(query: String) -> [MemoryModel] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return allCandidates }
-        return allCandidates.filter { memory in
-            memory.title.localizedCaseInsensitiveContains(trimmed) ||
-            (memory.space?.name ?? "No Space").localizedCaseInsensitiveContains(trimmed)
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(.secondary)
         }
     }
+}
 
-    private var allCandidates: [MemoryModel] {
-        viewModel.environment.memoryService.memories.filter { memory in
-            if let excludedMemoryID, memory.id == excludedMemoryID {
-                return false
-            }
-            return true
-        }
-    }
+#Preview {
+    let persistence = PersistenceController(inMemory: true)
+    let environment = AppEnvironment(persistence: persistence)
+    let viewModel = MemoryEditorViewModel(
+        environment: environment,
+        attachmentStore: environment.attachmentStore,
+        memory: nil,
+        defaultSpace: nil,
+        template: .blank
+    )
 
-    private var memoryLookup: [UUID: MemoryModel] {
-        Dictionary(uniqueKeysWithValues: viewModel.environment.memoryService.memories.map { ($0.id, $0) })
-    }
-
-    private enum SelectionKind {
-        case previous
-        case next
-
-        var title: String {
-            switch self {
-            case .previous: return "Previous memory"
-            case .next: return "Next memory"
-            }
-        }
-
-        var emptyMessage: String {
-            switch self {
-            case .previous: return "No previous memory selected."
-            case .next: return "No next memory selected."
-            }
-        }
-    }
-
-    private struct SpaceSection: Identifiable {
-        let space: SpaceModel?
-        let memories: [MemoryModel]
-
-        var id: UUID { space?.id ?? Self.noSpaceIdentifier }
-        var displayName: String { space?.name ?? "No Space" }
-
-        private static let noSpaceIdentifier = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
-    }
+    SequentialTriggerEditorScreen(viewModel: viewModel)
 }
