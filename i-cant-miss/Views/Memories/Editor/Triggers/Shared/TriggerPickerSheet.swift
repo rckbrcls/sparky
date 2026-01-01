@@ -3,7 +3,11 @@ import SwiftUI
 struct TriggerPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @State private var selectedDestination: MemoryTriggerPickerDestination?
+    @State private var showDateAndTimeSheet = false
+    @State private var showLocationSheet = false
+    @State private var showPersonSheet = false
+    @State private var showSequentialSheet = false
+    @State private var showFocusSheet = false
 
     var body: some View {
         NavigationStack {
@@ -13,7 +17,7 @@ struct TriggerPickerSheet: View {
                     icon: "clock.badge",
                     isActive: isDateAndTimeActive
                 ) {
-                    select(.dateAndTime)
+                    showDateAndTimeSheet = true
                 }
 
                 triggerRow(
@@ -21,7 +25,7 @@ struct TriggerPickerSheet: View {
                     icon: "mappin.circle.fill",
                     isActive: isLocationActive
                 ) {
-                    select(.location)
+                    showLocationSheet = true
                 }
 
                 triggerRow(
@@ -29,7 +33,7 @@ struct TriggerPickerSheet: View {
                     icon: "person.crop.circle.badge.plus",
                     isActive: isPersonActive
                 ) {
-                    select(.person)
+                    showPersonSheet = true
                 }
 
                 triggerRow(
@@ -37,7 +41,7 @@ struct TriggerPickerSheet: View {
                     icon: "arrow.right",
                     isActive: isSequentialActive
                 ) {
-                    select(.sequential)
+                    showSequentialSheet = true
                 }
 
                 triggerRow(
@@ -45,7 +49,7 @@ struct TriggerPickerSheet: View {
                     icon: "moon.fill",
                     isActive: isFocusActive
                 ) {
-                    select(.focus)
+                    showFocusSheet = true
                 }
             }
             .listStyle(.insetGrouped)
@@ -63,23 +67,36 @@ struct TriggerPickerSheet: View {
                     .accessibilityLabel("Close")
                 }
             }
-            .navigationDestination(item: $selectedDestination) { destination in
-                switch destination {
-                case .dateAndTime:
-                    ScheduledTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
-                case .location:
-                    LocationTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
-                case .person:
-                    PersonTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
-                case .sequential:
+            .sheet(isPresented: $showDateAndTimeSheet) {
+                NavigationStack {
+                    ScheduledTriggerEditorScreen(viewModel: viewModel)
+                }
+            }
+            .sheet(isPresented: $showLocationSheet) {
+                NavigationStack {
+                    LocationTriggerEditorScreen(viewModel: viewModel)
+                }
+            }
+            .sheet(isPresented: $showPersonSheet) {
+                NavigationStack {
+                    PersonTriggerEditorScreen(viewModel: viewModel)
+                }
+                .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $showSequentialSheet) {
+                NavigationStack {
                     SequentialTriggerEditorScreen(
                         viewModel: viewModel,
-                        excludedMemoryID: viewModel.editingMemoryID,
-                        showsCloseButton: false
+                        excludedMemoryID: viewModel.editingMemoryID
                     )
-                case .focus:
-                    FocusTriggerEditorScreen(viewModel: viewModel, showsCloseButton: false)
                 }
+                .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showFocusSheet) {
+                NavigationStack {
+                    FocusTriggerEditorScreen(viewModel: viewModel)
+                }
+                .presentationDetents([.medium])
             }
         }
         .presentationDetents([.medium])
@@ -124,9 +141,5 @@ struct TriggerPickerSheet: View {
 
     private var isFocusActive: Bool {
         viewModel.triggers.contains(where: { $0.type == .focus })
-    }
-
-    private func select(_ destination: MemoryTriggerPickerDestination) {
-        selectedDestination = destination
     }
 }
