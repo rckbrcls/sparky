@@ -209,7 +209,7 @@ struct MemoryCardView: View {
             Spacer()
 
             // Completion check circle button
-            if let onToggleCompletion = onToggleCompletion, !memory.triggers.isEmpty {
+            if let onToggleCompletion = onToggleCompletion {
                 Button {
                     onToggleCompletion()
                 } label: {
