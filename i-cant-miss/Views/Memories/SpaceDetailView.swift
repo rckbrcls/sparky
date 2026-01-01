@@ -21,12 +21,6 @@ struct SpaceDetailView: View {
     let onSpaceContextChange: (SpaceModel?) -> Void
     let onSearchActiveChange: (Bool) -> Void
 
-    @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
-    @State private var showPinned = true
-
-
-
-
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
     @State private var isPerformingBulkAction = false
@@ -41,17 +35,6 @@ struct SpaceDetailView: View {
     @State private var isPinnedExpanded = true
     @State private var isActiveExpanded = true
     @State private var isCompletedExpanded = true
-
-    private var activeFilterCount: Int {
-        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
-            return selectedTriggerTypes.count
-        }
-        return 0
-    }
-
-    private var isFiltering: Bool {
-        activeFilterCount > 0
-    }
 
     private var resolvedSpace: SpaceModel {
         spaceService.space(id: space.id) ?? space
@@ -82,24 +65,14 @@ struct SpaceDetailView: View {
         nonPinnedMemories.isEmpty && pinnedMemories.isEmpty && completedMemories.isEmpty
     }
 
-    private var filterDescription: String {
-        if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
-            let triggerTypeLabels = selectedTriggerTypes
-                .map(\.label)
-                .sorted()
-            return triggerTypeLabels.joined(separator: ", ")
-        }
-        return "All"
-    }
+
 
     private var emptyStateTitle: String {
-        isFiltering ? "No memories match these filters" : "No memories yet"
+        "No memories yet"
     }
 
     private var emptyStateMessage: String {
-        isFiltering
-            ? "Try adjusting the filters or reset them to see more memories."
-            : "Create a memory to get started in this space."
+        "Create a memory to get started in this space."
     }
 
     private var navigationTitleText: String {
@@ -252,14 +225,6 @@ struct SpaceDetailView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-            FilterBadgesBar(
-                selectedTriggerTypes: $selectedTriggerTypes,
-                showPinned: $showPinned
-            )
-            .listRowInsets(.init(top: 8, leading: 0, bottom: 8, trailing: 0))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-
             timelineAndInboxSection
         }
         .listStyle(.plain)
@@ -283,8 +248,7 @@ struct SpaceDetailView: View {
 
     @ViewBuilder
     private var timelineAndInboxSection: some View {
-        if showPinned {
-            Section {
+        Section {
                  Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         isPinnedExpanded.toggle()
@@ -473,7 +437,6 @@ struct SpaceDetailView: View {
         )
 
         return base.filter { memory in
-            matchesSelectedTrigger(memory) &&
             matchesSearchText(memory)
         }
     }
@@ -503,15 +466,7 @@ struct SpaceDetailView: View {
         }
     }
 
-    private func matchesSelectedTrigger(_ memory: MemoryModel) -> Bool {
-        // Check trigger types
-        if selectedTriggerTypes.isEmpty {
-            return true
-        }
-        return selectedTriggerTypes.contains { triggerType in
-            memory.triggers.contains { $0.type == triggerType && $0.isActive }
-        }
-    }
+
 
     private func isMemorySelected(_ memory: MemoryModel) -> Bool {
         selectedMemoryIDs.contains(memory.id)
