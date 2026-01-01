@@ -22,14 +22,6 @@ struct TriggersCard: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
 
-                if triggerCount > 0 {
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-                    Text("\(triggerCount)")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-
                 Spacer()
             }
             .padding(.horizontal)
