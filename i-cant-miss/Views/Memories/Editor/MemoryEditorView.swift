@@ -745,9 +745,10 @@ struct MemoryEditorView: View {
             }
 
             TextField("Memory", text: $viewModel.title, axis: .vertical)
-                .font(.custom("Vollkorn-Regular", size: 22))
+                .font(.custom("Vollkorn-Regular", size: 20))
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
+                .lineLimit(2)
                 .submitLabel(.done)
                 .focused($isTitleFocused)
                 .onSubmit {
