@@ -148,6 +148,7 @@ struct TriggersCard: View {
             )
             .contentShape(Rectangle())
         }
+        .foregroundStyle(.primary)
         .accessibilityLabel("Add trigger")
     }
 
