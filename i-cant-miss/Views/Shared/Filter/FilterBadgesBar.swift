@@ -2,29 +2,10 @@ import SwiftUI
 
 struct FilterBadgesBar: View {
     @Binding var selectedTriggerTypes: Set<MemoryTriggerType>
-    @Binding var showPinned: Bool
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .center, spacing: 10) {
-                // Pinned toggle
-                FilterBadgeButton(
-                    isToggle: true,
-                    isActive: showPinned,
-                    accessibilityLabel: showPinned ? "Hide pinned" : "Show pinned",
-                    action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            showPinned.toggle()
-                        }
-                    }
-                ) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "pin.fill")
-                        Text("Pinned")
-                    }
-                    .font(.caption2.bold())
-                    .foregroundStyle(showPinned ? .white : .primary)
-                }
 
                 // Individual trigger type toggles
                 ForEach(MemoryTriggerType.allCases) { triggerType in

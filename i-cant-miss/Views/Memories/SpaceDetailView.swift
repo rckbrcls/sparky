@@ -22,7 +22,6 @@ struct SpaceDetailView: View {
     let onSearchActiveChange: (Bool) -> Void
 
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
-    @State private var showPinned = true
 
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
@@ -250,8 +249,7 @@ struct SpaceDetailView: View {
                 .listRowSeparator(.hidden)
 
             FilterBadgesBar(
-                selectedTriggerTypes: $selectedTriggerTypes,
-                showPinned: $showPinned
+                selectedTriggerTypes: $selectedTriggerTypes
             )
             .listRowInsets(.init(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
@@ -280,7 +278,7 @@ struct SpaceDetailView: View {
 
     @ViewBuilder
     private var timelineAndInboxSection: some View {
-        if showPinned {
+        // Pinned section
             Section {
                  Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -335,7 +333,6 @@ struct SpaceDetailView: View {
                 }
             }
              .listSectionSeparator(.hidden)
-        }
 
         Section {
                  Button {
