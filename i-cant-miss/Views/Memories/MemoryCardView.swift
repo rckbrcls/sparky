@@ -16,12 +16,11 @@ struct MemoryCardView: View {
     var onTogglePin: (() -> Void)?
     var onToggleCompletion: (() -> Void)?
     var onDelete: (() -> Void)?
-    var onEdit: (() -> Void)?
     var onMoveToSpace: ((UUID?) -> Void)?
     var onUpdateStatus: ((MemoryStatus) -> Void)?
 
     private var isContextMenuEnabled: Bool {
-        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onEdit != nil || onMoveToSpace != nil || onUpdateStatus != nil
+        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToSpace != nil || onUpdateStatus != nil
     }
 
     init(
@@ -30,7 +29,6 @@ struct MemoryCardView: View {
         onTogglePin: (() -> Void)? = nil,
         onToggleCompletion: (() -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
-        onEdit: (() -> Void)? = nil,
         onMoveToSpace: ((UUID?) -> Void)? = nil,
         onUpdateStatus: ((MemoryStatus) -> Void)? = nil
     ) {
@@ -39,7 +37,6 @@ struct MemoryCardView: View {
         self.onTogglePin = onTogglePin
         self.onToggleCompletion = onToggleCompletion
         self.onDelete = onDelete
-        self.onEdit = onEdit
         self.onMoveToSpace = onMoveToSpace
         self.onUpdateStatus = onUpdateStatus
     }
@@ -244,13 +241,6 @@ struct MemoryCardView: View {
                     }
                 }
 
-                if let onEdit = onEdit {
-                    Button {
-                        onEdit()
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                }
 
                 if let onMoveToSpace = onMoveToSpace {
                     Menu {

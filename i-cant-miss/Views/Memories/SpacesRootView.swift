@@ -13,7 +13,6 @@ struct SpacesRootView: View {
     @Binding var navigationPath: NavigationPath
 
     let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
     let onCreateSpace: () -> Void
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
@@ -41,7 +40,9 @@ struct SpacesRootView: View {
                             )
                         }
                         .accessibilityHint("Opens details for \(space.name)")
+                        .moveDisabled(space.isAllSpaces)
                     }
+                    .onMove(perform: moveSpaces)
                 }
             }
             .listSectionSpacing(.compact)
@@ -67,8 +68,6 @@ struct SpacesRootView: View {
                     spaceService: spaceService,
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
-                    onEditMemory: onEditMemory,
-
                     onEditSpace: onEditSpace,
                     onMultiSelectionChange: onMultiSelectionChange,
                     onSpaceContextChange: { newSpace in
@@ -107,6 +106,28 @@ struct SpacesRootView: View {
         return [SpaceModel.allSpaces] + sortedSpaces
     }
 
+    private func moveSpaces(from source: IndexSet, to destination: Int) {
+        // Prevent moving to position 0 (All space must stay first)
+        guard destination > 0 else { return }
+
+        // Prevent moving the All space (index 0)
+        if source.contains(0) { return }
+
+        // Create mutable copy of display spaces
+        var reorderedSpaces = displaySpaces
+        reorderedSpaces.move(fromOffsets: source, toOffset: destination)
+
+        // Extract only the user-created spaces (exclude All space) and get their IDs
+        let orderedIDs = reorderedSpaces
+            .filter { !$0.isAllSpaces }
+            .map { $0.id }
+
+        // Persist the new order
+        Task {
+            try? await spaceService.reorderSpaces(orderedIDs)
+        }
+    }
+
     private func memoryCount(for space: SpaceModel) -> Int {
         if space.isAllSpaces {
             return memoryService.memories.count
@@ -132,7 +153,6 @@ struct SpacesRootView: View {
         memoryService: environment.memoryService,
         navigationPath: .constant(NavigationPath()),
         onSelectMemory: { _ in },
-        onEditMemory: nil,
         onCreateSpace: { },
         onEditSpace: nil,
         onMultiSelectionChange: { _ in },

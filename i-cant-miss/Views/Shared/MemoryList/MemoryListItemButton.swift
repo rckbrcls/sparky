@@ -7,7 +7,6 @@ struct MemoryListItemButton: View {
     let isDisabled: Bool
     let onSelect: (MemoryModel) -> Void
     let onToggleSelection: ((MemoryModel) -> Void)?
-    let onEdit: ((MemoryModel) -> Void)?
 
     @EnvironmentObject private var environment: AppEnvironment
 
@@ -63,7 +62,6 @@ struct MemoryListItemButton: View {
                     onTogglePin: { Task { await toggleMemoryPin() } },
                     onToggleCompletion: { Task { await toggleMemoryCompletion() } },
                     onDelete: { Task { await deleteMemory() } },
-                    onEdit: onEdit != nil ? { onEdit?(memory) } : nil,
                     onMoveToSpace: { spaceID in Task { await moveMemory(to: spaceID) } },
                     onUpdateStatus: { status in Task { await setMemoryStatus(status) } }
                 )

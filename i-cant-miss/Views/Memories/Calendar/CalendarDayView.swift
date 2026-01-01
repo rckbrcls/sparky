@@ -16,7 +16,6 @@ struct CalendarDayView: View {
     let isPerformingBulkAction: Bool
     let onSelectMemory: (MemoryModel) -> Void
     let onToggleSelection: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
 
     @State private var displayedDate: Date
     @State private var dayAnchor: Date
@@ -35,8 +34,7 @@ struct CalendarDayView: View {
         selectedMemoryIDs: Set<MemoryModel.ID>,
         isPerformingBulkAction: Bool,
         onSelectMemory: @escaping (MemoryModel) -> Void,
-        onToggleSelection: @escaping (MemoryModel) -> Void,
-        onEditMemory: ((MemoryModel) -> Void)?
+        onToggleSelection: @escaping (MemoryModel) -> Void
     ) {
         self.dataManager = dataManager
         self._currentDate = currentDate
@@ -45,7 +43,6 @@ struct CalendarDayView: View {
         self.isPerformingBulkAction = isPerformingBulkAction
         self.onSelectMemory = onSelectMemory
         self.onToggleSelection = onToggleSelection
-        self.onEditMemory = onEditMemory
 
         let startOfDay = Calendar.current.startOfDay(for: currentDate.wrappedValue)
         self._displayedDate = State(initialValue: startOfDay)
@@ -114,8 +111,7 @@ struct CalendarDayView: View {
                                         isSelected: selectedMemoryIDs.contains(memory.id),
                                         isDisabled: isPerformingBulkAction,
                                         onSelect: onSelectMemory,
-                                        onToggleSelection: onToggleSelection,
-                                        onEdit: onEditMemory
+                                        onToggleSelection: onToggleSelection
                                     )
                                     .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                                     .listRowBackground(Color.clear)
@@ -176,8 +172,7 @@ struct CalendarDayView: View {
                                             isSelected: selectedMemoryIDs.contains(memory.id),
                                             isDisabled: isPerformingBulkAction,
                                             onSelect: onSelectMemory,
-                                            onToggleSelection: onToggleSelection,
-                                            onEdit: onEditMemory
+                                            onToggleSelection: onToggleSelection
                                         )
                                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                                         .listRowBackground(Color.clear)
@@ -391,8 +386,7 @@ struct CalendarDayView: View {
         selectedMemoryIDs: [],
         isPerformingBulkAction: false,
         onSelectMemory: { _ in },
-        onToggleSelection: { _ in },
-        onEditMemory: nil
+        onToggleSelection: { _ in }
     )
     .environmentObject(environment)
 }
