@@ -163,14 +163,14 @@ struct MemoryCardView: View {
 
                 VStack (alignment: .leading, spacing: 6){
                     Text(title)
-                        .font(.headline)
+                        .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(.primary)
 
 
                     if let bodyPreview {
                         Text(bodyPreview)
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 

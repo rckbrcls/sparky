@@ -22,7 +22,7 @@ struct FilterBadgesBar: View {
                         Image(systemName: "pin.fill")
                         Text("Pinned")
                     }
-                    .font(.caption.bold())
+                    .font(.caption2.bold())
                     .foregroundStyle(showPinned ? .white : .primary)
                 }
 
@@ -42,7 +42,7 @@ struct FilterBadgesBar: View {
                             Image(systemName: triggerType.systemImage)
                             Text(triggerType.label)
                         }
-                        .font(.caption.bold())
+                        .font(.caption2.bold())
                         .foregroundStyle(isTriggerTypeActive(triggerType) ? .white : .primary)
                     }
                 }

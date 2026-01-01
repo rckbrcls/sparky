@@ -27,7 +27,7 @@ struct FilterBadgeButton<Content: View>: View {
                 content
             }
             .padding(.horizontal)
-            .frame(height: 40)
+            .frame(height: 32)
             .contentShape(Rectangle())
             .applySolidStyle(isToggle: isToggle, isActive: isActive)
         }
