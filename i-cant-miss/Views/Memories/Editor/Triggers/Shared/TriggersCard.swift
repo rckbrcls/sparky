@@ -2,7 +2,6 @@ import SwiftUI
 
 struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    let onAddTrigger: () -> Void
     @Binding var showDateAndTimeSheet: Bool
     @Binding var showLocationPicker: Bool
     @Binding var showPersonSheet: Bool
@@ -102,8 +101,36 @@ struct TriggersCard: View {
     }
 
     private var addTriggerButton: some View {
-        Button {
-            onAddTrigger()
+        Menu {
+            Button {
+                showDateAndTimeSheet = true
+            } label: {
+                Label("Date & Time", systemImage: "clock.badge")
+            }
+
+            Button {
+                showLocationPicker = true
+            } label: {
+                Label("Location", systemImage: "mappin.circle.fill")
+            }
+
+            Button {
+                showPersonSheet = true
+            } label: {
+                Label("Person", systemImage: "person.crop.circle.badge.plus")
+            }
+
+            Button {
+                showSequentialSheet = true
+            } label: {
+                Label("Sequence", systemImage: "arrow.right")
+            }
+
+            Button {
+                showFocusSheet = true
+            } label: {
+                Label("Focus", systemImage: "moon.fill")
+            }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
@@ -121,7 +148,6 @@ struct TriggersCard: View {
             )
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .accessibilityLabel("Add trigger")
     }
 

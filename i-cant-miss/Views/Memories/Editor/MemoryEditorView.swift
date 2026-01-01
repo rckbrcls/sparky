@@ -87,7 +87,7 @@ struct MemoryEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: MemoryEditorViewModel
     @State private var showDateAndTimeSheet = false
-    @State private var showTriggerPickerSheet = false
+
     @State private var showAddLinkSheet = false
     @State private var showLocationPicker = false
     @State private var showPersonSheet = false
@@ -182,9 +182,7 @@ struct MemoryEditorView: View {
 
         let sheetConfigured = lifecycleConfigured
             .sheet(isPresented: $showDateAndTimeSheet, content: dateAndTimeSheet)
-            .sheet(isPresented: $showTriggerPickerSheet) {
-                TriggerPickerSheet(viewModel: viewModel)
-            }
+
             .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
@@ -701,7 +699,6 @@ struct MemoryEditorView: View {
     private var triggersCard: some View {
         TriggersCard(
             viewModel: viewModel,
-            onAddTrigger: { showTriggerPickerSheet = true },
             showDateAndTimeSheet: $showDateAndTimeSheet,
             showLocationPicker: $showLocationPicker,
             showPersonSheet: $showPersonSheet,
