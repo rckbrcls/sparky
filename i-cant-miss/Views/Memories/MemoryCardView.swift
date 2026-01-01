@@ -215,7 +215,7 @@ struct MemoryCardView: View {
                 } label: {
                     Image(systemName: memory.status == .completed ? "checkmark.circle.fill" : "circle")
                         .font(.headline)
-                        .foregroundStyle(memory.status == .completed ? .green : .secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -280,6 +280,15 @@ struct MemoryCardView: View {
 
                 if let onDelete = onDelete {
                     Divider()
+
+                    Button {
+                        Task {
+                            try? await memoryService.duplicateMemory(memoryID: memoryID)
+                        }
+                    } label: {
+                        Label("Duplicate", systemImage: "doc.on.doc")
+                    }
+
                     Button(role: .destructive) {
                         onDelete()
                     } label: {

@@ -411,6 +411,103 @@ final class MemoryService: ObservableObject {
             }
         }
     }
+
+    func duplicateMemory(memoryID: UUID) async throws {
+        guard let memory = memory(id: memoryID) else {
+            throw MemoryServiceError.memoryNotFound
+        }
+
+        // 1. Duplicate Attachments
+        // We reuse the same data, but create new Attachment records with new IDs so they can be managed independently
+        // However, MemoryAttachmentStore handles attachments by ID.
+        // If we want "independent" attachments (e.g. deleting one doesn't delete the other's), we need new IDs and new files.
+        // For simplicity and storage efficiency here, we might just reference the same attachments if they were shared?
+        // BUT, MemoryModel has `attachments: [Attachment]`, where Attachment has an ID.
+        // MemoryDraft takes `attachments: [Attachment]`.
+        // Let's create new Attachment objects with new IDs but SAME data.
+        let newAttachments = memory.attachments.map { attachment in
+            MemoryModel.Attachment(
+                id: UUID(), // New ID
+                kind: attachment.kind,
+                data: attachment.data, // Copying data (might be expensive if large, but safe)
+                createdAt: Date(),
+                url: attachment.url,
+                filename: attachment.filename
+            )
+        }
+
+        // 2. Duplicate CheckItems (Reset completion)
+        let newCheckItems = memory.checkItems.map { item in
+            CheckItemDraft(
+                id: UUID(),
+                title: item.title,
+                detail: item.detail ?? "",
+                isCompleted: false, // Reset completion
+                sortOrder: item.sortOrder,
+                createdAt: Date(),
+                completedAt: nil
+            )
+        }
+
+        // 3. Duplicate Triggers
+        let newTriggers = memory.triggers.map { trigger in
+            MemoryTriggerModel(
+                id: UUID(),
+                type: trigger.type,
+                fireDate: trigger.fireDate,
+                startDate: trigger.startDate,
+                recurrenceRule: trigger.recurrenceRule,
+                timeZoneIdentifier: trigger.timeZoneIdentifier,
+                weekdayMask: trigger.weekdayMask,
+                isActive: trigger.isActive,
+                location: trigger.location,
+                person: trigger.person,
+                sequential: trigger.sequential, // Logic hole: if sequential depends on another memory, should we point to the original? Yes for now.
+                focus: trigger.focus,
+                spacedStage: trigger.spacedStage,
+                lastReviewDate: nil,
+                ignoreCount: 0
+            )
+        }
+
+        // 4. Create Draft
+        let draft = MemoryDraft(
+            id: UUID(),
+            title: memory.title, // Title copy
+            status: .active, // Reset status to active
+            isPinned: memory.isPinned,
+            dueDate: memory.dueDate,
+            spaceID: memory.space?.id,
+            triggers: newTriggers,
+            note: memory.note, // Fixed field
+            checkItems: newCheckItems,
+            photoAttachmentIDs: [], // These will be populated by apply() based on new attachments if we passed them?
+            // Actually MemoryDraft `attachments` arg is what persists new attachments.
+            // But we also have `photoAttachmentIDs` etc.
+            // Let's look at `persist` method. It calls `attachmentStore.replaceAttachments`.
+            // So we just need to pass the new attachments in `attachments` array.
+            // AND we need to make sure the ID arrays match these new IDs if we want them categorized?
+            // `decodeContents` in MemoryService uses `bundle.photoAttachmentIDs` etc.
+            // If we pass `attachments` in draft, `persist` saves them.
+            // BUT `apply` encodes `bundle` with `draft.photoAttachmentIDs`.
+            // So we MUST map the new IDs to the correct arrays.
+            linkAttachmentIDs: [],
+            audioAttachmentIDs: [],
+            fileAttachmentIDs: [],
+            attachments: newAttachments,
+            autoCompleteOnChecklistCompletion: memory.autoCompleteOnChecklistCompletion
+        )
+
+        // Populate specific ID arrays based on kind
+        var draftWithIDs = draft
+        draftWithIDs.photoAttachmentIDs = newAttachments.filter { $0.kind == .photo }.map { $0.id }
+        draftWithIDs.linkAttachmentIDs = newAttachments.filter { $0.kind == .link }.map { $0.id }
+        draftWithIDs.audioAttachmentIDs = newAttachments.filter { $0.kind == .audio }.map { $0.id }
+        draftWithIDs.fileAttachmentIDs = newAttachments.filter { $0.kind == .file }.map { $0.id }
+
+        // 5. Create
+        _ = try await createMemory(from: draftWithIDs)
+    }
 }
 
 // MARK: - Private helpers
