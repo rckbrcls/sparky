@@ -74,10 +74,6 @@ struct SpaceDetailView: View {
         filteredMemories.filter { $0.isCompleted }
     }
 
-    private var shouldShowEmptyStateCard: Bool {
-        nonPinnedMemories.isEmpty && pinnedMemories.isEmpty && completedMemories.isEmpty
-    }
-
     private var filterDescription: String {
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
             let triggerTypeLabels = selectedTriggerTypes
@@ -86,16 +82,6 @@ struct SpaceDetailView: View {
             return triggerTypeLabels.joined(separator: ", ")
         }
         return "All"
-    }
-
-    private var emptyStateTitle: String {
-        isFiltering ? "No memories match these filters" : "No memories yet"
-    }
-
-    private var emptyStateMessage: String {
-        isFiltering
-            ? "Try adjusting the filters or reset them to see more memories."
-            : "Create a memory to get started in this space."
     }
 
     private var navigationTitleText: String {
@@ -444,17 +430,7 @@ struct SpaceDetailView: View {
             }
             .listSectionSeparator(.hidden)
 
-        if nonPinnedMemories.isEmpty && pinnedMemories.isEmpty && completedMemories.isEmpty {
-             MemoryEmptyStateCard(
-                systemImage: "bolt.fill",
-                title: emptyStateTitle,
-                message: emptyStateMessage
-            )
-            .padding(.top, 16)
-            .listRowInsets(.init(top: 24, leading: 20, bottom: 24, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        }
+
     }
 
     private var filteredMemories: [MemoryModel] {
