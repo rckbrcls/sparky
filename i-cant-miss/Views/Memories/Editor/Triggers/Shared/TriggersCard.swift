@@ -15,26 +15,6 @@ struct TriggersCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack {
-                Text("Triggers")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-
-                if triggerCount > 0 {
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-                    Text("\(triggerCount)")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.top, 12)
-
             // Trigger cards
             VStack(spacing: 8) {
                 // Existing triggers
@@ -89,7 +69,9 @@ struct TriggersCard: View {
                 }
 
                 // Add trigger button (dashed border)
-                addTriggerButton
+                if triggerCount == 0 {
+                    addTriggerButton
+                }
             }
             .padding(.horizontal)
             .padding(.bottom, 12)
