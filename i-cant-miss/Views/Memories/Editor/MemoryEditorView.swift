@@ -116,7 +116,6 @@ struct MemoryEditorView: View {
     @State private var isAudioCardVisible = false
     @State private var navigationPath = NavigationPath()
     @State private var showSpaceComposer = false
-    @State private var isContentCollapsed = false
     @Namespace private var toolbarGlassNamespace
     @ObservedObject private var spaceService: SpaceService
 
@@ -474,11 +473,15 @@ struct MemoryEditorView: View {
         VStack(alignment: .leading, spacing: 12) {
             titleCard
 
-            if shouldShowRichTextCard || shouldShowChecklistCard {
-                collapsibleContentCard
+            triggersCard
+
+            if shouldShowRichTextCard {
+                notesCard
             }
 
-            triggersCard
+            if shouldShowChecklistCard {
+                checklistCard
+            }
         }
         .padding(.horizontal, 20)
         .listRowSeparator(.hidden)
@@ -771,105 +774,68 @@ struct MemoryEditorView: View {
         )
     }
 
-    // MARK: - Collapsible Content Card (Independent)
+    // MARK: - Notes Card
 
-    private var collapsibleContentCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Dropdown header
-            HStack {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16)
-                    .rotationEffect(.degrees(isContentCollapsed ? 0 : 90))
-                    .animation(.spring(response: 0.35, dampingFraction: 0.75), value: isContentCollapsed)
+    private var notesCard: some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $viewModel.note)
+                .textInputAutocapitalization(.sentences)
+                .autocorrectionDisabled(false)
+                .frame(minHeight: 120)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .disabled(!isEditingEnabled)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
 
-                Text("Content")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-
-                if shouldShowChecklistCard, let subtitle = checklistSubtitle {
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-
-                Spacer()
-            }
-            .contentShape(.interaction, Rectangle())
-            .onTapGesture {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.75, blendDuration: 0)) {
-                    isContentCollapsed.toggle()
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
-
-            if !isContentCollapsed {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Body Section
-                    if shouldShowRichTextCard {
-                        ZStack(alignment: .topLeading) {
-                            TextEditor(text: $viewModel.note)
-                                .textInputAutocapitalization(.sentences)
-                                .autocorrectionDisabled(false)
-                                .frame(minHeight: 120)
-                                .padding(.top, 0)
-                                .padding(.horizontal, 12)
-                                .disabled(!isEditingEnabled)
-                                .scrollContentBackground(.hidden)
-                                .background(Color.clear)
-
-                            if viewModel.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                Text(isEditingEnabled ? "Write something memorable…" : "No notes captured for this memory.")
-                                    .foregroundStyle(Color(uiColor: .placeholderText))
-                                    .padding(.top, 8)
-                                    .padding(.horizontal, 16)
-                                    .allowsHitTesting(false)
-                            }
-                        }
-                    }
-
-                    // Checklist Section
-                    if shouldShowChecklistCard {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach($viewModel.checkItems) { $item in
-                                ChecklistItemEditor(
-                                    item: $item,
-                                    isEditable: isEditingEnabled,
-                                    onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
-                                    onDelete: { viewModel.removeChecklistItem(itemID: item.id) }
-                                )
-                            }
-                            if isEditingEnabled {
-                                ForEach(checklistDraftRowsBinding) { $draft in
-                                    ChecklistNewItemRow(
-                                        draft: $draft,
-                                        focus: $focusedDraftID,
-                                        onSubmit: { handleChecklistDraftSubmit($0) },
-                                        onTitleChange: { draftID, text in handleChecklistDraftTitleChange(draftID, text) }
-                                    )
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                .padding(.bottom, 12)
-                .transition(
-                    .asymmetric(
-                        insertion: .scale(scale: 0.95, anchor: .top)
-                            .combined(with: .opacity)
-                            .combined(with: .move(edge: .top)),
-                        removal: .scale(scale: 0.95, anchor: .top)
-                            .combined(with: .opacity)
-                    )
-                )
+            if viewModel.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(isEditingEnabled ? "Write something memorable…" : "No notes captured for this memory.")
+                    .foregroundStyle(Color(uiColor: .placeholderText))
+                    .padding(.top, 16)
+                    .padding(.horizontal, 16)
+                    .allowsHitTesting(false)
             }
         }
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+    }
+
+    // MARK: - Checklist Card
+
+    private var checklistCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let subtitle = checklistSubtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+            }
+
+            ForEach($viewModel.checkItems) { $item in
+                ChecklistItemEditor(
+                    item: $item,
+                    isEditable: isEditingEnabled,
+                    onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
+                    onDelete: { viewModel.removeChecklistItem(itemID: item.id) }
+                )
+            }
+            if isEditingEnabled {
+                ForEach(checklistDraftRowsBinding) { $draft in
+                    ChecklistNewItemRow(
+                        draft: $draft,
+                        focus: $focusedDraftID,
+                        onSubmit: { handleChecklistDraftSubmit($0) },
+                        onTitleChange: { draftID, text in handleChecklistDraftTitleChange(draftID, text) }
+                    )
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 12)
+        .padding(.top, checklistSubtitle == nil ? 12 : 0)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))

@@ -137,7 +137,7 @@ struct QuickMemorySheet: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.primary)
                         .frame(width: 36, height: 36)
-                        .glassEffect(.regular)
+                        .glassEffect(.regular.tint(Color.primary.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("More options")
@@ -155,7 +155,7 @@ struct QuickMemorySheet: View {
             Spacer()
         }
         .presentationDetents([.height(128)])
-        .presentationBackground(.regularMaterial)
+        .presentationBackground(.clear)
         .onAppear {
             if space?.isAllSpaces == true {
                 selectedSpaceID = nil
@@ -234,10 +234,7 @@ struct QuickMemorySheet: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(selectedReminderMinutes != nil ? Color.orange.opacity(0.1) : Color(.systemGray6))
-            )
+            .glassEffect(.regular.tint(selectedReminderMinutes != nil ? Color.orange.opacity(0.15) : Color.primary.opacity(0.05)))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Quick reminder")
