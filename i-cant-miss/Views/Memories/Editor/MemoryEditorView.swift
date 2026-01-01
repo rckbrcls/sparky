@@ -315,29 +315,8 @@ struct MemoryEditorView: View {
 
             editorContent
                 .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 80)
+                    Color.clear.frame(height: 20)
                 }
-
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button {
-                        showTriggerPickerSheet = true
-                    } label: {
-                        Image(systemName: "bolt.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white)
-                            .frame(width: 56, height: 56)
-                            .background(Color.accentColor)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                    }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 20)
-                }
-            }
-            .ignoresSafeArea(.keyboard)
         }
     }
 
@@ -492,22 +471,16 @@ struct MemoryEditorView: View {
     }
 
     private var titleSectionRow: some View {
-        VStack(alignment: .leading, spacing: 16.0) {
-            triggerButtonsBar(onAddTrigger: nil)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .top).combined(with: .opacity),
-                    removal: .move(edge: .top).combined(with: .opacity)
-                ))
+        VStack(alignment: .leading, spacing: 12) {
+            titleCard
 
-            VStack(alignment: .leading, spacing: 12) {
-                titleCard
-
-                if shouldShowRichTextCard || shouldShowChecklistCard {
-                    collapsibleContentCard
-                }
+            if shouldShowRichTextCard || shouldShowChecklistCard {
+                collapsibleContentCard
             }
-            .padding(.horizontal, 20)
+
+            triggersCard
         }
+        .padding(.horizontal, 20)
         .listRowSeparator(.hidden)
         .listRowInsets(.init(top: 20, leading: 0, bottom: 16, trailing: 0))
         .listRowBackground(Color.clear)
@@ -722,21 +695,17 @@ struct MemoryEditorView: View {
         isPhotoViewerPresented = true
     }
 
-    @ViewBuilder
-    private func triggerButtonsBar(onAddTrigger: (() -> Void)?) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            TriggerButtonsBar(
-                viewModel: viewModel,
-                onAddTrigger: onAddTrigger,
-                showDateAndTimeSheet: $showDateAndTimeSheet,
-                showLocationPicker: $showLocationPicker,
-                showPersonSheet: $showPersonSheet,
-                showSequentialSheet: $showSequentialSheet,
-                showFocusSheet: $showFocusSheet,
-                memoryLookup: memoryLookup
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
+    private var triggersCard: some View {
+        TriggersCard(
+            viewModel: viewModel,
+            onAddTrigger: { showTriggerPickerSheet = true },
+            showDateAndTimeSheet: $showDateAndTimeSheet,
+            showLocationPicker: $showLocationPicker,
+            showPersonSheet: $showPersonSheet,
+            showSequentialSheet: $showSequentialSheet,
+            showFocusSheet: $showFocusSheet,
+            memoryLookup: memoryLookup
+        )
     }
 
 
