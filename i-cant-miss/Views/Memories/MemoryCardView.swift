@@ -146,13 +146,15 @@ struct MemoryCardView: View {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(memory.isCompleted ? .secondary : .primary)
+                        .strikethrough(memory.isCompleted, color: .secondary)
 
 
                     if let bodyPreview {
                         Text(bodyPreview)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .strikethrough(memory.isCompleted, color: .secondary)
                     }
 
                 }
