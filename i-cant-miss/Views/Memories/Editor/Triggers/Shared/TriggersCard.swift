@@ -89,7 +89,9 @@ struct TriggersCard: View {
                 }
 
                 // Add trigger button (dashed border)
-                addTriggerButton
+                if triggerCount == 0 {
+                    addTriggerButton
+                }
             }
             .padding(.horizontal)
             .padding(.bottom, 12)
