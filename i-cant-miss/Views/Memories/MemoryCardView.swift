@@ -92,15 +92,7 @@ struct MemoryCardView: View {
               let sequential = memory.triggers.first(where: { $0.type == .sequential })?.sequential else {
             return nil
         }
-
-        var parts: [String] = []
-        if let previous = sequential.previousMemoryID {
-            parts.append("After \(sequentialLabel(for: previous))")
-        }
-        if let next = sequential.nextMemoryID {
-            parts.append("Then \(sequentialLabel(for: next))")
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " • ")
+        return "Step \(sequential.stepIndex + 1)"
     }
 
     private var statusBadge: (text: String, systemImage: String, color: Color)? {
@@ -299,15 +291,7 @@ struct MemoryCardView: View {
         }
     }
 
-    private func sequentialLabel(for id: UUID) -> String {
-        if let memory = environment.memoryService.memory(id: id) {
-            let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-                return trimmed
-            }
-        }
-        return String(id.uuidString.prefix(6)) + "…"
-    }
+
 }
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)

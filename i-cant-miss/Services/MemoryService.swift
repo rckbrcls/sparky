@@ -462,7 +462,7 @@ final class MemoryService: ObservableObject {
                 isActive: trigger.isActive,
                 location: trigger.location,
                 person: trigger.person,
-                sequential: trigger.sequential, // Logic hole: if sequential depends on another memory, should we point to the original? Yes for now.
+                sequential: trigger.sequential,
                 focus: trigger.focus,
                 spacedStage: trigger.spacedStage,
                 lastReviewDate: nil,

@@ -38,23 +38,41 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
     func handleMemoryCompletion(memoryID: UUID) async {
         guard let memoryService = memoryService else { return }
 
-        // Buscar todas as memórias ativas com triggers sequenciais
-        let allMemories = memoryService.memories
+        // 1. Encontrar a memória que acabou de ser concluída
+        guard let completedMemory = memoryService.memory(id: memoryID) else { return }
 
-        // Encontrar memórias que referenciam esta memória como previousMemoryID
-        let nextMemories = allMemories.filter { memory in
-            guard memory.status == .active else { return false }
-            return memory.triggers.contains { trigger in
-                guard trigger.type == .sequential,
-                      trigger.isActive,
-                      let sequential = trigger.sequential else { return false }
-                return sequential.previousMemoryID == memoryID
+        // 2. Extrair informações da sequência (se houver)
+        // Devemos procurar em todos os triggers, pois pode ter mais de um, mas assumimos um principal
+        let seqTriggers = completedMemory.triggers.compactMap { $0.sequential }.filter { _ in true } // Filter inactive? TriggerSequential itself doesn't have active flag, the wrapper does.
+        // Wait, `completedMemory.triggers` is `[MemoryTriggerModel]`. `sequential` is optional property of `MemoryTriggerModel`.
+        // We need to check if the trigger containing the sequential info is active.
+
+        let activeSeqTriggers = completedMemory.triggers.filter { $0.isActive && $0.type == .sequential }
+
+        for trigger in activeSeqTriggers {
+            guard let seqInfo = trigger.sequential else { continue }
+
+            // 3. Encontrar memórias que são o "próximo passo" na mesma sequência
+            let targetSequenceID = seqInfo.sequenceID
+            let targetStepIndex = seqInfo.stepIndex + 1
+
+            let allMemories = memoryService.memories
+            let nextMemories = allMemories.filter { memory in
+                // A memória deve estar ativa (ou esperando)
+                // Se já estiver concluída, não faz sentido ativar de novo (loop protection basic)
+                guard memory.status != .completed else { return false }
+
+                // Verificar se tem um trigger com o mesmo sequenceID e index + 1
+                return memory.triggers.contains { t in
+                    guard t.isActive && t.type == .sequential, let s = t.sequential else { return false }
+                    return s.sequenceID == targetSequenceID && s.stepIndex == targetStepIndex
+                }
             }
-        }
 
-        // Para cada memória "próxima", ativar e criar trigger scheduled
-        for nextMemory in nextMemories {
-            await activateNextMemory(nextMemory, in: memoryService)
+            // 4. Ativar as próximas memórias
+            for nextMemory in nextMemories {
+                await activateNextMemory(nextMemory, in: memoryService)
+            }
         }
     }
 

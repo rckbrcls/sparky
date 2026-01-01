@@ -36,50 +36,17 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     }
 
     struct TriggerSequential: Hashable, Codable {
-        var previousMemoryIDs: [UUID]
-        var nextMemoryIDs: [UUID]
+        var sequenceID: UUID
+        var stepIndex: Int
 
-        // Backward compatibility - single ID access
-        var previousMemoryID: UUID? {
-            get { previousMemoryIDs.first }
-            set {
-                if let id = newValue {
-                    if previousMemoryIDs.isEmpty {
-                        previousMemoryIDs = [id]
-                    } else {
-                        previousMemoryIDs[0] = id
-                    }
-                } else {
-                    previousMemoryIDs = []
-                }
-            }
+        init(sequenceID: UUID = UUID(), stepIndex: Int = 0) {
+            self.sequenceID = sequenceID
+            self.stepIndex = stepIndex
         }
 
-        var nextMemoryID: UUID? {
-            get { nextMemoryIDs.first }
-            set {
-                if let id = newValue {
-                    if nextMemoryIDs.isEmpty {
-                        nextMemoryIDs = [id]
-                    } else {
-                        nextMemoryIDs[0] = id
-                    }
-                } else {
-                    nextMemoryIDs = []
-                }
-            }
-        }
-
-        init(previousMemoryIDs: [UUID] = [], nextMemoryIDs: [UUID] = []) {
-            self.previousMemoryIDs = previousMemoryIDs
-            self.nextMemoryIDs = nextMemoryIDs
-        }
-
-        // Convenience init for backward compatibility
-        init(previousMemoryID: UUID?, nextMemoryID: UUID?) {
-            self.previousMemoryIDs = previousMemoryID.map { [$0] } ?? []
-            self.nextMemoryIDs = nextMemoryID.map { [$0] } ?? []
-        }
+        // Deprecated/Removed: previousMemoryIDs, nextMemoryIDs loops
+        // We do not need backward compatibility for the internal struct in this radical refactor as per plan default behavior (breaking change accepted for alpha/dev).
+        // If strictly needed, we could keep optional legacy fields, but the plan approved "New sequence logic".
     }
 
     struct TriggerFocus: Hashable, Codable {

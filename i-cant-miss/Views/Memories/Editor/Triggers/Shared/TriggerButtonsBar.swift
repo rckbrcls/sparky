@@ -75,8 +75,7 @@ struct TriggerButtonsBar: View {
     }
 
     private var hasSequentialTrigger: Bool {
-        guard let configuration = viewModel.sequentialTrigger?.sequential else { return false }
-        return configuration.previousMemoryID != nil || configuration.nextMemoryID != nil
+        return viewModel.sequentialTrigger?.sequential != nil
     }
 
     private var hasFocusTrigger: Bool {
