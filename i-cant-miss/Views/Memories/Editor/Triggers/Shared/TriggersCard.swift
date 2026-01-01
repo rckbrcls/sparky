@@ -74,7 +74,7 @@ struct TriggersCard: View {
                 }
             }
             .padding(.horizontal)
-            .padding(.bottom, 12)
+            .padding(.vertical, 12)
         }
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
