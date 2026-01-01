@@ -141,26 +141,10 @@ struct MemoryCardView: View {
 
             Image(systemName: spaceIcon)
                 .foregroundStyle(spaceColor)
-                .frame(width: 36, height: 36)
+                .frame(width: 32, height: 32)
                 .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
 
             VStack(alignment: .leading, spacing: 6) {
-                if let statusBadge {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Spacer()
-
-                        Label {
-                            Text(statusBadge.text)
-                        } icon: {
-                            Image(systemName: statusBadge.systemImage)
-                        }
-                        .font(.caption)
-                        .labelStyle(.iconOnly)
-                        .foregroundStyle(statusBadge.color)
-                        .padding(.leading, 4)
-                    }
-                }
-
                 VStack (alignment: .leading, spacing: 6){
                     Text(title)
                         .font(.subheadline)
@@ -222,6 +206,20 @@ struct MemoryCardView: View {
                     }
                 }
             }
+
+            Spacer()
+
+            // Completion check circle button
+            if let onToggleCompletion = onToggleCompletion {
+                Button {
+                    onToggleCompletion()
+                } label: {
+                    Image(systemName: memory.status == .completed ? "checkmark.circle.fill" : "circle")
+                        .font(.headline)
+                        .foregroundStyle(memory.status == .completed ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -243,15 +241,6 @@ struct MemoryCardView: View {
                     } label: {
                         Label(memory.isPinned ? "Unpin" : "Pin",
                               systemImage: memory.isPinned ? "pin.slash.fill" : "pin.fill")
-                    }
-                }
-
-                if let onToggleCompletion = onToggleCompletion {
-                    Button {
-                        onToggleCompletion()
-                    } label: {
-                        Label(memory.status == .completed ? "Mark Active" : "Mark Completed",
-                              systemImage: memory.status == .completed ? "arrow.uturn.backward.circle" : "checkmark.circle.fill")
                     }
                 }
 
