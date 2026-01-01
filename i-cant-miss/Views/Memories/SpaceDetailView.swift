@@ -35,7 +35,12 @@ struct SpaceDetailView: View {
 
     @State private var isSearching = false
     @State private var searchText = ""
+
     @FocusState private var isSearchFieldFocused: Bool
+
+    @State private var isPinnedExpanded = true
+    @State private var isActiveExpanded = true
+    @State private var isCompletedExpanded = true
 
     private var activeFilterCount: Int {
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
@@ -57,20 +62,24 @@ struct SpaceDetailView: View {
     }
 
     private var nonPinnedMemories: [MemoryModel] {
-        filteredMemories.filter { !$0.isPinned }
+        filteredMemories.filter { !$0.isPinned && !$0.isCompleted }
     }
 
     private var pinnedMemories: [MemoryModel] {
         let referenceDate = Date()
         return filteredMemories
-            .filter(\.isPinned)
+            .filter { $0.isPinned && !$0.isCompleted }
             .sorted { lhs, rhs in
                 sortPinned(lhs, rhs, referenceDate: referenceDate)
             }
     }
 
+    private var completedMemories: [MemoryModel] {
+        filteredMemories.filter { $0.isCompleted }
+    }
+
     private var shouldShowEmptyStateCard: Bool {
-        nonPinnedMemories.isEmpty && pinnedMemories.isEmpty
+        nonPinnedMemories.isEmpty && pinnedMemories.isEmpty && completedMemories.isEmpty
     }
 
     private var filterDescription: String {
@@ -274,47 +283,174 @@ struct SpaceDetailView: View {
 
     @ViewBuilder
     private var timelineAndInboxSection: some View {
-        if !pinnedMemories.isEmpty && showPinned {
+        if showPinned {
             Section {
-                 ForEach(pinnedMemories) { memory in
-                    MemoryListItemButton(
-                        memory: memory,
-                        isMultiSelecting: isMultiSelecting,
-                        isSelected: isMemorySelected(memory),
-                        isDisabled: isPerformingBulkAction,
-                        onSelect: onSelectMemory,
-                        onToggleSelection: toggleMemorySelection(_:)
+                 Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isPinnedExpanded.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "pin.fill")
+                            .foregroundStyle(Color.orange)
+                            .font(.subheadline)
+                        Text("Pinned")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                        Text("\(pinnedMemories.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(isPinnedExpanded ? 90 : 0))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.orange.opacity(0.1), lineWidth: 1)
                     )
-                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
                 }
-            } header: {
-                 HStack(spacing: 12) {
-                    Label("Pinned Memories", systemImage: "pin.fill")
-                        .foregroundStyle(.white)
+                .buttonStyle(.plain)
+                .listRowInsets(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                if isPinnedExpanded {
+                     ForEach(pinnedMemories) { memory in
+                        MemoryListItemButton(
+                            memory: memory,
+                            isMultiSelecting: isMultiSelecting,
+                            isSelected: isMemorySelected(memory),
+                            isDisabled: isPerformingBulkAction,
+                            onSelect: onSelectMemory,
+                            onToggleSelection: toggleMemorySelection(_:)
+                        )
+                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
                 }
-                .padding(.vertical, 12)
-                .listRowInsets(.init(top: 24, leading: 20, bottom: 8, trailing: 20))
             }
              .listSectionSeparator(.hidden)
         }
 
-        ForEach(nonPinnedMemories) { memory in
-            MemoryListItemButton(
-                memory: memory,
-                isMultiSelecting: isMultiSelecting,
-                isSelected: isMemorySelected(memory),
-                isDisabled: isPerformingBulkAction,
-                onSelect: onSelectMemory,
-                onToggleSelection: toggleMemorySelection(_:)
-            )
-            .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        }
+        Section {
+                 Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isActiveExpanded.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "bolt.fill")
+                            .foregroundStyle(Color.blue)
+                            .font(.subheadline)
+                        Text("Memories")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                        Text("\(nonPinnedMemories.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(isActiveExpanded ? 90 : 0))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.blue.opacity(0.1), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .listRowInsets(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
 
-        if nonPinnedMemories.isEmpty && pinnedMemories.isEmpty {
+                if isActiveExpanded {
+                    ForEach(nonPinnedMemories) { memory in
+                        MemoryListItemButton(
+                            memory: memory,
+                            isMultiSelecting: isMultiSelecting,
+                            isSelected: isMemorySelected(memory),
+                            isDisabled: isPerformingBulkAction,
+                            onSelect: onSelectMemory,
+                            onToggleSelection: toggleMemorySelection(_:)
+                        )
+                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                }
+            }
+             .listSectionSeparator(.hidden)
+
+        Section {
+                 Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isCompletedExpanded.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.green)
+                            .font(.subheadline)
+                        Text("Completed")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                        Text("\(completedMemories.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(isCompletedExpanded ? 90 : 0))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.green.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.green.opacity(0.1), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .listRowInsets(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                if isCompletedExpanded {
+                     ForEach(completedMemories) { memory in
+                        MemoryListItemButton(
+                            memory: memory,
+                            isMultiSelecting: isMultiSelecting,
+                            isSelected: isMemorySelected(memory),
+                            isDisabled: isPerformingBulkAction,
+                            onSelect: onSelectMemory,
+                            onToggleSelection: toggleMemorySelection(_:)
+                        )
+                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                }
+            }
+            .listSectionSeparator(.hidden)
+
+        if nonPinnedMemories.isEmpty && pinnedMemories.isEmpty && completedMemories.isEmpty {
              MemoryEmptyStateCard(
                 systemImage: "bolt.fill",
                 title: emptyStateTitle,
