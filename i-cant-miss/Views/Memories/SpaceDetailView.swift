@@ -247,6 +247,9 @@ struct SpaceDetailView: View {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
+        .animation(.easeInOut(duration: 0.35), value: pinnedMemories.map(\.id))
+        .animation(.easeInOut(duration: 0.35), value: nonPinnedMemories.map(\.id))
+        .animation(.easeInOut(duration: 0.35), value: completedMemories.map(\.id))
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 70)
         }
