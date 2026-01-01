@@ -284,41 +284,46 @@ private struct TriggerMiniCard: View {
     let onDelete: () -> Void
 
     var body: some View {
-        Button {
-            onTap()
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: iconName)
-                    .font(.subheadline)
-                    .foregroundStyle(.accent)
-                    .frame(width: 24)
+        HStack(spacing: 10) {
+            Image(systemName: iconName)
+                .font(.subheadline)
+                .foregroundStyle(.accent)
+                .frame(width: 24)
 
-                Text(label)
-                    .font(.subheadline)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+            Text(label)
+                .font(.subheadline)
+                .lineLimit(1)
+                .truncationMode(.tail)
 
-                Spacer()
+            Spacer()
 
-                Image(systemName: "chevron.right")
+            Spacer()
+
+            Menu {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(uiColor: .tertiarySystemGroupedBackground))
-            )
-            .contentShape(Rectangle())
+            .highPriorityGesture(TapGesture()) // Consume taps to prevent row selection
         }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(uiColor: .tertiarySystemGroupedBackground))
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
         }
+        .id(trigger?.id ?? UUID())
     }
 }
