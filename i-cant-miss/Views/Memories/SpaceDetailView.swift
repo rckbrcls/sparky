@@ -30,9 +30,6 @@ struct SpaceDetailView: View {
     @State private var bulkActionErrorMessage: String?
 
     @State private var isSearching = false
-    @State private var searchText = ""
-
-    @FocusState private var isSearchFieldFocused: Bool
 
     @State private var isPinnedExpanded = true
     @State private var isActiveExpanded = true
@@ -131,6 +128,14 @@ struct SpaceDetailView: View {
                 onNotifyContext: notifySpaceContextChange,
                 resolvedSpaceProvider: { resolvedSpace }
             ))
+            .sheet(isPresented: $isSearching) {
+                MemorySearchSheet(
+                    space: space,
+                    memoryService: memoryService,
+                    onSelectMemory: onSelectMemory,
+                    spaceService: spaceService
+                )
+            }
     }
 
     private var baseView: some View {
@@ -158,41 +163,6 @@ struct SpaceDetailView: View {
                 onDelete: { showingDeleteConfirmation = true },
                 onDone: { toggleMultiSelection() }
             )
-        } else if isSearching {
-            ToolbarItem(placement: .principal) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField("Search memories...", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .focused($isSearchFieldFocused)
-                        .submitLabel(.search)
-
-                    Spacer()
-
-                    if !searchText.isEmpty {
-                        Button {
-                            searchText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .glassEffect()
-                .frame(maxWidth: .infinity)
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isSearching = false
-                    }
-                }
-                .fontWeight(.semibold)
-            }
         } else {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
@@ -219,8 +189,6 @@ struct SpaceDetailView: View {
                 }
                 .disabled(isPerformingBulkAction)
             }
-
-
         }
     }
 
@@ -257,11 +225,6 @@ struct SpaceDetailView: View {
         .background(Color.clear)
         .onChange(of: isSearching) { _, newValue in
             onSearchActiveChange(newValue)
-            if newValue {
-                isSearchFieldFocused = true
-            } else {
-                searchText = ""
-            }
         }
     }
 
@@ -446,34 +409,16 @@ struct SpaceDetailView: View {
         )
 
         return base.filter { memory in
-            matchesSelectedTrigger(memory) &&
-            matchesSearchText(memory)
+            matchesSelectedTrigger(memory)
         }
     }
 
-    private func matchesSearchText(_ memory: MemoryModel) -> Bool {
-        guard !searchText.isEmpty else { return true }
-        let lowercasedSearch = searchText.lowercased()
 
-        // Search in title
-        if memory.title.lowercased().contains(lowercasedSearch) {
-            return true
-        }
-
-        // Search in note/body
-        if let note = memory.note, note.lowercased().contains(lowercasedSearch) {
-            return true
-        }
-
-        return false
-    }
 
 
 
     private func toggleSearch() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            isSearching.toggle()
-        }
+        isSearching.toggle()
     }
 
     private func matchesSelectedTrigger(_ memory: MemoryModel) -> Bool {
