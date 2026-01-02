@@ -155,12 +155,13 @@ struct MemoryCardView: View {
                                 Image(systemName: "arrowshape.turn.up.right.circle")
                                 Text(sequentialSummary)
                             }
-                            .font(.caption)
+                            .fontWeight(.medium)
+                            .font(.caption2)
                             .lineLimit(1)
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(Color.gray.opacity(0.2))
+                            .foregroundStyle(.primary.opacity(0.7))
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
+                            .background(.secondary.opacity(0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
 
@@ -169,12 +170,13 @@ struct MemoryCardView: View {
                                 Image(systemName: "calendar")
                                 Text(scheduledDateText)
                             }
-                            .font(.caption)
+                            .fontWeight(.medium)
+                            .font(.caption2)
                             .lineLimit(1)
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(Color.gray.opacity(0.2))
+                            .foregroundStyle(.primary.opacity(0.7))
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
+                            .background(.secondary.opacity(0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
 
@@ -183,12 +185,13 @@ struct MemoryCardView: View {
                                 Image(systemName: "checklist")
                                 Text(checklistProgressText)
                             }
-                            .font(.caption)
+                            .fontWeight(.medium)
+                            .font(.caption2)
                             .lineLimit(1)
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(Color.gray.opacity(0.2))
+                            .foregroundStyle(.primary.opacity(0.7))
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
+                            .background(.secondary.opacity(0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
                     }

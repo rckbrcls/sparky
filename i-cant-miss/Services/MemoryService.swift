@@ -196,36 +196,20 @@ final class MemoryService: ObservableObject {
     func scheduledMemories(referenceDate: Date = Date()) -> [MemoryModel] {
         let result = memories
             .filter { memory in
-                // Deve ter pelo menos um trigger scheduled ativo
-                let hasScheduled = memory.triggers.contains {
-                    $0.type == .scheduled && $0.isActive
+                // Deve ter pelo menos um trigger scheduled ativo com fireDate
+                // Memórias devem aparecer no calendário independente do status ou se a hora passou
+                let hasScheduledWithFireDate = memory.triggers.contains {
+                    $0.type == .scheduled && $0.isActive && $0.fireDate != nil
                 }
 
-                guard hasScheduled else { return false }
-
-                // For completed or active memories with a next fire date, include them
-                // Completed memories should still appear in calendar based on their triggers
-                if memory.nextFireDate(referenceDate: referenceDate) != nil {
-                    return true
-                }
-
-                // For completed memories without a next fire date, still include if they have a fireDate
-                // This ensures completed memories don't disappear from calendar
-                if memory.isCompleted {
-                    let hasFireDate = memory.triggers.contains {
-                        $0.type == .scheduled && $0.isActive && $0.fireDate != nil
-                    }
-                    return hasFireDate
-                }
-
-                return false
+                return hasScheduledWithFireDate
             }
             .sorted { lhs, rhs in
                 let lhsDate = lhs.nextFireDate(referenceDate: referenceDate)
-                    ?? lhs.triggers.first(where: { $0.type == .scheduled })?.fireDate
+                    ?? lhs.triggers.first(where: { $0.type == .scheduled && $0.fireDate != nil })?.fireDate
                     ?? .distantFuture
                 let rhsDate = rhs.nextFireDate(referenceDate: referenceDate)
-                    ?? rhs.triggers.first(where: { $0.type == .scheduled })?.fireDate
+                    ?? rhs.triggers.first(where: { $0.type == .scheduled && $0.fireDate != nil })?.fireDate
                     ?? .distantFuture
                 if lhsDate != rhsDate {
                     return lhsDate < rhsDate
@@ -235,6 +219,7 @@ final class MemoryService: ObservableObject {
 
         return result
     }
+
 
     func nonScheduledMemories() -> [MemoryModel] {
         return memories
