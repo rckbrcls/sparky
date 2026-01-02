@@ -27,8 +27,6 @@ struct MeView: View {
         let id = UUID()
         let title: String
         let value: String
-        let detail: String
-        let systemImage: String
     }
 
     init(environment: AppEnvironment, settingsNavigationPath: Binding<NavigationPath>) {
@@ -130,44 +128,40 @@ struct MeView: View {
     }
 
     private var statsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Local stats")
-                .font(.headline)
-
+        VStack(alignment: .leading, spacing: 16) {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(meStats) { stat in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label(stat.title, systemImage: stat.systemImage)
-                            .labelStyle(.titleAndIcon)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(stat.value)
+                                .appLargeTitleStyle()
+                        }
 
-                        Text(stat.value)
-                            .font(.title2)
+                        Text(stat.title.uppercased())
+                            .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
-
-                        Text(stat.detail)
-                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
-                    .padding(12)
+                    .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.tertiarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(Color(.secondarySystemBackground))
+                            .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
                 }
             }
         }
-        .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
 
 
     private var meStats: [Stat] {
         let memories = memoryService.memories
-        let activeMemories = memories.filter { $0.status == .active }
         let completedMemories = memories.filter { $0.status == .completed }
         let spacesCount = spaceService.spaces.count
         let activeTriggers = memories.reduce(into: 0) { result, memory in
@@ -175,10 +169,10 @@ struct MeView: View {
         }
 
         return [
-            Stat(title: "Memories", value: "\(memories.count)", detail: "Active: \(activeMemories.count)", systemImage: "square.and.pencil"),
-            Stat(title: "Completed", value: "\(completedMemories.count)", detail: "Done", systemImage: "checkmark.circle"),
-            Stat(title: "Spaces", value: "\(spacesCount)", detail: "Organization", systemImage: "square.grid.2x2"),
-            Stat(title: "Triggers", value: "\(activeTriggers)", detail: "Active", systemImage: "bolt.circle"),
+            Stat(title: "Memories", value: "\(memories.count)"),
+            Stat(title: "Completed", value: "\(completedMemories.count)"),
+            Stat(title: "Spaces", value: "\(spacesCount)"),
+            Stat(title: "Triggers", value: "\(activeTriggers)"),
         ]
     }
 
