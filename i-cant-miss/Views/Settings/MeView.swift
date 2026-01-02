@@ -39,13 +39,51 @@ struct MeView: View {
         _settingsNavigationPath = settingsNavigationPath
     }
 
+    private var displayName: String {
+        let name = settings.userDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "Friend" : name
+    }
+
     var body: some View {
         NavigationStack(path: $settingsNavigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Hello")
-                        .appLargeTitleStyle()
-                    profileCard
+                    // Greeting title with editable name
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: 0) {
+                            Text("Hello, ")
+                                .appLargeTitleStyle()
+
+                            ZStack(alignment: .leading) {
+                                // Always rendered TextField for focus to work
+                                TextField("Name", text: $draftName)
+                                    .textInputAutocapitalization(.words)
+                                    .disableAutocorrection(true)
+                                    .appLargeTitleStyle()
+                                    .underline()
+                                    .focused($isNameFieldFocused)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                    .opacity(isNameFieldFocused ? 1 : 0)
+                                    .onSubmit {
+                                        saveName()
+                                    }
+
+                                // Display text shown when not editing
+                                if !isNameFieldFocused {
+                                    Text(displayName)
+                                        .appLargeTitleStyle()
+                                        .underline()
+                                        .onTapGesture {
+                                            isNameFieldFocused = true
+                                        }
+                                }
+                            }
+
+                            Text("!")
+                                .appLargeTitleStyle()
+                        }
+                    }
+
                     statsCard
                 }
                 .padding(.horizontal, 20)
@@ -89,53 +127,6 @@ struct MeView: View {
                 isNameFieldFocused = false
             }
         }
-    }
-
-    private var profileCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(Color(.secondarySystemFill))
-                        .frame(width: 64, height: 64)
-
-                    Image(systemName: "person.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.system(size: 28, weight: .semibold))
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Your name")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    TextField("Enter how you want to be called", text: $draftName)
-                        .textInputAutocapitalization(.words)
-                        .disableAutocorrection(true)
-                        .font(.headline)
-                        .focused($isNameFieldFocused)
-
-                    if isNameFieldFocused && !draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        HStack(spacing: 8) {
-                            Button("Save name") {
-                                saveName()
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-                            if didSaveName {
-                                Label("Saved", systemImage: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                                    .font(.footnote)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var statsCard: some View {
