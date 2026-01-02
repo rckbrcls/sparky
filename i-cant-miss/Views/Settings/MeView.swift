@@ -17,6 +17,7 @@ struct MeView: View {
     @StateObject private var viewModel: MeViewModel
     @State private var draftName: String = ""
     @State private var didSaveName = false
+    @State private var isEditing = false
     @FocusState private var isNameFieldFocused: Bool
 
     private enum Route: Hashable {
@@ -45,41 +46,38 @@ struct MeView: View {
 
     var body: some View {
         NavigationStack(path: $settingsNavigationPath) {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     // Greeting title with editable name
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack(alignment: .firstTextBaseline, spacing: 0) {
-                            Text("Hello, ")
-                                .appLargeTitleStyle()
+                        if isEditing {
+                            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                                Text("Hello, ")
+                                    .appLargeTitleStyle()
 
-                            ZStack(alignment: .leading) {
-                                // Always rendered TextField for focus to work
                                 TextField("Name", text: $draftName)
                                     .textInputAutocapitalization(.words)
                                     .disableAutocorrection(true)
                                     .appLargeTitleStyle()
                                     .underline()
                                     .focused($isNameFieldFocused)
-                                    .fixedSize(horizontal: true, vertical: false)
-                                    .opacity(isNameFieldFocused ? 1 : 0)
                                     .onSubmit {
                                         saveName()
+                                        isEditing = false
+                                    }
+                                    .onAppear {
+                                        isNameFieldFocused = true
                                     }
 
-                                // Display text shown when not editing
-                                if !isNameFieldFocused {
-                                    Text(displayName)
-                                        .appLargeTitleStyle()
-                                        .underline()
-                                        .onTapGesture {
-                                            isNameFieldFocused = true
-                                        }
-                                }
+                                Text("!")
+                                    .appLargeTitleStyle()
                             }
-
-                            Text("!")
+                        } else {
+                            (Text("Hello, ") + Text(displayName).underline() + Text("!"))
                                 .appLargeTitleStyle()
+                                .onTapGesture {
+                                    isEditing = true
+                                }
                         }
 
                         Text("Member since \(viewModel.memberSince)")
@@ -91,10 +89,13 @@ struct MeView: View {
 
                     heatmapSection
 
+                    completionRateSection
+
                     quoteCard
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 120)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -130,8 +131,13 @@ struct MeView: View {
                     }
                 }
             }
+            .onChange(of: isNameFieldFocused) { _, newValue in
+                if !newValue {
+                    isEditing = false
+                }
+            }
             .onTapGesture {
-                isNameFieldFocused = false
+                isEditing = false
             }
         }
     }
@@ -206,6 +212,47 @@ struct MeView: View {
                 .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
         )
          .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+        )
+    }
+
+    private var completionRateSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Completion Rate")
+                    .font(.headline)
+                Text("Based on total memories")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .stroke(Color(.secondarySystemFill), lineWidth: 8)
+                    .frame(width: 60, height: 60)
+
+                Circle()
+                    .trim(from: 0, to: viewModel.completionRate)
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: 60, height: 60)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring, value: viewModel.completionRate)
+
+                Text("\(Int(viewModel.completionRate * 100))%")
+                    .font(.caption)
+                    .fontWeight(.bold)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(.secondarySystemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+        )
+        .overlay(
             RoundedRectangle(cornerRadius: 24)
                 .stroke(Color.primary.opacity(0.1), lineWidth: 1)
         )

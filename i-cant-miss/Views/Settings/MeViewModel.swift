@@ -15,6 +15,7 @@ final class MeViewModel: ObservableObject {
     @Published var heatmapData: [Date: Int] = [:]
     @Published var memberSince: String = ""
     @Published var quoteOfTheDay: Quote = Quote.defaultQuote
+    @Published var completionRate: Double = 0.0
 
     // MARK: - Models
     struct Quote {
@@ -53,6 +54,7 @@ final class MeViewModel: ObservableObject {
         let allCompletionDates = extractCompletionDates(from: memories)
         calculateStreak(completionDates: allCompletionDates)
         generateHeatmapData(completionDates: allCompletionDates)
+        calculateCompletionRate(memories: memories)
     }
 
     private func extractCompletionDates(from memories: [MemoryModel]) -> Set<Date> {
@@ -142,6 +144,31 @@ final class MeViewModel: ObservableObject {
             map[date] = 1 // 1 level of intensity
         }
         heatmapData = map
+    }
+
+    private func calculateCompletionRate(memories: [MemoryModel]) {
+        guard !memories.isEmpty else {
+            completionRate = 0.0
+            return
+        }
+
+        // For recurring memories, it's tricky to define "total" vs "completed".
+        // This is a simplified metric:
+        // Rate = (Completed Memories + Active Recurring with some completions) / Total Active Memories?
+        // Let's stick to the user Request "Taxa de Conclusão" for "Active Memories".
+        // Maybe: Completed Memories / (Completed + Active)
+
+        let completedCount = memories.filter { $0.status == .completed }.count
+        // For recurring, we count them as completed if they were completed today? No, let's keep it global for now.
+        // A better metric might be: Number of completed items vs total items.
+
+        let total = memories.count
+        guard total > 0 else {
+            completionRate = 0.0
+            return
+        }
+
+        completionRate = Double(completedCount) / Double(total)
     }
 
     private func updateQuote() {
