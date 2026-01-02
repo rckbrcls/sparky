@@ -290,7 +290,7 @@ struct CalendarDayView: View {
 
     private func allDayMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         memories.filter { memory in
-            guard let fireDate = memory.nextFireDate(referenceDate: date) else {
+            guard let fireDate = fireDateForDay(memory: memory, day: date) else {
                 return false
             }
             let components = calendar.dateComponents([.hour, .minute], from: fireDate)
@@ -300,7 +300,7 @@ struct CalendarDayView: View {
 
     private func timedMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         memories.filter { memory in
-            guard let fireDate = memory.nextFireDate(referenceDate: date) else {
+            guard let fireDate = fireDateForDay(memory: memory, day: date) else {
                 return false
             }
             let components = calendar.dateComponents([.hour, .minute], from: fireDate)
@@ -363,12 +363,36 @@ struct CalendarDayView: View {
 
     private func memoriesForPeriod(_ period: TimePeriod, from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         timedMemories(from: memories, date: date).filter { memory in
-            guard let fireDate = memory.nextFireDate(referenceDate: date) else {
+            guard let fireDate = fireDateForDay(memory: memory, day: date) else {
                 return false
             }
             let hour = calendar.component(.hour, from: fireDate)
             return period.contains(hour: hour)
         }
+    }
+
+    /// Returns the fire date for a memory on a specific day, regardless of whether the date is in the past.
+    /// This is used for calendar display where we need to show the scheduled time even for past events.
+    private func fireDateForDay(memory: MemoryModel, day: Date) -> Date? {
+        let dayStart = calendar.startOfDay(for: day)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
+            return nil
+        }
+
+        // Get all dates for this memory on the specified day
+        let datesOnDay = memory.dates(from: dayStart, to: dayEnd)
+        if let matchingDate = datesOnDay.first {
+            return matchingDate
+        }
+
+        // Fallback: check if the memory has a scheduled trigger with a fireDate on this day
+        for trigger in memory.triggers where trigger.type == .scheduled && trigger.isActive {
+            if let fireDate = trigger.fireDate, calendar.isDate(fireDate, inSameDayAs: day) {
+                return fireDate
+            }
+        }
+
+        return nil
     }
 
 }
