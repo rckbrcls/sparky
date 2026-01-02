@@ -292,21 +292,19 @@ struct CalendarDayView: View {
 
     private func allDayMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         memories.filter { memory in
-            guard let fireDate = fireDateForDay(memory: memory, day: date) else {
+            guard let trigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) else {
                 return false
             }
-            let components = calendar.dateComponents([.hour, .minute], from: fireDate)
-            return (components.hour ?? 0) == 0 && (components.minute ?? 0) == 0
+            return trigger.isAllDay
         }
     }
 
     private func timedMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         memories.filter { memory in
-            guard let fireDate = fireDateForDay(memory: memory, day: date) else {
+            guard let trigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) else {
                 return false
             }
-            let components = calendar.dateComponents([.hour, .minute], from: fireDate)
-            return (components.hour ?? 0) != 0 || (components.minute ?? 0) != 0
+            return !trigger.isAllDay
         }
     }
 

@@ -235,13 +235,15 @@ final class MemoryEditorViewModel: ObservableObject {
         fireDate: Date?,
         recurrence: RecurrenceRule?,
         weekdaySelection: Set<Int>,
-        weekdayReferenceTime: Date
+        weekdayReferenceTime: Date,
+        isAllDay: Bool = false
     ) {
         setScheduledTrigger(
             fireDate: fireDate,
             recurrence: recurrence,
             weekdaySelection: weekdaySelection,
-            referenceTime: weekdayReferenceTime
+            referenceTime: weekdayReferenceTime,
+            isAllDay: isAllDay
         )
     }
 
@@ -249,13 +251,15 @@ final class MemoryEditorViewModel: ObservableObject {
         fireDate: Date?,
         recurrence: RecurrenceRule?,
         weekdaySelection: Set<Int>,
-        referenceTime: Date
+        referenceTime: Date,
+        isAllDay: Bool = false
     ) {
         updateScheduledTrigger(
             fireDate: fireDate,
             recurrence: recurrence,
             weekdaySelection: weekdaySelection,
-            referenceTime: referenceTime
+            referenceTime: referenceTime,
+            isAllDay: isAllDay
         )
     }
 
@@ -510,6 +514,7 @@ private extension MemoryEditorViewModel {
             timeZoneIdentifier: model.timeZoneIdentifier,
             weekdayMask: model.weekdayMask,
             isActive: model.isActive,
+            isAllDay: model.isAllDay,
             location: model.location,
             person: model.person,
             sequential: model.sequential,
@@ -523,7 +528,8 @@ private extension MemoryEditorViewModel {
         fireDate: Date?,
         recurrence: RecurrenceRule?,
         weekdaySelection: Set<Int>,
-        referenceTime: Date
+        referenceTime: Date,
+        isAllDay: Bool = false
     ) {
         let mask = weekdaySelection.reduce(into: Int16(0)) { partialResult, day in
             partialResult |= Int16(1 << day)
@@ -546,7 +552,8 @@ private extension MemoryEditorViewModel {
             recurrenceRule: recurrence,
             timeZoneIdentifier: TimeZone.current.identifier,
             weekdayMask: mask,
-            isActive: true
+            isActive: true,
+            isAllDay: isAllDay
         )
 
         if let existingIndex {

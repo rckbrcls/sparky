@@ -89,6 +89,11 @@ struct MemoryCardView: View {
               let trigger = memory.triggers.first(where: { $0.type == .scheduled }),
               let fireDate = trigger.fireDate else { return nil }
 
+        // Don't show time for all-day memories
+        if trigger.isAllDay {
+            return nil
+        }
+
         return fireDate.formatted(date: .omitted, time: .shortened)
     }
 

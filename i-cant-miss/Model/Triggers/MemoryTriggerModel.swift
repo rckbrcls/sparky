@@ -14,6 +14,7 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     var timeZoneIdentifier: String?
     var weekdayMask: Int16
     var isActive: Bool
+    var isAllDay: Bool
     var location: TriggerLocation?
     var person: TriggerPerson?
     var sequential: TriggerSequential?
@@ -21,6 +22,69 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     var spacedStage: Int
     var lastReviewDate: Date?
     var ignoreCount: Int
+
+    // Custom decoder for backwards compatibility
+    enum CodingKeys: String, CodingKey {
+        case id, type, fireDate, startDate, recurrenceRule, timeZoneIdentifier
+        case weekdayMask, isActive, isAllDay, location, person, sequential, focus
+        case spacedStage, lastReviewDate, ignoreCount
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        type = try container.decode(MemoryTriggerType.self, forKey: .type)
+        fireDate = try container.decodeIfPresent(Date.self, forKey: .fireDate)
+        startDate = try container.decodeIfPresent(Date.self, forKey: .startDate)
+        recurrenceRule = try container.decodeIfPresent(RecurrenceRule.self, forKey: .recurrenceRule)
+        timeZoneIdentifier = try container.decodeIfPresent(String.self, forKey: .timeZoneIdentifier)
+        weekdayMask = try container.decode(Int16.self, forKey: .weekdayMask)
+        isActive = try container.decode(Bool.self, forKey: .isActive)
+        isAllDay = try container.decodeIfPresent(Bool.self, forKey: .isAllDay) ?? false
+        location = try container.decodeIfPresent(TriggerLocation.self, forKey: .location)
+        person = try container.decodeIfPresent(TriggerPerson.self, forKey: .person)
+        sequential = try container.decodeIfPresent(TriggerSequential.self, forKey: .sequential)
+        focus = try container.decodeIfPresent(TriggerFocus.self, forKey: .focus)
+        spacedStage = try container.decode(Int.self, forKey: .spacedStage)
+        lastReviewDate = try container.decodeIfPresent(Date.self, forKey: .lastReviewDate)
+        ignoreCount = try container.decode(Int.self, forKey: .ignoreCount)
+    }
+
+    init(
+        id: UUID,
+        type: MemoryTriggerType,
+        fireDate: Date? = nil,
+        startDate: Date? = nil,
+        recurrenceRule: RecurrenceRule? = nil,
+        timeZoneIdentifier: String? = nil,
+        weekdayMask: Int16 = 0,
+        isActive: Bool = true,
+        isAllDay: Bool = false,
+        location: TriggerLocation? = nil,
+        person: TriggerPerson? = nil,
+        sequential: TriggerSequential? = nil,
+        focus: TriggerFocus? = nil,
+        spacedStage: Int = 0,
+        lastReviewDate: Date? = nil,
+        ignoreCount: Int = 0
+    ) {
+        self.id = id
+        self.type = type
+        self.fireDate = fireDate
+        self.startDate = startDate
+        self.recurrenceRule = recurrenceRule
+        self.timeZoneIdentifier = timeZoneIdentifier
+        self.weekdayMask = weekdayMask
+        self.isActive = isActive
+        self.isAllDay = isAllDay
+        self.location = location
+        self.person = person
+        self.sequential = sequential
+        self.focus = focus
+        self.spacedStage = spacedStage
+        self.lastReviewDate = lastReviewDate
+        self.ignoreCount = ignoreCount
+    }
 
     struct TriggerLocation: Hashable, Codable {
         var latitude: Double

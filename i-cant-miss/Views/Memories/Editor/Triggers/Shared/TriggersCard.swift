@@ -216,7 +216,10 @@ struct TriggersCard: View {
         }
 
         if let fireDate = trigger.fireDate {
-            if trigger.weekdayMask != 0 {
+            if trigger.isAllDay {
+                // All-day: show only date, no time
+                parts.append(fireDate.formatted(date: .abbreviated, time: .omitted))
+            } else if trigger.weekdayMask != 0 {
                 parts.append(fireDate.formatted(date: .omitted, time: .shortened))
             } else {
                 parts.append(fireDate.formatted(date: .abbreviated, time: .shortened))

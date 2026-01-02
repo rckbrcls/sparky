@@ -14,6 +14,7 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
     var timeZoneIdentifier: String?
     var weekdayMask: Int16
     var isActive: Bool
+    var isAllDay: Bool
     var location: MemoryTriggerModel.TriggerLocation?
     var person: MemoryTriggerModel.TriggerPerson?
     var sequential: MemoryTriggerModel.TriggerSequential?
@@ -31,6 +32,7 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         timeZoneIdentifier: String? = nil,
         weekdayMask: Int16 = 0,
         isActive: Bool = true,
+        isAllDay: Bool = false,
         location: MemoryTriggerModel.TriggerLocation? = nil,
         person: MemoryTriggerModel.TriggerPerson? = nil,
         sequential: MemoryTriggerModel.TriggerSequential? = nil,
@@ -47,6 +49,7 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         self.timeZoneIdentifier = timeZoneIdentifier
         self.weekdayMask = weekdayMask
         self.isActive = isActive
+        self.isAllDay = isAllDay
         self.location = location
         self.person = person
         self.sequential = sequential
@@ -70,6 +73,7 @@ extension MemoryTriggerDraft {
             timeZoneIdentifier: timeZoneIdentifier,
             weekdayMask: weekdayMask,
             isActive: isActive,
+            isAllDay: isAllDay,
             location: location,
             person: person,
             sequential: sequential,

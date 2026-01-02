@@ -58,14 +58,8 @@ struct ScheduledTriggerEditorScreen: View {
         let defaultDate = scheduledTrigger?.fireDate ?? Date().addingTimeInterval(3600)
         _fireDate = State(initialValue: defaultDate)
 
-        // Detect time of day type - check if time is midnight (all day indicator)
-        let detectedTimeOfDay: TimeOfDayType = {
-            guard let fire = scheduledTrigger?.fireDate else { return .specificTime }
-            let calendar = Calendar.current
-            let hour = calendar.component(.hour, from: fire)
-            let minute = calendar.component(.minute, from: fire)
-            return (hour == 0 && minute == 0) ? .allDay : .specificTime
-        }()
+        // Detect time of day type from isAllDay flag
+        let detectedTimeOfDay: TimeOfDayType = scheduledTrigger?.isAllDay == true ? .allDay : .specificTime
         _timeOfDayType = State(initialValue: detectedTimeOfDay)
 
         // Detect repeat type from existing trigger
@@ -259,7 +253,8 @@ struct ScheduledTriggerEditorScreen: View {
             fireDate: adjustedFireDate,
             recurrence: recurrence,
             weekdaySelection: weekdaySelection,
-            referenceTime: adjustedFireDate
+            referenceTime: adjustedFireDate,
+            isAllDay: timeOfDayType == .allDay
         )
         dismiss()
     }
