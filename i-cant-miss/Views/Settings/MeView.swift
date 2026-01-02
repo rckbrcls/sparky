@@ -55,19 +55,25 @@ struct MeView: View {
                                 Text("Hello, ")
                                     .appLargeTitleStyle()
 
-                                TextField("Name", text: $draftName)
-                                    .textInputAutocapitalization(.words)
-                                    .disableAutocorrection(true)
-                                    .appLargeTitleStyle()
-                                    .underline()
-                                    .focused($isNameFieldFocused)
-                                    .onSubmit {
-                                        saveName()
-                                        isEditing = false
-                                    }
-                                    .onAppear {
-                                        isNameFieldFocused = true
-                                    }
+                                ZStack {
+                                    Text(draftName.isEmpty ? "Name" : draftName)
+                                        .appLargeTitleStyle()
+                                        .opacity(0)
+
+                                    TextField("Name", text: $draftName)
+                                        .textInputAutocapitalization(.words)
+                                        .disableAutocorrection(true)
+                                        .appLargeTitleStyle()
+                                        .underline()
+                                        .focused($isNameFieldFocused)
+                                        .onSubmit {
+                                            saveName()
+                                            isEditing = false
+                                        }
+                                        .onAppear {
+                                            isNameFieldFocused = true
+                                        }
+                                }
 
                                 Text("!")
                                     .appLargeTitleStyle()
