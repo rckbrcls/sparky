@@ -207,7 +207,7 @@ struct MemoryCardView: View {
                 } label: {
                     Image(systemName: memory.status == .completed ? "checkmark.circle.fill" : "circle")
                         .font(.headline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
             }
