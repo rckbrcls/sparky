@@ -14,7 +14,7 @@ struct MeView: View {
     @ObservedObject private var spaceService: SpaceService
     @Binding private var settingsNavigationPath: NavigationPath
 
-    @State private var isShowingSettings = false
+    @StateObject private var viewModel: MeViewModel
     @State private var draftName: String = ""
     @State private var didSaveName = false
     @FocusState private var isNameFieldFocused: Bool
@@ -35,6 +35,7 @@ struct MeView: View {
         _memoryService = ObservedObject(wrappedValue: environment.memoryService)
         _spaceService = ObservedObject(wrappedValue: environment.spaceService)
         _settingsNavigationPath = settingsNavigationPath
+        _viewModel = StateObject(wrappedValue: MeViewModel(memoryService: environment.memoryService))
     }
 
     private var displayName: String {
@@ -45,7 +46,7 @@ struct MeView: View {
     var body: some View {
         NavigationStack(path: $settingsNavigationPath) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 24) {
                     // Greeting title with editable name
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -80,9 +81,17 @@ struct MeView: View {
                             Text("!")
                                 .appLargeTitleStyle()
                         }
+
+                        Text("Member since \(viewModel.memberSince)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
 
                     statsCard
+
+                    heatmapSection
+
+                    quoteCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -158,21 +167,88 @@ struct MeView: View {
         }
     }
 
+    private var heatmapSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Activity")
+                .font(.headline)
 
+            // Simple Heatmap Grid (Last 12 weeks equivalent approx 84 days, or just fill width)
+            // Let's do past 30 days for simplicity and good mobile fit
+            HStack(spacing: 4) {
+                ForEach(0..<30) { dayOffset in
+                    // 0 is today, 29 is 29 days ago.
+                    // We want to render left to right: oldest to newest?
+                    // Usually heatmaps are left-to-right.
+                    // So left is -29 days, right is 0 days.
+                    let date = Calendar.current.date(byAdding: .day, value: -(29 - dayOffset), to: Date())!
+                    let normalized = Calendar.current.startOfDay(for: date)
+                    let intensity = viewModel.heatmapData[normalized] ?? 0
+
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(intensity > 0 ? Color.accentColor : Color.gray.opacity(0.2))
+                        .frame(height: 20) // Aspect ratio roughly square?
+                        // Let screen width determine width
+                }
+            }
+            // Add labels
+            HStack {
+                Text("30 Days ago")
+                Spacer()
+                Text("Today")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(.secondarySystemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+        )
+         .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+        )
+    }
+
+    private var quoteCard: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Image(systemName: "quote.opening")
+                .font(.title2)
+                .foregroundStyle(.secondary)
+
+            Text(viewModel.quoteOfTheDay.text)
+                .font(.body)
+                .italic()
+                .multilineTextAlignment(.center)
+
+            Text("- " + viewModel.quoteOfTheDay.author)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.accentColor.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
+        )
+    }
 
     private var meStats: [Stat] {
         let memories = memoryService.memories
         let completedMemories = memories.filter { $0.status == .completed }
-        let spacesCount = spaceService.spaces.count
-        let activeTriggers = memories.reduce(into: 0) { result, memory in
-            result += memory.triggers.filter { $0.isActive }.count
-        }
+        let spaceCount = spaceService.spaces.count
 
         return [
-            Stat(title: "Memories", value: "\(memories.count)"),
+            Stat(title: "Streak", value: "\(viewModel.streakDays)"),
             Stat(title: "Completed", value: "\(completedMemories.count)"),
-            Stat(title: "Spaces", value: "\(spacesCount)"),
-            Stat(title: "Triggers", value: "\(activeTriggers)"),
+            Stat(title: "Memories", value: "\(memories.count)"),
+            Stat(title: "Spaces", value: "\(spaceCount)"),
         ]
     }
 
