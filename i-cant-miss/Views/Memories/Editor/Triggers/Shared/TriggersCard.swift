@@ -15,19 +15,6 @@ struct TriggersCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack {
-                Text("Triggers")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.top, 12)
-
-            // Trigger cards
             VStack(spacing: 8) {
                 // Existing triggers
                 if hasScheduledTrigger {
@@ -85,13 +72,10 @@ struct TriggersCard: View {
                     addTriggerButton
                 }
             }
-            .padding(.horizontal)
-            .padding(.bottom, 12)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private var addTriggerButton: some View {
@@ -136,7 +120,7 @@ struct TriggersCard: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                     .foregroundStyle(Color.secondary.opacity(0.4))
             )
@@ -312,7 +296,7 @@ private struct TriggerMiniCard: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .tertiarySystemGroupedBackground))
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
         .contentShape(Rectangle())
         .onTapGesture {

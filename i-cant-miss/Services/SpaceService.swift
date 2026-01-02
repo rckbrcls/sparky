@@ -302,6 +302,36 @@ final class SpaceService: ObservableObject {
     }
 
     func reorderSpaces(_ orderedIDs: [UUID]) async throws {
+        // Optimistic update on main thread
+        let currentSpaces = self.spaces
+        var spaceMap = Dictionary(uniqueKeysWithValues: currentSpaces.map { ($0.id, $0) })
+
+        var newOrderedSpaces: [SpaceModel] = []
+
+        // Add reordered spaces
+        for (index, id) in orderedIDs.enumerated() {
+            if let space = spaceMap[id] {
+                let updatedSpace = SpaceModel(
+                    id: space.id,
+                    name: space.name,
+                    colorHex: space.colorHex,
+                    iconName: space.iconName,
+                    sortOrder: index, // Update sort order
+                    isDefault: space.isDefault
+                )
+                newOrderedSpaces.append(updatedSpace)
+                spaceMap.removeValue(forKey: id)
+            }
+        }
+
+        // Add any remaining spaces (shouldn't happen in normal flow, but safe fallback)
+        let remainingSpaces = currentSpaces.filter { spaceMap.keys.contains($0.id) }
+        newOrderedSpaces.append(contentsOf: remainingSpaces)
+
+        self.spaces = newOrderedSpaces
+        rebuildIndex()
+
+        // Persist to database
         try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
@@ -313,6 +343,8 @@ final class SpaceService: ObservableObject {
                     try context.save()
                     continuation.resume()
                 } catch {
+                    // Revert optimistic update on failure would require reloading from DB
+                    // For now, we just log/throw as the auto-refresh will eventually correct state
                     continuation.resume(throwing: error)
                 }
             }

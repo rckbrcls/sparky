@@ -182,7 +182,6 @@ struct MemoryEditorView: View {
 
         let sheetConfigured = lifecycleConfigured
             .sheet(isPresented: $showDateAndTimeSheet, content: dateAndTimeSheet)
-
             .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
@@ -243,7 +242,6 @@ struct MemoryEditorView: View {
                     await loadSelectedPhotos(from: newItems)
                 }
             }
-            // Removed: .onChange(of: viewModel.contentQueue) - no longer using dynamic content queue
             .onChange(of: isPresentingPhotoLibrary) { _, isPresented in
                 if !isPresented {
                     let hadItems = !photoPickerItems.isEmpty
