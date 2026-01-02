@@ -743,7 +743,6 @@ struct MemoryEditorView: View {
                 .font(.custom("Vollkorn-Regular", size: 20))
                 .fontWeight(.bold)
                 .multilineTextAlignment(.leading)
-                .lineLimit(2)
                 .submitLabel(.done)
                 .focused($isTitleFocused)
                 .onSubmit {
