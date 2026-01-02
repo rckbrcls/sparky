@@ -15,6 +15,8 @@ struct MemoryDomain {
         var linkAttachmentIDs: [UUID]?
         var audioAttachmentIDs: [UUID]?
         var fileAttachmentIDs: [UUID]?
+        /// Dates on which this memory was marked as completed (for recurring memories)
+        var completedDates: [Date]?
         // Legacy field for backwards compatibility during migration
         var contents: [MemoryContent]?
 
@@ -23,13 +25,15 @@ struct MemoryDomain {
              photoAttachmentIDs: [UUID]? = nil,
              linkAttachmentIDs: [UUID]? = nil,
              audioAttachmentIDs: [UUID]? = nil,
-             fileAttachmentIDs: [UUID]? = nil) {
+             fileAttachmentIDs: [UUID]? = nil,
+             completedDates: [Date]? = nil) {
             self.note = note
             self.checkItems = checkItems
             self.photoAttachmentIDs = photoAttachmentIDs
             self.linkAttachmentIDs = linkAttachmentIDs
             self.audioAttachmentIDs = audioAttachmentIDs
             self.fileAttachmentIDs = fileAttachmentIDs
+            self.completedDates = completedDates
             self.contents = nil
         }
     }

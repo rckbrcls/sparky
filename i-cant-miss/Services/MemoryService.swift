@@ -368,6 +368,35 @@ final class MemoryService: ObservableObject {
         }
     }
 
+    /// Toggles completion for a specific date (for recurring memories)
+    /// - Parameters:
+    ///   - memoryID: The ID of the memory to toggle
+    ///   - date: The specific date to mark as completed/uncompleted
+    func toggleCompletionForDate(memoryID: UUID, date: Date) async throws {
+        guard let current = memory(id: memoryID) else {
+            throw MemoryServiceError.memoryNotFound
+        }
+
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        var updatedDates = current.completedDates
+
+        // Check if this date is already marked as completed
+        if let index = updatedDates.firstIndex(where: { calendar.isDate($0, inSameDayAs: normalizedDate) }) {
+            // Remove the date (uncomplete)
+            updatedDates.remove(at: index)
+        } else {
+            // Add the date (complete)
+            updatedDates.append(normalizedDate)
+        }
+
+        // Update the memory's contentsData with the new completedDates
+        try await mutateContentsData(memoryID: memoryID) { bundle in
+            bundle.completedDates = updatedDates.isEmpty ? nil : updatedDates
+        }
+    }
+
     func togglePin(memoryID: UUID) async throws {
         try await mutateMemory(memoryID: memoryID) { memory in
             memory.isPinned.toggle()
@@ -568,7 +597,8 @@ private extension MemoryService {
             photoAttachmentIDs: draft.photoAttachmentIDs.isEmpty ? nil : draft.photoAttachmentIDs,
             linkAttachmentIDs: draft.linkAttachmentIDs.isEmpty ? nil : draft.linkAttachmentIDs,
             audioAttachmentIDs: draft.audioAttachmentIDs.isEmpty ? nil : draft.audioAttachmentIDs,
-            fileAttachmentIDs: draft.fileAttachmentIDs.isEmpty ? nil : draft.fileAttachmentIDs
+            fileAttachmentIDs: draft.fileAttachmentIDs.isEmpty ? nil : draft.fileAttachmentIDs,
+            completedDates: draft.completedDates.isEmpty ? nil : draft.completedDates
         )
         entity.contentsData = try jsonEncoder.encode(bundle)
         entity.body = draft.note
@@ -638,7 +668,8 @@ private extension MemoryService {
             linkAttachmentIDs: decoded.linkAttachmentIDs,
             audioAttachmentIDs: decoded.audioAttachmentIDs,
             fileAttachmentIDs: decoded.fileAttachmentIDs,
-            attachments: decoded.attachments
+            attachments: decoded.attachments,
+            completedDates: decoded.completedDates
         )
 
         return memory
@@ -653,6 +684,7 @@ private extension MemoryService {
         var fileAttachmentIDs: [UUID]
         var attachments: [MemoryModel.Attachment]
         var body: String?
+        var completedDates: [Date]
     }
 
     func decodeContents(for entity: Memory,
@@ -667,7 +699,8 @@ private extension MemoryService {
                 audioAttachmentIDs: [],
                 fileAttachmentIDs: [],
                 attachments: attachments,
-                body: nil
+                body: nil,
+                completedDates: []
             )
         }
 
@@ -694,7 +727,8 @@ private extension MemoryService {
             audioAttachmentIDs: bundle.audioAttachmentIDs ?? [],
             fileAttachmentIDs: bundle.fileAttachmentIDs ?? [],
             attachments: filteredAttachments,
-            body: bundle.note
+            body: bundle.note,
+            completedDates: bundle.completedDates ?? []
         )
     }
 
@@ -705,7 +739,7 @@ private extension MemoryService {
             return DecodedContents(
                 note: nil, checkItems: [], photoAttachmentIDs: [],
                 linkAttachmentIDs: [], audioAttachmentIDs: [], fileAttachmentIDs: [],
-                attachments: attachments, body: nil
+                attachments: attachments, body: nil, completedDates: []
             )
         }
 
@@ -747,7 +781,8 @@ private extension MemoryService {
             audioAttachmentIDs: audioIDs,
             fileAttachmentIDs: fileIDs,
             attachments: filteredAttachments,
-            body: note
+            body: note,
+            completedDates: bundle.completedDates ?? []
         )
     }
 
@@ -789,6 +824,51 @@ private extension MemoryService {
         }
 
         // Then refresh to ensure everything is in sync
+        await refresh(force: true)
+    }
+
+    /// Mutates the contentsData field of a memory
+    /// This is useful for updating fields stored in MemoryContentBundle without affecting other memory properties
+    func mutateContentsData(memoryID: UUID,
+                            mutation: @escaping (inout MemoryDomain.MemoryContentBundle) throws -> Void) async throws {
+        let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
+            persistence.performBackgroundTask { context in
+                do {
+                    guard let memory = try self.fetchMemory(by: memoryID, context: context) else {
+                        throw MemoryServiceError.memoryNotFound
+                    }
+
+                    // Decode existing contentsData or create new bundle
+                    var bundle: MemoryDomain.MemoryContentBundle
+                    if let data = memory.contentsData,
+                       let existingBundle = try? self.jsonDecoder.decode(MemoryDomain.MemoryContentBundle.self, from: data) {
+                        bundle = existingBundle
+                    } else {
+                        bundle = MemoryDomain.MemoryContentBundle()
+                    }
+
+                    // Apply mutation
+                    try mutation(&bundle)
+
+                    // Re-encode and save
+                    memory.contentsData = try self.jsonEncoder.encode(bundle)
+                    memory.updatedAt = Date()
+                    try context.save()
+                    continuation.resume(returning: memory.objectID)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+
+        // Update cache immediately
+        do {
+            let updatedMemory = try await fetchMemoryFromViewContext(objectID: objectID)
+            updateCachedMemory(updatedMemory)
+        } catch {
+            logger.error("Failed to update cache immediately: \(error.localizedDescription)")
+        }
+
         await refresh(force: true)
     }
 

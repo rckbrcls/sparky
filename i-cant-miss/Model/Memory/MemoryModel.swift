@@ -69,6 +69,8 @@ struct MemoryModel: Identifiable, Hashable {
     var audioAttachmentIDs: [UUID]
     var fileAttachmentIDs: [UUID]
     var attachments: [Attachment]
+    /// Dates on which this memory was marked as completed (for recurring memories)
+    var completedDates: [Date]
 
     var hasChecklist: Bool {
         !checkItems.isEmpty
@@ -79,7 +81,7 @@ struct MemoryModel: Identifiable, Hashable {
     }
 
     var hasRecurringTriggers: Bool {
-        triggers.contains { $0.recurrenceRule != nil }
+        triggers.contains { $0.recurrenceRule != nil || $0.weekdayMask != 0 }
     }
 
     var hasAttachments: Bool {
@@ -88,6 +90,19 @@ struct MemoryModel: Identifiable, Hashable {
 
     var isCompleted: Bool {
         status == .completed
+    }
+
+    /// Checks if this memory is completed for a specific date (for recurring memories)
+    /// - Parameter date: The date to check completion for
+    /// - Returns: True if the memory was marked as completed on that specific date
+    func isCompleted(for date: Date) -> Bool {
+        // If the memory status is completed globally, it's completed for all dates
+        if status == .completed {
+            return true
+        }
+        // Check if this specific date is in the completedDates array
+        let calendar = Calendar.current
+        return completedDates.contains { calendar.isDate($0, inSameDayAs: date) }
     }
 
     nonisolated func nextFireDate(referenceDate: Date = Date()) -> Date? {

@@ -444,7 +444,8 @@ private enum OnboardingSampleData {
             linkAttachmentIDs: [],
             audioAttachmentIDs: [],
             fileAttachmentIDs: [],
-            attachments: []
+            attachments: [],
+            completedDates: []
         )
 
         let investorMemory = MemoryModel(
@@ -465,7 +466,8 @@ private enum OnboardingSampleData {
             linkAttachmentIDs: [],
             audioAttachmentIDs: [],
             fileAttachmentIDs: [],
-            attachments: []
+            attachments: [],
+            completedDates: []
         )
 
         return [travelMemory, investorMemory]

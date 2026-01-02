@@ -22,6 +22,8 @@ struct MemoryDraft: Identifiable, Hashable {
     var fileAttachmentIDs: [UUID]
     var attachments: [MemoryModel.Attachment]
     var autoCompleteOnChecklistCompletion: Bool
+    /// Dates on which this memory was marked as completed (for recurring memories)
+    var completedDates: [Date]
 
     init(id: UUID = UUID(),
          title: String,
@@ -37,7 +39,8 @@ struct MemoryDraft: Identifiable, Hashable {
          audioAttachmentIDs: [UUID] = [],
          fileAttachmentIDs: [UUID] = [],
          attachments: [MemoryModel.Attachment] = [],
-         autoCompleteOnChecklistCompletion: Bool = false) {
+         autoCompleteOnChecklistCompletion: Bool = false,
+         completedDates: [Date] = []) {
         self.id = id
         self.title = title
         self.status = status
@@ -53,6 +56,7 @@ struct MemoryDraft: Identifiable, Hashable {
         self.fileAttachmentIDs = fileAttachmentIDs
         self.attachments = attachments
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
+        self.completedDates = completedDates
     }
 
     static func == (lhs: MemoryDraft, rhs: MemoryDraft) -> Bool {

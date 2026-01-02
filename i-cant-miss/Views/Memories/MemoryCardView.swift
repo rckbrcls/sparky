@@ -12,6 +12,9 @@ struct MemoryCardView: View {
     @ObservedObject var memoryService: MemoryService
     @EnvironmentObject private var environment: AppEnvironment
 
+    /// Optional date context for date-aware completion display (used in CalendarDayView)
+    var displayDate: Date?
+
     // Context menu action callbacks (optional - if nil, context menu is disabled)
     var onTogglePin: (() -> Void)?
     var onToggleCompletion: (() -> Void)?
@@ -26,6 +29,7 @@ struct MemoryCardView: View {
     init(
         memoryID: UUID,
         memoryService: MemoryService,
+        displayDate: Date? = nil,
         onTogglePin: (() -> Void)? = nil,
         onToggleCompletion: (() -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
@@ -34,6 +38,7 @@ struct MemoryCardView: View {
     ) {
         self.memoryID = memoryID
         self._memoryService = ObservedObject(wrappedValue: memoryService)
+        self.displayDate = displayDate
         self.onTogglePin = onTogglePin
         self.onToggleCompletion = onToggleCompletion
         self.onDelete = onDelete
@@ -43,6 +48,18 @@ struct MemoryCardView: View {
 
     private var memory: MemoryModel? {
         memoryService.memory(id: memoryID)
+    }
+
+    /// Checks if this memory is completed for display purposes
+    /// For recurring memories with a displayDate, uses per-date completion check
+    private var isCompletedForDisplay: Bool {
+        guard let memory = memory else { return false }
+        // For recurring memories with a displayDate, use date-specific completion
+        if let date = displayDate, memory.hasRecurringTriggers {
+            return memory.isCompleted(for: date)
+        }
+        // Otherwise, use the global status
+        return memory.isCompleted
     }
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
@@ -135,15 +152,15 @@ struct MemoryCardView: View {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundStyle(memory.isCompleted ? .secondary : .primary)
-                        .strikethrough(memory.isCompleted, color: .secondary)
+                        .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
+                        .strikethrough(isCompletedForDisplay, color: .secondary)
 
 
                     if let bodyPreview {
                         Text(bodyPreview)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .strikethrough(memory.isCompleted, color: .secondary)
+                            .strikethrough(isCompletedForDisplay, color: .secondary)
                     }
 
                 }
@@ -205,7 +222,7 @@ struct MemoryCardView: View {
                 Button {
                     onToggleCompletion()
                 } label: {
-                    Image(systemName: memory.status == .completed ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
                         .font(.headline)
                         .foregroundStyle(.primary)
                 }

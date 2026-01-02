@@ -7,6 +7,8 @@ struct MemoryListItemButton: View {
     let isDisabled: Bool
     let onSelect: (MemoryModel) -> Void
     let onToggleSelection: ((MemoryModel) -> Void)?
+    /// Optional date context for date-aware completion (used in CalendarDayView)
+    var displayDate: Date?
 
     @EnvironmentObject private var environment: AppEnvironment
 
@@ -50,7 +52,7 @@ struct MemoryListItemButton: View {
         } label: {
             // Pass context menu callbacks only when not in multi-selecting or disabled mode
             if isMultiSelecting || isDisabled {
-                MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService)
+                MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService, displayDate: displayDate)
                     .overlay(selectionOverlay)
                     .overlay(alignment: .topTrailing) {
                         selectionBadge
@@ -59,6 +61,7 @@ struct MemoryListItemButton: View {
                 MemoryCardView(
                     memoryID: memory.id,
                     memoryService: environment.memoryService,
+                    displayDate: displayDate,
                     onTogglePin: { Task { await toggleMemoryPin() } },
                     onToggleCompletion: { Task { await toggleMemoryCompletion() } },
                     onDelete: { Task { await deleteMemory() } },
@@ -77,7 +80,12 @@ struct MemoryListItemButton: View {
 
     private func toggleMemoryCompletion() async {
         do {
-            try await environment.memoryService.toggleCompletion(memoryID: memory.id)
+            // Use date-aware completion for recurring memories when displayDate is provided
+            if let date = displayDate, memory.hasRecurringTriggers {
+                try await environment.memoryService.toggleCompletionForDate(memoryID: memory.id, date: date)
+            } else {
+                try await environment.memoryService.toggleCompletion(memoryID: memory.id)
+            }
         } catch {
             // Handle error silently for now
         }

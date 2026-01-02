@@ -78,7 +78,8 @@ struct SequentialMemoryCard: View {
         linkAttachmentIDs: [],
         audioAttachmentIDs: [],
         fileAttachmentIDs: [],
-        attachments: []
+        attachments: [],
+        completedDates: []
     )
 
     SequentialMemoryCard(memory: memory) {}
