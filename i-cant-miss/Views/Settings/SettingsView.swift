@@ -21,7 +21,10 @@ struct SettingsView: View {
         case reminders
         case notifications
         case location
+        case appIcon
     }
+
+    @StateObject private var appIconManager = AppIconManager()
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var isRequestingNotifications = false
@@ -68,12 +71,19 @@ private extension SettingsView {
                 .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-            
+
             Section {
                 NavigationLink(value: Route.reminders) {
                     SettingsRow(
                         iconName: "checklist",
                         title: "Reminders"
+                    )
+                }
+
+                NavigationLink(value: Route.appIcon) {
+                    SettingsRow(
+                        iconName: "square.dashed", // Placeholder, maybe use the current icon?
+                        title: "App Icon"
                     )
                 }
 
@@ -119,6 +129,8 @@ private extension SettingsView {
                 isRequestingLocation: $isRequestingLocation,
                 requestAuthorization: requestLocationAuthorization
             )
+        case .appIcon:
+            AppIconSettingsView(appIconManager: appIconManager)
         }
     }
 }
@@ -221,6 +233,55 @@ private struct LocationSettingsView: View {
             }
         }
         .navigationTitle("Location & Geofencing")
+    }
+}
+
+
+
+private struct AppIconSettingsView: View {
+    @ObservedObject var appIconManager: AppIconManager
+
+    let columns = [
+        GridItem(.adaptive(minimum: 80))
+    ]
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 20) {
+                ForEach(AppIcon.allCases) { icon in
+                    Button {
+                        appIconManager.changeIcon(to: icon)
+                    } label: {
+                        VStack(spacing: 8) {
+                            Image(icon.previewImageName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(appIconManager.currentIcon == icon ? Color.accentColor : Color.clear, lineWidth: 3)
+                                )
+                                .shadow(radius: 2)
+
+                            Text(icon.displayTitle)
+                                .font(.caption)
+                                .foregroundStyle(appIconManager.currentIcon == icon ? .primary : .secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("App Icon")
+        .alert("Failed to Change Icon", isPresented: $appIconManager.showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let error = appIconManager.error {
+                Text(error.localizedDescription)
+            }
+        }
     }
 }
 
