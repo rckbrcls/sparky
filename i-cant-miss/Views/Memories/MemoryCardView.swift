@@ -72,10 +72,7 @@ struct MemoryCardView: View {
               let trigger = memory.triggers.first(where: { $0.type == .scheduled }),
               let fireDate = trigger.fireDate else { return nil }
 
-        if trigger.weekdayMask != 0 {
-            return fireDate.formatted(date: .omitted, time: .shortened)
-        }
-        return fireDate.formatted(date: .abbreviated, time: .shortened)
+        return fireDate.formatted(date: .omitted, time: .shortened)
     }
 
     private var checklistProgressText: String? {
