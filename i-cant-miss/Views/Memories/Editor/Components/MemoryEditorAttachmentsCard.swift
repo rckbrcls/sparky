@@ -56,7 +56,7 @@ struct MemoryEditorAttachmentsCard: View {
     private var addAttachmentButton: some View {
         Menu {
             Button(action: onAddPhoto) {
-                Label("Photo Library", systemImage: "photo")
+                Label("Library", systemImage: "photo")
             }
              Button(action: onAddCamera) {
                 Label("Camera", systemImage: "camera")
