@@ -307,7 +307,7 @@ struct MemoryEditorView: View {
 
     private var editorContent: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(spacing: 12) {
                 titleSectionRow
 
                 MemoryEditorAttachmentsCard(
@@ -326,7 +326,6 @@ struct MemoryEditorView: View {
                     }
                 )
                 .padding(.horizontal, 20)
-                .padding(.vertical, 8)
             }
             .padding(.bottom, 20)
         }
@@ -432,7 +431,6 @@ struct MemoryEditorView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
-        .padding(.bottom, 16)
         .animation(.easeInOut(duration: 0.3), value: viewModel.triggers.count)
     }
 
