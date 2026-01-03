@@ -51,55 +51,5 @@ extension MemoryEditorView {
         .presentationDetents([.large])
     }
 
-    @ViewBuilder
-    func photoOptionsSheet() -> some View {
-        NavigationStack {
-            HStack(spacing: 16) {
-                Button {
-                    showPhotoOptionsSheet = false
-                    handleLibraryToolbarTap()
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(systemName: "photo.stack")
-                            .font(.system(size: 24, weight: .semibold))
-                        Text("Library")
-                            .font(.subheadline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .glassEffect(in: .rect(cornerRadius: 24.0))
-                }
-                .disabled(!isPhotoActionsEnabled)
 
-                Button {
-                    showPhotoOptionsSheet = false
-                    handleCameraToolbarTap()
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(systemName: "camera")
-                            .font(.system(size: 24, weight: .semibold))
-                        Text("Camera")
-                            .font(.subheadline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .glassEffect(in: .rect(cornerRadius: 24.0))
-                }
-                .disabled(!isPhotoActionsEnabled)
-            }
-            .padding()
-            .navigationTitle("Add Photo")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        showPhotoOptionsSheet = false
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                }
-            }
-        }
-        .presentationDetents([.height(200)])
-    }
 }

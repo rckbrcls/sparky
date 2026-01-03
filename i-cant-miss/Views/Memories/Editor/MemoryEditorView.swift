@@ -29,7 +29,7 @@ struct MemoryEditorView: View {
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
 
-    @State var showPhotoOptionsSheet = false
+
     @State private var showErrorAlert = false
 
     @State private var isPresentingPhotoLibrary = false
@@ -49,7 +49,7 @@ struct MemoryEditorView: View {
     @State var selectedPhotoContentID: UUID?
     @State private var filePreviewItem: FilePreviewItem?
     @State private var isShowingFilePreview = false
-    @State private var isAudioCardVisible = false
+
     @State private var navigationPath = NavigationPath()
 
     @State private var showDeleteConfirmation = false
@@ -132,7 +132,7 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
-            .sheet(isPresented: $showPhotoOptionsSheet, content: photoOptionsSheet)
+
 
         let attachmentConfigured = sheetConfigured
             .fullScreenCover(isPresented: $isPresentingCamera) {
@@ -303,25 +303,10 @@ struct MemoryEditorView: View {
         List {
             titleSectionRow
 
-            if shouldShowPhotosCard {
-                photosCardView
-                    .transition(cardBounceTransition)
-            }
-
-            if shouldShowLinksCard {
-                linksCardView
-                    .transition(cardBounceTransition)
-            }
-
-            if shouldShowAudioCard {
-                audioCardView
-                    .transition(cardBounceTransition)
-            }
-
-            if shouldShowFilesCard {
-                filesCardView
-                    .transition(cardBounceTransition)
-            }
+            photosCardView
+            linksCardView
+            audioCardView
+            filesCardView
         }
 
         .toolbar{
@@ -364,33 +349,7 @@ struct MemoryEditorView: View {
                     }
                     .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
 
-                    Section("Attachments") {
-                        Button {
-                            showPhotoOptionsSheet = true
-                        } label: {
-                            Label("Add Photo", systemImage: "photo")
-                        }
-                        .disabled(!isPhotoActionsEnabled)
 
-                        Button {
-                            handleAddContentSelection(.links)
-                        } label: {
-                            Label("Add Link", systemImage: MemoryEditorContentType.links.iconName)
-                        }
-
-                        Button {
-                            handleAddContentSelection(.files)
-                        } label: {
-                            Label("Add File", systemImage: MemoryEditorContentType.files.iconName)
-                        }
-                        .disabled(viewModel.isSaving || isPresentingFileImporter || !fileImportingContentIDs.isEmpty)
-
-                        Button {
-                            handleAddContentSelection(.audio)
-                        } label: {
-                            Label("Add Audio", systemImage: MemoryEditorContentType.audio.iconName)
-                        }
-                    }
 
                     Section("Details") {
                         Picker(selection: $viewModel.status) {
@@ -429,10 +388,7 @@ struct MemoryEditorView: View {
         .environment(\.defaultMinListRowHeight, 0)
         .animation(cardBounceAnimation, value: shouldShowChecklistCard)
         .animation(cardBounceAnimation, value: shouldShowRichTextCard)
-        .animation(cardBounceAnimation, value: shouldShowPhotosCard)
-        .animation(cardBounceAnimation, value: shouldShowLinksCard)
-        .animation(cardBounceAnimation, value: shouldShowFilesCard)
-        .animation(cardBounceAnimation, value: shouldShowAudioCard)
+
     }
 
     private var titleSectionRow: some View {
@@ -501,6 +457,10 @@ struct MemoryEditorView: View {
         MemoryEditorLinksCard(
             links: $viewModel.linkAttachments,
             isEditable: isEditingEnabled,
+            onAddLink: {
+                pendingLinkContentID = nil
+                showAddLinkSheet = true
+            },
             onRemoveLink: { id in
                 viewModel.removeLinkAttachment(id: id)
             }
@@ -590,121 +550,7 @@ struct MemoryEditorView: View {
     }
 
 
-    private var addLinkButton: some View {
-        Button {
-            handleAddContentSelection(.links)
-        } label: {
-            Image(systemName:  MemoryEditorContentType.links.iconName)
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(!viewModel.linkAttachments.isEmpty ? Color.accentColor : .primary)
-        }
-        .accessibilityLabel("Add link")
-    }
 
-    private var addFilesButton: some View {
-        Button {
-            handleAddContentSelection(.files)
-        } label: {
-            Image(systemName: MemoryEditorContentType.files.iconName)
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(!viewModel.fileAttachments.isEmpty ? Color.accentColor : .primary)
-        }
-        .disabled(viewModel.isSaving || isPresentingFileImporter || !fileImportingContentIDs.isEmpty)
-        .accessibilityLabel("Add files")
-    }
-
-    private var addAudioButton: some View {
-        Button {
-            handleAddContentSelection(.audio)
-        } label: {
-            Image(systemName: MemoryEditorContentType.audio.iconName)
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(!viewModel.audioAttachments.isEmpty ? Color.accentColor : .primary)
-        }
-        .accessibilityLabel("Add audio")
-    }
-
-    private var addPhotoMenuButton: some View {
-        Button {
-            showPhotoOptionsSheet = true
-        } label: {
-            Image(systemName: "photo")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 48, height: 48)
-                .glassEffect(.regular.interactive())
-                .glassEffectUnion(id: "editorToolbar", namespace: toolbarGlassNamespace)
-                .foregroundStyle(photoToolbarForegroundColor)
-        }
-        .disabled(!isPhotoActionsEnabled)
-        .accessibilityLabel("Add photo")
-    }
-
-    private var photoToolbarForegroundColor: Color {
-        guard isPhotoActionsEnabled else { return .secondary }
-        return !viewModel.photoAttachments.isEmpty ? Color.accentColor : Color.primary
-    }
-
-    var isPhotoActionsEnabled: Bool {
-        !viewModel.isSaving && pendingPhotoContentID == nil && photoLoadingContentIDs.isEmpty
-    }
-
-    private func canAddPhotos() -> Bool {
-        guard isEditingEnabled else { return false }
-        guard !viewModel.isSaving else { return false }
-        guard pendingPhotoContentID == nil else { return false }
-        guard !isPresentingPhotoLibrary && !isPresentingCamera else { return false }
-        guard photoLoadingContentIDs.isEmpty else { return false }
-        return true
-    }
-
-    // Simplified for fixed content model - content types are always available as fixed sections
-    private func handleAddContentSelection(_ type: MemoryEditorContentType) {
-        guard isEditingEnabled else { return }
-        switch type {
-        case .richText:
-            // Note section is always shown via fixed card
-            break
-        case .checklist:
-            // Add a new Synapse item
-            viewModel.addChecklistItem(title: "", detail: "")
-        case .photos:
-            pendingPhotoContentID = nil
-            isPresentingPhotoLibrary = true
-        case .links:
-            pendingLinkContentID = nil
-            showAddLinkSheet = true
-        case .audio:
-            // Show the audio card when toolbar button is tapped
-            withAnimation(cardBounceAnimation) {
-                isAudioCardVisible = true
-            }
-        case .files:
-            pendingFileContentID = nil
-            beginFileImportFixed()
-        }
-    }
-
-
-    func handleCameraToolbarTap() {
-        guard isEditingEnabled else { return }
-        pendingPhotoContentID = nil
-        isPresentingCamera = true
-    }
-
-    func handleLibraryToolbarTap() {
-        guard isEditingEnabled else { return }
-        pendingPhotoContentID = nil
-        isPresentingPhotoLibrary = true
-    }
 
     // Simplified for fixed model - photos go directly to viewModel.photoAttachments
     private func handleCapturedImage(_ image: UIImage) {
@@ -864,21 +710,7 @@ struct MemoryEditorView: View {
         !viewModel.checkItems.isEmpty || isEditingEnabled
     }
 
-    private var shouldShowPhotosCard: Bool {
-        !viewModel.photoAttachments.isEmpty
-    }
 
-    private var shouldShowLinksCard: Bool {
-        !viewModel.linkAttachments.isEmpty
-    }
-
-    private var shouldShowFilesCard: Bool {
-        !viewModel.fileAttachments.isEmpty
-    }
-
-    private var shouldShowAudioCard: Bool {
-        !viewModel.audioAttachments.isEmpty || isAudioCardVisible
-    }
 
 
 
