@@ -41,8 +41,9 @@ struct SynapseView: View {
                             }
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.body)
+                                .font(.caption.bold())
                                 .foregroundStyle(.secondary)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
