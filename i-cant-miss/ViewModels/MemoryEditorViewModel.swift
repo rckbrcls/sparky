@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 enum MemoryEditorTemplate {
     case blank
@@ -196,6 +197,11 @@ final class MemoryEditorViewModel: ObservableObject {
         for i in checkItems.indices {
             checkItems[i].sortOrder = i
         }
+    }
+
+    func moveChecklistItem(from source: IndexSet, to destination: Int) {
+        checkItems.move(fromOffsets: source, toOffset: destination)
+        reindexCheckItems()
     }
 
     // MARK: - Photo Attachment Methods

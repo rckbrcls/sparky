@@ -1,68 +1,4 @@
-extension MemoryEditorView {
-    private func ensureDraftContainer(for contentID: UUID) {
-        if let drafts = checklistDraftRows[contentID], !drafts.isEmpty {
-            return
-        }
-        checklistDraftRows[contentID] = [ChecklistDraftRow()]
-    }
 
-    private func draftsBinding(for contentID: UUID) -> Binding<[ChecklistDraftRow]> {
-        Binding(
-            get: { checklistDraftRows[contentID] ?? [ChecklistDraftRow()] },
-            set: { checklistDraftRows[contentID] = $0 }
-        )
-    }
-
-    // Legacy helper - kept for compatibility, deprecated
-    private func handleDraftSubmit(_ draftID: UUID, in contentID: UUID) {
-        handleChecklistDraftSubmit(draftID)
-    }
-
-    // Legacy helper - kept for compatibility, deprecated
-    private func handleDraftTitleChange(_ contentID: UUID, _ draftID: UUID, _ text: String) {
-        handleChecklistDraftTitleChange(draftID, text)
-    }
-
-    private func cleanupTrailingPlaceholders() {
-        var drafts = checklistDraftRows[fixedChecklistID] ?? [ChecklistDraftRow()]
-        while drafts.count > 1 {
-            guard let last = drafts.last else { break }
-            let beforeLast = drafts[drafts.count - 2]
-            if last.isEffectivelyEmpty && beforeLast.isEffectivelyEmpty {
-                drafts.removeLast()
-            } else {
-                break
-            }
-        }
-
-        if drafts.isEmpty {
-            drafts = [ChecklistDraftRow()]
-        }
-        checklistDraftRows[fixedChecklistID] = drafts
-    }
-
-    private func commitChecklistDrafts() {
-        let drafts = checklistDraftRows[fixedChecklistID] ?? []
-        let draftsToCommit = drafts.filter {
-            !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        }
-
-        for draft in draftsToCommit {
-            let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedTitle.isEmpty else { continue }
-            let trimmedDetail = draft.detail.trimmingCharacters(in: .whitespacesAndNewlines)
-            viewModel.addChecklistItem(title: trimmedTitle, detail: trimmedDetail)
-        }
-
-        checklistDraftRows[fixedChecklistID] = [ChecklistDraftRow()]
-        focusedDraftID = nil
-    }
-
-    // No longer needed - checklist items are removed directly
-    private func removeChecklist(_ item: CheckItemDraft) {
-        viewModel.removeChecklistItem(itemID: item.id)
-    }
-}
 
 //
 //  MemoryEditorView.swift
@@ -95,7 +31,7 @@ struct MemoryEditorView: View {
 
     @State private var showPhotoOptionsSheet = false
     @State private var showErrorAlert = false
-    @State private var checklistDraftRows: [UUID: [ChecklistDraftRow]] = [:]
+
     @State private var isPresentingPhotoLibrary = false
     @State private var photoPickerItems: [PhotosPickerItem] = []
     @State private var isPresentingCamera = false
@@ -162,10 +98,8 @@ struct MemoryEditorView: View {
         let lifecycleConfigured = baseEditorContainer
             .scrollDismissesKeyboard(.interactively)
             .onAppear {
-                ensureDraftContainer(for: fixedChecklistID)
                 Task {
                     await viewModel.loadLatestDataIfNeeded()
-                    ensureDraftContainer(for: fixedChecklistID)
                 }
             }
             .alert("Unable to save", isPresented: $showErrorAlert) {
@@ -400,7 +334,7 @@ struct MemoryEditorView: View {
 
             ToolbarItem(placement: .confirmationAction) {
                 Button(role: .confirm) {
-                    commitChecklistDrafts()
+
                     Task {
                         let success = await viewModel.save()
                         if success {
@@ -534,49 +468,9 @@ struct MemoryEditorView: View {
         .listRowBackground(Color.clear)
     }
 
-    private var checklistCardView: some View {
-        MemoryEditorChecklistCard {
-            VStack(alignment: .leading, spacing: 12) {
-                if let subtitle = checklistSubtitle {
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                ForEach($viewModel.checkItems) { $item in
-                    ChecklistItemEditor(
-                        item: $item,
-                        isEditable: isEditingEnabled,
-                        onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
-                        onDelete: { viewModel.removeChecklistItem(itemID: item.id) }
-                    )
-                }
-                if isEditingEnabled {
-                    ForEach(checklistDraftRowsBinding) { $draft in
-                        ChecklistNewItemRow(
-                            draft: $draft,
-                            focus: $focusedDraftID,
-                            onSubmit: { handleChecklistDraftSubmit($0) },
-                            onTitleChange: { draftID, text in handleChecklistDraftTitleChange(draftID, text) }
-                        )
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
-    }
 
-    private var checklistSubtitle: String? {
-        let total = viewModel.checkItems.count
-        guard total > 0 else { return nil }
-        let completed = viewModel.checkItems.filter(\.isCompleted).count
-        if completed == 0 {
-            return total == 1 ? "1 item" : "\(total) items"
-        }
-        return "\(completed) of \(total) completed"
-    }
+
+
 
     private var photosCardView: some View {
         MemoryEditorPhotosCard(
@@ -647,18 +541,7 @@ struct MemoryEditorView: View {
         .listRowBackground(Color.clear)
     }
 
-    // Helper bindings and state for fixed cards
-    private var checklistDraftRowsBinding: Binding<[ChecklistDraftRow]> {
-        Binding(
-            get: { checklistDraftRows[fixedChecklistID] ?? [ChecklistDraftRow()] },
-            set: { checklistDraftRows[fixedChecklistID] = $0 }
-        )
-    }
 
-    private var fixedChecklistID: UUID {
-        // Use a stable ID for the single checklist
-        UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
-    }
 
     private var isLoadingPhotos: Bool {
         !photoLoadingContentIDs.isEmpty
@@ -668,64 +551,26 @@ struct MemoryEditorView: View {
         !fileImportingContentIDs.isEmpty
     }
 
-    private func handleChecklistDraftSubmit(_ draftID: UUID) {
-        var drafts = checklistDraftRows[fixedChecklistID] ?? [ChecklistDraftRow()]
-        guard let index = drafts.firstIndex(where: { $0.id == draftID }) else { return }
-        let trimmedTitle = drafts[index].title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty else {
-            focusedDraftID = draftID
-            return
-        }
 
-        let trimmedDetail = drafts[index].detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        viewModel.addChecklistItem(title: trimmedTitle, detail: trimmedDetail)
-
-        drafts.remove(at: index)
-        if drafts.isEmpty {
-            drafts = [ChecklistDraftRow()]
-        }
-        checklistDraftRows[fixedChecklistID] = drafts
-        focusedDraftID = drafts.last?.id
-    }
-
-    private func handleChecklistDraftTitleChange(_ draftID: UUID, _ text: String) {
-        var drafts = checklistDraftRows[fixedChecklistID] ?? [ChecklistDraftRow()]
-        guard let index = drafts.firstIndex(where: { $0.id == draftID }) else { return }
-
-        drafts[index].title = text
-
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let lastIndex = drafts.count - 1
-
-        if trimmed.isEmpty {
-            if drafts.count > 1 && index != lastIndex {
-                drafts.remove(at: index)
-            }
-        } else if index == lastIndex {
-            drafts.append(ChecklistDraftRow())
-        }
-
-        checklistDraftRows[fixedChecklistID] = drafts
-    }
 
     private func addPhotosFromLibraryFixed() {
-        pendingPhotoContentID = fixedChecklistID // Reuse ID for triggering
+        pendingPhotoContentID = UUID() // Use temporary ID for triggering
         isPresentingPhotoLibrary = true
     }
 
     private func addPhotosFromCameraFixed() {
-        pendingPhotoContentID = fixedChecklistID
+        pendingPhotoContentID = UUID()
         isPresentingCamera = true
     }
 
     private func beginFileImportFixed() {
-        pendingFileContentID = fixedChecklistID
+        pendingFileContentID = UUID()
         isPresentingFileImporter = true
     }
 
     private func presentPhotoViewerForFixedPhotos(at index: Int, clickedAttachment: MemoryModel.Attachment) {
         selectedAttachmentIndex = index
-        selectedPhotoContentID = fixedChecklistID
+        selectedPhotoContentID = UUID()
         isPhotoViewerPresented = true
     }
 
@@ -775,7 +620,6 @@ struct MemoryEditorView: View {
 
             TextField("Memory", text: $viewModel.title, axis: .vertical)
                 .font(.custom("Vollkorn-Regular", size: 20))
-                .fontWeight(.medium)
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
                 .focused($isTitleFocused)
@@ -835,37 +679,29 @@ struct MemoryEditorView: View {
     // MARK: - Checklist Card
 
     private var checklistCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let subtitle = checklistSubtitle {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-            }
-
-            ForEach($viewModel.checkItems) { $item in
-                ChecklistItemEditor(
+        VStack(spacing: 12) {
+             ForEach($viewModel.checkItems) { $item in
+                SynapseView(
                     item: $item,
                     isEditable: isEditingEnabled,
                     onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
-                    onDelete: { viewModel.removeChecklistItem(itemID: item.id) }
+                    onDelete: { viewModel.removeChecklistItem(itemID: item.id) },
+                    focusedField: $focusedDraftID
                 )
             }
+            .onMove { source, destination in
+                viewModel.moveChecklistItem(from: source, to: destination)
+            }
+
             if isEditingEnabled {
-                ForEach(checklistDraftRowsBinding) { $draft in
-                    ChecklistNewItemRow(
-                        draft: $draft,
-                        focus: $focusedDraftID,
-                        onSubmit: { handleChecklistDraftSubmit($0) },
-                        onTitleChange: { draftID, text in handleChecklistDraftTitleChange(draftID, text) }
-                    )
+                AddSynapseButton {
+                     viewModel.addChecklistItem(title: "", detail: "")
+                     focusedDraftID = viewModel.checkItems.last?.id
                 }
             }
         }
         .padding(.horizontal)
-        .padding(.bottom, 12)
-        .padding(.top, checklistSubtitle == nil ? 12 : 0)
+        .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
@@ -960,8 +796,9 @@ struct MemoryEditorView: View {
             // Note section is always shown via fixed card
             break
         case .checklist:
-            // Checklist section is always shown via fixed card
-            ensureDraftContainer(for: fixedChecklistID)
+            // Add a new Synapse item
+            viewModel.addChecklistItem(title: "", detail: "")
+            focusedDraftID = viewModel.checkItems.last?.id
         case .photos:
             pendingPhotoContentID = nil
             isPresentingPhotoLibrary = true
@@ -1015,6 +852,8 @@ struct MemoryEditorView: View {
         filePreviewItem = nil
         isShowingFilePreview = false
     }
+
+
 
     // Simplified for fixed model - files go directly to viewModel.fileAttachments
     private func importFiles(from urls: [URL]) async {
@@ -1091,7 +930,7 @@ struct MemoryEditorView: View {
 
         guard flattenedAttachments.indices.contains(safeIndex) else { return }
 
-        selectedPhotoContentID = fixedChecklistID
+        selectedPhotoContentID = UUID()
         selectedAttachmentIndex = safeIndex
         isPhotoViewerPresented = true
     }
