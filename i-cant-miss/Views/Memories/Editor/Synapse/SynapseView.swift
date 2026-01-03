@@ -45,7 +45,7 @@ struct SynapseView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(16)
+            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color(.secondarySystemBackground))
@@ -55,15 +55,7 @@ struct SynapseView: View {
                 RoundedRectangle(cornerRadius: 24)
                     .stroke(Color.primary.opacity(0.1), lineWidth: 1)
             )
-            .contextMenu {
-                if isEditable {
-                    Button(role: .destructive) {
-                        onDelete()
-                    } label: {
-                        Label("Delete Synapse", systemImage: "trash")
-                    }
-                }
-            }
+
         }
     }
 }

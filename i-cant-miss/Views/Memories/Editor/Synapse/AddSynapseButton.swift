@@ -23,7 +23,7 @@ struct AddSynapseButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.top, 8)
+
     }
 }
 

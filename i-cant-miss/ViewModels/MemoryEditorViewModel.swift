@@ -169,7 +169,6 @@ final class MemoryEditorViewModel: ObservableObject {
 
     func addChecklistItem(title: String, detail: String = "") {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty else { return }
         let trimmedDetail = detail.trimmingCharacters(in: .whitespacesAndNewlines)
         let nextOrder = (checkItems.map(\.sortOrder).max() ?? -1) + 1
         let item = CheckItemDraft(

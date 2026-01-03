@@ -701,8 +701,7 @@ struct MemoryEditorView: View {
             }
         }
         .padding(.horizontal)
-        .padding(.bottom, 12)
-        .padding(.top, 4)
+        .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
