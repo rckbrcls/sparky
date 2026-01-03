@@ -24,7 +24,7 @@ struct SynapseView: View {
                     }
                     .buttonStyle(.plain)
                     TextField("Title", text: $item.title, axis: .vertical)
-                        .font(.custom("Vollkorn-Regular", size: 17))
+                        .fontWeight(.medium)
                         .foregroundStyle(item.isCompleted ? .secondary : .primary)
                         .strikethrough(item.isCompleted, color: .secondary)
                         .fixedSize(horizontal: false, vertical: true)

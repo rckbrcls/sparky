@@ -22,12 +22,8 @@ struct MemoryEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject var viewModel: MemoryEditorViewModel
-    @State private var showDateAndTimeSheet = false
 
     @State private var showAddLinkSheet = false
-    @State private var showLocationPicker = false
-    @State private var showPersonSheet = false
-    @State private var showSequentialSheet = false
 
 
     @State private var showErrorAlert = false
@@ -128,11 +124,7 @@ struct MemoryEditorView: View {
             }
 
         let sheetConfigured = lifecycleConfigured
-            .sheet(isPresented: $showDateAndTimeSheet, content: dateAndTimeSheet)
             .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
-            .sheet(isPresented: $showLocationPicker, content: locationSheet)
-            .sheet(isPresented: $showPersonSheet, content: personSheet)
-            .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
             .sheet(isPresented: $isShowingAudioRecorder) {
                 AudioRecorderSheet(onSave: { data, url in
                     _ = viewModel.addAudioAttachment(data: data, sourceURL: url)
@@ -459,10 +451,6 @@ struct MemoryEditorView: View {
     private var triggersCard: some View {
         TriggersCard(
             viewModel: viewModel,
-            showDateAndTimeSheet: $showDateAndTimeSheet,
-            showLocationPicker: $showLocationPicker,
-            showPersonSheet: $showPersonSheet,
-            showSequentialSheet: $showSequentialSheet,
             memoryLookup: memoryLookup
         )
     }
