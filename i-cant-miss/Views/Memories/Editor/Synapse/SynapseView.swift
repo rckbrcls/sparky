@@ -34,7 +34,7 @@ struct SynapseView: View {
 
                     Spacer()
 
-                    if isEditable && (!item.title.isEmpty || !item.detail.isEmpty) {
+                    if isEditable {
                         Button {
                             withAnimation {
                                 onDelete()
