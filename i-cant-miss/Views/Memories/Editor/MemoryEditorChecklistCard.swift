@@ -27,9 +27,9 @@ struct MemoryEditorChecklistCard: View {
                 )
                 .onDrag {
                     self.draggedSynapse = $item.wrappedValue
-                    return NSItemProvider(object: $item.wrappedValue.id.uuidString as NSString)
+                     return NSItemProvider(item: $item.wrappedValue.id.uuidString as NSString, typeIdentifier: "com.icantmiss.synapse")
                 }
-                .onDrop(of: [.text], delegate: SynapseDropDelegate(destinationItem: $item.wrappedValue, viewModel: viewModel, draggedItem: $draggedSynapse))
+                .onDrop(of: ["com.icantmiss.synapse"], delegate: SynapseDropDelegate(destinationItem: $item.wrappedValue, viewModel: viewModel, draggedItem: $draggedSynapse))
             }
             .onMove { source, destination in
                 viewModel.moveChecklistItem(from: source, to: destination)
