@@ -12,8 +12,17 @@ struct SynapseView: View {
         HStack(alignment: .top, spacing: 12) {
              // Card Style Background
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-
+                HStack(alignment: .center, spacing: 12) {
+                    Button {
+                        if isEditable {
+                            onToggle()
+                        }
+                    } label: {
+                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(item.isCompleted ? .green : .secondary)
+                    }
+                    .buttonStyle(.plain)
                     TextField("Title", text: $item.title, axis: .vertical)
                         .font(.custom("Vollkorn-Regular", size: 17))
                         .foregroundStyle(item.isCompleted ? .secondary : .primary)
@@ -25,16 +34,18 @@ struct SynapseView: View {
 
                     Spacer()
 
-                    Button {
-                        if isEditable {
-                            onToggle()
+                    if isEditable && (!item.title.isEmpty || !item.detail.isEmpty) {
+                        Button {
+                            withAnimation {
+                                onDelete()
+                            }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
                         }
-                    } label: {
-                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .font(.title3)
-                            .foregroundStyle(item.isCompleted ? .green : .secondary)
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
 
                 TextField("Description", text: $item.detail, axis: .vertical)
