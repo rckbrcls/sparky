@@ -14,7 +14,7 @@ struct SynapseView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
 
-                    TextField("Title", text: $item.title)
+                    TextField("Title", text: $item.title, axis: .vertical)
                         .font(.custom("Vollkorn-Regular", size: 17))
                         .foregroundStyle(item.isCompleted ? .secondary : .primary)
                         .strikethrough(item.isCompleted, color: .secondary)
