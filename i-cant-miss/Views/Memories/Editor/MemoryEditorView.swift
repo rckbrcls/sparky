@@ -21,7 +21,7 @@ struct MemoryEditorView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel: MemoryEditorViewModel
+    @StateObject var viewModel: MemoryEditorViewModel
     @State private var showDateAndTimeSheet = false
 
     @State private var showAddLinkSheet = false
@@ -29,7 +29,7 @@ struct MemoryEditorView: View {
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
 
-    @State private var showPhotoOptionsSheet = false
+    @State var showPhotoOptionsSheet = false
     @State private var showErrorAlert = false
 
     @State private var isPresentingPhotoLibrary = false
@@ -44,18 +44,18 @@ struct MemoryEditorView: View {
     @FocusState private var focusedDraftID: UUID?
     @FocusState private var isTitleFocused: Bool
     @State private var isEditingEnabled: Bool
-    @State private var isPhotoViewerPresented = false
-    @State private var selectedAttachmentIndex = 0
-    @State private var selectedPhotoContentID: UUID?
+    @State var isPhotoViewerPresented = false
+    @State var selectedAttachmentIndex = 0
+    @State var selectedPhotoContentID: UUID?
     @State private var filePreviewItem: FilePreviewItem?
     @State private var isShowingFilePreview = false
     @State private var isAudioCardVisible = false
     @State private var navigationPath = NavigationPath()
-    @State private var showSpaceComposer = false
+
     @State private var showDeleteConfirmation = false
     @Namespace private var toolbarGlassNamespace
     @ObservedObject private var spaceService: SpaceService
-    @State private var draggedSynapse: CheckItemDraft?
+
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -437,16 +437,28 @@ struct MemoryEditorView: View {
 
     private var titleSectionRow: some View {
         VStack(alignment: .leading, spacing: 12) {
-            titleCard
+            MemoryEditorTitleCard(
+                viewModel: viewModel,
+                spaceService: spaceService,
+                environment: environment,
+                isTitleFocused: $isTitleFocused
+            )
 
             triggersCard
 
             if shouldShowRichTextCard {
-                notesCard
+                MemoryEditorNotesCard(
+                    viewModel: viewModel,
+                    isEditingEnabled: isEditingEnabled
+                )
             }
 
             if shouldShowChecklistCard {
-                checklistCard
+                MemoryEditorChecklistCard(
+                    viewModel: viewModel,
+                    isEditingEnabled: isEditingEnabled,
+                    focusedDraftID: $focusedDraftID
+                )
             }
         }
         .padding(.horizontal, 20)
@@ -458,16 +470,7 @@ struct MemoryEditorView: View {
 
     // MARK: - Fixed Content Card Views
 
-    private var noteCard: some View {
-        MemoryEditorRichTextCard(
-            text: $viewModel.note,
-            isEditable: isEditingEnabled
-        )
-        .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
-    }
+
 
 
 
@@ -587,135 +590,6 @@ struct MemoryEditorView: View {
     }
 
 
-    // MARK: - Title Card (Independent)
-
-    private var titleCard: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Menu {
-                Picker("Space", selection: $viewModel.selectedSpaceID) {
-                    Label("No Space", systemImage: "square.grid.2x2")
-                        .tag(nil as UUID?)
-
-                    ForEach(spacesForPicker) { space in
-                        Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
-                            .tag(Optional(space.id))
-                    }
-                }
-
-                Divider()
-
-                Button {
-                    showSpaceComposer = true
-                } label: {
-                    Label("Create New Space", systemImage: "plus.circle")
-                }
-            } label: {
-                Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
-                    .foregroundStyle(selectedSpaceColor)
-                    .frame(width: 36, height: 36)
-                    .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
-            }
-            .sheet(isPresented: $showSpaceComposer) {
-                SpaceComposerView(environment: environment)
-            }
-
-            TextField("Memory", text: $viewModel.title, axis: .vertical)
-                .font(.custom("Vollkorn-Regular", size: 20))
-                .multilineTextAlignment(.leading)
-                .submitLabel(.done)
-                .focused($isTitleFocused)
-                .onSubmit {
-                    isTitleFocused = false
-                }
-                .onChange(of: viewModel.title) { _, newValue in
-                    guard newValue.contains(where: { $0.isNewline }) else { return }
-                    let sanitized = newValue
-                        .split(whereSeparator: \.isNewline)
-                        .joined(separator: " ")
-                    if sanitized != newValue {
-                        viewModel.title = sanitized
-                    }
-                    DispatchQueue.main.async {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        isTitleFocused = false
-                    }
-                }
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-    }
-
-    // MARK: - Notes Card
-
-    private var notesCard: some View {
-        ZStack(alignment: .topLeading) {
-            TextEditor(text: $viewModel.note)
-                .textInputAutocapitalization(.sentences)
-                .autocorrectionDisabled(false)
-                .frame(minHeight: 120)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .disabled(!isEditingEnabled)
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
-
-            if viewModel.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text(isEditingEnabled ? "Write something memorable…" : "No notes captured for this memory.")
-                    .foregroundStyle(Color(uiColor: .placeholderText))
-                    .padding(.top, 16)
-                    .padding(.horizontal, 16)
-                    .allowsHitTesting(false)
-            }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-    }
-
-    // MARK: - Checklist Card
-
-    private var checklistCard: some View {
-        VStack(spacing: 12) {
-             ForEach($viewModel.checkItems) { $item in
-                SynapseView(
-                    item: $item,
-                    isEditable: isEditingEnabled,
-                    onToggle: { viewModel.toggleChecklistCompletion(for: $item.wrappedValue.id) },
-                    onDelete: { viewModel.removeChecklistItem(itemID: $item.wrappedValue.id) },
-                    focusedField: $focusedDraftID
-                )
-                .onDrag {
-                    self.draggedSynapse = $item.wrappedValue
-                    return NSItemProvider(object: $item.wrappedValue.id.uuidString as NSString)
-                }
-                .onDrop(of: [.text], delegate: SynapseDropDelegate(destinationItem: $item.wrappedValue, viewModel: viewModel, draggedItem: $draggedSynapse))
-            }
-            .onMove { source, destination in
-                viewModel.moveChecklistItem(from: source, to: destination)
-            }
-
-            if isEditingEnabled {
-                AddSynapseButton {
-                     viewModel.addChecklistItem(title: "", detail: "")
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-    }
-
-    // MARK: - Obsolete card functions removed - now using fixed card views (noteCard, checklistCardView, etc.)
-
-    // Removed: addRichTextButton and addChecklistButton - these are now always visible as fixed cards
-
     private var addLinkButton: some View {
         Button {
             handleAddContentSelection(.links)
@@ -779,7 +653,7 @@ struct MemoryEditorView: View {
         return !viewModel.photoAttachments.isEmpty ? Color.accentColor : Color.primary
     }
 
-    private var isPhotoActionsEnabled: Bool {
+    var isPhotoActionsEnabled: Bool {
         !viewModel.isSaving && pendingPhotoContentID == nil && photoLoadingContentIDs.isEmpty
     }
 
@@ -820,13 +694,13 @@ struct MemoryEditorView: View {
     }
 
 
-    private func handleCameraToolbarTap() {
+    func handleCameraToolbarTap() {
         guard isEditingEnabled else { return }
         pendingPhotoContentID = nil
         isPresentingCamera = true
     }
 
-    private func handleLibraryToolbarTap() {
+    func handleLibraryToolbarTap() {
         guard isEditingEnabled else { return }
         pendingPhotoContentID = nil
         isPresentingPhotoLibrary = true
@@ -842,7 +716,7 @@ struct MemoryEditorView: View {
     }
 
     // Simplified for fixed model - links go directly to viewModel.linkAttachments
-    private func handleLinkAdded(_ url: URL) {
+    func handleLinkAdded(_ url: URL) {
         let _ = viewModel.addLinkAttachment(url: url)
         pendingLinkContentID = nil
         cleanupPendingContentTargets()
@@ -910,33 +784,7 @@ struct MemoryEditorView: View {
     }
 
     // Simplified for fixed model - using viewModel.photoAttachments directly
-    private func presentPhotoViewer(at index: Int, clickedAttachment: MemoryModel.Attachment) {
-        guard index >= 0 else { return }
 
-        isPhotoViewerPresented = false
-        selectedPhotoContentID = nil
-        selectedAttachmentIndex = 0
-
-        let rawAttachments = viewModel.photoAttachments
-        guard !rawAttachments.isEmpty else { return }
-        guard rawAttachments.indices.contains(index) else { return }
-
-        let flattenedAttachments = flattenAttachments(rawAttachments)
-        guard !flattenedAttachments.isEmpty else { return }
-
-        let safeIndex: Int
-        if let flattenedIndex = flattenedAttachments.firstIndex(where: { $0.id == clickedAttachment.id }) {
-            safeIndex = flattenedIndex
-        } else {
-            safeIndex = min(max(0, index), flattenedAttachments.count - 1)
-        }
-
-        guard flattenedAttachments.indices.contains(safeIndex) else { return }
-
-        selectedPhotoContentID = UUID()
-        selectedAttachmentIndex = safeIndex
-        isPhotoViewerPresented = true
-    }
 
     // Simplified for fixed model - photos go directly to viewModel.photoAttachments
     private func loadSelectedPhotos(from items: [PhotosPickerItem]) async {
@@ -998,17 +846,9 @@ struct MemoryEditorView: View {
         cleanupPendingContentTargets()
     }
 
-    private var spacesForPicker: [SpaceModel] {
-        spaceService.spaces
-    }
 
-    private var selectedSpaceColor: Color {
-        if let hex = viewModel.selectedSpace?.colorHex,
-           let color = Color(hex: hex) {
-            return color
-        }
-        return .gray
-    }
+
+
 
     private var baseBackground: Color {
         Color(.systemBackground)
@@ -1059,174 +899,9 @@ struct MemoryEditorView: View {
 
 
 
-    @ViewBuilder
-    private var photoViewerContent: some View {
-        let attachments = getPhotoAttachmentsForViewer()
-        Group {
-            if !attachments.isEmpty {
-                let safeIndex = min(max(selectedAttachmentIndex, 0), attachments.count - 1)
-                MemoryEditorPhotoCarouselView(
-                    attachments: attachments,
-                    initialIndex: safeIndex
-                ) {
-                    isPhotoViewerPresented = false
-                    selectedPhotoContentID = nil
-                    selectedAttachmentIndex = 0
-                }
-            } else {
-                photoViewerErrorView
-            }
-        }
-        .onAppear {
-            let attachments = getPhotoAttachmentsForViewer()
-            if attachments.isEmpty {
-                isPhotoViewerPresented = false
-                selectedPhotoContentID = nil
-                selectedAttachmentIndex = 0
-            } else {
-                let safeIndex = min(max(selectedAttachmentIndex, 0), attachments.count - 1)
-                if safeIndex != selectedAttachmentIndex {
-                    selectedAttachmentIndex = safeIndex
-                }
-            }
-        }
-    }
-
-    // Simplified for fixed model - using viewModel.photoAttachments directly
-    private func getPhotoAttachmentsForViewer() -> [MemoryModel.Attachment] {
-        let rawAttachments = viewModel.photoAttachments
-        guard !rawAttachments.isEmpty else { return [] }
-        return flattenAttachments(rawAttachments)
-    }
-
-    private func flattenAttachments(_ attachments: [MemoryModel.Attachment]) -> [MemoryModel.Attachment] {
-        attachments.filter { $0.kind == .photo && !$0.data.isEmpty }
-    }
-
-    private var photoViewerErrorView: some View {
-        NavigationStack {
-            ZStack {
-                Color.black
-                    .ignoresSafeArea()
-
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 48, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
-                    Text("Unable to load photos")
-                        .font(.headline)
-                        .foregroundStyle(.white.opacity(0.8))
-                    Text("The photos are no longer available.")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .cancel) {
-                        isPhotoViewerPresented = false
-                    } label: {
-                        Label("Close", systemImage: "xmark")
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func dateAndTimeSheet() -> some View {
-        NavigationStack {
-            ScheduledTriggerEditorScreen(viewModel: viewModel)
-        }
-        .presentationDetents([.medium])
-    }
-
-    @ViewBuilder
-    private func locationSheet() -> some View {
-        NavigationStack {
-            LocationTriggerEditorScreen(viewModel: viewModel)
-        }
-    }
-
-    @ViewBuilder
-    private func linkSheet() -> some View {
-        MemoryEditorAddLinkSheet { url in
-            handleLinkAdded(url)
-        }
-        .presentationDetents([.height(200)])
-    }
-
-    @ViewBuilder
-    private func personSheet() -> some View {
-        NavigationStack {
-            PersonTriggerEditorScreen(viewModel: viewModel)
-        }
-        .presentationDetents([.medium])
-    }
-
-    @ViewBuilder
-    private func sequentialSheet() -> some View {
-        NavigationStack {
-            SequentialTriggerEditorScreen(
-                viewModel: viewModel,
-            )
-        }
-        .presentationDetents([.large])
-    }
 
 
 
-    @ViewBuilder
-    private func photoOptionsSheet() -> some View {
-        NavigationStack {
-            HStack(spacing: 16) {
-                Button {
-                    showPhotoOptionsSheet = false
-                    handleLibraryToolbarTap()
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(systemName: "photo.stack")
-                            .font(.system(size: 24, weight: .semibold))
-                        Text("Library")
-                            .font(.subheadline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .glassEffect(in: .rect(cornerRadius: 24.0))
-                }
-                .disabled(!isPhotoActionsEnabled)
-
-                Button {
-                    showPhotoOptionsSheet = false
-                    handleCameraToolbarTap()
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(systemName: "camera")
-                            .font(.system(size: 24, weight: .semibold))
-                        Text("Camera")
-                            .font(.subheadline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .glassEffect(in: .rect(cornerRadius: 24.0))
-                }
-                .disabled(!isPhotoActionsEnabled)
-            }
-            .padding()
-            .navigationTitle("Add Photo")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        showPhotoOptionsSheet = false
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                }
-            }
-        }
-        .presentationDetents([.height(200)])
-    }
 }
 
 private struct EditingSwipeActionModifier: ViewModifier {
