@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct FocusTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
@@ -7,8 +6,6 @@ struct FocusTriggerEditorScreen: View {
     private let showsCloseButton: Bool
     @State private var focusName: String
     @State private var selectedFocusIdentifier: String?
-    @State private var showAccessDeniedAlert = false
-    @State private var authorizationStatus: FocusAuthorizationStatus = .notDetermined
 
     private var existingTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .focus })
@@ -62,28 +59,6 @@ struct FocusTriggerEditorScreen: View {
                 }
             }
 
-            if #available(iOS 15.0, *) {
-                Section {
-                    HStack {
-                        Image(systemName: authorizationStatusIcon)
-                            .foregroundStyle(authorizationStatusColor)
-                        Text(authorizationStatusText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        if case .denied = authorizationStatus {
-                            Button("Open Settings") {
-                                if let url = URL(string: UIApplication.openSettingsURLString) {
-                                    UIApplication.shared.open(url)
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-                    }
-                }
-            }
-
             Section {
                 Text("Get reminded when you activate a specific focus mode.")
                     .font(.caption)
@@ -117,30 +92,6 @@ struct FocusTriggerEditorScreen: View {
                     .accessibilityLabel("Remove focus trigger")
                 }
             }
-        }
-        .task {
-            if #available(iOS 15.0, *) {
-                await checkAuthorizationStatus()
-            }
-        }
-        .alert("Focus Access Required", isPresented: $showAccessDeniedAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-        } message: {
-            Text("Allow focus status access in Settings to use focus triggers.")
-        }
-    }
-
-    @available(iOS 15.0, *)
-    private func checkAuthorizationStatus() async {
-        // Buscar status do executor através do environment
-        let focusExecutor = viewModel.environment.triggerExecutorCoordinator.focus
-        await MainActor.run {
-            authorizationStatus = focusExecutor.authorizationStatus
         }
     }
 
@@ -178,39 +129,6 @@ struct FocusTriggerEditorScreen: View {
         guard let trigger = existingTrigger else { return }
         viewModel.removeTrigger(id: trigger.id)
         dismiss()
-    }
-
-    private var authorizationStatusIcon: String {
-        switch authorizationStatus {
-        case .authorized:
-            return "checkmark.circle.fill"
-        case .denied:
-            return "xmark.circle.fill"
-        case .notDetermined:
-            return "questionmark.circle.fill"
-        }
-    }
-
-    private var authorizationStatusColor: Color {
-        switch authorizationStatus {
-        case .authorized:
-            return .green
-        case .denied:
-            return .red
-        case .notDetermined:
-            return .orange
-        }
-    }
-
-    private var authorizationStatusText: String {
-        switch authorizationStatus {
-        case .authorized:
-            return "Access granted"
-        case .denied:
-            return "Access denied"
-        case .notDetermined:
-            return "Access not requested"
-        }
     }
 }
 

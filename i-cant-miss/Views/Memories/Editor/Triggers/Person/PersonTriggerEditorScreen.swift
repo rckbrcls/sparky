@@ -43,12 +43,6 @@ struct PersonTriggerEditorScreen: View {
                         .foregroundStyle(.green)
                 }
             }
-
-            Section {
-                Text("Enter a name or choose from contacts.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
         }
         .scrollContentBackground(.hidden)
         .navigationTitle(existingTrigger == nil ? "Add Person Trigger" : "Edit Person Trigger")
