@@ -35,9 +35,6 @@ struct MemoryEditorNotesCard: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
-        .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
+
     }
 }
