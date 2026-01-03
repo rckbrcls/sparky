@@ -13,6 +13,7 @@ struct MemorySearchSheet: View {
 
     let onSelectMemory: (MemoryModel) -> Void
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var environment: AppEnvironment
 
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
@@ -30,6 +31,70 @@ struct MemorySearchSheet: View {
     // Let's grab it from init.
     // SpaceDetailView has it, let's pass it.
     @ObservedObject var spaceService: SpaceService
+
+    // MARK: - Context Menu Actions
+
+    private func togglePin(for memory: MemoryModel) async {
+        do {
+            try await environment.memoryService.togglePin(memoryID: memory.id)
+        } catch {
+            // Handle error silently
+        }
+    }
+
+    private func toggleCompletion(for memory: MemoryModel) async {
+        do {
+            try await environment.memoryService.toggleCompletion(memoryID: memory.id)
+        } catch {
+            // Handle error silently
+        }
+    }
+
+    private func deleteMemory(_ memory: MemoryModel) async {
+        do {
+            try await environment.memoryService.deleteMemory(id: memory.id)
+        } catch {
+            // Handle error silently
+        }
+    }
+
+    private func moveMemory(_ memory: MemoryModel, to spaceID: UUID?) async {
+        let currentID = memory.space?.id
+        guard currentID != spaceID else { return }
+
+        do {
+            let targetSpace = spaceID.flatMap { environment.spaceService.space(id: $0) }
+            try await environment.memoryService.moveMemory(memory.id, to: targetSpace)
+        } catch {
+            // Handle error silently
+        }
+    }
+
+    private func setStatus(for memory: MemoryModel, to status: MemoryStatus) async {
+        guard status != memory.status else { return }
+        do {
+            try await environment.memoryService.setStatus(memoryID: memory.id, status: status)
+        } catch {
+            // Handle error silently
+        }
+    }
+
+    @ViewBuilder
+    private func memoryCard(for memory: MemoryModel) -> some View {
+        MemoryCardView(
+            memoryID: memory.id,
+            memoryService: memoryService,
+            onTogglePin: { Task { await togglePin(for: memory) } },
+            onToggleCompletion: { Task { await toggleCompletion(for: memory) } },
+            onDelete: { Task { await deleteMemory(memory) } },
+            onMoveToSpace: { spaceID in Task { await moveMemory(memory, to: spaceID) } },
+            onUpdateStatus: { status in Task { await setStatus(for: memory, to: status) } }
+        )
+        .onTapGesture {
+            onSelectMemory(memory)
+            dismiss()
+        }
+    }
 
     private var recentMemories: [MemoryModel] {
         // Fetch top 10 most recently updated memories in this space
@@ -105,17 +170,7 @@ struct MemorySearchSheet: View {
 
                                 VStack(spacing: 16) {
                                     ForEach(recentMemories) { memory in
-                                        MemoryCardView(
-                                            memoryID: memory.id,
-                                            memoryService: memoryService,
-                                            onToggleCompletion: {
-                                                Task { try? await memoryService.toggleCompletion(memoryID: memory.id) }
-                                            }
-                                        )
-                                        .onTapGesture {
-                                            onSelectMemory(memory)
-                                            dismiss()
-                                        }
+                                        memoryCard(for: memory)
                                     }
                                 }
                                 .padding(.horizontal)
@@ -129,17 +184,7 @@ struct MemorySearchSheet: View {
                     ScrollView {
                         LazyVStack(spacing: 16) {
                             ForEach(searchResults) { memory in
-                                MemoryCardView(
-                                    memoryID: memory.id,
-                                    memoryService: memoryService,
-                                    onToggleCompletion: {
-                                        Task { try? await memoryService.toggleCompletion(memoryID: memory.id) }
-                                    }
-                                )
-                                .onTapGesture {
-                                    onSelectMemory(memory)
-                                    dismiss()
-                                }
+                                memoryCard(for: memory)
                             }
                         }
                         .padding()
