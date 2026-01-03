@@ -404,8 +404,7 @@ struct MemoryEditorView: View {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .background(Color.clear)
-        .animation(cardBounceAnimation, value: shouldShowChecklistCard)
-        .animation(cardBounceAnimation, value: shouldShowRichTextCard)
+
 
     }
 
@@ -420,20 +419,16 @@ struct MemoryEditorView: View {
 
             triggersCard
 
-            if shouldShowRichTextCard {
-                MemoryEditorNotesCard(
-                    viewModel: viewModel,
-                    isEditingEnabled: isEditingEnabled
-                )
-            }
+            MemoryEditorNotesCard(
+                viewModel: viewModel,
+                isEditingEnabled: isEditingEnabled
+            )
 
-            if shouldShowChecklistCard {
-                MemoryEditorChecklistCard(
-                    viewModel: viewModel,
-                    isEditingEnabled: isEditingEnabled,
-                    focusedDraftID: $focusedDraftID
-                )
-            }
+            MemoryEditorChecklistCard(
+                viewModel: viewModel,
+                isEditingEnabled: isEditingEnabled,
+                focusedDraftID: $focusedDraftID
+            )
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
@@ -622,13 +617,7 @@ struct MemoryEditorView: View {
         Color(.systemBackground)
     }
 
-    private var shouldShowRichTextCard: Bool {
-        !viewModel.note.isEmpty || isEditingEnabled
-    }
 
-    private var shouldShowChecklistCard: Bool {
-        !viewModel.checkItems.isEmpty || isEditingEnabled
-    }
 
     private var cardBounceAnimation: Animation {
         .interpolatingSpring(stiffness: 240, damping: 18, initialVelocity: 0.35)
