@@ -11,24 +11,16 @@ struct SynapseView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
              // Card Style Background
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Title", text: $item.title)
-                            .font(.custom("Vollkorn-Regular", size: 17))
-                            .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                            .strikethrough(item.isCompleted, color: .secondary)
-                            .disabled(!isEditable)
-                            .submitLabel(.next)
-                            .focused($focusedField, equals: item.id)
-
-                        TextField("Description", text: $item.detail, axis: .vertical)
-                            .font(.subheadline)
-                             .foregroundStyle(.secondary)
-                             .strikethrough(item.isCompleted, color: .secondary)
-                             .disabled(!isEditable)
-                    }
+                    TextField("Title", text: $item.title)
+                        .font(.custom("Vollkorn-Regular", size: 17))
+                        .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                        .strikethrough(item.isCompleted, color: .secondary)
+                        .disabled(!isEditable)
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: item.id)
 
                     Spacer()
 
@@ -43,8 +35,21 @@ struct SynapseView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                TextField("Description", text: $item.detail, axis: .vertical)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .strikethrough(item.isCompleted, color: .secondary)
+                    .disabled(!isEditable)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.primary.opacity(0.03))
+                    )
             }
-            .padding(12)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color(.secondarySystemBackground))
