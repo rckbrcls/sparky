@@ -49,6 +49,7 @@ struct MemoryEditorView: View {
     @State var selectedPhotoContentID: UUID?
     @State private var filePreviewItem: FilePreviewItem?
     @State private var isShowingFilePreview = false
+    @State private var isShowingAudioRecorder = false
 
     @State private var navigationPath = NavigationPath()
 
@@ -132,6 +133,11 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showLocationPicker, content: locationSheet)
             .sheet(isPresented: $showPersonSheet, content: personSheet)
             .sheet(isPresented: $showSequentialSheet, content: sequentialSheet)
+            .sheet(isPresented: $isShowingAudioRecorder) {
+                AudioRecorderSheet(onSave: { data, url in
+                    _ = viewModel.addAudioAttachment(data: data, sourceURL: url)
+                })
+            }
 
 
         let attachmentConfigured = sheetConfigured
@@ -303,10 +309,25 @@ struct MemoryEditorView: View {
         List {
             titleSectionRow
 
-            photosCardView
-            linksCardView
-            audioCardView
-            filesCardView
+            MemoryEditorAttachmentsCard(
+                viewModel: viewModel,
+                isEditable: isEditingEnabled,
+                onAddPhoto: { addPhotosFromLibraryFixed() },
+                onAddCamera: { addPhotosFromCameraFixed() },
+                onAddLink: {
+                    pendingLinkContentID = nil
+                    showAddLinkSheet = true
+                },
+                onAddAudio: { isShowingAudioRecorder = true },
+                onAddFile: { beginFileImportFixed() },
+                onAttachmentTap: { attachment in
+                    handleAttachmentTap(attachment)
+                }
+            )
+            .padding(.horizontal, 20)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
+            .listRowBackground(Color.clear)
         }
 
         .toolbar{
@@ -432,88 +453,7 @@ struct MemoryEditorView: View {
 
 
 
-    private var photosCardView: some View {
-        MemoryEditorPhotosCard(
-            attachments: $viewModel.photoAttachments,
-            isLoading: isLoadingPhotos,
-            isEditable: isEditingEnabled,
-            onRemoveAttachment: { id in
-                viewModel.removePhotoAttachment(id: id)
-            },
-            onAttachmentTap: { index, attachment in
-                presentPhotoViewerForFixedPhotos(at: index, clickedAttachment: attachment)
-            },
-            onAddFromLibrary: { addPhotosFromLibraryFixed() },
-            onAddFromCamera: { addPhotosFromCameraFixed() },
-            isAddMenuEnabled: true
-        )
-        .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
-    }
 
-    private var linksCardView: some View {
-        MemoryEditorLinksCard(
-            links: $viewModel.linkAttachments,
-            isEditable: isEditingEnabled,
-            onAddLink: {
-                pendingLinkContentID = nil
-                showAddLinkSheet = true
-            },
-            onRemoveLink: { id in
-                viewModel.removeLinkAttachment(id: id)
-            }
-        )
-        .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
-    }
-
-    private var audioCardView: some View {
-        MemoryEditorAudioCard(
-            clips: $viewModel.audioAttachments,
-            isEditable: isEditingEnabled,
-            onAddClip: { data, url in
-                _ = viewModel.addAudioAttachment(data: data, sourceURL: url)
-            },
-            onRemoveClip: { id in
-                viewModel.removeAudioAttachment(id: id)
-            }
-        )
-        .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
-    }
-
-    private var filesCardView: some View {
-        MemoryEditorFilesCard(
-            files: $viewModel.fileAttachments,
-            isEditable: isEditingEnabled,
-            isImporting: isImportingFiles,
-            onImport: { beginFileImportFixed() },
-            onRemove: { id in
-                viewModel.removeFileAttachment(id: id)
-            },
-            onPreview: { presentFilePreview(for: $0) }
-        )
-        .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
-    }
-
-
-
-    private var isLoadingPhotos: Bool {
-        !photoLoadingContentIDs.isEmpty
-    }
-
-    private var isImportingFiles: Bool {
-        !fileImportingContentIDs.isEmpty
-    }
 
 
 
@@ -727,13 +667,21 @@ struct MemoryEditorView: View {
         )
     }
 
-
-
-
-
-
-
-
+    private func handleAttachmentTap(_ attachment: MemoryModel.Attachment) {
+        switch attachment.kind {
+        case .photo:
+            if let index = viewModel.photoAttachments.firstIndex(where: { $0.id == attachment.id }) {
+                presentPhotoViewerForFixedPhotos(at: index, clickedAttachment: attachment)
+            }
+        case .link:
+            if let url = attachment.url {
+                 UIApplication.shared.open(url)
+            }
+        case .file:
+            presentFilePreview(for: attachment)
+        default: break
+        }
+    }
 }
 
 private struct EditingSwipeActionModifier: ViewModifier {
