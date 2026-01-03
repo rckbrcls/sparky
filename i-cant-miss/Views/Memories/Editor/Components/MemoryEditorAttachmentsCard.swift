@@ -90,11 +90,8 @@ struct MemoryEditorAttachmentsCard: View {
             squareCell { _ in
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color(uiColor: .secondarySystemBackground))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(Color.secondary.opacity(0.1), lineWidth: 1)
-                        )
+                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                        .foregroundStyle(Color.secondary.opacity(0.4))
 
                     VStack(spacing: 8) {
                         Image(systemName: "plus")
@@ -102,7 +99,7 @@ struct MemoryEditorAttachmentsCard: View {
                         Text("Add")
                             .font(.caption2.weight(.medium))
                     }
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.secondary)
                 }
             }
         }
@@ -132,14 +129,20 @@ struct MemoryEditorAttachmentsCard: View {
                     }
 
                 case .link:
-                    VStack(spacing: 4) {
-                        Image(systemName: "link.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(.blue)
-                        Text("Link")
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .foregroundStyle(.secondary)
+                    if let url = attachment.url {
+                        LinkPreviewCard(url: url)
+                            .frame(width: size, height: size)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    } else {
+                        VStack(spacing: 4) {
+                            Image(systemName: "link.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundStyle(.blue)
+                            Text("Link")
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                 case .audio:
@@ -154,16 +157,9 @@ struct MemoryEditorAttachmentsCard: View {
                     }
 
                 case .file:
-                    VStack(spacing: 4) {
-                        Image(systemName: "doc.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(.orange)
-                        Text(attachment.filename ?? "File")
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 4)
-                    }
+                    FilePreviewCard(attachment: attachment)
+                        .frame(width: size, height: size)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 default:
                      EmptyView()
                 }
