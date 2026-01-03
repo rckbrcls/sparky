@@ -46,30 +46,14 @@ struct LocationPickerView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                SearchSection(
-                    searchModel: searchModel,
-                    isSearching: isSearching,
-                    onClearQuery: clearSearchQuery,
-                    onSuggestionSelected: handleSuggestionTap(_:)
-                )
-                MapSection(
-                    defaultRadius: defaultRadius,
-                    onExpand: { isMapExpanded = true },
-                    mapPreview: { mapPreviewContent },
-                    selectionOverlay: { mapSelectionOverlay },
-                    hint: { mapPreviewHint }
-                )
-                EventSection(event: $event, description: eventDescription)
-                SummarySection(
-                    resolvedLocationName: resolvedLocationName,
-                    coordinateSummary: coordinateSummary,
-                    defaultRadius: defaultRadius
-                )
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 20)
+        VStack {
+            Spacer()
+            MapSection(
+                onExpand: { isMapExpanded = true },
+                mapPreview: { mapPreviewContent }
+            )
+            .padding(.horizontal, 24)
+            Spacer()
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Location Trigger")
@@ -126,19 +110,6 @@ private extension LocationPickerView {
             .allowsHitTesting(false)
     }
 
-    var mapPreviewHint: some View {
-        HStack {
-            Spacer()
-            Label("Tap to expand", systemImage: "arrow.up.left.and.arrow.down.right")
-                .font(.caption.weight(.semibold))
-                .padding(.vertical, 6)
-                .padding(.horizontal, 10)
-                .background(Color(.systemBackground), in: Capsule())
-        }
-        .padding(12)
-        .allowsHitTesting(false)
-    }
-
     var expandedMapView: some View {
         ExpandedMapScreen(
             searchModel: searchModel,
@@ -166,6 +137,7 @@ private extension LocationPickerView {
             resolvedLocationName: resolvedLocationName,
             coordinateSummary: coordinateSummary,
             isResolving: geocodingModel.isResolving,
+            event: $event,
             onUseLocation: { isMapExpanded = false }
         )
     }

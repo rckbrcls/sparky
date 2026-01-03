@@ -5,6 +5,7 @@ extension LocationPickerView {
         let resolvedLocationName: String
         let coordinateSummary: String
         let isResolving: Bool
+        @Binding var event: LocationEvent
         let onUseLocation: () -> Void
 
         var body: some View {
@@ -45,6 +46,23 @@ extension LocationPickerView {
                         .padding(.vertical, 12)
                         .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
                         .foregroundStyle(Color.white)
+                }
+
+                Divider()
+                    .padding(.vertical, 4)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Remind me when I")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    Picker("Event", selection: $event) {
+                        ForEach(LocationEvent.allCases, id: \.self) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
             }
             .padding(16)
