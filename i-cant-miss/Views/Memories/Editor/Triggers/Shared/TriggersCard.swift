@@ -567,14 +567,14 @@ private struct LocationTriggerInlineForm: View {
             VStack(spacing: 4) {
                 Image(systemName: geocodingModel.isResolving ? "mappin.circle" : "mappin.circle.fill")
                     .font(.system(size: 44))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.primary)
                     .shadow(color: Color.black.opacity(0.25), radius: 8, y: 6)
                 Circle()
-                    .fill(Color.accentColor.opacity(0.25))
+                    .fill(Color.primary.opacity(0.25))
                     .frame(width: 18, height: 18)
                     .overlay(
                         Circle()
-                            .fill(Color.accentColor)
+                            .fill(Color.primary)
                             .frame(width: 6, height: 6)
                     )
             }
@@ -872,7 +872,7 @@ private struct SequentialTriggerInlineForm: View {
                             Text("Step \(config.stepIndex + 1)")
                                 .font(.title3)
                                 .fontWeight(.bold)
-                                .foregroundStyle(.accent)
+                                .foregroundStyle(.primary)
 
                             Spacer()
 
@@ -964,12 +964,12 @@ private struct SequentialTriggerInlineForm: View {
                                         Text(memory.title.isEmpty ? "Untitled" : memory.title)
                                             .font(.subheadline)
                                             .lineLimit(1)
-                                            .foregroundStyle(memory.id == viewModel.editingMemoryID ? .accent : .primary)
+                                            .foregroundStyle(.primary)
 
                                         if memory.id == viewModel.editingMemoryID {
                                             Text("(current)")
                                                 .font(.caption)
-                                                .foregroundStyle(.accent)
+                                                .foregroundStyle(.secondary)
                                         }
 
                                         Spacer()
@@ -1113,7 +1113,7 @@ private struct SequentialItemRow: View {
                 Text(item.title.isEmpty ? "Untitled" : item.title)
                     .font(.subheadline)
                     .lineLimit(1)
-                    .foregroundStyle(item.isCurrent ? .accent : .primary)
+                    .foregroundStyle(.primary)
             }
 
             Spacer()
@@ -1209,7 +1209,7 @@ private struct TriggerSectionHeader: View {
         HStack(spacing: 10) {
             Image(systemName: iconName)
                 .font(.subheadline)
-                .foregroundStyle(.accent)
+                .foregroundStyle(.primary)
                 .frame(width: 24)
 
             Text(title)
@@ -1676,14 +1676,14 @@ private struct LocationTriggerEmptyForm: View {
             VStack(spacing: 4) {
                 Image(systemName: geocodingModel.isResolving ? "mappin.circle" : "mappin.circle.fill")
                     .font(.system(size: 44))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.primary)
                     .shadow(color: Color.black.opacity(0.25), radius: 8, y: 6)
                 Circle()
-                    .fill(Color.accentColor.opacity(0.25))
+                    .fill(Color.primary.opacity(0.25))
                     .frame(width: 18, height: 18)
                     .overlay(
                         Circle()
-                            .fill(Color.accentColor)
+                            .fill(Color.primary)
                             .frame(width: 6, height: 6)
                     )
             }
@@ -2005,7 +2005,7 @@ private struct TriggerEmptyFormHeader: View {
 
             Image(systemName: iconName)
                 .font(.subheadline)
-                .foregroundStyle(.accent)
+                .foregroundStyle(.primary)
                 .frame(width: 24)
 
             Text(title)
@@ -2019,7 +2019,7 @@ private struct TriggerEmptyFormHeader: View {
             } label: {
                 Image(systemName: "checkmark")
                     .font(.caption.bold())
-                    .foregroundStyle(isSaveDisabled ? .secondary : Color.accent)
+                    .foregroundStyle(isSaveDisabled ? .tertiary : .primary)
             }
             .disabled(isSaveDisabled)
         }
@@ -2029,4 +2029,3 @@ private struct TriggerEmptyFormHeader: View {
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 24))
     }
 }
-
