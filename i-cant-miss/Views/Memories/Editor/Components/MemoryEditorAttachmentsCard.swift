@@ -122,7 +122,7 @@ struct MemoryEditorAttachmentsCard: View {
                         VStack(spacing: 4) {
                             Image(systemName: "link.circle.fill")
                                 .font(.system(size: 28))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.secondary)
                             Text("Link")
                                 .font(.caption2)
                                 .lineLimit(1)
@@ -134,7 +134,7 @@ struct MemoryEditorAttachmentsCard: View {
                     VStack(spacing: 4) {
                         Image(systemName: "waveform.circle.fill")
                             .font(.system(size: 28))
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(.secondary)
                         Text("Audio")
                             .font(.caption2)
                             .lineLimit(1)

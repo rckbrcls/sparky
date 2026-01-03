@@ -37,7 +37,7 @@ struct LinkPreviewCard: View {
                     VStack(spacing: 4) {
                         Image(systemName: "safari.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(.secondary)
 
                          if let title = title {
                             Text(title)
@@ -144,7 +144,7 @@ struct FilePreviewCard: View {
                     VStack(spacing: 4) {
                         Image(systemName: "doc.fill")
                             .font(.system(size: 28))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.secondary)
                         Text(attachment.filename ?? "File")
                             .font(.caption2)
                             .lineLimit(2)
