@@ -696,7 +696,6 @@ struct MemoryEditorView: View {
             if isEditingEnabled {
                 AddSynapseButton {
                      viewModel.addChecklistItem(title: "", detail: "")
-                     focusedDraftID = viewModel.checkItems.last?.id
                 }
             }
         }
@@ -798,7 +797,6 @@ struct MemoryEditorView: View {
         case .checklist:
             // Add a new Synapse item
             viewModel.addChecklistItem(title: "", detail: "")
-            focusedDraftID = viewModel.checkItems.last?.id
         case .photos:
             pendingPhotoContentID = nil
             isPresentingPhotoLibrary = true

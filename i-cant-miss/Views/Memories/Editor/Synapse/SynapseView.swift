@@ -12,12 +12,11 @@ struct SynapseView: View {
         HStack(alignment: .top, spacing: 12) {
              // Card Style Background
             VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
 
                     VStack(alignment: .leading, spacing: 4) {
                         TextField("Title", text: $item.title)
-                            .font(.headline)
-                            .fontWeight(.medium)
+                            .font(.custom("Vollkorn-Regular", size: 17))
                             .foregroundStyle(item.isCompleted ? .secondary : .primary)
                             .strikethrough(item.isCompleted, color: .secondary)
                             .disabled(!isEditable)
@@ -25,7 +24,7 @@ struct SynapseView: View {
                             .focused($focusedField, equals: item.id)
 
                         TextField("Description", text: $item.detail, axis: .vertical)
-                             .font(.subheadline)
+                            .font(.subheadline)
                              .foregroundStyle(.secondary)
                              .strikethrough(item.isCompleted, color: .secondary)
                              .disabled(!isEditable)
