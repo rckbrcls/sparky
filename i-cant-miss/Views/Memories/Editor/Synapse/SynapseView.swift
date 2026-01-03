@@ -45,7 +45,7 @@ struct SynapseView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 16)
                             .fill(Color.primary.opacity(0.03))
                     )
             }
