@@ -116,6 +116,7 @@ struct MemoryEditorView: View {
     @State private var isAudioCardVisible = false
     @State private var navigationPath = NavigationPath()
     @State private var showSpaceComposer = false
+    @State private var showDeleteConfirmation = false
     @Namespace private var toolbarGlassNamespace
     @ObservedObject private var spaceService: SpaceService
 
@@ -178,6 +179,16 @@ struct MemoryEditorView: View {
             }
             .onChange(of: viewModel.errorMessage) { _, newValue in
                 showErrorAlert = newValue != nil
+            }
+            .alert("Delete Memory", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    Task {
+                        await deleteMemory()
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to delete this memory? This action cannot be undone.")
             }
 
         let sheetConfigured = lifecycleConfigured
@@ -300,6 +311,19 @@ struct MemoryEditorView: View {
         }
     }
 
+    private func deleteMemory() async {
+        guard case let .edit(memory) = mode else { return }
+        do {
+            try await environment.memoryService.deleteMemory(id: memory.id)
+            await MainActor.run {
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                viewModel.errorMessage = "Failed to delete memory: \(error.localizedDescription)"
+            }
+        }
+    }
 
 
     private var baseEditorContainer: some View {
@@ -446,6 +470,18 @@ struct MemoryEditorView: View {
 
                 } label: {
                     Image(systemName: "ellipsis")
+                }
+            }
+
+            if case .edit = mode {
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+                    }
+                    Spacer()
                 }
             }
         }
@@ -739,7 +775,7 @@ struct MemoryEditorView: View {
 
             TextField("Memory", text: $viewModel.title, axis: .vertical)
                 .font(.custom("Vollkorn-Regular", size: 20))
-                .fontWeight(.bold)
+                .fontWeight(.medium)
                 .multilineTextAlignment(.leading)
                 .submitLabel(.done)
                 .focused($isTitleFocused)
