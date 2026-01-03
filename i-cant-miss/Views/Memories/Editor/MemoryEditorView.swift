@@ -617,21 +617,6 @@ struct MemoryEditorView: View {
         Color(.systemBackground)
     }
 
-
-
-    private var cardBounceAnimation: Animation {
-        .interpolatingSpring(stiffness: 240, damping: 18, initialVelocity: 0.35)
-    }
-
-    private var cardBounceTransition: AnyTransition {
-        .asymmetric(
-            insertion: .scale(scale: 0.9, anchor: .center)
-                .combined(with: .opacity),
-            removal: .scale(scale: 0.75, anchor: .center)
-                .combined(with: .opacity)
-        )
-    }
-
     private func handleAttachmentTap(_ attachment: MemoryModel.Attachment) {
         switch attachment.kind {
         case .photo:
