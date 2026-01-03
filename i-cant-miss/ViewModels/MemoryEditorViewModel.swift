@@ -87,6 +87,73 @@ final class MemoryEditorViewModel: ObservableObject {
         note.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Returns true if the current editor state differs from the original memory.
+    /// For new memories (create mode), always returns true since there's nothing to compare.
+    var hasChanges: Bool {
+        guard let original = existingMemory else {
+            // Create mode - always allow saving if title is valid
+            return true
+        }
+
+        // Compare all editable fields with the original memory
+        if title != original.title { return true }
+        if status != original.status { return true }
+        if isPinned != original.isPinned { return true }
+        if selectedSpaceID != original.space?.id { return true }
+        if autoCompleteChecklist != original.autoCompleteOnChecklistCompletion { return true }
+
+        // Compare note
+        let originalNote = original.note ?? ""
+        if note != originalNote { return true }
+
+        // Compare check items
+        let originalCheckItems = original.checkItems.sorted(by: { $0.sortOrder < $1.sortOrder })
+        if checkItems.count != originalCheckItems.count { return true }
+        for (current, original) in zip(checkItems, originalCheckItems) {
+            if current.id != original.id ||
+               current.title != original.title ||
+               current.detail != (original.detail ?? "") ||
+               current.isCompleted != original.isCompleted ||
+               current.sortOrder != original.sortOrder {
+                return true
+            }
+        }
+
+        // Compare triggers
+        let originalTriggers = original.triggers
+        if triggers.count != originalTriggers.count { return true }
+        for (currentTrigger, originalTrigger) in zip(triggers, originalTriggers) {
+            if currentTrigger.id != originalTrigger.id ||
+               currentTrigger.type != originalTrigger.type ||
+               currentTrigger.fireDate != originalTrigger.fireDate ||
+               currentTrigger.recurrenceRule != originalTrigger.recurrenceRule ||
+               currentTrigger.weekdayMask != originalTrigger.weekdayMask ||
+               currentTrigger.isActive != originalTrigger.isActive ||
+               currentTrigger.isAllDay != originalTrigger.isAllDay {
+                return true
+            }
+        }
+
+        // Compare attachments
+        let originalPhotoIDs = Set(original.photoAttachmentIDs)
+        let currentPhotoIDs = Set(photoAttachments.map(\.id))
+        if originalPhotoIDs != currentPhotoIDs { return true }
+
+        let originalLinkIDs = Set(original.linkAttachmentIDs)
+        let currentLinkIDs = Set(linkAttachments.map(\.id))
+        if originalLinkIDs != currentLinkIDs { return true }
+
+        let originalAudioIDs = Set(original.audioAttachmentIDs)
+        let currentAudioIDs = Set(audioAttachments.map(\.id))
+        if originalAudioIDs != currentAudioIDs { return true }
+
+        let originalFileIDs = Set(original.fileAttachmentIDs)
+        let currentFileIDs = Set(fileAttachments.map(\.id))
+        if originalFileIDs != currentFileIDs { return true }
+
+        return false
+    }
+
     private var allAttachments: [MemoryModel.Attachment] {
         photoAttachments + linkAttachments + audioAttachments + fileAttachments
     }

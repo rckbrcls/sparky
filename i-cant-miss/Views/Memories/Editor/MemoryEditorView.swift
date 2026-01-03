@@ -361,7 +361,7 @@ struct MemoryEditorView: View {
     }
 
     private var isSaveDisabled: Bool {
-        viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !viewModel.hasChanges
     }
 
     private var editorContent: some View {
