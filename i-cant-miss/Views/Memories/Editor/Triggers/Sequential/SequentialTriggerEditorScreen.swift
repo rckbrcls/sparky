@@ -4,8 +4,10 @@
 //
 //  Created by Codex on 13/10/25.
 //
+//
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SequentialTriggerEditorScreen: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
@@ -13,69 +15,75 @@ struct SequentialTriggerEditorScreen: View {
 
     @State private var sequenceItems: [SequentialItem] = []
     @State private var showingPicker = false
+    @State private var draggedItem: SequentialItem?
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    if sequenceItems.isEmpty {
-                        Text("No memories in sequence")
+            ScrollView {
+                VStack(spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Sequence Order")
+                            .font(.headline)
                             .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(sequenceItems) { item in
-                            HStack {
-                                Text("\(sequenceItems.firstIndex(of: item)! + 1)")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
+                            .padding(.horizontal)
+
+                        VStack(spacing: 12) {
+                            if sequenceItems.isEmpty {
+                                Text("No memories in sequence")
                                     .foregroundStyle(.secondary)
-                                    .frame(width: 24)
-
-                                VStack(alignment: .leading) {
-                                    if item.isCurrent {
-                                        Text("Current Memory")
-                                            .font(.caption)
-                                            .foregroundStyle(.blue)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding()
+                            } else {
+                                ForEach(sequenceItems) { item in
+                                    SequentialItemView(
+                                        index: sequenceItems.firstIndex(of: item) ?? 0,
+                                        item: item,
+                                        onDelete: {
+                                            if let index = sequenceItems.firstIndex(of: item) {
+                                                sequenceItems.remove(at: index)
+                                            }
+                                        }
+                                    )
+                                    .onDrag {
+                                        self.draggedItem = item
+                                        return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.sequentialitem")
                                     }
-                                    Text(item.title)
-                                        .font(.headline)
+                                    .onDrop(of: ["com.icantmiss.sequentialitem"], delegate: SequentialDropDelegate(item: item, items: $sequenceItems, draggedItem: $draggedItem))
                                 }
-                                Spacer()
                             }
-                            .contentShape(Rectangle())
-                        }
-                        .onMove { from, to in
-                            sequenceItems.move(fromOffsets: from, toOffset: to)
-                        }
-                        .onDelete { indexSet in
-                            // Prevent deleting "current" memory if desired, or allow removing it from sequence?
-                            // For now, let's allow removing others.
-                            // If user removes "current", it effectively clears the trigger for current.
-                            // But usually we just remove the triggers for others.
-                            // Let's block removing current for simplicity, or handle it as "Cancel Sequence"
 
-                            // Check if current is in indexSet
-                            let containsCurrent = indexSet.map { sequenceItems[$0] }.contains { $0.isCurrent }
-                            if containsCurrent {
-                                // Can't delete self from list in this view? Or maybe just allow it?
-                                // If deleted, we remove from list.
+                            Button {
+                                showingPicker = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus")
+                                        .font(.caption.bold())
+                                    Text("Add Memory")
+                                        .font(.caption.bold())
+                                }
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                                        .foregroundStyle(Color.secondary.opacity(0.4))
+                                )
+                                .contentShape(Rectangle())
                             }
-                            sequenceItems.remove(atOffsets: indexSet)
+                            .buttonStyle(.plain)
                         }
                     }
-                } header: {
-                    Text("Sequence Order")
-                } footer: {
+
                     Text("Drag to reorder. The sequence will advance in this order.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-
-                Section {
-                    Button {
-                        showingPicker = true
-                    } label: {
-                        Label("Add Memory", systemImage: "plus")
-                    }
-                }
+                .padding()
             }
+            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("Sequential Trigger")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -94,10 +102,6 @@ struct SequentialTriggerEditorScreen: View {
                     }
                     .fontWeight(.semibold)
                 }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    EditButton()
-                }
             }
             .sheet(isPresented: $showingPicker) {
                 SequentialMemoryPickerSheet(
@@ -115,7 +119,7 @@ struct SequentialTriggerEditorScreen: View {
         }
     }
 
-    private struct SequentialItem: Identifiable, Equatable {
+    fileprivate struct SequentialItem: Identifiable, Equatable {
         let id: UUID
         let title: String
         var isCurrent: Bool
@@ -125,17 +129,13 @@ struct SequentialTriggerEditorScreen: View {
         var items: [SequentialItem] = []
 
         // 1. Current Memory
-        let currentID = viewModel.editingMemoryID ?? UUID() // Use temp ID if new?
-        // Ideally we assume current memory is ALWAYS part of it if we are editing.
-        // If we have a sequenceID, fetch others.
+        let currentID = viewModel.editingMemoryID ?? UUID()
 
         if let seqInfo = viewModel.sequentialTrigger?.sequential {
             let sequenceID = seqInfo.sequenceID
 
             // Fetch all memories with this sequenceID
             let allMemories = viewModel.environment.memoryService.memories.filter { memory in
-                // Active memories only? Or include completed? Sequence might include completed ones.
-                // Include all status for editing visibility.
                 memory.triggers.contains { t in
                     t.type == .sequential && t.sequential?.sequenceID == sequenceID
                 }
@@ -154,9 +154,8 @@ struct SequentialTriggerEditorScreen: View {
             }
         }
 
-        // Ensure current is in list if not found (new sequence or new memory)
+        // Ensure current is in list if not found
         if !items.contains(where: { $0.isCurrent }) {
-            // Note: If `viewModel.editingMemoryID` is different from persisted (new memory), we use title from VM
             let title = viewModel.title.isEmpty ? "New Memory" : viewModel.title
             let current = SequentialItem(id: currentID, title: title, isCurrent: true)
             items.append(current)
@@ -166,10 +165,6 @@ struct SequentialTriggerEditorScreen: View {
     }
 
     private func save() async {
-        // 1. Generate new Sequence ID if needed
-        // If we already have one, keep it? Or generate new one to be safe/clean?
-        // If we keep it, we don't break links to memories NOT in the list (if any exist that were not fetched?)
-        // But we fetched all.
         let sequenceID = viewModel.sequentialTrigger?.sequential?.sequenceID ?? UUID()
 
         // 2. Iterate items and update
@@ -185,9 +180,7 @@ struct SequentialTriggerEditorScreen: View {
             }
         }
 
-        // 3. Handle removed items?
-        // If an item was in the sequence but removed from list, we should remove its sequential trigger.
-        // We can find them by querying the service for correct sequenceID but not in our list.
+        // 3. Handle removed items
         let service = viewModel.environment.memoryService
         let staleMemories = service.memories.filter { mem in
             mem.triggers.contains { $0.type == .sequential && $0.sequential?.sequenceID == sequenceID } &&
@@ -200,10 +193,7 @@ struct SequentialTriggerEditorScreen: View {
     }
 
     private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int) async {
-        // Create Draft
-        // Existing trigger?
         var triggers = memory.triggers
-
         let newSeq = MemoryTriggerModel.TriggerSequential(sequenceID: sequenceID, stepIndex: index)
 
         if let idx = triggers.firstIndex(where: { $0.type == .sequential }) {
@@ -213,25 +203,13 @@ struct SequentialTriggerEditorScreen: View {
                 id: UUID(),
                 type: .sequential,
                 weekdayMask: 0,
-                isActive: true, // Should be active?
+                isActive: true,
                 sequential: newSeq,
                 spacedStage: 0,
                 ignoreCount: 0
             )
             triggers.append(t)
         }
-
-        // Create minimal draft/update
-        // Simplest way is to use MemoryService.updateMemory but we need a full draft.
-        // We can replicate changes.
-        // Or simpler: MemoryService expose a way to update triggers directly?
-        // `MemoryService.mutateMemory` is internal/private helper but we have `updateMemory(from: draft)`.
-
-        // Construct draft
-        // Need to convert ALL fields? That's heavy.
-        // Let's see if we can use a lighter update or just do the draft.
-        // MemoryService has `toggleCompletion` using `mutateMemory`.
-        // Maybe we just create a full draft.
 
         let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
         _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
@@ -245,10 +223,91 @@ struct SequentialTriggerEditorScreen: View {
     }
 }
 
-// Helper extension to create Draft from Model easily (if not exists)
-// It seems `MemoryDraft` has an init but not a "from model" static manually.
-// VM has `draft(from:)`.
-// Let's add a helper extension here locally or rely on VM-like mapping.
+fileprivate struct SequentialItemView: View {
+    let index: Int
+    let item: SequentialTriggerEditorScreen.SequentialItem
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
+                    Text("\(index + 1)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24, alignment: .center)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if item.isCurrent {
+                            Text("Current Memory")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                        }
+                        Text(item.title)
+                            .font(.custom("Vollkorn-Regular", size: 17))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        withAnimation {
+                            onDelete()
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(.secondarySystemBackground))
+                    .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+            )
+        }
+    }
+}
+
+fileprivate struct SequentialDropDelegate: DropDelegate {
+    let item: SequentialTriggerEditorScreen.SequentialItem
+    @Binding var items: [SequentialTriggerEditorScreen.SequentialItem]
+    @Binding var draggedItem: SequentialTriggerEditorScreen.SequentialItem?
+
+    func dropUpdated(info: DropInfo) -> DropProposal {
+        return DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggedItem = nil
+        return true
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let draggedItem = draggedItem else { return }
+        guard draggedItem.id != item.id else { return }
+
+        if let from = items.firstIndex(of: draggedItem),
+           let to = items.firstIndex(of: item) {
+            if from != to {
+                withAnimation {
+                    items.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+                }
+            }
+        }
+    }
+}
+
 fileprivate extension MemoryDraft {
     static func from(model: MemoryModel, withTriggers triggers: [MemoryTriggerModel]) -> MemoryDraft {
         MemoryDraft(
@@ -258,7 +317,7 @@ fileprivate extension MemoryDraft {
             isPinned: model.isPinned,
             dueDate: model.dueDate,
             spaceID: model.space?.id,
-            triggers: triggers, // Updated triggers
+            triggers: triggers,
             note: model.note,
             checkItems: model.checkItems.map { CheckItemDraft(id: $0.id, title: $0.title, detail: $0.detail ?? "", isCompleted: $0.isCompleted, sortOrder: $0.sortOrder, createdAt: $0.createdAt, completedAt: $0.completedAt) },
             photoAttachmentIDs: model.photoAttachmentIDs,
@@ -269,18 +328,4 @@ fileprivate extension MemoryDraft {
             autoCompleteOnChecklistCompletion: model.autoCompleteOnChecklistCompletion
         )
     }
-}
-
-#Preview {
-    let persistence = PersistenceController(inMemory: true)
-    let environment = AppEnvironment(persistence: persistence)
-    let viewModel = MemoryEditorViewModel(
-        environment: environment,
-        attachmentStore: environment.attachmentStore,
-        memory: nil,
-        defaultSpace: nil,
-        template: .blank
-    )
-
-    SequentialTriggerEditorScreen(viewModel: viewModel)
 }
