@@ -179,6 +179,7 @@ struct MemorySearchSheet: View {
                         }
                         .padding(.vertical)
                     }
+                    .scrollDismissesKeyboard(.interactively)
                 } else {
                     // Search Results
                     ScrollView {
@@ -189,6 +190,7 @@ struct MemorySearchSheet: View {
                         }
                         .padding()
                     }
+                    .scrollDismissesKeyboard(.interactively)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
