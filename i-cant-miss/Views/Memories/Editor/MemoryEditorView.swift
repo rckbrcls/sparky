@@ -55,6 +55,7 @@ struct MemoryEditorView: View {
     @State private var showDeleteConfirmation = false
     @Namespace private var toolbarGlassNamespace
     @ObservedObject private var spaceService: SpaceService
+    @State private var draggedSynapse: CheckItemDraft?
 
     private let mode: Mode
     private let environment: AppEnvironment
@@ -684,10 +685,15 @@ struct MemoryEditorView: View {
                 SynapseView(
                     item: $item,
                     isEditable: isEditingEnabled,
-                    onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
-                    onDelete: { viewModel.removeChecklistItem(itemID: item.id) },
+                    onToggle: { viewModel.toggleChecklistCompletion(for: $item.wrappedValue.id) },
+                    onDelete: { viewModel.removeChecklistItem(itemID: $item.wrappedValue.id) },
                     focusedField: $focusedDraftID
                 )
+                .onDrag {
+                    self.draggedSynapse = $item.wrappedValue
+                    return NSItemProvider(object: $item.wrappedValue.id.uuidString as NSString)
+                }
+                .onDrop(of: [.text], delegate: SynapseDropDelegate(destinationItem: $item.wrappedValue, viewModel: viewModel, draggedItem: $draggedSynapse))
             }
             .onMove { source, destination in
                 viewModel.moveChecklistItem(from: source, to: destination)

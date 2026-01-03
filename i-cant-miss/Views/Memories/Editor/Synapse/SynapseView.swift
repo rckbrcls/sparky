@@ -18,6 +18,7 @@ struct SynapseView: View {
                         .font(.custom("Vollkorn-Regular", size: 17))
                         .foregroundStyle(item.isCompleted ? .secondary : .primary)
                         .strikethrough(item.isCompleted, color: .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .disabled(!isEditable)
                         .submitLabel(.next)
                         .focused($focusedField, equals: item.id)
