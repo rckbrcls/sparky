@@ -79,7 +79,7 @@ struct MeView: View {
                                     .appLargeTitleStyle()
                             }
                         } else {
-                            (Text("Hello, ") + Text(displayName).underline() + Text("!"))
+                            Text("Hello, \(Text(displayName).underline())!")
                                 .appLargeTitleStyle()
                                 .onTapGesture {
                                     isEditing = true

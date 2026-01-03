@@ -58,8 +58,6 @@ struct SequentialMemoryCard: View {
 }
 
 #Preview {
-    let persistence = PersistenceController(inMemory: true)
-    let environment = AppEnvironment(persistence: persistence)
     let memory = MemoryModel(
         id: UUID(),
         title: "Sample Memory",

@@ -43,7 +43,7 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
 
         // 2. Extrair informações da sequência (se houver)
         // Devemos procurar em todos os triggers, pois pode ter mais de um, mas assumimos um principal
-        let seqTriggers = completedMemory.triggers.compactMap { $0.sequential }.filter { _ in true } // Filter inactive? TriggerSequential itself doesn't have active flag, the wrapper does.
+        // Note: We use activeSeqTriggers below which filters by isActive && type == .sequential
         // Wait, `completedMemory.triggers` is `[MemoryTriggerModel]`. `sequential` is optional property of `MemoryTriggerModel`.
         // We need to check if the trigger containing the sequential info is active.
 

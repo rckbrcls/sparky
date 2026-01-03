@@ -61,7 +61,7 @@ final class NotificationScheduler {
             switch trigger.type {
             case .scheduled:
                 scheduleScheduledTrigger(trigger: trigger, memoryID: memory.id, content: content, requests: &requests)
-            case .location, .person, .sequential, .focus:
+            case .location, .person, .sequential:
                 continue
             }
         }

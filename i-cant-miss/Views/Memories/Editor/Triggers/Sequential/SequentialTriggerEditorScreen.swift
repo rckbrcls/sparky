@@ -234,14 +234,14 @@ struct SequentialTriggerEditorScreen: View {
         // Maybe we just create a full draft.
 
         let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
-        try? await viewModel.environment.memoryService.updateMemory(from: draft)
+        _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
     }
 
     private func removeSequentialTrigger(from memory: MemoryModel) async {
         var triggers = memory.triggers
         triggers.removeAll { $0.type == .sequential }
         let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
-        try? await viewModel.environment.memoryService.updateMemory(from: draft)
+        _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
     }
 }
 
