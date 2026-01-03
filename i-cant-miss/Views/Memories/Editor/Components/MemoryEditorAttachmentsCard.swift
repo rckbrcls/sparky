@@ -80,8 +80,9 @@ struct MemoryEditorAttachmentsCard: View {
                     VStack(spacing: 8) {
                         Image(systemName: "plus")
                             .font(.system(size: 24, weight: .semibold))
-                        Text("Add Attachments")
+                        Text("Add Media")
                             .font(.caption2.weight(.medium))
+                            .padding(.horizontal, 8)
                     }
                 }
             }
