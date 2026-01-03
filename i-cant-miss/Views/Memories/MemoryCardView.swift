@@ -176,14 +176,15 @@ struct MemoryCardView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrowshape.turn.up.right.circle")
                                 Text(sequentialSummary)
+                                    .strikethrough(isCompletedForDisplay, color: .secondary)
                             }
                             .fontWeight(.medium)
                             .font(.caption2)
                             .lineLimit(1)
-                            .foregroundStyle(.primary.opacity(0.7))
+                            .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
                             .padding(.vertical, 4)
                             .padding(.horizontal, 10)
-                            .background(.secondary.opacity(0.2))
+                            .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
 
@@ -191,14 +192,15 @@ struct MemoryCardView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "calendar")
                                 Text(scheduledDateText)
+                                    .strikethrough(isCompletedForDisplay, color: .secondary)
                             }
                             .fontWeight(.medium)
                             .font(.caption2)
                             .lineLimit(1)
-                            .foregroundStyle(.primary.opacity(0.7))
+                            .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
                             .padding(.vertical, 4)
                             .padding(.horizontal, 10)
-                            .background(.secondary.opacity(0.2))
+                            .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
 
@@ -206,14 +208,15 @@ struct MemoryCardView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "checklist")
                                 Text(checklistProgressText)
+                                    .strikethrough(isCompletedForDisplay, color: .secondary)
                             }
                             .fontWeight(.medium)
                             .font(.caption2)
                             .lineLimit(1)
-                            .foregroundStyle(.primary.opacity(0.7))
+                            .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
                             .padding(.vertical, 4)
                             .padding(.horizontal, 10)
-                            .background(.secondary.opacity(0.2))
+                            .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
                             .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
                     }

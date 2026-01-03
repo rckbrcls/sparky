@@ -148,9 +148,12 @@ struct MemorySearchSheet: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .fontWeight(.medium)
                     }
                 }
             }
@@ -159,7 +162,5 @@ struct MemorySearchSheet: View {
                 isSearchFieldFocused = true
             }
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
     }
 }

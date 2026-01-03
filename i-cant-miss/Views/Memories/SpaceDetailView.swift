@@ -128,7 +128,7 @@ struct SpaceDetailView: View {
                 onNotifyContext: notifySpaceContextChange,
                 resolvedSpaceProvider: { resolvedSpace }
             ))
-            .sheet(isPresented: $isSearching) {
+            .fullScreenCover(isPresented: $isSearching) {
                 MemorySearchSheet(
                     space: space,
                     memoryService: memoryService,
