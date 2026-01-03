@@ -329,7 +329,6 @@ struct MemoryEditorView: View {
             }
             .padding(.bottom, 20)
         }
-
         .toolbar{
             ToolbarItem(placement: .cancellationAction) {
                 Button(role: .cancel) {
