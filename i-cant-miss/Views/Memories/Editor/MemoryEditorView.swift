@@ -306,28 +306,29 @@ struct MemoryEditorView: View {
     }
 
     private var editorContent: some View {
-        List {
-            titleSectionRow
+        ScrollView {
+            VStack(spacing: 0) {
+                titleSectionRow
 
-            MemoryEditorAttachmentsCard(
-                viewModel: viewModel,
-                isEditable: isEditingEnabled,
-                onAddPhoto: { addPhotosFromLibraryFixed() },
-                onAddCamera: { addPhotosFromCameraFixed() },
-                onAddLink: {
-                    pendingLinkContentID = nil
-                    showAddLinkSheet = true
-                },
-                onAddAudio: { isShowingAudioRecorder = true },
-                onAddFile: { beginFileImportFixed() },
-                onAttachmentTap: { attachment in
-                    handleAttachmentTap(attachment)
-                }
-            )
-            .padding(.horizontal, 20)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: 0, leading: 0, bottom: 16, trailing: 0))
-            .listRowBackground(Color.clear)
+                MemoryEditorAttachmentsCard(
+                    viewModel: viewModel,
+                    isEditable: isEditingEnabled,
+                    onAddPhoto: { addPhotosFromLibraryFixed() },
+                    onAddCamera: { addPhotosFromCameraFixed() },
+                    onAddLink: {
+                        pendingLinkContentID = nil
+                        showAddLinkSheet = true
+                    },
+                    onAddAudio: { isShowingAudioRecorder = true },
+                    onAddFile: { beginFileImportFixed() },
+                    onAttachmentTap: { attachment in
+                        handleAttachmentTap(attachment)
+                    }
+                )
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+            }
+            .padding(.bottom, 20)
         }
 
         .toolbar{
@@ -400,13 +401,9 @@ struct MemoryEditorView: View {
                 }
             }
         }
-        .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .background(Color.clear)
-        .listSectionSpacing(0)
-        .listRowSeparator(.hidden)
-        .environment(\.defaultMinListRowHeight, 0)
         .animation(cardBounceAnimation, value: shouldShowChecklistCard)
         .animation(cardBounceAnimation, value: shouldShowRichTextCard)
 
@@ -439,23 +436,12 @@ struct MemoryEditorView: View {
             }
         }
         .padding(.horizontal, 20)
-        .listRowSeparator(.hidden)
-        .listRowInsets(.init(top: 20, leading: 0, bottom: 16, trailing: 0))
-        .listRowBackground(Color.clear)
+        .padding(.top, 20)
+        .padding(.bottom, 16)
         .animation(.easeInOut(duration: 0.3), value: viewModel.triggers.count)
     }
 
     // MARK: - Fixed Content Card Views
-
-
-
-
-
-
-
-
-
-
 
     private func addPhotosFromLibraryFixed() {
         pendingPhotoContentID = UUID() // Use temporary ID for triggering
@@ -632,15 +618,9 @@ struct MemoryEditorView: View {
         cleanupPendingContentTargets()
     }
 
-
-
-
-
     private var baseBackground: Color {
         Color(.systemBackground)
     }
-
-
 
     private var shouldShowRichTextCard: Bool {
         !viewModel.note.isEmpty || isEditingEnabled
@@ -649,10 +629,6 @@ struct MemoryEditorView: View {
     private var shouldShowChecklistCard: Bool {
         !viewModel.checkItems.isEmpty || isEditingEnabled
     }
-
-
-
-
 
     private var cardBounceAnimation: Animation {
         .interpolatingSpring(stiffness: 240, damping: 18, initialVelocity: 0.35)
