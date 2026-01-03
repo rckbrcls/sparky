@@ -103,11 +103,10 @@ struct QuickMemorySheet: View {
     }
 
     private var titleFont: UIFont {
-        guard let font = UIFont(name: "Vollkorn-Regular", size: 20) else {
-            return .systemFont(ofSize: 20, weight: .regular)
+        if let font = UIFont(name: "Vollkorn-Regular", size: 20) {
+            return font
         }
-        let descriptor = font.fontDescriptor.withSymbolicTraits(.traitBold)
-        return UIFont(descriptor: descriptor ?? font.fontDescriptor, size: 20)
+        return .systemFont(ofSize: 20, weight: .regular)
     }
 
     var body: some View {
