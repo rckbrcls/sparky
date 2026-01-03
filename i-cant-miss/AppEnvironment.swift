@@ -74,11 +74,6 @@ final class AppEnvironment: ObservableObject {
 
             await triggerExecutorCoordinator.scheduled.requestAuthorizationIfNeeded()
 
-            // Request focus status authorization if available
-            if #available(iOS 15.0, *) {
-                await triggerExecutorCoordinator.focus.requestAuthorization()
-            }
-
             hasBootstrapped = true
             isBootstrapping = false
         }

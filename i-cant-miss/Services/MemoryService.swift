@@ -477,7 +477,6 @@ final class MemoryService: ObservableObject {
                 location: trigger.location,
                 person: trigger.person,
                 sequential: trigger.sequential,
-                focus: trigger.focus,
                 spacedStage: trigger.spacedStage,
                 lastReviewDate: nil,
                 ignoreCount: 0

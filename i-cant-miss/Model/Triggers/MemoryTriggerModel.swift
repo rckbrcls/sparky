@@ -18,7 +18,6 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     var location: TriggerLocation?
     var person: TriggerPerson?
     var sequential: TriggerSequential?
-    var focus: TriggerFocus?
     var spacedStage: Int
     var lastReviewDate: Date?
     var ignoreCount: Int
@@ -26,7 +25,7 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     // Custom decoder for backwards compatibility
     enum CodingKeys: String, CodingKey {
         case id, type, fireDate, startDate, recurrenceRule, timeZoneIdentifier
-        case weekdayMask, isActive, isAllDay, location, person, sequential, focus
+        case weekdayMask, isActive, isAllDay, location, person, sequential
         case spacedStage, lastReviewDate, ignoreCount
     }
 
@@ -44,7 +43,6 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         location = try container.decodeIfPresent(TriggerLocation.self, forKey: .location)
         person = try container.decodeIfPresent(TriggerPerson.self, forKey: .person)
         sequential = try container.decodeIfPresent(TriggerSequential.self, forKey: .sequential)
-        focus = try container.decodeIfPresent(TriggerFocus.self, forKey: .focus)
         spacedStage = try container.decode(Int.self, forKey: .spacedStage)
         lastReviewDate = try container.decodeIfPresent(Date.self, forKey: .lastReviewDate)
         ignoreCount = try container.decode(Int.self, forKey: .ignoreCount)
@@ -63,7 +61,6 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         location: TriggerLocation? = nil,
         person: TriggerPerson? = nil,
         sequential: TriggerSequential? = nil,
-        focus: TriggerFocus? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
         ignoreCount: Int = 0
@@ -80,7 +77,6 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         self.location = location
         self.person = person
         self.sequential = sequential
-        self.focus = focus
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
         self.ignoreCount = ignoreCount
@@ -113,10 +109,7 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         // If strictly needed, we could keep optional legacy fields, but the plan approved "New sequence logic".
     }
 
-    struct TriggerFocus: Hashable, Codable {
-        var focusIdentifier: String?
-        var focusName: String
-    }
+
 }
 
 // MARK: - TriggerProtocol Conversion
@@ -135,7 +128,7 @@ extension MemoryTriggerModel {
         switch type {
         case .scheduled:
             return nextScheduledOccurrence(from: reference)
-        case .location, .person, .sequential, .focus:
+        case .location, .person, .sequential:
             return startDate ?? fireDate
         }
     }

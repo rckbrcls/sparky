@@ -95,7 +95,6 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             location: nil,
             person: nil,
             sequential: nil,
-            focus: nil,
             spacedStage: 0,
             lastReviewDate: nil,
             ignoreCount: 0

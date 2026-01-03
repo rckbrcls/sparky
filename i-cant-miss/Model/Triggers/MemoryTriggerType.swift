@@ -10,7 +10,6 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
     case location
     case person
     case sequential
-    case focus
 
     var id: String { rawValue }
 
@@ -20,7 +19,6 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
         case .location: return "mappin.and.ellipse"
         case .person: return "person.crop.circle"
         case .sequential: return "arrowshape.turn.up.right.circle"
-        case .focus: return "moon.fill"
         }
     }
 
@@ -30,7 +28,6 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
         case .location: return "Location"
         case .person: return "Person"
         case .sequential: return "Sequential"
-        case .focus: return "Focus"
         }
     }
 }

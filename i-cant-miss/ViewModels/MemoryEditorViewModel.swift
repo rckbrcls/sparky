@@ -289,17 +289,7 @@ final class MemoryEditorViewModel: ObservableObject {
         triggers.append(draft)
     }
 
-    func addFocusTrigger(focusIdentifier: String?, focusName: String) {
-        let draft = MemoryTriggerDraft(
-            type: .focus,
-            fireDate: nil,
-            startDate: Date(),
-            focus: .init(focusIdentifier: focusIdentifier, focusName: focusName),
-            spacedStage: 0,
-            ignoreCount: 0
-        )
-        triggers.append(draft)
-    }
+
 
     func removeTrigger(id: UUID) {
         triggers.removeAll { $0.id == id }

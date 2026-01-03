@@ -18,7 +18,6 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
     var location: MemoryTriggerModel.TriggerLocation?
     var person: MemoryTriggerModel.TriggerPerson?
     var sequential: MemoryTriggerModel.TriggerSequential?
-    var focus: MemoryTriggerModel.TriggerFocus?
     var spacedStage: Int
     var lastReviewDate: Date?
     var ignoreCount: Int
@@ -36,7 +35,6 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         location: MemoryTriggerModel.TriggerLocation? = nil,
         person: MemoryTriggerModel.TriggerPerson? = nil,
         sequential: MemoryTriggerModel.TriggerSequential? = nil,
-        focus: MemoryTriggerModel.TriggerFocus? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
         ignoreCount: Int = 0
@@ -53,7 +51,6 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         self.location = location
         self.person = person
         self.sequential = sequential
-        self.focus = focus
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
         self.ignoreCount = ignoreCount
@@ -77,7 +74,6 @@ extension MemoryTriggerDraft {
             location: location,
             person: person,
             sequential: sequential,
-            focus: focus,
             spacedStage: spacedStage,
             lastReviewDate: lastReviewDate,
             ignoreCount: ignoreCount

@@ -7,7 +7,6 @@ struct TriggerPickerSheet: View {
     @State private var showLocationSheet = false
     @State private var showPersonSheet = false
     @State private var showSequentialSheet = false
-    @State private var showFocusSheet = false
 
     var body: some View {
         NavigationStack {
@@ -44,13 +43,7 @@ struct TriggerPickerSheet: View {
                     showSequentialSheet = true
                 }
 
-                triggerRow(
-                    title: "Focus",
-                    icon: "moon.fill",
-                    isActive: isFocusActive
-                ) {
-                    showFocusSheet = true
-                }
+
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Add Trigger")
@@ -89,12 +82,7 @@ struct TriggerPickerSheet: View {
                 }
                 .presentationDetents([.large])
             }
-            .sheet(isPresented: $showFocusSheet) {
-                NavigationStack {
-                    FocusTriggerEditorScreen(viewModel: viewModel)
-                }
-                .presentationDetents([.medium])
-            }
+
         }
         .presentationDetents([.medium])
         .presentationBackground(.clear)
@@ -136,7 +124,5 @@ struct TriggerPickerSheet: View {
         viewModel.sequentialTrigger != nil
     }
 
-    private var isFocusActive: Bool {
-        viewModel.triggers.contains(where: { $0.type == .focus })
-    }
+
 }

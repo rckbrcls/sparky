@@ -6,7 +6,6 @@ struct TriggersCard: View {
     @Binding var showLocationPicker: Bool
     @Binding var showPersonSheet: Bool
     @Binding var showSequentialSheet: Bool
-    @Binding var showFocusSheet: Bool
     let memoryLookup: [UUID: MemoryModel]
 
     private var triggerCount: Int {
@@ -57,15 +56,7 @@ struct TriggersCard: View {
                     )
                 }
 
-                if hasFocusTrigger {
-                    TriggerMiniCard(
-                        trigger: viewModel.triggers.first(where: { $0.type == .focus }),
-                        iconName: "moon.fill",
-                        label: focusLabel,
-                        onTap: { showFocusSheet = true },
-                        onDelete: { removeTrigger(type: .focus) }
-                    )
-                }
+
 
                 // Add trigger button (dashed border)
                 if triggerCount == 0 {
@@ -104,11 +95,7 @@ struct TriggersCard: View {
                 Label("Sequence", systemImage: "arrow.right")
             }
 
-            Button {
-                showFocusSheet = true
-            } label: {
-                Label("Focus", systemImage: "moon.fill")
-            }
+
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
@@ -148,9 +135,7 @@ struct TriggersCard: View {
         return viewModel.sequentialTrigger?.sequential != nil
     }
 
-    private var hasFocusTrigger: Bool {
-        viewModel.triggers.contains(where: { $0.type == .focus })
-    }
+
 
     // MARK: - Label Helpers
 
@@ -184,13 +169,7 @@ struct TriggersCard: View {
         return "Step \(configuration.stepIndex + 1)"
     }
 
-    private var focusLabel: String {
-        guard let trigger = viewModel.triggers.first(where: { $0.type == .focus }),
-              let focus = trigger.focus else {
-            return "Focus"
-        }
-        return focus.focusName
-    }
+
 
     // MARK: - Helper Functions
 

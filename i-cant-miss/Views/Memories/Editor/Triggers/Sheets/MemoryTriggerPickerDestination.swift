@@ -3,7 +3,6 @@ enum MemoryTriggerPickerDestination: Hashable {
     case location
     case person
     case sequential
-    case focus
 }
 
 

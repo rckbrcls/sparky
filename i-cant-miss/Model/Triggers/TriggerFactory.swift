@@ -70,20 +70,6 @@ enum TriggerFactory {
                 lastReviewDate: model.lastReviewDate,
                 ignoreCount: model.ignoreCount
             )
-        case .focus:
-            let focusData = FocusTrigger.FocusData(
-                focusIdentifier: model.focus?.focusIdentifier,
-                focusName: model.focus?.focusName ?? ""
-            )
-            return FocusTrigger(
-                id: model.id,
-                startDate: model.startDate,
-                isActive: model.isActive,
-                focus: focusData,
-                spacedStage: model.spacedStage,
-                lastReviewDate: model.lastReviewDate,
-                ignoreCount: model.ignoreCount
-            )
         }
     }
 
@@ -106,7 +92,6 @@ enum TriggerFactory {
                 location: nil,
                 person: nil,
                 sequential: nil,
-                focus: nil,
                 spacedStage: scheduled.spacedStage,
                 lastReviewDate: scheduled.lastReviewDate,
                 ignoreCount: scheduled.ignoreCount
@@ -134,7 +119,6 @@ enum TriggerFactory {
                 location: locationModel,
                 person: nil,
                 sequential: nil,
-                focus: nil,
                 spacedStage: location.spacedStage,
                 lastReviewDate: location.lastReviewDate,
                 ignoreCount: location.ignoreCount
@@ -159,7 +143,6 @@ enum TriggerFactory {
                 location: nil,
                 person: personModel,
                 sequential: nil,
-                focus: nil,
                 spacedStage: person.spacedStage,
                 lastReviewDate: person.lastReviewDate,
                 ignoreCount: person.ignoreCount
@@ -184,35 +167,9 @@ enum TriggerFactory {
                 location: nil,
                 person: nil,
                 sequential: sequentialModel,
-                focus: nil,
                 spacedStage: sequential.spacedStage,
                 lastReviewDate: sequential.lastReviewDate,
                 ignoreCount: sequential.ignoreCount
-            )
-        case .focus:
-            guard let focus = trigger as? FocusTrigger else {
-                fatalError("Trigger type mismatch")
-            }
-            let focusModel = MemoryTriggerModel.TriggerFocus(
-                focusIdentifier: focus.focus.focusIdentifier,
-                focusName: focus.focus.focusName
-            )
-            return MemoryTriggerModel(
-                id: focus.id,
-                type: .focus,
-                fireDate: nil,
-                startDate: focus.startDate,
-                recurrenceRule: nil,
-                timeZoneIdentifier: nil,
-                weekdayMask: 0,
-                isActive: focus.isActive,
-                location: nil,
-                person: nil,
-                sequential: nil,
-                focus: focusModel,
-                spacedStage: focus.spacedStage,
-                lastReviewDate: focus.lastReviewDate,
-                ignoreCount: focus.ignoreCount
             )
         }
     }
