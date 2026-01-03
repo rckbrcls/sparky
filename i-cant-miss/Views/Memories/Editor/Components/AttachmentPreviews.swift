@@ -199,14 +199,12 @@ struct FilePreviewCard: View {
             let request = QLThumbnailGenerator.Request(
                 fileAt: tempURL,
                 size: CGSize(width: 300, height: 300),
-                scale: UIScreen.main.scale,
+                scale: 3.0,
                 representationTypes: .thumbnail
             )
 
             let generator = QLThumbnailGenerator.shared
-            try await generator.saveBestRepresentation(for: request, to: tempURL.deletingPathExtension().appendingPathExtension("thumb"))
-
-            // Actually QLThumbnailGenerator.shared.generateBestRepresentation gives us the image directly
+            // Generate the thumbnail directly
             let thumbnail = try await generator.generateBestRepresentation(for: request)
 
             await MainActor.run {

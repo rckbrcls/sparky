@@ -28,8 +28,6 @@ struct MemoryEditorAttachmentsCard: View {
     var body: some View {
         MemoryEditorContentCard {
             VStack(alignment: .leading, spacing: 12) {
-                header
-
                 LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
                     if isEditable {
                         addAttachmentButton
@@ -52,20 +50,6 @@ struct MemoryEditorAttachmentsCard: View {
                     }
                 }
             }
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Attachments")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Text("Photos, links, audio, and files.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
         }
     }
 
@@ -96,13 +80,13 @@ struct MemoryEditorAttachmentsCard: View {
                     VStack(spacing: 8) {
                         Image(systemName: "plus")
                             .font(.system(size: 24, weight: .semibold))
-                        Text("Add")
+                        Text("Add Attachments")
                             .font(.caption2.weight(.medium))
                     }
-                    .foregroundStyle(.secondary)
                 }
             }
         }
+        .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
