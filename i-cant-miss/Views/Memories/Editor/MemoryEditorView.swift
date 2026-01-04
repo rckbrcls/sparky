@@ -359,7 +359,7 @@ struct MemoryEditorView: View {
                     if isEditingEnabled {
                         // Eye button: Switch to View (Discard/Cancel)
                         Button {
-                            withAnimation {
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
                                 isEditingEnabled = false
                             }
                             Task { await viewModel.loadLatestDataIfNeeded() }
@@ -376,7 +376,7 @@ struct MemoryEditorView: View {
                                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                                         isTitleFocused = false
                                         focusedDraftID = nil
-                                        withAnimation {
+                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
                                             isEditingEnabled = false
                                         }
                                     }
@@ -389,7 +389,7 @@ struct MemoryEditorView: View {
                     } else {
                         // Pencil button: Switch to Edit
                         Button {
-                            withAnimation {
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
                                 isEditingEnabled = true
                             }
                         } label: {
