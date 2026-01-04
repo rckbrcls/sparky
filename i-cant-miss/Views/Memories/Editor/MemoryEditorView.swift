@@ -297,7 +297,7 @@ struct MemoryEditorView: View {
     }
 
     private var isSaveDisabled: Bool {
-        viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !viewModel.hasChanges
+        viewModel.isSaving || viewModel.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var editorContent: some View {
@@ -360,16 +360,6 @@ struct MemoryEditorView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if case .edit = mode {
                     if isEditingEnabled {
-                        // Eye button: Switch to View (Discard/Cancel)
-                        Button {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
-                                isEditingEnabled = false
-                            }
-                            Task { await viewModel.loadLatestDataIfNeeded() }
-                        } label: {
-                            Label("View", systemImage: "eye")
-                        }
-
                         // Checkmark button: Save and switch to View
                         Button {
                             Task {
