@@ -31,9 +31,9 @@ struct SpaceDetailView: View {
 
     @State private var isSearching = false
 
-    @State private var isPinnedExpanded = true
-    @State private var isActiveExpanded = true
-    @State private var isCompletedExpanded = true
+    @State private var isPinnedExpanded = false
+    @State private var isActiveExpanded = false
+    @State private var isCompletedExpanded = false
 
     private var activeFilterCount: Int {
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
