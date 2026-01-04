@@ -1191,21 +1191,21 @@ private struct SequentialItemRow: View {
                 .disabled(!canMoveUp && !canMoveDown)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
-                if item.isCurrent {
-                    Text("Current Memory")
-                        .font(.caption)
-                        .foregroundStyle(.blue)
-                }
+
+
                 Text(item.title.isEmpty ? "Untitled" : item.title)
                     .font(.subheadline)
                     .lineLimit(1)
                     .foregroundStyle(.primary)
-            }
+
 
             Spacer()
 
-            if isEditable && !item.isCurrent {
+            if item.isCurrent {
+                Image(systemName: "pencil")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.accentColor)
+            } else if isEditable {
                 Button {
                     withAnimation { onDelete() }
                 } label: {
