@@ -351,32 +351,14 @@ struct MemoryEditorView: View {
             }
 
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        viewModel.isPinned.toggle()
-                    } label: {
-                        Label(viewModel.isPinned ? "Unpin" : "Pin",
-                              systemImage: viewModel.isPinned ? "pin.fill" : "pin")
-                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
-                    }
-                    .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
-
-
-
-                    Section("Details") {
-                        Picker(selection: $viewModel.status) {
-                            ForEach(MemoryStatus.allCases) { status in
-                                Text(status.rawValue.capitalized).tag(status)
-                            }
-                        } label: {
-                            Label(viewModel.status.rawValue.capitalized, systemImage: "circle.circle")
-                        }
-                        .pickerStyle(.menu)
-                    }
-
+                Button {
+                    viewModel.isPinned.toggle()
                 } label: {
-                    Image(systemName: "ellipsis")
+                    Label(viewModel.isPinned ? "Unpin" : "Pin",
+                          systemImage: viewModel.isPinned ? "pin.fill" : "pin")
+                    .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
                 }
+                .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
             }
 
             if case .edit = mode {
@@ -387,7 +369,15 @@ struct MemoryEditorView: View {
                         Image(systemName: "trash")
                             .foregroundStyle(.red)
                     }
+
                     Spacer()
+
+                    Button {
+                        viewModel.status = viewModel.status == .active ? .completed : .active
+                    } label: {
+                        Label(viewModel.status.rawValue.capitalized, systemImage: viewModel.status == .active ? "circle" : "checkmark.circle.fill")
+                            .labelStyle(.titleAndIcon)
+                    }
                 }
             }
         }
