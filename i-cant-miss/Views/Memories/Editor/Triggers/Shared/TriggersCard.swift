@@ -975,10 +975,29 @@ private struct SequentialTriggerInlineForm: View {
 
                         // List of items
                         VStack(spacing: 8) {
-                            ForEach(sequenceItems) { item in
+                            ForEach(Array(sequenceItems.enumerated()), id: \.element.id) { index, item in
                                 SequentialItemRow(
                                     item: item,
                                     currentMemoryID: viewModel.editingMemoryID,
+                                    isEditable: isEditable,
+                                    canMoveUp: index > 0,
+                                    canMoveDown: index < sequenceItems.count - 1,
+                                    onMoveUp: {
+                                        if index > 0 {
+                                            withAnimation {
+                                                sequenceItems.swapAt(index, index - 1)
+                                            }
+                                            Task { await saveSequenceChanges() }
+                                        }
+                                    },
+                                    onMoveDown: {
+                                        if index < sequenceItems.count - 1 {
+                                            withAnimation {
+                                                sequenceItems.swapAt(index, index + 1)
+                                            }
+                                            Task { await saveSequenceChanges() }
+                                        }
+                                    },
                                     onDelete: {
                                         if !item.isCurrent, let idx = sequenceItems.firstIndex(of: item) {
                                             withAnimation { _ = sequenceItems.remove(at: idx) }
@@ -986,17 +1005,6 @@ private struct SequentialTriggerInlineForm: View {
                                         }
                                     }
                                 )
-                                .onDrag {
-                                    if isEditable {
-                                        draggedItem = item
-                                        return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.sequentialitem")
-                                    } else {
-                                        return NSItemProvider()
-                                    }
-                                }
-                                .onDrop(of: ["com.icantmiss.sequentialitem"], delegate: SequentialDropDelegate(item: item, items: $sequenceItems, draggedItem: $draggedItem, onReorder: {
-                                    Task { await saveSequenceChanges() }
-                                }))
                                 .disabled(!isEditable)
                             }
                         }
@@ -1148,14 +1156,40 @@ private struct SequentialTriggerInlineForm: View {
 private struct SequentialItemRow: View {
     let item: SequentialItem
     let currentMemoryID: UUID?
+    let isEditable: Bool
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let onMoveUp: () -> Void
+    let onMoveDown: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(systemName: "line.3.horizontal")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
+            if isEditable {
+                Menu {
+                    if canMoveUp {
+                        Button(action: onMoveUp) {
+                            Label("Move Up", systemImage: "arrow.up")
+                        }
+                    }
+
+                    if canMoveDown {
+                        Button(action: onMoveDown) {
+                            Label("Move Down", systemImage: "arrow.down")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                        .frame(width: 30, height: 30)
+                        .background(Color(uiColor: .secondarySystemFill))
+                        .clipShape(Circle())
+                }
+                .menuStyle(.borderlessButton)
+                .tint(.primary)
+                .disabled(!canMoveUp && !canMoveDown)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 if item.isCurrent {
@@ -1171,7 +1205,7 @@ private struct SequentialItemRow: View {
 
             Spacer()
 
-            if !item.isCurrent {
+            if isEditable && !item.isCurrent {
                 Button {
                     withAnimation { onDelete() }
                 } label: {
@@ -1185,11 +1219,12 @@ private struct SequentialItemRow: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(.tertiarySystemBackground))
         )
     }
 }
+
 
 fileprivate struct SequentialItem: Identifiable, Equatable {
     let id: UUID
@@ -1197,36 +1232,7 @@ fileprivate struct SequentialItem: Identifiable, Equatable {
     var isCurrent: Bool
 }
 
-private struct SequentialDropDelegate: DropDelegate {
-    let item: SequentialItem
-    @Binding var items: [SequentialItem]
-    @Binding var draggedItem: SequentialItem?
-    let onReorder: () -> Void
 
-    func dropUpdated(info: DropInfo) -> DropProposal {
-        return DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        draggedItem = nil
-        onReorder()
-        return true
-    }
-
-    func dropEntered(info: DropInfo) {
-        guard let draggedItem = draggedItem else { return }
-        guard draggedItem.id != item.id else { return }
-
-        if let from = items.firstIndex(of: draggedItem),
-           let to = items.firstIndex(of: item) {
-            if from != to {
-                withAnimation {
-                    items.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
-                }
-            }
-        }
-    }
-}
 
 fileprivate extension MemoryDraft {
     static func from(model: MemoryModel, withTriggers triggers: [MemoryTriggerModel]) -> MemoryDraft {
