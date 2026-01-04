@@ -464,7 +464,7 @@ private struct LocationTriggerInlineForm: View {
     @FocusState private var isSearchFieldFocused: Bool
 
     private let defaultRadius: Double = 200
-    private let expandedSuggestionBottomPadding: CGFloat = 120
+
 
     private var existingTrigger: MemoryTriggerDraft? {
         viewModel.triggers.first(where: { $0.type == .location })
@@ -603,14 +603,16 @@ private struct LocationTriggerInlineForm: View {
     private var expandedMapView: some View {
         LocationPickerView.ExpandedMapScreen(
             searchModel: searchModel,
-            suggestionBottomPadding: expandedSuggestionBottomPadding,
+            event: $event,
             mapContent: { mapView(allowsSelection: true) },
-            selectionOverlay: { mapSelectionOverlay },
             centerIndicator: { mapCenterIndicator },
-            searchBar: { expandedSearchBar },
-            suggestionPanel: { expandedSuggestionPanel },
-            confirmationPanel: { expandedConfirmationPanel },
-            searchFieldFocus: $isSearchFieldFocused,
+            onSuggestionSelected: { suggestion in
+                 Task { await selectSuggestion(suggestion) }
+            },
+            onConfirm: {
+                applyChanges()
+                isMapExpanded = false
+            },
             onDismiss: { isMapExpanded = false }
         )
     }
@@ -631,19 +633,7 @@ private struct LocationTriggerInlineForm: View {
         .environmentObject(geocodingModel)
     }
 
-    private var mapSelectionOverlay: some View {
-        HStack {
-            Text("Drag the map to position the pin precisely.")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(Color(.systemBackground), in: Capsule())
-            Spacer()
-        }
-        .padding(12)
-        .allowsHitTesting(false)
-    }
+
 
     private var mapCenterIndicator: some View {
         VStack {
@@ -668,35 +658,7 @@ private struct LocationTriggerInlineForm: View {
         .allowsHitTesting(false)
     }
 
-    private var expandedSearchBar: some View {
-        LocationPickerView.ExpandedSearchBar(
-            query: $searchModel.query,
-            isSearching: isSearching,
-            onClearQuery: { searchModel.query = ""; searchModel.suggestions = [] }
-        )
-    }
 
-    private var expandedSuggestionPanel: some View {
-        LocationPickerView.ExpandedSuggestionPanel(
-            suggestions: searchModel.suggestions,
-            onSuggestionSelected: { suggestion in
-                Task { await selectSuggestion(suggestion) }
-            }
-        )
-    }
-
-    private var expandedConfirmationPanel: some View {
-        LocationPickerView.ExpandedConfirmationPanel(
-            resolvedLocationName: resolvedLocationName,
-            coordinateSummary: coordinateSummary,
-            isResolving: geocodingModel.isResolving,
-            event: $event,
-            onUseLocation: {
-                applyChanges()
-                isMapExpanded = false
-            }
-        )
-    }
 
     private var resolvedLocationName: String {
         guard selectedCoordinate != nil else { return "Select a place on the map" }

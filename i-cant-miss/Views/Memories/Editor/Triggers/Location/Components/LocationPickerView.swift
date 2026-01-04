@@ -6,7 +6,7 @@ struct LocationPickerView: View {
     @StateObject private var searchModel: LocationSearchViewModel
     @StateObject private var geocodingModel: LocationGeocoder
     private let defaultRadius: Double = 200
-    private let expandedSuggestionBottomPadding: CGFloat = 120
+
     @State private var region: MKCoordinateRegion
     @State private var mapCameraPosition: MapCameraPosition
     @State private var selectedCoordinate: CLLocationCoordinate2D?
@@ -113,56 +113,23 @@ private extension LocationPickerView {
     var expandedMapView: some View {
         ExpandedMapScreen(
             searchModel: searchModel,
-            suggestionBottomPadding: expandedSuggestionBottomPadding,
+            event: $event,
             mapContent: { mapView(allowsSelection: true) },
-            selectionOverlay: { mapSelectionOverlay },
             centerIndicator: { mapCenterIndicator },
-            searchBar: { expandedSearchBar },
-            suggestionPanel: { expandedSuggestionPanel },
-            confirmationPanel: { expandedConfirmationPanel },
-            searchFieldFocus: $isSearchFieldFocused,
+            onSuggestionSelected: handleSuggestionTap(_:),
+            onConfirm: confirmSelection,
             onDismiss: { isMapExpanded = false }
         )
     }
 
-    var expandedSuggestionPanel: some View {
-        ExpandedSuggestionPanel(
-            suggestions: searchModel.suggestions,
-            onSuggestionSelected: handleSuggestionTap(_:)
-        )
+    func confirmSelection() {
+        guard let coordinate = selectedCoordinate else { return }
+        let name = resolvedLocationName
+        onAdd(name, coordinate.latitude, coordinate.longitude, defaultRadius, event)
+        dismiss()
     }
 
-    var expandedConfirmationPanel: some View {
-        ExpandedConfirmationPanel(
-            resolvedLocationName: resolvedLocationName,
-            coordinateSummary: coordinateSummary,
-            isResolving: geocodingModel.isResolving,
-            event: $event,
-            onUseLocation: { isMapExpanded = false }
-        )
-    }
 
-    var expandedSearchBar: some View {
-        ExpandedSearchBar(
-            query: $searchModel.query,
-            isSearching: isSearching,
-            onClearQuery: clearSearchQuery
-        )
-    }
-
-    var mapSelectionOverlay: some View {
-        HStack {
-            Text("Drag the map to position the pin precisely.")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(Color(.systemBackground), in: Capsule())
-            Spacer()
-        }
-        .padding(12)
-        .allowsHitTesting(false)
-    }
 
     var mapCenterIndicator: some View {
         VStack {
