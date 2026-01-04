@@ -68,18 +68,26 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             let nextStepIndex = (seqInfo.currentStepIndex + 1) > maxStepIndex ? 0 : (seqInfo.currentStepIndex + 1)
 
             // 6. Atualizar currentStepIndex para TODAS as memórias na sequência
+            // e resetar status para .active na memória que se torna "current"
             for memory in sequenceMemories {
-                await updateCurrentStepIndex(memory: memory, newCurrentStepIndex: nextStepIndex, startDate: seqInfo.startDate, in: memoryService)
+                let isNextCurrent = memory.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex == nextStepIndex
+                await updateCurrentStepIndex(memory: memory, newCurrentStepIndex: nextStepIndex, startDate: seqInfo.startDate, resetStatus: isNextCurrent, in: memoryService)
             }
         }
     }
 
     /// Atualiza o currentStepIndex de uma memória mantendo os outros campos
-    private func updateCurrentStepIndex(memory: MemoryModel, newCurrentStepIndex: Int, startDate: Date?, in memoryService: MemoryService) async {
+    /// - Parameters:
+    ///   - memory: A memória a ser atualizada
+    ///   - newCurrentStepIndex: O novo índice do passo atual
+    ///   - startDate: Data de início da sequência
+    ///   - resetStatus: Se true, reseta o status para .active (usado quando a memória se torna a "current")
+    ///   - memoryService: Serviço para persistir as alterações
+    private func updateCurrentStepIndex(memory: MemoryModel, newCurrentStepIndex: Int, startDate: Date?, resetStatus: Bool, in memoryService: MemoryService) async {
         var updatedTriggers = memory.triggers
 
         guard let index = updatedTriggers.firstIndex(where: { $0.type == .sequential }),
-              var currentSeq = updatedTriggers[index].sequential else {
+              let currentSeq = updatedTriggers[index].sequential else {
             return
         }
 
@@ -109,6 +117,7 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
         )
 
         // Criar draft e atualizar
+        // Se resetStatus é true, reseta o status para .active (para permitir completar novamente no ciclo)
         let checkItemDrafts = memory.checkItems.map { item in
             CheckItemDraft(
                 id: item.id,
@@ -124,7 +133,7 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
         let draft = MemoryDraft(
             id: memory.id,
             title: memory.title,
-            status: memory.status,
+            status: resetStatus ? .active : memory.status,
             isPinned: memory.isPinned,
             dueDate: memory.dueDate,
             spaceID: memory.space?.id,
