@@ -84,6 +84,17 @@ final class MemoryEditorViewModel: ObservableObject {
         triggers.first(where: { $0.type == .sequential })
     }
 
+    var hasAnyAttachment: Bool {
+        !photoAttachments.isEmpty || !linkAttachments.isEmpty || !audioAttachments.isEmpty || !fileAttachments.isEmpty
+    }
+
+    var hasAnyTrigger: Bool {
+        triggers.contains { $0.type == .scheduled } ||
+        triggers.contains { $0.type == .location } ||
+        triggers.contains { $0.type == .person } ||
+        sequentialTrigger?.sequential != nil
+    }
+
     var aggregatedBody: String {
         note.trimmingCharacters(in: .whitespacesAndNewlines)
     }

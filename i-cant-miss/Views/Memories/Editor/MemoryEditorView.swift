@@ -82,7 +82,7 @@ struct MemoryEditorView: View {
                 defaultSpace: memory.space,
                 template: .blank
             ))
-            _isEditingEnabled = State(initialValue: true)
+            _isEditingEnabled = State(initialValue: false)
         }
     }
 
@@ -302,7 +302,8 @@ struct MemoryEditorView: View {
             VStack(spacing: 12) {
                 titleSectionRow
 
-                MemoryEditorAttachmentsCard(
+                if isEditingEnabled || viewModel.hasAnyAttachment {
+                    MemoryEditorAttachmentsCard(
                     viewModel: viewModel,
                     isEditable: isEditingEnabled,
                     onAddPhoto: { addPhotosFromLibraryFixed() },
@@ -316,8 +317,10 @@ struct MemoryEditorView: View {
                     onAttachmentTap: { attachment in
                         handleAttachmentTap(attachment)
                     }
-                )
-                .padding(.horizontal, 20)
+                    )
+                    .padding(.horizontal, 20)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
             .padding(.bottom, 20)
         }
@@ -331,37 +334,74 @@ struct MemoryEditorView: View {
             }
 
             ToolbarItem(placement: .confirmationAction) {
-                Button(role: .confirm) {
-
-                    Task {
-                        let success = await viewModel.save()
-                        if success {
-                            await MainActor.run {
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                isTitleFocused = false
-                                focusedDraftID = nil
-                                dismiss()
+                if case .create = mode {
+                    Button(role: .confirm) {
+                        Task {
+                            let success = await viewModel.save()
+                            if success {
+                                await MainActor.run {
+                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                    isTitleFocused = false
+                                    focusedDraftID = nil
+                                    dismiss()
+                                }
                             }
                         }
+                    } label: {
+                        Label(saveButtonTitle, systemImage: "checkmark")
                     }
-                } label: {
-                    Label(saveButtonTitle, systemImage: "checkmark")
+                    .disabled(isSaveDisabled)
                 }
-                .disabled(isSaveDisabled)
             }
 
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    viewModel.isPinned.toggle()
-                } label: {
-                    Label(viewModel.isPinned ? "Unpin" : "Pin",
-                          systemImage: viewModel.isPinned ? "pin.fill" : "pin")
-                    .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if case .edit = mode {
+                    if isEditingEnabled {
+                        // Eye button: Switch to View (Discard/Cancel)
+                        Button {
+                            withAnimation {
+                                isEditingEnabled = false
+                            }
+                            Task { await viewModel.loadLatestDataIfNeeded() }
+                        } label: {
+                            Label("View", systemImage: "eye")
+                        }
+
+                        // Checkmark button: Save and switch to View
+                        Button {
+                            Task {
+                                let success = await viewModel.save()
+                                if success {
+                                    await MainActor.run {
+                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                        isTitleFocused = false
+                                        focusedDraftID = nil
+                                        withAnimation {
+                                            isEditingEnabled = false
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label("Save", systemImage: "checkmark")
+                        }
+                        .disabled(isSaveDisabled)
+                    } else {
+                        // Pencil button: Switch to Edit
+                        Button {
+                            withAnimation {
+                                isEditingEnabled = true
+                            }
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                    }
                 }
-                .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
             }
 
-            if case .edit = mode {
+
+
+            if case .edit = mode, isEditingEnabled {
                 ToolbarItemGroup(placement: .bottomBar) {
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
@@ -371,6 +411,15 @@ struct MemoryEditorView: View {
                     }
 
                     Spacer()
+
+                    Button {
+                        viewModel.isPinned.toggle()
+                    } label: {
+                        Label(viewModel.isPinned ? "Unpin" : "Pin",
+                              systemImage: viewModel.isPinned ? "pin.fill" : "pin")
+                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
+                    }
+                    .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
 
                     Button {
                         viewModel.status = viewModel.status == .active ? .completed : .active
@@ -397,18 +446,27 @@ struct MemoryEditorView: View {
                 isTitleFocused: $isTitleFocused
             )
 
-            triggersCard
+            if isEditingEnabled || viewModel.hasAnyTrigger {
+                triggersCard
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
 
-            MemoryEditorNotesCard(
-                viewModel: viewModel,
-                isEditingEnabled: isEditingEnabled
-            )
+            if isEditingEnabled || !viewModel.note.isEmpty {
+                MemoryEditorNotesCard(
+                    viewModel: viewModel,
+                    isEditingEnabled: isEditingEnabled
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
 
-            MemoryEditorChecklistCard(
-                viewModel: viewModel,
-                isEditingEnabled: isEditingEnabled,
-                focusedDraftID: $focusedDraftID
-            )
+            if isEditingEnabled || !viewModel.checkItems.isEmpty {
+                MemoryEditorChecklistCard(
+                    viewModel: viewModel,
+                    isEditingEnabled: isEditingEnabled,
+                    focusedDraftID: $focusedDraftID
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
@@ -441,7 +499,8 @@ struct MemoryEditorView: View {
     private var triggersCard: some View {
         TriggersCard(
             viewModel: viewModel,
-            memoryLookup: memoryLookup
+            memoryLookup: memoryLookup,
+            isEditable: isEditingEnabled
         )
     }
 

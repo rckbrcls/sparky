@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     let memoryLookup: [UUID: MemoryModel]
+    var isEditable: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -15,6 +16,7 @@ struct TriggersCard: View {
                 if hasScheduledTrigger {
                     ScheduledTriggerInlineForm(
                         viewModel: viewModel,
+                        isEditable: isEditable,
                         onDelete: { removeTrigger(type: .scheduled) }
                     )
                 }
@@ -23,6 +25,7 @@ struct TriggersCard: View {
                 if hasLocationTrigger {
                     LocationTriggerInlineForm(
                         viewModel: viewModel,
+                        isEditable: isEditable,
                         onDelete: { removeTrigger(type: .location) }
                     )
                 }
@@ -31,6 +34,7 @@ struct TriggersCard: View {
                 if hasPersonTrigger {
                     PersonTriggerInlineForm(
                         viewModel: viewModel,
+                        isEditable: isEditable,
                         onDelete: { removeTrigger(type: .person) }
                     )
                 }
@@ -40,12 +44,13 @@ struct TriggersCard: View {
                     SequentialTriggerInlineForm(
                         viewModel: viewModel,
                         memoryLookup: memoryLookup,
+                        isEditable: isEditable,
                         onDelete: { viewModel.removeSequentialTrigger() }
                     )
                 }
 
                 // Add trigger button (dashed border)
-                if !hasAnyTrigger {
+                if isEditable && !hasAnyTrigger {
                     addTriggerButton
                 }
             }
@@ -88,17 +93,17 @@ struct TriggersCard: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
-                    .font(.caption.bold())
+                .font(.caption.bold())
                 Text("Add Trigger")
-                    .font(.caption.bold())
+                .font(.caption.bold())
             }
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                    .foregroundStyle(Color.secondary.opacity(0.4))
+                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                .foregroundStyle(Color.secondary.opacity(0.4))
             )
             .contentShape(Rectangle())
         }
@@ -171,6 +176,7 @@ struct TriggersCard: View {
 
 private struct ScheduledTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
+    var isEditable: Bool
     let onDelete: () -> Void
 
     @State private var fireDate: Date
@@ -185,8 +191,9 @@ private struct ScheduledTriggerInlineForm: View {
         viewModel.triggers.first(where: { $0.type == .scheduled })
     }
 
-    init(viewModel: MemoryEditorViewModel, onDelete: @escaping () -> Void) {
+    init(viewModel: MemoryEditorViewModel, isEditable: Bool, onDelete: @escaping () -> Void) {
         self.viewModel = viewModel
+        self.isEditable = isEditable
         self.onDelete = onDelete
 
         let scheduledTrigger = viewModel.triggers.first(where: { $0.type == .scheduled })
@@ -317,16 +324,19 @@ private struct ScheduledTriggerInlineForm: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
+            .disabled(!isEditable)
         }
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
         .contextMenu {
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label("Delete Trigger", systemImage: "trash")
+            if isEditable {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete Trigger", systemImage: "trash")
+                }
             }
         }
 
@@ -453,6 +463,7 @@ private struct ScheduledTriggerInlineForm: View {
 
 private struct LocationTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
+    var isEditable: Bool
     let onDelete: () -> Void
 
     @StateObject private var searchModel = LocationSearchViewModel()
@@ -476,8 +487,9 @@ private struct LocationTriggerInlineForm: View {
         viewModel.triggers.first(where: { $0.type == .location })
     }
 
-    init(viewModel: MemoryEditorViewModel, onDelete: @escaping () -> Void) {
+    init(viewModel: MemoryEditorViewModel, isEditable: Bool, onDelete: @escaping () -> Void) {
         self.viewModel = viewModel
+        self.isEditable = isEditable
         self.onDelete = onDelete
 
         let trigger = viewModel.triggers.first(where: { $0.type == .location })
@@ -503,7 +515,7 @@ private struct LocationTriggerInlineForm: View {
             VStack(spacing: 12) {
                 // Map preview
                 LocationPickerView.MapSection(
-                    onExpand: { isMapExpanded = true },
+                    onExpand: { if isEditable { isMapExpanded = true } },
                     mapPreview: { mapPreviewContent }
                 )
 
@@ -535,7 +547,7 @@ private struct LocationTriggerInlineForm: View {
                     Menu {
                         ForEach(LocationEvent.allCases, id: \.self) { option in
                             Button {
-                                event = option
+                                if isEditable { event = option }
                             } label: {
                                 if event == option {
                                     Label(option.displayName, systemImage: "checkmark")
@@ -568,10 +580,12 @@ private struct LocationTriggerInlineForm: View {
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
         .contextMenu {
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label("Delete Trigger", systemImage: "trash")
+            if isEditable {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete Trigger", systemImage: "trash")
+                }
             }
         }
         .fullScreenCover(isPresented: $isMapExpanded) {
@@ -810,6 +824,7 @@ private struct LocationTriggerInlineForm: View {
 
 private struct PersonTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
+    var isEditable: Bool
     let onDelete: () -> Void
 
     @State private var name: String
@@ -821,8 +836,9 @@ private struct PersonTriggerInlineForm: View {
         viewModel.triggers.first(where: { $0.type == .person })
     }
 
-    init(viewModel: MemoryEditorViewModel, onDelete: @escaping () -> Void) {
+    init(viewModel: MemoryEditorViewModel, isEditable: Bool, onDelete: @escaping () -> Void) {
         self.viewModel = viewModel
+        self.isEditable = isEditable
         self.onDelete = onDelete
         let trigger = viewModel.triggers.first(where: { $0.type == .person })
         _name = State(initialValue: trigger?.person?.name ?? "")
@@ -836,17 +852,19 @@ private struct PersonTriggerInlineForm: View {
                 HStack {
                     TextField("Name", text: $name)
                         .textFieldStyle(.plain)
+                        .disabled(!isEditable)
                         .onChange(of: name) { _, _ in
                             commitChanges()
                         }
-                    Button {
-                        Task { await requestContactsAndShow() }
-                    } label: {
-                        Image(systemName: "person.crop.circle.badge.plus")
+                    if isEditable {
+                        Button {
+                            Task { await requestContactsAndShow() }
+                        } label: {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Pick from contacts")
                     }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Pick from contacts")
-
 
                 }
 
@@ -863,10 +881,12 @@ private struct PersonTriggerInlineForm: View {
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
         .contextMenu {
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label("Delete Trigger", systemImage: "trash")
+            if isEditable {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete Trigger", systemImage: "trash")
+                }
             }
         }
         .sheet(isPresented: $showContactPicker) {
@@ -936,6 +956,7 @@ private struct PersonTriggerInlineForm: View {
 private struct SequentialTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     let memoryLookup: [UUID: MemoryModel]
+    var isEditable: Bool
     let onDelete: () -> Void
 
     @State private var sequenceItems: [SequentialItem] = []
@@ -991,35 +1012,42 @@ private struct SequentialTriggerInlineForm: View {
                                         }
                                     )
                                     .onDrag {
-                                        draggedItem = item
-                                        return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.sequentialitem")
+                                        if isEditable {
+                                            draggedItem = item
+                                            return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.sequentialitem")
+                                        } else {
+                                            return NSItemProvider()
+                                        }
                                     }
                                     .onDrop(of: ["com.icantmiss.sequentialitem"], delegate: SequentialDropDelegate(item: item, items: $sequenceItems, draggedItem: $draggedItem, onReorder: {
                                         Task { await saveSequenceChanges() }
                                     }))
+                                    .disabled(!isEditable)
                                 }
                             }
 
                             // Add Memory button
-                            Button {
-                                showingPicker = true
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "plus")
-                                        .font(.caption.bold())
-                                    Text("Add Memory")
-                                        .font(.caption.bold())
+                            if isEditable {
+                                Button {
+                                    showingPicker = true
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "plus")
+                                            .font(.caption.bold())
+                                        Text("Add Memory")
+                                            .font(.caption.bold())
+                                    }
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                                            .foregroundStyle(Color.secondary.opacity(0.4))
+                                    )
                                 }
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                                        .foregroundStyle(Color.secondary.opacity(0.4))
-                                )
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
 
                             Text("Drag to reorder")
                                 .font(.caption)
@@ -1073,10 +1101,12 @@ private struct SequentialTriggerInlineForm: View {
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
         .contextMenu {
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label("Delete Trigger", systemImage: "trash")
+            if isEditable {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete Trigger", systemImage: "trash")
+                }
             }
         }
         .sheet(isPresented: $showingPicker) {
