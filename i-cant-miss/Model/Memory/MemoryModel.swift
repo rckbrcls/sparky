@@ -92,6 +92,48 @@ struct MemoryModel: Identifiable, Hashable {
         status == .completed
     }
 
+    /// Returns true if this memory has a sequence trigger
+    var hasSequenceTrigger: Bool {
+        triggers.contains { $0.type == .sequential && $0.sequential != nil }
+    }
+
+    /// Returns true if this memory is the current step in its sequence and the sequence has started
+    var isCurrentInSequence: Bool {
+        guard let seqTrigger = triggers.first(where: { $0.type == .sequential }),
+              let seq = seqTrigger.sequential else {
+            return false
+        }
+
+        // Check if sequence has started
+        if let startDate = seq.startDate {
+            let calendar = Calendar.current
+            if calendar.startOfDay(for: Date()) < calendar.startOfDay(for: startDate) {
+                return false // Sequence hasn't started yet
+            }
+        }
+
+        // Check if this memory is the current step
+        return seq.stepIndex == seq.currentStepIndex
+    }
+
+    /// Returns true if this memory is part of a sequence but not the current step
+    var isNextInSequence: Bool {
+        guard let seqTrigger = triggers.first(where: { $0.type == .sequential }),
+              let seq = seqTrigger.sequential else {
+            return false
+        }
+
+        // If sequence hasn't started, all memories are "next"
+        if let startDate = seq.startDate {
+            let calendar = Calendar.current
+            if calendar.startOfDay(for: Date()) < calendar.startOfDay(for: startDate) {
+                return true
+            }
+        }
+
+        return seq.stepIndex != seq.currentStepIndex
+    }
+
     /// Checks if this memory is completed for a specific date (for recurring memories)
     /// - Parameter date: The date to check completion for
     /// - Returns: True if the memory was marked as completed on that specific date

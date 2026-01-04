@@ -377,10 +377,12 @@ final class MemoryEditorViewModel: ObservableObject {
         triggers.removeAll { $0.type == .scheduled }
     }
 
-    func updateSequentialTrigger(sequenceID: UUID, stepIndex: Int) {
+    func updateSequentialTrigger(sequenceID: UUID, stepIndex: Int, startDate: Date? = nil, currentStepIndex: Int = 0) {
         let sequential = MemoryTriggerModel.TriggerSequential(
             sequenceID: sequenceID,
-            stepIndex: stepIndex
+            stepIndex: stepIndex,
+            startDate: startDate,
+            currentStepIndex: currentStepIndex
         )
 
         if let index = triggers.firstIndex(where: { $0.type == .sequential }) {

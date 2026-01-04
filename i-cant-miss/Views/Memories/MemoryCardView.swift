@@ -228,7 +228,11 @@ struct MemoryCardView: View {
             Spacer()
 
             // Completion check circle button
-            if let onToggleCompletion = onToggleCompletion {
+            // Only show checkbox if:
+            // 1. Memory has no sequence trigger, OR
+            // 2. Memory is the current step in its sequence
+            let shouldShowCheckbox = !memory.hasSequenceTrigger || memory.isCurrentInSequence
+            if let onToggleCompletion = onToggleCompletion, shouldShowCheckbox {
                 Button {
                     feedbackGenerator.impactOccurred()
                     onToggleCompletion()

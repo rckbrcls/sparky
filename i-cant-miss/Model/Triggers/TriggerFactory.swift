@@ -46,7 +46,9 @@ enum TriggerFactory {
         case .sequential:
             let sequentialData = SequentialTrigger.SequentialData(
                 sequenceID: model.sequential?.sequenceID ?? UUID(),
-                stepIndex: model.sequential?.stepIndex ?? 0
+                stepIndex: model.sequential?.stepIndex ?? 0,
+                startDate: model.sequential?.startDate,
+                currentStepIndex: model.sequential?.currentStepIndex ?? 0
             )
             return SequentialTrigger(
                 id: model.id,
@@ -115,7 +117,9 @@ enum TriggerFactory {
             }
             let sequentialModel = MemoryTriggerModel.TriggerSequential(
                 sequenceID: sequential.sequential.sequenceID,
-                stepIndex: sequential.sequential.stepIndex
+                stepIndex: sequential.sequential.stepIndex,
+                startDate: sequential.sequential.startDate,
+                currentStepIndex: sequential.sequential.currentStepIndex
             )
             return MemoryTriggerModel(
                 id: sequential.id,

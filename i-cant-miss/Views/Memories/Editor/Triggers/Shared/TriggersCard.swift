@@ -151,7 +151,7 @@ struct TriggersCard: View {
 
 
     private func createDefaultSequentialTrigger() {
-        viewModel.updateSequentialTrigger(sequenceID: UUID(), stepIndex: 0)
+        viewModel.updateSequentialTrigger(sequenceID: UUID(), stepIndex: 0, startDate: Date(), currentStepIndex: 0)
     }
 }
 
@@ -815,9 +815,14 @@ private struct SequentialTriggerInlineForm: View {
     @State private var sequenceItems: [SequentialItem] = []
     @State private var showingPicker = false
     @State private var draggedItem: SequentialItem?
+    @State private var sequenceStartDate: Date = Date()
 
     private var sequentialConfig: MemoryTriggerModel.TriggerSequential? {
         viewModel.sequentialTrigger?.sequential
+    }
+
+    private var currentStepIndex: Int {
+        sequentialConfig?.currentStepIndex ?? 0
     }
 
     var body: some View {
@@ -825,6 +830,25 @@ private struct SequentialTriggerInlineForm: View {
             VStack(spacing: 12) {
                 if sequentialConfig != nil {
                     VStack(alignment: .leading, spacing: 8) {
+
+                        // Start Date Row
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text("Start Date")
+                                    .font(.body)
+                                    .foregroundStyle(.secondary)
+
+                                Spacer()
+
+                                DatePicker("", selection: $sequenceStartDate, displayedComponents: [.date])
+                                    .labelsHidden()
+                                    .disabled(!isEditable)
+                            }
+                            .padding(.vertical, 10)
+                        }
+
+                        Divider()
+                            .padding(.bottom, 8)
 
                         // List of items
                         VStack(spacing: 8) {
@@ -916,6 +940,9 @@ private struct SequentialTriggerInlineForm: View {
         .onAppear {
             loadExistingConfiguration()
         }
+        .onChange(of: sequenceStartDate) { _, _ in
+            Task { await saveSequenceChanges() }
+        }
     }
 
     private func loadExistingConfiguration() {
@@ -939,6 +966,11 @@ private struct SequentialTriggerInlineForm: View {
                 let rhsIndex = allMemories.first(where: { $0.id == rhs.id })?.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex ?? 0
                 return lhsIndex < rhsIndex
             }
+
+            // Load start date from sequence
+            if let startDate = seqInfo.startDate {
+                self.sequenceStartDate = startDate
+            }
         }
 
         if !items.contains(where: { $0.isCurrent }) {
@@ -952,13 +984,19 @@ private struct SequentialTriggerInlineForm: View {
 
     private func saveSequenceChanges() async {
         let sequenceID = viewModel.sequentialTrigger?.sequential?.sequenceID ?? UUID()
+        let currentStepIdx = viewModel.sequentialTrigger?.sequential?.currentStepIndex ?? 0
 
         for (index, item) in sequenceItems.enumerated() {
             if item.isCurrent {
-                viewModel.updateSequentialTrigger(sequenceID: sequenceID, stepIndex: index)
+                viewModel.updateSequentialTrigger(
+                    sequenceID: sequenceID,
+                    stepIndex: index,
+                    startDate: sequenceStartDate,
+                    currentStepIndex: currentStepIdx
+                )
             } else {
                 if let memory = viewModel.environment.memoryService.memory(id: item.id) {
-                    await updateMemoryTrigger(memory, sequenceID: sequenceID, index: index)
+                    await updateMemoryTrigger(memory, sequenceID: sequenceID, index: index, startDate: sequenceStartDate, currentStepIndex: currentStepIdx)
                 }
             }
         }
@@ -975,9 +1013,14 @@ private struct SequentialTriggerInlineForm: View {
         }
     }
 
-    private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int) async {
+    private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int, startDate: Date, currentStepIndex: Int) async {
         var triggers = memory.triggers
-        let newSeq = MemoryTriggerModel.TriggerSequential(sequenceID: sequenceID, stepIndex: index)
+        let newSeq = MemoryTriggerModel.TriggerSequential(
+            sequenceID: sequenceID,
+            stepIndex: index,
+            startDate: startDate,
+            currentStepIndex: currentStepIndex
+        )
 
         if let idx = triggers.firstIndex(where: { $0.type == .sequential }) {
             triggers[idx].sequential = newSeq

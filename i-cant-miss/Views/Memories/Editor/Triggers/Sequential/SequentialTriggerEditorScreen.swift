@@ -166,16 +166,23 @@ struct SequentialTriggerEditorScreen: View {
 
     private func save() async {
         let sequenceID = viewModel.sequentialTrigger?.sequential?.sequenceID ?? UUID()
+        let startDate = viewModel.sequentialTrigger?.sequential?.startDate ?? Date()
+        let currentStepIdx = viewModel.sequentialTrigger?.sequential?.currentStepIndex ?? 0
 
         // 2. Iterate items and update
         for (index, item) in sequenceItems.enumerated() {
             if item.isCurrent {
                 // Update VM
-                viewModel.updateSequentialTrigger(sequenceID: sequenceID, stepIndex: index)
+                viewModel.updateSequentialTrigger(
+                    sequenceID: sequenceID,
+                    stepIndex: index,
+                    startDate: startDate,
+                    currentStepIndex: currentStepIdx
+                )
             } else {
                 // Update other memory
                 if let memory = viewModel.environment.memoryService.memory(id: item.id) {
-                    await updateMemoryTrigger(memory, sequenceID: sequenceID, index: index)
+                    await updateMemoryTrigger(memory, sequenceID: sequenceID, index: index, startDate: startDate, currentStepIndex: currentStepIdx)
                 }
             }
         }
@@ -192,9 +199,14 @@ struct SequentialTriggerEditorScreen: View {
         }
     }
 
-    private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int) async {
+    private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int, startDate: Date, currentStepIndex: Int) async {
         var triggers = memory.triggers
-        let newSeq = MemoryTriggerModel.TriggerSequential(sequenceID: sequenceID, stepIndex: index)
+        let newSeq = MemoryTriggerModel.TriggerSequential(
+            sequenceID: sequenceID,
+            stepIndex: index,
+            startDate: startDate,
+            currentStepIndex: currentStepIndex
+        )
 
         if let idx = triggers.firstIndex(where: { $0.type == .sequential }) {
              triggers[idx].sequential = newSeq

@@ -34,79 +34,81 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
         // Eles são processados quando memórias são completadas
     }
 
-    /// Processa a conclusão de uma memória e agenda a próxima memória na sequência
+    /// Processa a conclusão de uma memória e avança para o próximo passo na sequência (ciclicamente)
     func handleMemoryCompletion(memoryID: UUID) async {
         guard let memoryService = memoryService else { return }
 
         // 1. Encontrar a memória que acabou de ser concluída
         guard let completedMemory = memoryService.memory(id: memoryID) else { return }
 
-        // 2. Extrair informações da sequência (se houver)
-        // Devemos procurar em todos os triggers, pois pode ter mais de um, mas assumimos um principal
-        // Note: We use activeSeqTriggers below which filters by isActive && type == .sequential
-        // Wait, `completedMemory.triggers` is `[MemoryTriggerModel]`. `sequential` is optional property of `MemoryTriggerModel`.
-        // We need to check if the trigger containing the sequential info is active.
-
+        // 2. Encontrar triggers sequenciais ativos
         let activeSeqTriggers = completedMemory.triggers.filter { $0.isActive && $0.type == .sequential }
 
         for trigger in activeSeqTriggers {
             guard let seqInfo = trigger.sequential else { continue }
 
-            // 3. Encontrar memórias que são o "próximo passo" na mesma sequência
-            let targetSequenceID = seqInfo.sequenceID
-            let targetStepIndex = seqInfo.stepIndex + 1
+            // Só processar se a memória completada é o passo atual
+            guard seqInfo.stepIndex == seqInfo.currentStepIndex else { continue }
 
-            let allMemories = memoryService.memories
-            let nextMemories = allMemories.filter { memory in
-                // A memória deve estar ativa (ou esperando)
-                // Se já estiver concluída, não faz sentido ativar de novo (loop protection basic)
-                guard memory.status != .completed else { return false }
+            let sequenceID = seqInfo.sequenceID
 
-                // Verificar se tem um trigger com o mesmo sequenceID e index + 1
-                return memory.triggers.contains { t in
-                    guard t.isActive && t.type == .sequential, let s = t.sequential else { return false }
-                    return s.sequenceID == targetSequenceID && s.stepIndex == targetStepIndex
+            // 3. Encontrar todas as memórias na sequência
+            let sequenceMemories = memoryService.memories.filter { memory in
+                memory.triggers.contains { t in
+                    t.type == .sequential && t.sequential?.sequenceID == sequenceID
                 }
             }
 
-            // 4. Ativar as próximas memórias
-            for nextMemory in nextMemories {
-                await activateNextMemory(nextMemory, in: memoryService)
+            // 4. Encontrar o maior stepIndex na sequência
+            let maxStepIndex = sequenceMemories.compactMap { memory -> Int? in
+                memory.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex
+            }.max() ?? 0
+
+            // 5. Calcular próximo passo (cíclico: volta para 0 após o último)
+            let nextStepIndex = (seqInfo.currentStepIndex + 1) > maxStepIndex ? 0 : (seqInfo.currentStepIndex + 1)
+
+            // 6. Atualizar currentStepIndex para TODAS as memórias na sequência
+            for memory in sequenceMemories {
+                await updateCurrentStepIndex(memory: memory, newCurrentStepIndex: nextStepIndex, startDate: seqInfo.startDate, in: memoryService)
             }
         }
     }
 
-    private func activateNextMemory(_ memory: MemoryModel, in memoryService: MemoryService) async {
-        // Calcular data para o dia seguinte às 9h
-        let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-        let fireDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
+    /// Atualiza o currentStepIndex de uma memória mantendo os outros campos
+    private func updateCurrentStepIndex(memory: MemoryModel, newCurrentStepIndex: Int, startDate: Date?, in memoryService: MemoryService) async {
+        var updatedTriggers = memory.triggers
 
-        // Criar trigger scheduled
-        let scheduledTrigger = MemoryTriggerModel(
-            id: UUID(),
-            type: .scheduled,
-            fireDate: fireDate,
-            startDate: fireDate,
-            recurrenceRule: nil,
-            timeZoneIdentifier: TimeZone.current.identifier,
-            weekdayMask: 0,
-            isActive: true,
-            location: nil,
-            sequential: nil,
-            spacedStage: 0,
-            lastReviewDate: nil,
-            ignoreCount: 0
+        guard let index = updatedTriggers.firstIndex(where: { $0.type == .sequential }),
+              var currentSeq = updatedTriggers[index].sequential else {
+            return
+        }
+
+        // Atualizar apenas o currentStepIndex, mantendo tudo mais
+        let updatedSeq = MemoryTriggerModel.TriggerSequential(
+            sequenceID: currentSeq.sequenceID,
+            stepIndex: currentSeq.stepIndex,
+            startDate: startDate,
+            currentStepIndex: newCurrentStepIndex
         )
 
-        // Manter triggers existentes e adicionar o scheduled
-        var updatedTriggers = memory.triggers
-        // Remover triggers scheduled antigos para evitar duplicação
-        updatedTriggers.removeAll { $0.type == .scheduled }
-        updatedTriggers.append(scheduledTrigger)
+        updatedTriggers[index] = MemoryTriggerModel(
+            id: updatedTriggers[index].id,
+            type: .sequential,
+            fireDate: updatedTriggers[index].fireDate,
+            startDate: updatedTriggers[index].startDate,
+            recurrenceRule: updatedTriggers[index].recurrenceRule,
+            timeZoneIdentifier: updatedTriggers[index].timeZoneIdentifier,
+            weekdayMask: updatedTriggers[index].weekdayMask,
+            isActive: updatedTriggers[index].isActive,
+            isAllDay: updatedTriggers[index].isAllDay,
+            location: updatedTriggers[index].location,
+            sequential: updatedSeq,
+            spacedStage: updatedTriggers[index].spacedStage,
+            lastReviewDate: updatedTriggers[index].lastReviewDate,
+            ignoreCount: updatedTriggers[index].ignoreCount
+        )
 
-        // Criar draft com triggers atualizados
-        // Convert checkItems to CheckItemDrafts
+        // Criar draft e atualizar
         let checkItemDrafts = memory.checkItems.map { item in
             CheckItemDraft(
                 id: item.id,
@@ -122,7 +124,7 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
         let draft = MemoryDraft(
             id: memory.id,
             title: memory.title,
-            status: .active, // Garantir que está ativa
+            status: memory.status,
             isPinned: memory.isPinned,
             dueDate: memory.dueDate,
             spaceID: memory.space?.id,
@@ -137,11 +139,10 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             autoCompleteOnChecklistCompletion: memory.autoCompleteOnChecklistCompletion
         )
 
-        // Atualizar memória
         do {
             _ = try await memoryService.updateMemory(from: draft)
         } catch {
-            print("Failed to activate next memory in sequence: \(error.localizedDescription)")
+            print("Failed to update currentStepIndex in sequence: \(error.localizedDescription)")
         }
     }
 }

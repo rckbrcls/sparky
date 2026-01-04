@@ -21,10 +21,16 @@ struct SequentialTrigger: TriggerProtocol {
     struct SequentialData: Hashable, Codable {
         var sequenceID: UUID
         var stepIndex: Int
+        /// When the sequence begins. Before this date, no memory is "current".
+        var startDate: Date?
+        /// The currently active step index in the sequence (shared across all memories in the sequence).
+        var currentStepIndex: Int
 
-        init(sequenceID: UUID = UUID(), stepIndex: Int = 0) {
+        init(sequenceID: UUID = UUID(), stepIndex: Int = 0, startDate: Date? = nil, currentStepIndex: Int = 0) {
             self.sequenceID = sequenceID
             self.stepIndex = stepIndex
+            self.startDate = startDate
+            self.currentStepIndex = currentStepIndex
         }
     }
 
