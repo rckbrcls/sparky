@@ -216,9 +216,8 @@ private struct ScheduledTriggerInlineForm: View {
                 // Time of Day Row
                 HStack {
                     Text("Time")
-                        .font(.caption)
+                        .font(.body)
                         .foregroundStyle(.secondary)
-                        .frame(width: 60, alignment: .leading)
 
                     Spacer()
 
@@ -236,7 +235,7 @@ private struct ScheduledTriggerInlineForm: View {
                         }
                     } label: {
                         Text(timeOfDayType.rawValue)
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundStyle(.primary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -254,9 +253,8 @@ private struct ScheduledTriggerInlineForm: View {
                 // Date & Time Row
                 HStack {
                     Text(timeOfDayType == .specificTime ? "Date & Time" : "Date")
-                        .font(.caption)
+                        .font(.body)
                         .foregroundStyle(.secondary)
-                        .frame(width: 80, alignment: .leading)
 
                     Spacer()
 
@@ -275,18 +273,22 @@ private struct ScheduledTriggerInlineForm: View {
                 // Repeat Row
                 HStack {
                     Text("Repeat")
-                        .font(.caption)
+                        .font(.body)
                         .foregroundStyle(.secondary)
-                        .frame(width: 60, alignment: .leading)
 
                     Spacer()
 
                     Menu {
                         ForEach(RepeatType.allCases) { type in
                             Button {
-                                repeatType = type
-                                if type == .custom {
+                                if type == .custom && repeatType == .custom {
+                                    // Already custom, open sheet
                                     showCustomRepeatSheet = true
+                                } else {
+                                    repeatType = type
+                                    if type == .custom {
+                                        showCustomRepeatSheet = true
+                                    }
                                 }
                             } label: {
                                 if repeatType == type {
@@ -297,8 +299,8 @@ private struct ScheduledTriggerInlineForm: View {
                             }
                         }
                     } label: {
-                        Text(repeatType.rawValue)
-                            .font(.subheadline)
+                        Text(repeatType == .custom ? customRepeatSummary : repeatType.rawValue)
+                            .font(.body)
                             .foregroundStyle(.primary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -310,33 +312,6 @@ private struct ScheduledTriggerInlineForm: View {
                     .tint(.primary)
                 }
                 .padding(.vertical, 10)
-
-                // Show custom repeat summary if custom is selected
-                if repeatType == .custom {
-                    Divider()
-
-                    Button {
-                        showCustomRepeatSheet = true
-                    } label: {
-                        HStack {
-                            Text("Custom")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 60, alignment: .leading)
-
-                            Spacer()
-
-                            Text(customRepeatSummary)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .padding(.vertical, 10)
-                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
@@ -546,7 +521,7 @@ private struct LocationTriggerInlineForm: View {
                 // Event picker
                 HStack {
                     Text("Remind")
-                        .font(.caption)
+                        .font(.body)
                         .foregroundStyle(.secondary)
 
                     Spacer()
@@ -565,7 +540,7 @@ private struct LocationTriggerInlineForm: View {
                         }
                     } label: {
                         Text(event.displayName)
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundStyle(.primary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
