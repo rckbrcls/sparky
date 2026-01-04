@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct MemoryCardView: View {
     let memoryID: UUID
     @ObservedObject var memoryService: MemoryService
     @EnvironmentObject private var environment: AppEnvironment
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     /// Optional date context for date-aware completion display (used in CalendarDayView)
     var displayDate: Date?
@@ -228,6 +230,7 @@ struct MemoryCardView: View {
             // Completion check circle button
             if let onToggleCompletion = onToggleCompletion {
                 Button {
+                    feedbackGenerator.impactOccurred()
                     onToggleCompletion()
                 } label: {
                     Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
@@ -295,6 +298,7 @@ struct MemoryCardView: View {
                     }
 
                     Button(role: .destructive) {
+                        feedbackGenerator.impactOccurred()
                         onDelete()
                     } label: {
                         Label("Delete", systemImage: "trash")
