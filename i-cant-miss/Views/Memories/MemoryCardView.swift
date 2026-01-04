@@ -23,7 +23,7 @@ struct MemoryCardView: View {
     var onUpdateStatus: ((MemoryStatus) -> Void)?
 
     private var isContextMenuEnabled: Bool {
-        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToSpace != nil || onUpdateStatus != nil
+        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToSpace != nil
     }
 
     init(
@@ -281,19 +281,7 @@ struct MemoryCardView: View {
                     }
                 }
 
-                if let onUpdateStatus = onUpdateStatus {
-                    Menu {
-                        ForEach(MemoryStatus.allCases) { status in
-                            Button {
-                                onUpdateStatus(status)
-                            } label: {
-                                Label(status.rawValue.capitalized, systemImage: status == .active ? "play.circle" : "checkmark.circle")
-                            }
-                        }
-                    } label: {
-                        Label("Status", systemImage: "circle.circle")
-                    }
-                }
+
 
                 if let onDelete = onDelete {
                     Divider()
