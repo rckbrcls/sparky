@@ -212,27 +212,65 @@ private struct ScheduledTriggerInlineForm: View {
                 onDelete: onDelete
             )
 
-            VStack(spacing: 12) {
-                // Time of Day
-                Picker("Time of Day", selection: $timeOfDayType) {
-                    ForEach(TimeOfDayType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
+            VStack(spacing: 0) {
+                // Time of Day Row
+                HStack {
+                    Text("Time")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 60, alignment: .leading)
+
+                    Spacer()
+
+                    Picker("", selection: $timeOfDayType) {
+                        ForEach(TimeOfDayType.allCases, id: \.self) { type in
+                            Text(type.rawValue).tag(type)
+                        }
+                    }
+                    .labelsHidden()
+                }
+                .padding(.vertical, 10)
+
+                Divider()
+
+                // Date & Time Row
+                HStack {
+                    Text(timeOfDayType == .specificTime ? "Date & Time" : "Date")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 80, alignment: .leading)
+
+                    Spacer()
+
+                    if timeOfDayType == .specificTime {
+                        DatePicker("", selection: $fireDate, displayedComponents: [.date, .hourAndMinute])
+                            .labelsHidden()
+                    } else {
+                        DatePicker("", selection: $fireDate, displayedComponents: [.date])
+                            .labelsHidden()
                     }
                 }
+                .padding(.vertical, 10)
 
-                // Date & Time (depends on time of day type)
-                if timeOfDayType == .specificTime {
-                    DatePicker("Date & Time", selection: $fireDate, displayedComponents: [.date, .hourAndMinute])
-                } else {
-                    DatePicker("Date", selection: $fireDate, displayedComponents: [.date])
-                }
+                Divider()
 
-                // Repeat
-                Picker("Repeat", selection: $repeatType) {
-                    ForEach(RepeatType.allCases) { type in
-                        Text(type.rawValue).tag(type)
+                // Repeat Row
+                HStack {
+                    Text("Repeat")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 60, alignment: .leading)
+
+                    Spacer()
+
+                    Picker("", selection: $repeatType) {
+                        ForEach(RepeatType.allCases) { type in
+                            Text(type.rawValue).tag(type)
+                        }
                     }
+                    .labelsHidden()
                 }
+                .padding(.vertical, 10)
                 .onChange(of: repeatType) { _, newValue in
                     if newValue == .custom {
                         showCustomRepeatSheet = true
@@ -241,21 +279,33 @@ private struct ScheduledTriggerInlineForm: View {
 
                 // Show custom repeat summary if custom is selected
                 if repeatType == .custom {
+                    Divider()
+
                     Button {
                         showCustomRepeatSheet = true
                     } label: {
                         HStack {
-                            Text(customRepeatSummary)
-                                .foregroundStyle(.primary)
+                            Text("Custom")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 60, alignment: .leading)
+
                             Spacer()
+
+                            Text(customRepeatSummary)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+
                             Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
+                    .padding(.vertical, 10)
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
         }
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
