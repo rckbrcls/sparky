@@ -16,7 +16,6 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     var isActive: Bool
     var isAllDay: Bool
     var location: TriggerLocation?
-    var person: TriggerPerson?
     var sequential: TriggerSequential?
     var spacedStage: Int
     var lastReviewDate: Date?
@@ -25,7 +24,7 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
     // Custom decoder for backwards compatibility
     enum CodingKeys: String, CodingKey {
         case id, type, fireDate, startDate, recurrenceRule, timeZoneIdentifier
-        case weekdayMask, isActive, isAllDay, location, person, sequential
+        case weekdayMask, isActive, isAllDay, location, sequential
         case spacedStage, lastReviewDate, ignoreCount
     }
 
@@ -41,7 +40,7 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         isActive = try container.decode(Bool.self, forKey: .isActive)
         isAllDay = try container.decodeIfPresent(Bool.self, forKey: .isAllDay) ?? false
         location = try container.decodeIfPresent(TriggerLocation.self, forKey: .location)
-        person = try container.decodeIfPresent(TriggerPerson.self, forKey: .person)
+
         sequential = try container.decodeIfPresent(TriggerSequential.self, forKey: .sequential)
         spacedStage = try container.decode(Int.self, forKey: .spacedStage)
         lastReviewDate = try container.decodeIfPresent(Date.self, forKey: .lastReviewDate)
@@ -59,7 +58,6 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         isActive: Bool = true,
         isAllDay: Bool = false,
         location: TriggerLocation? = nil,
-        person: TriggerPerson? = nil,
         sequential: TriggerSequential? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
@@ -75,7 +73,6 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         self.isActive = isActive
         self.isAllDay = isAllDay
         self.location = location
-        self.person = person
         self.sequential = sequential
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
@@ -90,10 +87,7 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         var event: LocationEvent
     }
 
-    struct TriggerPerson: Hashable, Codable {
-        var name: String
-        var contactIdentifier: String?
-    }
+
 
     struct TriggerSequential: Hashable, Codable {
         var sequenceID: UUID
@@ -128,7 +122,7 @@ extension MemoryTriggerModel {
         switch type {
         case .scheduled:
             return nextScheduledOccurrence(from: reference)
-        case .location, .person, .sequential:
+        case .location, .sequential:
             return startDate ?? fireDate
         }
     }

@@ -93,7 +93,6 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             weekdayMask: 0,
             isActive: true,
             location: nil,
-            person: nil,
             sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,

@@ -16,7 +16,6 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
     var isActive: Bool
     var isAllDay: Bool
     var location: MemoryTriggerModel.TriggerLocation?
-    var person: MemoryTriggerModel.TriggerPerson?
     var sequential: MemoryTriggerModel.TriggerSequential?
     var spacedStage: Int
     var lastReviewDate: Date?
@@ -33,7 +32,6 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         isActive: Bool = true,
         isAllDay: Bool = false,
         location: MemoryTriggerModel.TriggerLocation? = nil,
-        person: MemoryTriggerModel.TriggerPerson? = nil,
         sequential: MemoryTriggerModel.TriggerSequential? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
@@ -49,7 +47,6 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
         self.isActive = isActive
         self.isAllDay = isAllDay
         self.location = location
-        self.person = person
         self.sequential = sequential
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
@@ -72,7 +69,6 @@ extension MemoryTriggerDraft {
             isActive: isActive,
             isAllDay: isAllDay,
             location: location,
-            person: person,
             sequential: sequential,
             spacedStage: spacedStage,
             lastReviewDate: lastReviewDate,

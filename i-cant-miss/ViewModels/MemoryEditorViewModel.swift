@@ -91,7 +91,7 @@ final class MemoryEditorViewModel: ObservableObject {
     var hasAnyTrigger: Bool {
         triggers.contains { $0.type == .scheduled } ||
         triggers.contains { $0.type == .location } ||
-        triggers.contains { $0.type == .person } ||
+        triggers.contains { $0.type == .location } ||
         sequentialTrigger?.sequential != nil
     }
 
@@ -360,17 +360,7 @@ final class MemoryEditorViewModel: ObservableObject {
         triggers.append(draft)
     }
 
-    func addPersonTrigger(name: String, identifier: String?) {
-        let draft = MemoryTriggerDraft(
-            type: .person,
-            fireDate: nil,
-            startDate: Date(),
-            person: .init(name: name, contactIdentifier: identifier),
-            spacedStage: 0,
-            ignoreCount: 0
-        )
-        triggers.append(draft)
-    }
+
 
 
 
@@ -589,7 +579,7 @@ private extension MemoryEditorViewModel {
             isActive: model.isActive,
             isAllDay: model.isAllDay,
             location: model.location,
-            person: model.person,
+
             sequential: model.sequential,
             spacedStage: model.spacedStage,
             lastReviewDate: model.lastReviewDate,

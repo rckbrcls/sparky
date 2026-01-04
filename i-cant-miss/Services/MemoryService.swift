@@ -250,19 +250,7 @@ final class MemoryService: ObservableObject {
             }
     }
 
-    func memoriesWithPersonOnly() -> [MemoryModel] {
-        return nonScheduledMemories()
-            .filter { memory in
-                let activeTriggers = memory.triggers.filter { $0.isActive }
-                guard !activeTriggers.isEmpty else { return false }
 
-                // Deve ter apenas triggers person
-                let hasPerson = activeTriggers.contains { $0.type == .person }
-                let hasOtherTypes = activeTriggers.contains { $0.type != .person }
-
-                return hasPerson && !hasOtherTypes
-            }
-    }
 
     func memoriesWithSequentialOnly() -> [MemoryModel] {
         return nonScheduledMemories()
@@ -475,7 +463,6 @@ final class MemoryService: ObservableObject {
                 weekdayMask: trigger.weekdayMask,
                 isActive: trigger.isActive,
                 location: trigger.location,
-                person: trigger.person,
                 sequential: trigger.sequential,
                 spacedStage: trigger.spacedStage,
                 lastReviewDate: nil,

@@ -42,20 +42,7 @@ enum TriggerFactory {
                 lastReviewDate: model.lastReviewDate,
                 ignoreCount: model.ignoreCount
             )
-        case .person:
-            let personData = PersonTrigger.PersonData(
-                name: model.person?.name ?? "",
-                contactIdentifier: model.person?.contactIdentifier
-            )
-            return PersonTrigger(
-                id: model.id,
-                startDate: model.startDate,
-                isActive: model.isActive,
-                person: personData,
-                spacedStage: model.spacedStage,
-                lastReviewDate: model.lastReviewDate,
-                ignoreCount: model.ignoreCount
-            )
+
         case .sequential:
             let sequentialData = SequentialTrigger.SequentialData(
                 sequenceID: model.sequential?.sequenceID ?? UUID(),
@@ -90,7 +77,6 @@ enum TriggerFactory {
                 weekdayMask: scheduled.weekdayMask,
                 isActive: scheduled.isActive,
                 location: nil,
-                person: nil,
                 sequential: nil,
                 spacedStage: scheduled.spacedStage,
                 lastReviewDate: scheduled.lastReviewDate,
@@ -117,35 +103,11 @@ enum TriggerFactory {
                 weekdayMask: 0,
                 isActive: location.isActive,
                 location: locationModel,
-                person: nil,
+
                 sequential: nil,
                 spacedStage: location.spacedStage,
                 lastReviewDate: location.lastReviewDate,
                 ignoreCount: location.ignoreCount
-            )
-        case .person:
-            guard let person = trigger as? PersonTrigger else {
-                fatalError("Trigger type mismatch")
-            }
-            let personModel = MemoryTriggerModel.TriggerPerson(
-                name: person.person.name,
-                contactIdentifier: person.person.contactIdentifier
-            )
-            return MemoryTriggerModel(
-                id: person.id,
-                type: .person,
-                fireDate: nil,
-                startDate: person.startDate,
-                recurrenceRule: nil,
-                timeZoneIdentifier: nil,
-                weekdayMask: 0,
-                isActive: person.isActive,
-                location: nil,
-                person: personModel,
-                sequential: nil,
-                spacedStage: person.spacedStage,
-                lastReviewDate: person.lastReviewDate,
-                ignoreCount: person.ignoreCount
             )
         case .sequential:
             guard let sequential = trigger as? SequentialTrigger else {
@@ -165,7 +127,6 @@ enum TriggerFactory {
                 weekdayMask: 0,
                 isActive: sequential.isActive,
                 location: nil,
-                person: nil,
                 sequential: sequentialModel,
                 spacedStage: sequential.spacedStage,
                 lastReviewDate: sequential.lastReviewDate,

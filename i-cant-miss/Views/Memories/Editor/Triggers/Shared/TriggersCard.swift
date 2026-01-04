@@ -30,14 +30,7 @@ struct TriggersCard: View {
                     )
                 }
 
-                // Person Trigger - Inline Form (existing or empty)
-                if hasPersonTrigger {
-                    PersonTriggerInlineForm(
-                        viewModel: viewModel,
-                        isEditable: isEditable,
-                        onDelete: { removeTrigger(type: .person) }
-                    )
-                }
+
 
                 // Sequential Trigger - Inline Form
                 if hasSequentialTrigger {
@@ -75,13 +68,7 @@ struct TriggersCard: View {
                 }
             }
 
-            if !hasPersonTrigger {
-                Button {
-                    createDefaultPersonTrigger()
-                } label: {
-                    Label("Person", systemImage: "person.crop.circle.badge.plus")
-                }
-            }
+
 
             if !hasSequentialTrigger {
                 Button {
@@ -121,16 +108,14 @@ struct TriggersCard: View {
         viewModel.triggers.contains(where: { $0.type == .location })
     }
 
-    private var hasPersonTrigger: Bool {
-        viewModel.triggers.contains(where: { $0.type == .person })
-    }
+
 
     private var hasSequentialTrigger: Bool {
         return viewModel.sequentialTrigger?.sequential != nil
     }
 
     private var hasAnyTrigger: Bool {
-        hasScheduledTrigger || hasLocationTrigger || hasPersonTrigger || hasSequentialTrigger
+        hasScheduledTrigger || hasLocationTrigger || hasSequentialTrigger
     }
 
     // MARK: - Helper Functions
@@ -163,9 +148,7 @@ struct TriggersCard: View {
         )
     }
 
-    private func createDefaultPersonTrigger() {
-        viewModel.addPersonTrigger(name: "", identifier: nil)
-    }
+
 
     private func createDefaultSequentialTrigger() {
         viewModel.updateSequentialTrigger(sequenceID: UUID(), stepIndex: 0)
@@ -820,136 +803,6 @@ private struct LocationTriggerInlineForm: View {
 }
 
 
-// MARK: - Person Trigger Inline Form
-
-private struct PersonTriggerInlineForm: View {
-    @ObservedObject var viewModel: MemoryEditorViewModel
-    var isEditable: Bool
-    let onDelete: () -> Void
-
-    @State private var name: String
-    @State private var contactIdentifier: String
-    @State private var showContactPicker = false
-    @State private var showAccessDeniedAlert = false
-
-    private var existingTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .person })
-    }
-
-    init(viewModel: MemoryEditorViewModel, isEditable: Bool, onDelete: @escaping () -> Void) {
-        self.viewModel = viewModel
-        self.isEditable = isEditable
-        self.onDelete = onDelete
-        let trigger = viewModel.triggers.first(where: { $0.type == .person })
-        _name = State(initialValue: trigger?.person?.name ?? "")
-        _contactIdentifier = State(initialValue: trigger?.person?.contactIdentifier ?? "")
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 12) {
-                HStack {
-                    TextField("Name", text: $name)
-                        .textFieldStyle(.plain)
-                        .disabled(!isEditable)
-                        .onChange(of: name) { _, _ in
-                            commitChanges()
-                        }
-                    if isEditable {
-                        Button {
-                            Task { await requestContactsAndShow() }
-                        } label: {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel("Pick from contacts")
-                    }
-
-                }
-
-                if !contactIdentifier.isEmpty {
-                    Label("Contact linked", systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                }
-            }
-            .padding(16)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-        .contextMenu {
-            if isEditable {
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Label("Delete Trigger", systemImage: "trash")
-                }
-            }
-        }
-        .sheet(isPresented: $showContactPicker) {
-            ContactPickerView { selectedName, identifier in
-                name = selectedName
-                contactIdentifier = identifier ?? ""
-                showContactPicker = false
-                commitChanges()
-            }
-        }
-        .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-        } message: {
-            Text("Allow contact access in Settings to pick a person trigger.")
-        }
-    }
-
-    private func commitChanges() {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
-
-        if let trigger = existingTrigger {
-            var updated = trigger
-            updated.person = .init(
-                name: trimmedName,
-                contactIdentifier: contactIdentifier.isEmpty ? nil : contactIdentifier
-            )
-            viewModel.updateTrigger(id: trigger.id, with: updated)
-        }
-    }
-
-    private func requestContactsAndShow() async {
-        let status = ContactAccessHelper.checkAuthorizationStatus()
-        switch status {
-        case .authorized, .limited:
-            await MainActor.run {
-                showContactPicker = true
-            }
-        case .notDetermined:
-            let granted = await ContactAccessHelper.requestAccess()
-            await MainActor.run {
-                if granted {
-                    showContactPicker = true
-                } else {
-                    showAccessDeniedAlert = true
-                }
-            }
-        case .denied, .restricted:
-            await MainActor.run {
-                showAccessDeniedAlert = true
-            }
-        @unknown default:
-            await MainActor.run {
-                showAccessDeniedAlert = true
-            }
-        }
-    }
-}
 
 // MARK: - Sequential Trigger Inline Form
 

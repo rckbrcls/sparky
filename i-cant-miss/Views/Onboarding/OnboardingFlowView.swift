@@ -397,7 +397,6 @@ private enum OnboardingSampleData {
                 name: "GRU Airport",
                 event: .onEntry
             ),
-            person: nil,
             sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,
@@ -414,10 +413,6 @@ private enum OnboardingSampleData {
             weekdayMask: 0,
             isActive: true,
             location: nil,
-            person: MemoryTriggerModel.TriggerPerson(
-                name: "Maya Singh",
-                contactIdentifier: nil
-            ),
             sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,

@@ -12,9 +12,7 @@ import Foundation
 final class TriggerExecutorCoordinator {
     private let scheduledExecutor: ScheduledTriggerExecutor
     private let locationExecutor: LocationTriggerExecutor
-    private let personExecutor: PersonTriggerExecutor
     private let sequentialExecutor: SequentialTriggerExecutor
-
     var scheduled: ScheduledTriggerExecutor { scheduledExecutor }
     var location: LocationTriggerExecutor { locationExecutor }
     var sequential: SequentialTriggerExecutor { sequentialExecutor }
@@ -22,7 +20,6 @@ final class TriggerExecutorCoordinator {
     init(settings: SettingsStore, memoryService: MemoryService? = nil) {
         self.scheduledExecutor = ScheduledTriggerExecutor(settings: settings)
         self.locationExecutor = LocationTriggerExecutor()
-        self.personExecutor = PersonTriggerExecutor(settings: settings)
         self.sequentialExecutor = SequentialTriggerExecutor(memoryService: memoryService)
     }
 
@@ -33,8 +30,7 @@ final class TriggerExecutorCoordinator {
             await scheduledExecutor.register(trigger: trigger, for: memory)
         case .location:
             await locationExecutor.register(trigger: trigger, for: memory.id)
-        case .person:
-            await personExecutor.register(trigger: trigger, for: memory.id)
+
         case .sequential:
             await sequentialExecutor.register(trigger: trigger, for: memory.id)
         }
@@ -47,8 +43,7 @@ final class TriggerExecutorCoordinator {
             await scheduledExecutor.unregister(triggerID: triggerID, for: memoryID)
         case .location:
             await locationExecutor.unregister(triggerID: triggerID, for: memoryID)
-        case .person:
-            await personExecutor.unregister(triggerID: triggerID, for: memoryID)
+
         case .sequential:
             await sequentialExecutor.unregister(triggerID: triggerID, for: memoryID)
         }
@@ -58,7 +53,7 @@ final class TriggerExecutorCoordinator {
     func unregisterAll(for memoryID: UUID) async {
         await scheduledExecutor.unregisterAll(for: memoryID)
         await locationExecutor.unregisterAll(for: memoryID)
-        await personExecutor.unregisterAll(for: memoryID)
+
         await sequentialExecutor.unregisterAll(for: memoryID)
     }
 
@@ -66,7 +61,7 @@ final class TriggerExecutorCoordinator {
     func sync(memories: [MemoryModel]) async {
         await scheduledExecutor.sync(memories: memories)
         await locationExecutor.sync(memories: memories)
-        await personExecutor.sync(memories: memories)
+
         await sequentialExecutor.sync(memories: memories)
     }
 

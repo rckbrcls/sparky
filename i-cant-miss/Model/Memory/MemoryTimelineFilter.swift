@@ -17,7 +17,6 @@ enum MemoryTimelineFilter: String, CaseIterable, Identifiable {
     case byTriggerType
     case timeTriggers
     case locationTriggers
-    case personTriggers
     case noTriggers
 
     var id: String { rawValue }
@@ -35,7 +34,6 @@ enum MemoryTimelineFilter: String, CaseIterable, Identifiable {
         case .byTriggerType: return "Type"
         case .timeTriggers: return "Scheduled"
         case .locationTriggers: return "Location"
-        case .personTriggers: return "People"
         case .noTriggers: return "No Triggers"
         }
     }
@@ -53,7 +51,6 @@ enum MemoryTimelineFilter: String, CaseIterable, Identifiable {
         case .byTriggerType: return "byTriggerType"
         case .timeTriggers: return "timeTriggers"
         case .locationTriggers: return "locationTriggers"
-        case .personTriggers: return "personTriggers"
         case .noTriggers: return "noTriggers"
         }
     }
