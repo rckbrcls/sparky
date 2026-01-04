@@ -1202,7 +1202,7 @@ private struct SequentialItemRow: View {
             Spacer()
 
             if item.isCurrent {
-                Image(systemName: "pencil")
+                Image(systemName: "circle.circle")
                     .font(.caption.bold())
                     .foregroundStyle(Color.accentColor)
             } else if isEditable {
