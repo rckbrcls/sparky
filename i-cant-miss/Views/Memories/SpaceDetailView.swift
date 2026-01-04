@@ -28,11 +28,9 @@ struct SpaceDetailView: View {
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
-
     @State private var isSearching = false
-
-    @State private var isPinnedExpanded = false
-    @State private var isActiveExpanded = false
+    @State private var isPinnedExpanded = true
+    @State private var isActiveExpanded = true
     @State private var isCompletedExpanded = false
 
     private var activeFilterCount: Int {
