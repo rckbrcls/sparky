@@ -26,9 +26,19 @@ struct MemoryEditorChecklistCard: View {
                         onDelete: { viewModel.removeChecklistItem(itemID: item.id) },
                         focusedField: focusedDraftID
                     )
+                    .contentShape(Rectangle())
                     .onDrag {
                         self.draggedSynapse = item
-                         return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.synapse")
+                        let itemProvider = NSItemProvider()
+                        itemProvider.registerDataRepresentation(forTypeIdentifier: "com.icantmiss.synapse", visibility: .all) { completion in
+                            if let data = item.id.uuidString.data(using: .utf8) {
+                                completion(data, nil)
+                            } else {
+                                completion(nil, NSError(domain: "com.icantmiss.synapse", code: -1, userInfo: nil))
+                            }
+                            return nil
+                        }
+                        return itemProvider
                     }
                     .onDrop(of: ["com.icantmiss.synapse"], delegate: SynapseDropDelegate(destinationItem: item, viewModel: viewModel, draggedItem: $draggedSynapse))
 
