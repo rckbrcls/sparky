@@ -232,6 +232,9 @@ struct MemoryEditorView: View {
             .onChange(of: viewModel.autoCompleteChecklist) { _, _ in
                 handleMetadataSaveIfNeeded()
             }
+            .onChange(of: viewModel.checkItems) { _, _ in
+                handleMetadataSaveIfNeeded()
+            }
 
         return metadataSaveConfigured
 

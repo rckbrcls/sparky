@@ -14,9 +14,7 @@ struct SynapseView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 Button {
-                    if isEditable {
-                        onToggle()
-                    }
+                    onToggle()
                 } label: {
                     Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
