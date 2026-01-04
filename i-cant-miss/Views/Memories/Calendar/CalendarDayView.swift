@@ -292,10 +292,24 @@ struct CalendarDayView: View {
 
     private func allDayMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
         memories.filter { memory in
-            guard let trigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) else {
-                return false
+            // Check for scheduled all-day triggers
+            if let scheduledTrigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) {
+                if scheduledTrigger.isAllDay {
+                    return true
+                }
             }
-            return trigger.isAllDay
+
+            // Check for sequential triggers - show only if this memory is the current step in the sequence
+            if let seqTrigger = memory.triggers.first(where: { $0.type == .sequential && $0.isActive }),
+               let seqInfo = seqTrigger.sequential {
+                // Only show if startDate has passed (or no startDate set)
+                let isStarted = seqInfo.startDate == nil || seqInfo.startDate! <= date
+                // This memory is current if its stepIndex matches the currentStepIndex
+                let isCurrent = seqInfo.stepIndex == seqInfo.currentStepIndex
+                return isStarted && isCurrent
+            }
+
+            return false
         }
     }
 
