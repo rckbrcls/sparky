@@ -8,21 +8,6 @@ struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     let memoryLookup: [UUID: MemoryModel]
 
-    // State to track which empty forms are visible
-    @State private var showScheduledForm = false
-    @State private var showPersonForm = false
-    @State private var showLocationForm = false
-    @State private var showSequentialForm = false
-
-    private var triggerCount: Int {
-        viewModel.triggers.count + (showScheduledForm ? 1 : 0) + (showPersonForm ? 1 : 0) + (showLocationForm ? 1 : 0) + (showSequentialForm ? 1 : 0)
-    }
-
-    private var hasAnyTriggerOrForm: Bool {
-        hasScheduledTrigger || hasLocationTrigger || hasPersonTrigger || hasSequentialTrigger ||
-        showScheduledForm || showPersonForm || showLocationForm || showSequentialForm
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(spacing: 8) {
@@ -32,12 +17,6 @@ struct TriggersCard: View {
                         viewModel: viewModel,
                         onDelete: { removeTrigger(type: .scheduled) }
                     )
-                } else if showScheduledForm {
-                    ScheduledTriggerEmptyForm(
-                        viewModel: viewModel,
-                        onCancel: { showScheduledForm = false },
-                        onSave: { showScheduledForm = false }
-                    )
                 }
 
                 // Location Trigger - Inline Form
@@ -45,12 +24,6 @@ struct TriggersCard: View {
                     LocationTriggerInlineForm(
                         viewModel: viewModel,
                         onDelete: { removeTrigger(type: .location) }
-                    )
-                } else if showLocationForm {
-                    LocationTriggerEmptyForm(
-                        viewModel: viewModel,
-                        onCancel: { showLocationForm = false },
-                        onSave: { showLocationForm = false }
                     )
                 }
 
@@ -60,12 +33,6 @@ struct TriggersCard: View {
                         viewModel: viewModel,
                         onDelete: { removeTrigger(type: .person) }
                     )
-                } else if showPersonForm {
-                    PersonTriggerEmptyForm(
-                        viewModel: viewModel,
-                        onCancel: { showPersonForm = false },
-                        onSave: { showPersonForm = false }
-                    )
                 }
 
                 // Sequential Trigger - Inline Form
@@ -74,12 +41,6 @@ struct TriggersCard: View {
                         viewModel: viewModel,
                         memoryLookup: memoryLookup,
                         onDelete: { viewModel.removeSequentialTrigger() }
-                    )
-                } else if showSequentialForm {
-                    SequentialTriggerEmptyForm(
-                        viewModel: viewModel,
-                        onCancel: { showSequentialForm = false },
-                        onSave: { showSequentialForm = false }
                     )
                 }
 
@@ -91,33 +52,33 @@ struct TriggersCard: View {
 
     private var addTriggerButton: some View {
         Menu {
-            if !hasScheduledTrigger && !showScheduledForm {
+            if !hasScheduledTrigger {
                 Button {
-                    showScheduledForm = true
+                    createDefaultScheduledTrigger()
                 } label: {
                     Label("Date & Time", systemImage: "clock.badge")
                 }
             }
 
-            if !hasLocationTrigger && !showLocationForm {
+            if !hasLocationTrigger {
                 Button {
-                    showLocationForm = true
+                    createDefaultLocationTrigger()
                 } label: {
                     Label("Location", systemImage: "mappin.circle.fill")
                 }
             }
 
-            if !hasPersonTrigger && !showPersonForm {
+            if !hasPersonTrigger {
                 Button {
-                    showPersonForm = true
+                    createDefaultPersonTrigger()
                 } label: {
                     Label("Person", systemImage: "person.crop.circle.badge.plus")
                 }
             }
 
-            if !hasSequentialTrigger && !showSequentialForm {
+            if !hasSequentialTrigger {
                 Button {
-                    showSequentialForm = true
+                    createDefaultSequentialTrigger()
                 } label: {
                     Label("Sequence", systemImage: "arrow.right")
                 }
@@ -168,6 +129,36 @@ struct TriggersCard: View {
             viewModel.removeTrigger(id: trigger.id)
         }
     }
+
+    private func createDefaultScheduledTrigger() {
+        let fireDate = Date().addingTimeInterval(3600) // 1 hour from now
+        viewModel.setScheduledTrigger(
+            fireDate: fireDate,
+            recurrence: nil,
+            weekdaySelection: [],
+            referenceTime: fireDate,
+            isAllDay: false
+        )
+    }
+
+    private func createDefaultLocationTrigger() {
+        // Default to Apple Park coordinates
+        viewModel.addLocationTrigger(
+            name: "Select a location",
+            latitude: 37.3349,
+            longitude: -122.00902,
+            radius: 200,
+            event: .onEntry
+        )
+    }
+
+    private func createDefaultPersonTrigger() {
+        viewModel.addPersonTrigger(name: "", identifier: nil)
+    }
+
+    private func createDefaultSequentialTrigger() {
+        viewModel.updateSequentialTrigger(sequenceID: UUID(), stepIndex: 0)
+    }
 }
 
 // MARK: - Scheduled Trigger Inline Form
@@ -217,7 +208,6 @@ private struct ScheduledTriggerInlineForm: View {
         VStack(spacing: 0) {
             // Header
             TriggerSectionHeader(
-                iconName: "clock.badge",
                 title: "Date & Time",
                 onDelete: onDelete
             )
@@ -442,7 +432,6 @@ private struct LocationTriggerInlineForm: View {
     var body: some View {
         VStack(spacing: 0) {
             TriggerSectionHeader(
-                iconName: "mappin.circle.fill",
                 title: "Location",
                 onDelete: onDelete
             )
@@ -746,7 +735,6 @@ private struct PersonTriggerInlineForm: View {
         VStack(spacing: 0) {
             // Header
             TriggerSectionHeader(
-                iconName: "person.crop.circle.fill",
                 title: "Person",
                 onDelete: onDelete
             )
@@ -860,7 +848,6 @@ private struct SequentialTriggerInlineForm: View {
     var body: some View {
         VStack(spacing: 0) {
             TriggerSectionHeader(
-                iconName: "arrowshape.turn.up.right.circle",
                 title: "Sequence",
                 onDelete: onDelete
             )
@@ -1201,827 +1188,27 @@ fileprivate extension MemoryDraft {
 // MARK: - Trigger Section Header
 
 private struct TriggerSectionHeader: View {
-    let iconName: String
     let title: String
     let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: iconName)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .frame(width: 24)
-
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
             Spacer()
 
-            Menu {
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 24, height: 24)
-                    .contentShape(Rectangle())
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 24))
-    }
-}
-
-// MARK: - Scheduled Trigger Empty Form
-
-private struct ScheduledTriggerEmptyForm: View {
-    @ObservedObject var viewModel: MemoryEditorViewModel
-    let onCancel: () -> Void
-    let onSave: () -> Void
-
-    @State private var fireDate: Date = Date().addingTimeInterval(3600)
-    @State private var timeOfDayType: TimeOfDayType = .specificTime
-    @State private var repeatType: RepeatType = .never
-    @State private var showCustomRepeatSheet: Bool = false
-    @State private var customRepeatType: CustomRepeatType = .weekly
-    @State private var selectedWeekdays: Set<Int> = []
-    @State private var selectedMonthDays: Set<Int> = []
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            TriggerEmptyFormHeader(
-                iconName: "clock.badge",
-                title: "Date & Time",
-                onCancel: onCancel,
-                onSave: saveAndClose
-            )
-
-            VStack(spacing: 12) {
-                // Time of Day
-                Picker("Time of Day", selection: $timeOfDayType) {
-                    ForEach(TimeOfDayType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
-                    }
-                }
-
-                // Date & Time (depends on time of day type)
-                if timeOfDayType == .specificTime {
-                    DatePicker("Date & Time", selection: $fireDate, displayedComponents: [.date, .hourAndMinute])
-                } else {
-                    DatePicker("Date", selection: $fireDate, displayedComponents: [.date])
-                }
-
-                // Repeat
-                Picker("Repeat", selection: $repeatType) {
-                    ForEach(RepeatType.allCases) { type in
-                        Text(type.rawValue).tag(type)
-                    }
-                }
-                .onChange(of: repeatType) { _, newValue in
-                    if newValue == .custom {
-                        showCustomRepeatSheet = true
-                    }
-                }
-
-                // Show custom repeat summary if custom is selected
-                if repeatType == .custom {
-                    Button {
-                        showCustomRepeatSheet = true
-                    } label: {
-                        HStack {
-                            Text(customRepeatSummary)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-            }
-            .padding(16)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-        .sheet(isPresented: $showCustomRepeatSheet) {
-            CustomRepeatSheet(
-                customRepeatType: $customRepeatType,
-                selectedWeekdays: $selectedWeekdays,
-                selectedMonthDays: $selectedMonthDays
-            )
-        }
-    }
-
-    private var customRepeatSummary: String {
-        switch customRepeatType {
-        case .weekly:
-            if selectedWeekdays.isEmpty {
-                return "Select weekdays"
-            }
-            let mask = selectedWeekdays.reduce(into: Int16(0)) { result, day in
-                result |= Int16(1 << day)
-            }
-            return weekdayMaskSummary(mask: mask)
-        case .monthly:
-            if selectedMonthDays.isEmpty {
-                return "Select days of month"
-            }
-            let sortedDays = selectedMonthDays.sorted()
-            if sortedDays.count <= 3 {
-                return "Day \(sortedDays.map(String.init).joined(separator: ", "))"
-            } else {
-                return "\(sortedDays.count) days of month"
-            }
-        }
-    }
-
-    private func saveAndClose() {
-        var adjustedFireDate = fireDate
-        if timeOfDayType == .allDay {
-            let calendar = Calendar.current
-            adjustedFireDate = calendar.startOfDay(for: fireDate)
-        }
-
-        let recurrence: RecurrenceRule?
-        var weekdaySelection: Set<Int> = []
-
-        switch repeatType {
-        case .never:
-            recurrence = nil
-        case .daily:
-            recurrence = RecurrenceRule(frequency: .daily, interval: 1)
-        case .weekly:
-            recurrence = RecurrenceRule(frequency: .weekly, interval: 1)
-        case .yearly:
-            recurrence = RecurrenceRule(frequency: .yearly, interval: 1)
-        case .custom:
-            switch customRepeatType {
-            case .weekly:
-                recurrence = RecurrenceRule(frequency: .weekly, interval: 1)
-                weekdaySelection = selectedWeekdays
-            case .monthly:
-                recurrence = RecurrenceRule(frequency: .monthly, interval: 1)
-                if let firstDay = selectedMonthDays.sorted().first {
-                    var calendar = Calendar.current
-                    calendar.timeZone = TimeZone.current
-                    var components = calendar.dateComponents([.year, .month, .hour, .minute], from: adjustedFireDate)
-                    components.day = firstDay
-                    if let newDate = calendar.date(from: components) {
-                        adjustedFireDate = newDate
-                    }
-                }
-            }
-        }
-
-        viewModel.setScheduledTrigger(
-            fireDate: adjustedFireDate,
-            recurrence: recurrence,
-            weekdaySelection: weekdaySelection,
-            referenceTime: adjustedFireDate,
-            isAllDay: timeOfDayType == .allDay
-        )
-        onSave()
-    }
-}
-
-// MARK: - Person Trigger Empty Form
-
-private struct PersonTriggerEmptyForm: View {
-    @ObservedObject var viewModel: MemoryEditorViewModel
-    let onCancel: () -> Void
-    let onSave: () -> Void
-
-    @State private var name: String = ""
-    @State private var contactIdentifier: String = ""
-    @State private var showContactPicker = false
-    @State private var showAccessDeniedAlert = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            TriggerEmptyFormHeader(
-                iconName: "person.crop.circle.fill",
-                title: "Person",
-                onCancel: onCancel,
-                onSave: saveAndClose,
-                isSaveDisabled: name.trimmingCharacters(in: .whitespaces).isEmpty
-            )
-
-            VStack(spacing: 12) {
-                HStack {
-                    TextField("Name", text: $name)
-                        .textFieldStyle(.plain)
-                    Button {
-                        Task { await requestContactsAndShow() }
-                    } label: {
-                        Image(systemName: "person.crop.circle.badge.plus")
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Pick from contacts")
-                }
-
-                if !contactIdentifier.isEmpty {
-                    Label("Contact linked", systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                }
-            }
-            .padding(16)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-        .sheet(isPresented: $showContactPicker) {
-            ContactPickerView { selectedName, identifier in
-                name = selectedName
-                contactIdentifier = identifier ?? ""
-                showContactPicker = false
-            }
-        }
-        .alert("Contacts Access Required", isPresented: $showAccessDeniedAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-        } message: {
-            Text("Allow contact access in Settings to pick a person trigger.")
-        }
-    }
-
-    private func saveAndClose() {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
-
-        viewModel.addPersonTrigger(
-            name: trimmedName,
-            identifier: contactIdentifier.isEmpty ? nil : contactIdentifier
-        )
-        onSave()
-    }
-
-    private func requestContactsAndShow() async {
-        let status = ContactAccessHelper.checkAuthorizationStatus()
-        switch status {
-        case .authorized, .limited:
-            await MainActor.run {
-                showContactPicker = true
-            }
-        case .notDetermined:
-            let granted = await ContactAccessHelper.requestAccess()
-            await MainActor.run {
-                if granted {
-                    showContactPicker = true
-                } else {
-                    showAccessDeniedAlert = true
-                }
-            }
-        case .denied, .restricted:
-            await MainActor.run {
-                showAccessDeniedAlert = true
-            }
-        @unknown default:
-            await MainActor.run {
-                showAccessDeniedAlert = true
-            }
-        }
-    }
-}
-
-// MARK: - Location Trigger Empty Form
-
-private struct LocationTriggerEmptyForm: View {
-    @ObservedObject var viewModel: MemoryEditorViewModel
-    let onCancel: () -> Void
-    let onSave: () -> Void
-
-    @StateObject private var searchModel = LocationSearchViewModel()
-    @StateObject private var geocodingModel = LocationGeocoder()
-    @State private var region: MKCoordinateRegion
-    @State private var mapCameraPosition: MapCameraPosition
-    @State private var selectedCoordinate: CLLocationCoordinate2D?
-    @State private var selectedName = ""
-    @State private var event: LocationEvent = .onEntry
-    @State private var isMapExpanded = false
-    @State private var isCameraAdjusting = false
-    @State private var geocodeTask: Task<Void, Never>?
-    @State private var cameraCooldownTask: Task<Void, Never>?
-    @State private var isSearching = false
-    @FocusState private var isSearchFieldFocused: Bool
-
-    private let defaultRadius: Double = 200
-    private let expandedSuggestionBottomPadding: CGFloat = 120
-
-    init(viewModel: MemoryEditorViewModel, onCancel: @escaping () -> Void, onSave: @escaping () -> Void) {
-        self.viewModel = viewModel
-        self.onCancel = onCancel
-        self.onSave = onSave
-
-        let initialRegion = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902),
-            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-        )
-
-        _region = State(initialValue: initialRegion)
-        _mapCameraPosition = State(initialValue: .region(initialRegion))
-        _selectedCoordinate = State(initialValue: nil)
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            TriggerEmptyFormHeader(
-                iconName: "mappin.circle.fill",
-                title: "Location",
-                onCancel: onCancel,
-                onSave: saveAndClose,
-                isSaveDisabled: selectedCoordinate == nil
-            )
-
-            VStack(spacing: 12) {
-                // Map preview
-                LocationPickerView.MapSection(
-                    onExpand: { isMapExpanded = true },
-                    mapPreview: { mapPreviewContent }
-                )
-
-                // Location info
-                if selectedCoordinate != nil {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(resolvedLocationName)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-
-                            Text(coordinateSummary)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                } else {
-                    Text("Tap the map to select a location")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                // Event picker
-                Picker("Remind when", selection: $event) {
-                    ForEach(LocationEvent.allCases, id: \.self) { option in
-                        Text(option.displayName).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-            .padding(16)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-        .fullScreenCover(isPresented: $isMapExpanded) {
-            expandedMapView
-        }
-        .onReceive(searchModel.$isSearching) { value in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isSearching = value
-            }
-        }
-        .onAppear {
-            if selectedCoordinate == nil {
-                let center = region.center
-                updateSelection(to: center, resetName: true, updateCamera: true)
-            }
-        }
-        .onDisappear {
-            geocodeTask?.cancel()
-            cameraCooldownTask?.cancel()
-        }
-    }
-
-    private var mapPreviewContent: some View {
-        MapContainer(
-            allowsSelection: false,
-            mapCameraPosition: $mapCameraPosition,
-            region: $region,
-            selectedCoordinate: $selectedCoordinate,
-            defaultRadius: defaultRadius,
-            resolvedLocationName: resolvedLocationName,
-            onCameraChange: { _ in },
-            onCoordinateSelected: { _ in }
-        )
-        .allowsHitTesting(false)
-        .environmentObject(geocodingModel)
-    }
-
-    private var expandedMapView: some View {
-        LocationPickerView.ExpandedMapScreen(
-            searchModel: searchModel,
-            suggestionBottomPadding: expandedSuggestionBottomPadding,
-            mapContent: { mapView(allowsSelection: true) },
-            selectionOverlay: { mapSelectionOverlay },
-            centerIndicator: { mapCenterIndicator },
-            searchBar: { expandedSearchBar },
-            suggestionPanel: { expandedSuggestionPanel },
-            confirmationPanel: { expandedConfirmationPanel },
-            searchFieldFocus: $isSearchFieldFocused,
-            onDismiss: { isMapExpanded = false }
-        )
-    }
-
-    private func mapView(allowsSelection: Bool) -> some View {
-        MapContainer(
-            allowsSelection: allowsSelection,
-            mapCameraPosition: $mapCameraPosition,
-            region: $region,
-            selectedCoordinate: $selectedCoordinate,
-            defaultRadius: defaultRadius,
-            resolvedLocationName: resolvedLocationName,
-            onCameraChange: handleCameraRegionChange(to:),
-            onCoordinateSelected: { coordinate in
-                updateSelection(to: coordinate, resetName: true, updateCamera: false, shouldGeocode: true)
-            }
-        )
-        .environmentObject(geocodingModel)
-    }
-
-    private var mapSelectionOverlay: some View {
-        HStack {
-            Text("Drag the map to position the pin precisely.")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(Color(.systemBackground), in: Capsule())
-            Spacer()
-        }
-        .padding(12)
-        .allowsHitTesting(false)
-    }
-
-    private var mapCenterIndicator: some View {
-        VStack {
-            Spacer()
-            VStack(spacing: 4) {
-                Image(systemName: geocodingModel.isResolving ? "mappin.circle" : "mappin.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.primary)
-                    .shadow(color: Color.black.opacity(0.25), radius: 8, y: 6)
-                Circle()
-                    .fill(Color.primary.opacity(0.25))
-                    .frame(width: 18, height: 18)
-                    .overlay(
-                        Circle()
-                            .fill(Color.primary)
-                            .frame(width: 6, height: 6)
-                    )
-            }
-            .offset(y: -28)
-            Spacer()
-        }
-        .allowsHitTesting(false)
-    }
-
-    private var expandedSearchBar: some View {
-        LocationPickerView.ExpandedSearchBar(
-            query: $searchModel.query,
-            isSearching: isSearching,
-            onClearQuery: { searchModel.query = ""; searchModel.suggestions = [] }
-        )
-    }
-
-    private var expandedSuggestionPanel: some View {
-        LocationPickerView.ExpandedSuggestionPanel(
-            suggestions: searchModel.suggestions,
-            onSuggestionSelected: { suggestion in
-                Task { await selectSuggestion(suggestion) }
-            }
-        )
-    }
-
-    private var expandedConfirmationPanel: some View {
-        LocationPickerView.ExpandedConfirmationPanel(
-            resolvedLocationName: resolvedLocationName,
-            coordinateSummary: coordinateSummary,
-            isResolving: geocodingModel.isResolving,
-            event: $event,
-            onUseLocation: { isMapExpanded = false }
-        )
-    }
-
-    private var resolvedLocationName: String {
-        guard selectedCoordinate != nil else { return "Select a place on the map" }
-        if geocodingModel.isResolving && selectedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Resolving address..."
-        }
-        let trimmed = selectedName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Pinned Location" : trimmed
-    }
-
-    private var coordinateSummary: String {
-        guard let coordinate = selectedCoordinate else { return "Drag the map to choose a location." }
-        return String(format: "%.4f, %.4f", coordinate.latitude, coordinate.longitude)
-    }
-
-    private func handleCameraRegionChange(to updatedRegion: MKCoordinateRegion) {
-        guard !isCameraAdjusting else { return }
-        let coordinate = updatedRegion.center
-        if selectedCoordinate?.isApproximatelyEqual(to: coordinate) == true { return }
-        selectedName = ""
-        selectedCoordinate = coordinate
-        scheduleReverseGeocode(for: coordinate)
-    }
-
-    private func updateSelection(to coordinate: CLLocationCoordinate2D,
-                                 span overrideSpan: MKCoordinateSpan? = nil,
-                                 name: String? = nil,
-                                 resetName: Bool = true,
-                                 updateCamera: Bool = false,
-                                 shouldGeocode: Bool = true) {
-        let targetSpan = sanitizedSpan(overrideSpan ?? region.span)
-        let updatedRegion = MKCoordinateRegion(center: coordinate, span: targetSpan)
-
-        selectedCoordinate = coordinate
-        region = updatedRegion
-
-        if updateCamera {
-            isCameraAdjusting = true
-            mapCameraPosition = .region(updatedRegion)
-            cameraCooldownTask?.cancel()
-            cameraCooldownTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 250_000_000)
-                isCameraAdjusting = false
-            }
-        }
-
-        if let providedName = name {
-            selectedName = providedName
-        } else if resetName {
-            selectedName = ""
-        }
-
-        if shouldGeocode {
-            scheduleReverseGeocode(for: coordinate, force: name == nil)
-        }
-    }
-
-    private func scheduleReverseGeocode(for coordinate: CLLocationCoordinate2D, force: Bool = false) {
-        geocodeTask?.cancel()
-        geocodeTask = Task { @MainActor in
-            if !force { try? await Task.sleep(nanoseconds: 350_000_000) }
-            guard !Task.isCancelled else { return }
-            if let resolved = await geocodingModel.resolveName(for: coordinate) {
-                guard !Task.isCancelled else { return }
-                if let currentCoordinate = selectedCoordinate, currentCoordinate.isApproximatelyEqual(to: coordinate) {
-                    selectedName = resolved
-                }
-            } else if selectedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                selectedName = "Pinned Location"
-            }
-        }
-    }
-
-    private func selectSuggestion(_ suggestion: MKLocalSearchCompletion) async {
-        if let result = await searchModel.search(for: suggestion) {
-            await MainActor.run {
-                let resolvedName = result.name ?? suggestion.title
-                let coordinate = result.location.coordinate
-                updateSelection(to: coordinate, name: resolvedName, resetName: false, updateCamera: true, shouldGeocode: false)
-                searchModel.query = suggestion.title
-                withAnimation(.easeInOut(duration: 0.2)) { searchModel.suggestions = [] }
-                isSearchFieldFocused = false
-            }
-        }
-    }
-
-    private func sanitizedSpan(_ span: MKCoordinateSpan) -> MKCoordinateSpan {
-        let latitude = span.latitudeDelta > 0 ? span.latitudeDelta : 0.01
-        let longitude = span.longitudeDelta > 0 ? span.longitudeDelta : 0.01
-        return MKCoordinateSpan(latitudeDelta: latitude, longitudeDelta: longitude)
-    }
-
-    private func saveAndClose() {
-        guard let coordinate = selectedCoordinate else { return }
-        let name = resolvedLocationName
-        viewModel.addLocationTrigger(
-            name: name,
-            latitude: coordinate.latitude,
-            longitude: coordinate.longitude,
-            radius: defaultRadius,
-            event: event
-        )
-        onSave()
-    }
-}
-
-// MARK: - Sequential Trigger Empty Form
-
-private struct SequentialTriggerEmptyForm: View {
-    @ObservedObject var viewModel: MemoryEditorViewModel
-    let onCancel: () -> Void
-    let onSave: () -> Void
-
-    @State private var sequenceItems: [SequentialItem] = []
-    @State private var showingPicker = false
-    @State private var draggedItem: SequentialItem?
-
-    var body: some View {
-        VStack(spacing: 0) {
-            TriggerEmptyFormHeader(
-                iconName: "arrowshape.turn.up.right.circle",
-                title: "Sequence",
-                onCancel: onCancel,
-                onSave: saveAndClose,
-                isSaveDisabled: sequenceItems.count < 2
-            )
-
-            VStack(spacing: 12) {
-                // Description
-                Text("Create a sequence of memories that will be triggered in order.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Drag-and-drop list
-                if !sequenceItems.isEmpty {
-                    VStack(spacing: 8) {
-                        ForEach(sequenceItems) { item in
-                            SequentialItemRow(
-                                index: sequenceItems.firstIndex(of: item) ?? 0,
-                                item: item,
-                                currentMemoryID: viewModel.editingMemoryID,
-                                onDelete: {
-                                    if !item.isCurrent, let idx = sequenceItems.firstIndex(of: item) {
-                                        withAnimation { _ = sequenceItems.remove(at: idx) }
-                                    }
-                                }
-                            )
-                            .onDrag {
-                                draggedItem = item
-                                return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.sequentialitem")
-                            }
-                            .onDrop(of: ["com.icantmiss.sequentialitem"], delegate: SequentialDropDelegate(item: item, items: $sequenceItems, draggedItem: $draggedItem, onReorder: {}))
-                        }
-                    }
-
-                    Text("Drag to reorder")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-
-                // Add Memory button
-                Button {
-                    showingPicker = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus")
-                            .font(.caption.bold())
-                        Text("Add Memory")
-                            .font(.caption.bold())
-                    }
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                            .foregroundStyle(Color.secondary.opacity(0.4))
-                    )
-                }
-                .buttonStyle(.plain)
-
-                if sequenceItems.count < 2 {
-                    Text("Add at least 2 memories to create a sequence")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-            .padding(16)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
-        .sheet(isPresented: $showingPicker) {
-            SequentialMemoryPickerSheet(
-                viewModel: viewModel,
-                excludedMemoryIDs: Set(sequenceItems.map(\.id)),
-                onSelect: { memory in
-                    let item = SequentialItem(id: memory.id, title: memory.title, isCurrent: false)
-                    sequenceItems.append(item)
-                }
-            )
-        }
-        .onAppear {
-            loadCurrentMemory()
-        }
-    }
-
-    private func loadCurrentMemory() {
-        let currentID = viewModel.editingMemoryID ?? UUID()
-        let title = viewModel.title.isEmpty ? "New Memory" : viewModel.title
-        let current = SequentialItem(id: currentID, title: title, isCurrent: true)
-        sequenceItems = [current]
-    }
-
-    private func saveAndClose() {
-        guard sequenceItems.count >= 2 else { return }
-
-        let sequenceID = UUID()
-
-        Task {
-            for (index, item) in sequenceItems.enumerated() {
-                if item.isCurrent {
-                    viewModel.updateSequentialTrigger(sequenceID: sequenceID, stepIndex: index)
-                } else {
-                    if let memory = viewModel.environment.memoryService.memory(id: item.id) {
-                        await updateMemoryTrigger(memory, sequenceID: sequenceID, index: index)
-                    }
-                }
-            }
-
-            await MainActor.run {
-                onSave()
-            }
-        }
-    }
-
-    private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int) async {
-        var triggers = memory.triggers
-        let newSeq = MemoryTriggerModel.TriggerSequential(sequenceID: sequenceID, stepIndex: index)
-
-        if let idx = triggers.firstIndex(where: { $0.type == .sequential }) {
-            triggers[idx].sequential = newSeq
-        } else {
-            let t = MemoryTriggerModel(
-                id: UUID(),
-                type: .sequential,
-                weekdayMask: 0,
-                isActive: true,
-                sequential: newSeq,
-                spacedStage: 0,
-                ignoreCount: 0
-            )
-            triggers.append(t)
-        }
-
-        let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
-        _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
-    }
-}
-
-// MARK: - Trigger Empty Form Header
-
-
-private struct TriggerEmptyFormHeader: View {
-    let iconName: String
-    let title: String
-    let onCancel: () -> Void
-    let onSave: () -> Void
-    var isSaveDisabled: Bool = false
-
-    var body: some View {
-        HStack(spacing: 10) {
             Button {
-                onCancel()
+                onDelete()
             } label: {
                 Image(systemName: "xmark")
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
+                    .frame(width: 24, height: 24)
+                    .contentShape(Rectangle())
             }
-
-            Image(systemName: iconName)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .frame(width: 24)
-
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-
-            Spacer()
-
-            Button {
-                onSave()
-            } label: {
-                Image(systemName: "checkmark")
-                    .font(.caption.bold())
-                    .foregroundStyle(isSaveDisabled ? .tertiary : .primary)
-            }
-            .disabled(isSaveDisabled)
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
