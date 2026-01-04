@@ -17,20 +17,20 @@ struct MemoryEditorChecklistCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-             ForEach($viewModel.checkItems) { $item in
+             ForEach(viewModel.checkItems) { item in
                 VStack(spacing: 0) {
                     SynapseView(
-                        item: $item,
+                        item: binding(for: item),
                         isEditable: isEditingEnabled,
-                        onToggle: { viewModel.toggleChecklistCompletion(for: $item.wrappedValue.id) },
-                        onDelete: { viewModel.removeChecklistItem(itemID: $item.wrappedValue.id) },
+                        onToggle: { viewModel.toggleChecklistCompletion(for: item.id) },
+                        onDelete: { viewModel.removeChecklistItem(itemID: item.id) },
                         focusedField: focusedDraftID
                     )
                     .onDrag {
-                        self.draggedSynapse = $item.wrappedValue
-                         return NSItemProvider(item: $item.wrappedValue.id.uuidString as NSString, typeIdentifier: "com.icantmiss.synapse")
+                        self.draggedSynapse = item
+                         return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.synapse")
                     }
-                    .onDrop(of: ["com.icantmiss.synapse"], delegate: SynapseDropDelegate(destinationItem: $item.wrappedValue, viewModel: viewModel, draggedItem: $draggedSynapse))
+                    .onDrop(of: ["com.icantmiss.synapse"], delegate: SynapseDropDelegate(destinationItem: item, viewModel: viewModel, draggedItem: $draggedSynapse))
 
                     if item.id != viewModel.checkItems.last?.id {
                          Divider()
@@ -58,6 +58,22 @@ struct MemoryEditorChecklistCard: View {
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+    }
+
+    private func binding(for item: CheckItemDraft) -> Binding<CheckItemDraft> {
+        Binding(
+            get: {
+                if let index = viewModel.checkItems.firstIndex(where: { $0.id == item.id }) {
+                    return viewModel.checkItems[index]
+                }
+                return item
+            },
+            set: { newValue in
+                if let index = viewModel.checkItems.firstIndex(where: { $0.id == item.id }) {
+                    viewModel.checkItems[index] = newValue
+                }
+            }
         )
     }
 }

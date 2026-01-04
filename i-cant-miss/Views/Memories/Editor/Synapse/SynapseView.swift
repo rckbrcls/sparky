@@ -1,5 +1,6 @@
 
 import SwiftUI
+import UIKit
 
 struct SynapseView: View {
     @Binding var item: CheckItemDraft
@@ -7,7 +8,8 @@ struct SynapseView: View {
     let onToggle: () -> Void
     let onDelete: () -> Void
     @FocusState.Binding var focusedField: UUID?
-    
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
@@ -29,11 +31,12 @@ struct SynapseView: View {
                     .disabled(!isEditable)
                     .submitLabel(.next)
                     .focused($focusedField, equals: item.id)
-                
+
                 Spacer()
-                
+
                 if isEditable {
                     Button {
+                        feedbackGenerator.impactOccurred()
                         withAnimation {
                             onDelete()
                         }
@@ -46,7 +49,7 @@ struct SynapseView: View {
                     .buttonStyle(.plain)
                 }
             }
-            
+
             TextField("Description", text: $item.detail, axis: .vertical)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
