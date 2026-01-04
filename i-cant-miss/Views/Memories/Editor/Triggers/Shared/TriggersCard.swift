@@ -962,7 +962,6 @@ private struct SequentialTriggerInlineForm: View {
     @State private var sequenceItems: [SequentialItem] = []
     @State private var showingPicker = false
     @State private var draggedItem: SequentialItem?
-    @State private var isExpanded = false
 
     private var sequentialConfig: MemoryTriggerModel.TriggerSequential? {
         viewModel.sequentialTrigger?.sequential
@@ -971,125 +970,58 @@ private struct SequentialTriggerInlineForm: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                if let config = sequentialConfig {
+                if sequentialConfig != nil {
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Step \(config.stepIndex + 1)")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.primary)
 
-                            Spacer()
-
-                            Text("in sequence")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            Button {
-                                withAnimation { isExpanded.toggle() }
-                            } label: {
-                                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                        // List of items
+                        VStack(spacing: 8) {
+                            ForEach(sequenceItems) { item in
+                                SequentialItemRow(
+                                    item: item,
+                                    currentMemoryID: viewModel.editingMemoryID,
+                                    onDelete: {
+                                        if !item.isCurrent, let idx = sequenceItems.firstIndex(of: item) {
+                                            withAnimation { _ = sequenceItems.remove(at: idx) }
+                                            Task { await saveSequenceChanges() }
+                                        }
+                                    }
+                                )
+                                .onDrag {
+                                    if isEditable {
+                                        draggedItem = item
+                                        return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.sequentialitem")
+                                    } else {
+                                        return NSItemProvider()
+                                    }
+                                }
+                                .onDrop(of: ["com.icantmiss.sequentialitem"], delegate: SequentialDropDelegate(item: item, items: $sequenceItems, draggedItem: $draggedItem, onReorder: {
+                                    Task { await saveSequenceChanges() }
+                                }))
+                                .disabled(!isEditable)
                             }
-
-
                         }
 
-                        if isExpanded {
-                            // Drag-and-drop list
-                            VStack(spacing: 8) {
-                                ForEach(sequenceItems) { item in
-                                    SequentialItemRow(
-                                        index: sequenceItems.firstIndex(of: item) ?? 0,
-                                        item: item,
-                                        currentMemoryID: viewModel.editingMemoryID,
-                                        onDelete: {
-                                            if !item.isCurrent, let idx = sequenceItems.firstIndex(of: item) {
-                                                withAnimation { _ = sequenceItems.remove(at: idx) }
-                                                Task { await saveSequenceChanges() }
-                                            }
-                                        }
-                                    )
-                                    .onDrag {
-                                        if isEditable {
-                                            draggedItem = item
-                                            return NSItemProvider(item: item.id.uuidString as NSString, typeIdentifier: "com.icantmiss.sequentialitem")
-                                        } else {
-                                            return NSItemProvider()
-                                        }
-                                    }
-                                    .onDrop(of: ["com.icantmiss.sequentialitem"], delegate: SequentialDropDelegate(item: item, items: $sequenceItems, draggedItem: $draggedItem, onReorder: {
-                                        Task { await saveSequenceChanges() }
-                                    }))
-                                    .disabled(!isEditable)
+                        // Add Memory button
+                        if isEditable {
+                            Button {
+                                showingPicker = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus")
+                                        .font(.caption.bold())
+                                    Text("Add Memory")
+                                        .font(.caption.bold())
                                 }
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                                        .foregroundStyle(Color.secondary.opacity(0.4))
+                                )
                             }
-
-                            // Add Memory button
-                            if isEditable {
-                                Button {
-                                    showingPicker = true
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "plus")
-                                            .font(.caption.bold())
-                                        Text("Add Memory")
-                                            .font(.caption.bold())
-                                    }
-                                    .foregroundStyle(.secondary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                                            .foregroundStyle(Color.secondary.opacity(0.4))
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            Text("Drag to reorder")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                        } else {
-                            // Collapsed view - show sequence preview
-                            let sequenceID = config.sequenceID
-                            let sequenceMemories = memoryLookup.values.filter { memory in
-                                memory.triggers.contains { t in
-                                    t.type == .sequential && t.sequential?.sequenceID == sequenceID
-                                }
-                            }.sorted { lhs, rhs in
-                                let lhsIndex = lhs.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex ?? 0
-                                let rhsIndex = rhs.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex ?? 0
-                                return lhsIndex < rhsIndex
-                            }
-
-                            if !sequenceMemories.isEmpty {
-                                ForEach(Array(sequenceMemories.enumerated()), id: \.element.id) { index, memory in
-                                    HStack(spacing: 8) {
-                                        Text("\(index + 1)")
-                                            .font(.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundStyle(.secondary)
-                                            .frame(width: 20)
-
-                                        Text(memory.title.isEmpty ? "Untitled" : memory.title)
-                                            .font(.subheadline)
-                                            .lineLimit(1)
-                                            .foregroundStyle(.primary)
-
-                                        if memory.id == viewModel.editingMemoryID {
-                                            Text("(current)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-
-                                        Spacer()
-                                    }
-                                }
-                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -1214,16 +1146,14 @@ private struct SequentialTriggerInlineForm: View {
 }
 
 private struct SequentialItemRow: View {
-    let index: Int
     let item: SequentialItem
     let currentMemoryID: UUID?
     let onDelete: () -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Text("\(index + 1)")
+            Image(systemName: "line.3.horizontal")
                 .font(.caption)
-                .fontWeight(.bold)
                 .foregroundStyle(.secondary)
                 .frame(width: 20)
 
@@ -1246,9 +1176,9 @@ private struct SequentialItemRow: View {
                     withAnimation { onDelete() }
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-                        .contentShape(Rectangle())
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -1259,6 +1189,12 @@ private struct SequentialItemRow: View {
                 .fill(Color(.tertiarySystemBackground))
         )
     }
+}
+
+fileprivate struct SequentialItem: Identifiable, Equatable {
+    let id: UUID
+    let title: String
+    var isCurrent: Bool
 }
 
 private struct SequentialDropDelegate: DropDelegate {
@@ -1290,12 +1226,6 @@ private struct SequentialDropDelegate: DropDelegate {
             }
         }
     }
-}
-
-fileprivate struct SequentialItem: Identifiable, Equatable {
-    let id: UUID
-    let title: String
-    var isCurrent: Bool
 }
 
 fileprivate extension MemoryDraft {
