@@ -362,18 +362,17 @@ struct MemoryEditorView: View {
                     if isEditingEnabled {
                         // Checkmark button: Save and switch to View
                         Button {
+                            // Optimistic UI: Switch to View mode immediately
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            isTitleFocused = false
+                            focusedDraftID = nil
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
+                                isEditingEnabled = false
+                            }
+
+                            // Perform save in background
                             Task {
-                                let success = await viewModel.save()
-                                if success {
-                                    await MainActor.run {
-                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                        isTitleFocused = false
-                                        focusedDraftID = nil
-                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
-                                            isEditingEnabled = false
-                                        }
-                                    }
-                                }
+                                _ = await viewModel.save()
                             }
                         } label: {
                             Label("Save", systemImage: "checkmark")
