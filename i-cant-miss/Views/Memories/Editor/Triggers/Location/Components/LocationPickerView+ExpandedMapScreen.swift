@@ -45,8 +45,7 @@ extension LocationPickerView {
                             }
                         }
                         .padding(12)
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(10)
+                        .glassEffect()
                         .padding(.horizontal)
 
                         // Content switching based on search state
@@ -79,7 +78,7 @@ extension LocationPickerView {
                     .presentationCornerRadius(24)
                     .presentationBackgroundInteraction(.enabled(upThrough: .height(120)))
                     .interactiveDismissDisabled()
-                    .onChange(of: isSearchFocused) { focused in
+                    .onChange(of: isSearchFocused) { _, focused in
                         if focused {
                             presentationDetent = .large
                         } else if searchModel.query.isEmpty {
@@ -97,29 +96,28 @@ extension LocationPickerView {
                                     .tag(LocationEvent.onExit)
                             }
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 Text(event == .onEntry ? "Arriving" : "Leaving")
                                     .fontWeight(.semibold)
-                                Image(systemName: "chevron.down.circle.fill")
-                                    .resizable()
-                                    .frame(width: 16, height: 16)
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
                                     .foregroundStyle(.secondary)
                             }
                             .font(.subheadline)
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(Capsule())
+                            .padding(.horizontal)
+                            .padding(.vertical, 14)
+                            .glassEffect()
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Set Area", action: onConfirm)
                             .fontWeight(.semibold)
+                            .buttonStyle(.glassProminent)
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: onDismiss) {
-                            Image(systemName: "xmark.circle.fill")
+                            Image(systemName: "xmark")
                                 .font(.title2)
                                 .foregroundColor(.secondary)
                                 .symbolRenderingMode(.hierarchical)
