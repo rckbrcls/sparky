@@ -222,12 +222,30 @@ private struct ScheduledTriggerInlineForm: View {
 
                     Spacer()
 
-                    Picker("", selection: $timeOfDayType) {
+                    Menu {
                         ForEach(TimeOfDayType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
+                            Button {
+                                timeOfDayType = type
+                            } label: {
+                                if timeOfDayType == type {
+                                    Label(type.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(type.rawValue)
+                                }
+                            }
                         }
+                    } label: {
+                        Text(timeOfDayType.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color(uiColor: .tertiarySystemFill))
+                            )
                     }
-                    .labelsHidden()
+                    .tint(.primary)
                 }
                 .padding(.vertical, 10)
 
@@ -263,19 +281,35 @@ private struct ScheduledTriggerInlineForm: View {
 
                     Spacer()
 
-                    Picker("", selection: $repeatType) {
+                    Menu {
                         ForEach(RepeatType.allCases) { type in
-                            Text(type.rawValue).tag(type)
+                            Button {
+                                repeatType = type
+                                if type == .custom {
+                                    showCustomRepeatSheet = true
+                                }
+                            } label: {
+                                if repeatType == type {
+                                    Label(type.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(type.rawValue)
+                                }
+                            }
                         }
+                    } label: {
+                        Text(repeatType.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color(uiColor: .tertiarySystemFill))
+                            )
                     }
-                    .labelsHidden()
+                    .tint(.primary)
                 }
                 .padding(.vertical, 10)
-                .onChange(of: repeatType) { _, newValue in
-                    if newValue == .custom {
-                        showCustomRepeatSheet = true
-                    }
-                }
 
                 // Show custom repeat summary if custom is selected
                 if repeatType == .custom {
@@ -510,12 +544,38 @@ private struct LocationTriggerInlineForm: View {
                 }
 
                 // Event picker
-                Picker("Remind when", selection: $event) {
-                    ForEach(LocationEvent.allCases, id: \.self) { option in
-                        Text(option.displayName).tag(option)
+                HStack {
+                    Text("Remind")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Menu {
+                        ForEach(LocationEvent.allCases, id: \.self) { option in
+                            Button {
+                                event = option
+                            } label: {
+                                if event == option {
+                                    Label(option.displayName, systemImage: "checkmark")
+                                } else {
+                                    Text(option.displayName)
+                                }
+                            }
+                        }
+                    } label: {
+                        Text(event.displayName)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color(uiColor: .tertiarySystemFill))
+                            )
                     }
+                    .tint(.primary)
                 }
-                .pickerStyle(.segmented)
                 .onChange(of: event) { _, _ in
                     applyChanges()
                 }
