@@ -45,7 +45,9 @@ struct TriggersCard: View {
                 }
 
                 // Add trigger button (dashed border)
-                addTriggerButton
+                if !hasAnyTrigger {
+                    addTriggerButton
+                }
             }
         }
     }
@@ -120,6 +122,10 @@ struct TriggersCard: View {
 
     private var hasSequentialTrigger: Bool {
         return viewModel.sequentialTrigger?.sequential != nil
+    }
+
+    private var hasAnyTrigger: Bool {
+        hasScheduledTrigger || hasLocationTrigger || hasPersonTrigger || hasSequentialTrigger
     }
 
     // MARK: - Helper Functions
@@ -206,13 +212,9 @@ private struct ScheduledTriggerInlineForm: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            TriggerSectionHeader(
-                title: "Date & Time",
-                onDelete: onDelete
-            )
-
             VStack(spacing: 0) {
+
+
                 // Time of Day Row
                 HStack {
                     Text("Time")
@@ -320,6 +322,14 @@ private struct ScheduledTriggerInlineForm: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
+        .contextMenu {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete Trigger", systemImage: "trash")
+            }
+        }
+
         .onChange(of: fireDate) { _, _ in applyChanges() }
         .onChange(of: timeOfDayType) { _, _ in applyChanges() }
         .onChange(of: repeatType) { _, _ in applyChanges() }
@@ -490,17 +500,13 @@ private struct LocationTriggerInlineForm: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TriggerSectionHeader(
-                title: "Location",
-                onDelete: onDelete
-            )
-
             VStack(spacing: 12) {
                 // Map preview
                 LocationPickerView.MapSection(
                     onExpand: { isMapExpanded = true },
                     mapPreview: { mapPreviewContent }
                 )
+
 
                 // Location info
                 if let location = existingTrigger?.location {
@@ -561,6 +567,13 @@ private struct LocationTriggerInlineForm: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
+        .contextMenu {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete Trigger", systemImage: "trash")
+            }
+        }
         .fullScreenCover(isPresented: $isMapExpanded) {
             expandedMapView
         }
@@ -819,11 +832,6 @@ private struct PersonTriggerInlineForm: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            TriggerSectionHeader(
-                title: "Person",
-                onDelete: onDelete
-            )
-
             VStack(spacing: 12) {
                 HStack {
                     TextField("Name", text: $name)
@@ -838,6 +846,8 @@ private struct PersonTriggerInlineForm: View {
                     }
                     .buttonStyle(.borderless)
                     .accessibilityLabel("Pick from contacts")
+
+
                 }
 
                 if !contactIdentifier.isEmpty {
@@ -852,6 +862,13 @@ private struct PersonTriggerInlineForm: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
+        .contextMenu {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete Trigger", systemImage: "trash")
+            }
+        }
         .sheet(isPresented: $showContactPicker) {
             ContactPickerView { selectedName, identifier in
                 name = selectedName
@@ -932,11 +949,6 @@ private struct SequentialTriggerInlineForm: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TriggerSectionHeader(
-                title: "Sequence",
-                onDelete: onDelete
-            )
-
             VStack(spacing: 12) {
                 if let config = sequentialConfig {
                     VStack(alignment: .leading, spacing: 8) {
@@ -959,6 +971,8 @@ private struct SequentialTriggerInlineForm: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+
+
                         }
 
                         if isExpanded {
@@ -1058,6 +1072,13 @@ private struct SequentialTriggerInlineForm: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
+        .contextMenu {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete Trigger", systemImage: "trash")
+            }
+        }
         .sheet(isPresented: $showingPicker) {
             SequentialMemoryPickerSheet(
                 viewModel: viewModel,
@@ -1266,38 +1287,5 @@ fileprivate extension MemoryDraft {
             attachments: model.attachments,
             autoCompleteOnChecklistCompletion: model.autoCompleteOnChecklistCompletion
         )
-    }
-}
-
-
-// MARK: - Trigger Section Header
-
-private struct TriggerSectionHeader: View {
-    let title: String
-    let onDelete: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-
-            Spacer()
-
-            Button {
-                onDelete()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 24))
     }
 }
