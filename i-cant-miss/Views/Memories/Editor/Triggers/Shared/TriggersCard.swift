@@ -88,7 +88,7 @@ struct TriggersCard: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                 .foregroundStyle(Color.secondary.opacity(0.4))
             )
@@ -310,7 +310,7 @@ private struct ScheduledTriggerInlineForm: View {
             .disabled(!isEditable)
         }
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
         .contextMenu {
@@ -559,7 +559,7 @@ private struct LocationTriggerInlineForm: View {
             .padding(16)
         }
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
         .contextMenu {

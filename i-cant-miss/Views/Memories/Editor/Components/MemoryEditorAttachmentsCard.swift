@@ -96,7 +96,7 @@ struct MemoryEditorAttachmentsCard: View {
             ZStack {
                 // Background
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemBackground))
+                    .fill(Color("ElementBackground"))
 
                 // Content
                 switch attachment.kind {
@@ -151,7 +151,7 @@ struct MemoryEditorAttachmentsCard: View {
 
                 // Border
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.secondary.opacity(0.1), lineWidth: 1)
+                    .strokeBorder(Color("ElementBorder"), lineWidth: 1)
 
                 // Remove button overlay (top-right)
                 if isEditable {

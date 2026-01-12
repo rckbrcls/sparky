@@ -47,7 +47,7 @@ struct MeView: View {
     var body: some View {
         NavigationStack(path: $settingsNavigationPath) {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 12) {
                     // Greeting title with editable name
                     VStack(alignment: .leading, spacing: 8) {
                         if isEditing {
@@ -165,15 +165,7 @@ struct MeView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(Color(.secondarySystemBackground))
-                            .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                    )
+                    .cardStyle()
                 }
             }
         }
@@ -212,15 +204,7 @@ struct MeView: View {
             .foregroundStyle(.secondary)
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color(.secondarySystemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-        )
-         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-        )
+        .cardStyle()
     }
 
     private var completionRateSection: some View {
@@ -253,15 +237,7 @@ struct MeView: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color(.secondarySystemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-        )
+        .cardStyle()
     }
 
     private var quoteCard: some View {
@@ -282,14 +258,7 @@ struct MeView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.accentColor.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
-        )
+        .cardStyle()
     }
 
     private var meStats: [Stat] {

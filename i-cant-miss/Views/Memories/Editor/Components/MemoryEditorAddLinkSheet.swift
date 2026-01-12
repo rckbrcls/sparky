@@ -17,7 +17,7 @@ struct MemoryEditorAddLinkSheet: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .padding()
-                        .glassEffect(in: .rect(cornerRadius: 24.0))
+                        .glassEffect(in: .rect(cornerRadius: 12.0))
                         .onChange(of: urlString) { _, _ in
                             validationMessage = nil
                         }

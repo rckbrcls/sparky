@@ -15,14 +15,14 @@ struct LinkPreviewView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemBackground))
+                .fill(Color("ElementBackground"))
 
             content
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                .stroke(Color("ElementBorder"), lineWidth: 1)
         )
         .frame(maxWidth: .infinity)
         .frame(minHeight: 110)

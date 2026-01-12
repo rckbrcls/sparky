@@ -17,7 +17,7 @@ struct LinkPreviewCard: View {
         GeometryReader { proxy in
             ZStack {
                 // Background
-                Color(uiColor: .secondarySystemBackground)
+                Color("ElementBackground")
 
                 if let image = previewImage {
                     Image(uiImage: image)
@@ -131,7 +131,7 @@ struct FilePreviewCard: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                Color(uiColor: .secondarySystemBackground)
+                Color("ElementBackground")
 
                 if let thumbnail = thumbnail {
                     Image(uiImage: thumbnail)

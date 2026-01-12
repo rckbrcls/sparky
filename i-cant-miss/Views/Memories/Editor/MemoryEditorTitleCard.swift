@@ -70,7 +70,7 @@ struct MemoryEditorTitleCard: View {
         .padding(.horizontal)
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(uiColor: .secondarySystemGroupedBackground))
         )
     }

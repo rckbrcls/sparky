@@ -193,7 +193,7 @@ private extension OnboardingStep {
                     )
                 }
                 .padding(16)
-                .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .liquidGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
 
         case .triggers:
@@ -239,9 +239,9 @@ private extension OnboardingStep {
                     }
                 }
                 .padding(12)
-                .liquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .liquidGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
@@ -273,7 +273,7 @@ private extension OnboardingStep {
             }
             .padding(.horizontal, 4)
             .overlay(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [

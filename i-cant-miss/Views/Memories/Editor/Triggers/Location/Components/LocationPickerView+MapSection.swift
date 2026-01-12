@@ -12,9 +12,9 @@ extension LocationPickerView {
                     Color.black.opacity(0.001)
                 }
                 .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24)
+                    RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
                 )
             }

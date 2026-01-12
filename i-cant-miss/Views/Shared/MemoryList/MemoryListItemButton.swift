@@ -21,10 +21,10 @@ struct MemoryListItemButton: View {
         if isMultiSelecting {
             ZStack {
                 if !isSelected {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color.black.opacity(0.05))
                 }
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(isSelected ? Color.accent : Color.secondary.opacity(0.3), lineWidth: isSelected ? 3 : 1)
                     .animation(.easeInOut(duration: 0.2), value: isSelected)
             }

@@ -255,9 +255,9 @@ struct SpaceDetailView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.orange.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.orange.opacity(0.1), lineWidth: 1)
                     )
                 }
@@ -310,9 +310,9 @@ struct SpaceDetailView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.blue.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.blue.opacity(0.1), lineWidth: 1)
                     )
                 }
@@ -365,9 +365,9 @@ struct SpaceDetailView: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.green.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.green.opacity(0.1), lineWidth: 1)
                     )
                 }

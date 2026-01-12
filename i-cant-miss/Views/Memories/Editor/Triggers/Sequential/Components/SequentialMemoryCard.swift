@@ -47,7 +47,7 @@ struct SequentialMemoryCard: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color("ElementBackground"))
         )
         .contextMenu {
             Button(role: .destructive, action: onDelete) {

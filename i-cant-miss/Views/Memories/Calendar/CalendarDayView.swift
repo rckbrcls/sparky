@@ -92,9 +92,9 @@ struct CalendarDayView: View {
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
                                 .background(Color.cyan.opacity(0.20))
-                                .clipShape(RoundedRectangle(cornerRadius: 24))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 24)
+                                    RoundedRectangle(cornerRadius: 12)
                                         .stroke(Color.cyan.opacity(0.1), lineWidth: 1)
                                 )
                             }
@@ -154,9 +154,9 @@ struct CalendarDayView: View {
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 6)
                                     .background(period.color.opacity(0.20))
-                                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 24)
+                                        RoundedRectangle(cornerRadius: 12)
                                             .stroke(period.color.opacity(0.1), lineWidth: 1)
                                     )
                                 }

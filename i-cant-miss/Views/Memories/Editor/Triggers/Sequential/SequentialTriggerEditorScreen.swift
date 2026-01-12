@@ -65,7 +65,7 @@ struct SequentialTriggerEditorScreen: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                                         .foregroundStyle(Color.secondary.opacity(0.4))
                                 )
@@ -278,15 +278,7 @@ fileprivate struct SequentialItemView: View {
                 }
             }
             .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(.secondarySystemBackground))
-                    .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-            )
+            .cardStyle()
         }
     }
 }

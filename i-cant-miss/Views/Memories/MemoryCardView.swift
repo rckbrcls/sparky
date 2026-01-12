@@ -187,7 +187,7 @@ struct MemoryCardView: View {
                             .padding(.vertical, 4)
                             .padding(.horizontal, 10)
                             .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
                         if let scheduledDateText {
@@ -203,7 +203,7 @@ struct MemoryCardView: View {
                             .padding(.vertical, 4)
                             .padding(.horizontal, 10)
                             .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
                         if let checklistProgressText {
@@ -219,7 +219,7 @@ struct MemoryCardView: View {
                             .padding(.vertical, 4)
                             .padding(.horizontal, 10)
                             .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
                 }
