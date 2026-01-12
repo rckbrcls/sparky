@@ -65,10 +65,7 @@ struct MemoryEditorChecklistCard: View {
             }
         }
         .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        .cardStyle(cornerRadius: 24)
     }
 
     private func binding(for item: CheckItemDraft) -> Binding<CheckItemDraft> {

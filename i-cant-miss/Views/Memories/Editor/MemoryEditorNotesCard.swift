@@ -31,10 +31,7 @@ struct MemoryEditorNotesCard: View {
                     .allowsHitTesting(false)
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        .cardStyle(cornerRadius: 24)
 
     }
 }

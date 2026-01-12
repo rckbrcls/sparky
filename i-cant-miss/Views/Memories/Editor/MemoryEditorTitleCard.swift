@@ -69,10 +69,7 @@ struct MemoryEditorTitleCard: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        .cardStyle(cornerRadius: 24)
     }
 
     private var selectedSpaceColor: Color {

@@ -7,9 +7,6 @@ struct MemoryEditorContentCard<Content: View>: View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-            )
+            .cardStyle(cornerRadius: 24)
     }
 }

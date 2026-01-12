@@ -309,10 +309,7 @@ private struct ScheduledTriggerInlineForm: View {
             .padding(.vertical, 6)
             .disabled(!isEditable)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        .cardStyle(cornerRadius: 24)
         .contextMenu {
             if isEditable {
                 Button(role: .destructive) {
@@ -558,10 +555,7 @@ private struct LocationTriggerInlineForm: View {
             }
             .padding(16)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        .cardStyle(cornerRadius: 24)
         .contextMenu {
             if isEditable {
                 Button(role: .destructive) {
@@ -874,10 +868,7 @@ private struct SequentialTriggerInlineForm: View {
             }
             .padding(16)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
-        )
+        .cardStyle(cornerRadius: 24)
         .contextMenu {
             if isEditable {
                 Button(role: .destructive) {
