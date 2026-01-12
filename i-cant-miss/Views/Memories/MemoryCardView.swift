@@ -246,16 +246,7 @@ struct MemoryCardView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color(.secondarySystemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-        )
-        .contentShape(Rectangle())
+        .cardStyle()
         .contextMenu {
             if isContextMenuEnabled {
                 if let onTogglePin = onTogglePin {
