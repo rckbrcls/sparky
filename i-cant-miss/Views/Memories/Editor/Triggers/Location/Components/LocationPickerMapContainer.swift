@@ -18,8 +18,16 @@ struct MapContainer: View {
                 MapCircle(center: coordinate, radius: defaultRadius)
                     .foregroundStyle(Color.accentColor.opacity(0.18))
                 if !allowsSelection {
-                    Marker(resolvedLocationName, coordinate: coordinate)
-                        .tint(Color.accentColor)
+                    Annotation(resolvedLocationName, coordinate: coordinate) {
+                        Circle()
+                            .fill(Color.accentColor)
+                            .frame(width: 10, height: 10)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white, lineWidth: 2)
+                            )
+                            .shadow(radius: 2)
+                    }
                 }
             }
         }

@@ -115,7 +115,6 @@ private extension LocationPickerView {
             searchModel: searchModel,
             event: $event,
             mapContent: { mapView(allowsSelection: true) },
-            centerIndicator: { mapCenterIndicator },
             onSuggestionSelected: handleSuggestionTap(_:),
             onConfirm: confirmSelection,
             onDismiss: { isMapExpanded = false }
@@ -131,28 +130,7 @@ private extension LocationPickerView {
 
 
 
-    var mapCenterIndicator: some View {
-        VStack {
-            Spacer()
-            VStack(spacing: 4) {
-                Image(systemName: geocodingModel.isResolving ? "mappin.circle" : "mappin.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(Color.accentColor)
-                    .shadow(color: Color.black.opacity(0.25), radius: 8, y: 6)
-                Circle()
-                    .fill(Color.accentColor.opacity(0.25))
-                    .frame(width: 18, height: 18)
-                    .overlay(
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 6, height: 6)
-                    )
-            }
-            .offset(y: -28)
-            Spacer()
-        }
-        .allowsHitTesting(false)
-    }
+
 
     func mapView(allowsSelection: Bool) -> some View {
         MapContainer(

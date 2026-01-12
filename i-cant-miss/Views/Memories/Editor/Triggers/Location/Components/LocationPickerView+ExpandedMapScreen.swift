@@ -2,12 +2,10 @@ import SwiftUI
 import MapKit
 
 extension LocationPickerView {
-    struct ExpandedMapScreen<MapContent: View,
-                             CenterIndicator: View>: View {
+    struct ExpandedMapScreen<MapContent: View>: View {
         @ObservedObject var searchModel: LocationSearchViewModel
         @Binding var event: LocationEvent
         let mapContent: () -> MapContent
-        let centerIndicator: () -> CenterIndicator
         let onSuggestionSelected: (MKLocalSearchCompletion) -> Void
         let onConfirm: () -> Void
         let onDismiss: () -> Void
@@ -23,7 +21,15 @@ extension LocationPickerView {
                     mapContent()
                         .ignoresSafeArea()
 
-                    centerIndicator()
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 10, height: 10)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white, lineWidth: 2)
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 2)
+                        .allowsHitTesting(false)
                 }
                 .sheet(isPresented: .constant(true)) {
                     VStack(spacing: 20) {

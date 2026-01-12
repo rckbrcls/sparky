@@ -605,7 +605,6 @@ private struct LocationTriggerInlineForm: View {
             searchModel: searchModel,
             event: $event,
             mapContent: { mapView(allowsSelection: true) },
-            centerIndicator: { mapCenterIndicator },
             onSuggestionSelected: { suggestion in
                  Task { await selectSuggestion(suggestion) }
             },
