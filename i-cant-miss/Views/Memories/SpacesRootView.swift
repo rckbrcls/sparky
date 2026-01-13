@@ -24,13 +24,18 @@ struct SpacesRootView: View {
             List {
                 Text("Spaces")
                     .appLargeTitleStyle()
-                    .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
 
                 Section {
                     ForEach(displaySpaces) { space in
-                        NavigationLink(value: space) {
+                        ZStack {
+                            NavigationLink(value: space) {
+                                EmptyView()
+                            }
+                            .opacity(0)
+
                             SpaceRowView(
                                 space: space,
                                 count: memoryCount(for: space),
@@ -41,10 +46,16 @@ struct SpacesRootView: View {
                         }
                         .accessibilityHint("Opens details for \(space.name)")
                         .moveDisabled(space.isAllSpaces)
+                        .listRowInsets(.init(top: 4, leading: 20, bottom: 4, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                     .onMove(perform: moveSpaces)
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .scrollIndicators(.hidden)
             .listSectionSpacing(.compact)
             .contentMargins(.top, 0, for: .scrollContent)
             .environment(\.defaultMinListRowHeight, 0)

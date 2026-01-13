@@ -39,8 +39,8 @@ struct SpaceRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+                .font(.headline)
+                .foregroundStyle(.primary)
             }
 
             Spacer()
@@ -48,8 +48,14 @@ struct SpaceRowView: View {
             Text("\(count)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .cardStyle()
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             if canDeleteSpace {
                 Button {

@@ -68,43 +68,75 @@ private extension SettingsView {
         List {
             Text("Settings")
                 .appLargeTitleStyle()
-                .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
             Section {
-                NavigationLink(value: Route.reminders) {
+                ZStack {
+                    NavigationLink(value: Route.reminders) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+
                     SettingsRow(
                         iconName: "checklist",
                         title: "Reminders"
                     )
                 }
+                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
 
-                NavigationLink(value: Route.appIcon) {
+                ZStack {
+                    NavigationLink(value: Route.appIcon) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+
                     SettingsRow(
                         iconName: "square.dashed", // Placeholder, maybe use the current icon?
                         title: "App Icon"
                     )
                 }
+                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
 
-                NavigationLink(value: Route.notifications) {
+                ZStack {
+                    NavigationLink(value: Route.notifications) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+
                     SettingsRow(
                         iconName: "bell.badge",
                         title: "Notifications"
                     )
                 }
+                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
 
-                NavigationLink(value: Route.location) {
+                ZStack {
+                    NavigationLink(value: Route.location) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+
                     SettingsRow(
                         iconName: "location.circle",
                         title: "Location & Geofencing"
                     )
                 }
+                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         }
         .listSectionSpacing(.compact)
         .contentMargins(.top, 0, for: .scrollContent)
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height:  70)
         }
@@ -299,8 +331,14 @@ private struct SettingsRow: View {
                 .foregroundStyle(.primary)
 
             Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .cardStyle()
     }
 }
 

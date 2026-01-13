@@ -19,10 +19,17 @@ struct TriggerFilterSheetView: View {
                                 .font(.title2)
                                 .foregroundStyle(isTriggerTypeSelected(triggerType) ? .accent : .secondary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .cardStyle()
                     }
                     .buttonStyle(.plain)
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
+            .listStyle(.plain)
             .scrollIndicators(.hidden)
             .navigationTitle("Filter Triggers")
             .navigationBarTitleDisplayMode(.inline)
@@ -76,3 +83,4 @@ struct TriggerFilterSheetView: View {
         }
     }
 }
+// End of file

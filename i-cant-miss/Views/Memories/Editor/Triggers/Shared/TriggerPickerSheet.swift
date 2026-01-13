@@ -38,7 +38,7 @@ struct TriggerPickerSheet: View {
 
 
             }
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
             .navigationTitle("Add Trigger")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -92,8 +92,13 @@ struct TriggerPickerSheet: View {
                     .font(.caption.weight(.semibold))
                     .foregroundColor(isActive ? .accentColor : .primary)
             }
-            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .cardStyle()
         }
+        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private var isDateAndTimeActive: Bool {

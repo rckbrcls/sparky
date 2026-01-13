@@ -73,8 +73,13 @@ struct SequentialMemoryPickerSheet: View {
                         Text("\(memoryCount(for: space))")
                             .foregroundStyle(.secondary)
                     }
-                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .cardStyle()
                 }
+                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         } header: {
             Text("Spaces")
@@ -96,6 +101,9 @@ struct SequentialMemoryPickerSheet: View {
                         SequentialMemoryPickerRow(memory: memory)
                     }
                     .buttonStyle(.plain)
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
         } header: {
@@ -186,6 +194,9 @@ private struct SequentialSpaceDetailView: View {
                         SequentialMemoryPickerRow(memory: memory)
                     }
                     .buttonStyle(.plain)
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
         }
@@ -227,6 +238,8 @@ private struct SequentialMemoryPickerRow: View {
                     .font(.caption)
             }
         }
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .cardStyle()
     }
 }

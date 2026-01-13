@@ -595,7 +595,7 @@ private struct LocationTriggerInlineForm: View {
     }
 
     private var expandedMapView: some View {
-        LocationPickerView.ExpandedMapScreen(
+        ExpandedMapScreen(
             searchModel: searchModel,
             event: $event,
             mapContent: { mapView(allowsSelection: true) },
