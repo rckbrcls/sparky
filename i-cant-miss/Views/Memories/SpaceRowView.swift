@@ -37,7 +37,7 @@ struct SpaceRowView: View {
 
             Image(systemName: space.iconName ?? "square.grid.2x2")
                 .foregroundStyle(spaceColor)
-                .frame(width: 36, height: 36)
+                .frame(width: 32, height: 32)
                 .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
 
             VStack(alignment: .leading, spacing: 2) {
