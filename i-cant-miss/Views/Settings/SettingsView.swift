@@ -84,7 +84,7 @@ private extension SettingsView {
                         title: "Reminders"
                     )
                 }
-                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
@@ -99,7 +99,7 @@ private extension SettingsView {
                         title: "App Icon"
                     )
                 }
-                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
@@ -114,7 +114,7 @@ private extension SettingsView {
                         title: "Notifications"
                     )
                 }
-                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
@@ -129,7 +129,7 @@ private extension SettingsView {
                         title: "Location & Geofencing"
                     )
                 }
-                .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }

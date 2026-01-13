@@ -46,7 +46,7 @@ struct SpacesRootView: View {
                         }
                         .accessibilityHint("Opens details for \(space.name)")
                         .moveDisabled(space.isAllSpaces)
-                        .listRowInsets(.init(top: 4, leading: 20, bottom: 4, trailing: 20))
+                        .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                     }
