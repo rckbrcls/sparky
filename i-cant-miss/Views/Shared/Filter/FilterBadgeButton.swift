@@ -28,7 +28,7 @@ struct FilterBadgeButton<Content: View>: View {
             }
             .padding(.horizontal)
             .frame(height: 32)
-            .contentShape(Rectangle())
+            .contentShape(Capsule())
             .applySolidStyle(isToggle: isToggle, isActive: isActive)
         }
         .buttonStyle(.plain)
@@ -40,14 +40,15 @@ private extension View {
     @ViewBuilder
     func applySolidStyle(isToggle: Bool, isActive: Bool) -> some View {
         let isSelected = isToggle && isActive
-        self
+        return self
             .background(
                 Capsule()
                     .fill(isSelected ? Color(uiColor: .systemGray6) : Color.clear)
+                    .shadow(color: isSelected ? .black.opacity(0.05) : .clear, radius: 6, x: 0, y: 3)
             )
             .overlay(
                 Capsule()
-                    .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
+                    .stroke(Color("ElementBorder"), lineWidth: 2)
             )
     }
 }
