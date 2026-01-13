@@ -377,7 +377,7 @@ struct MemoryEditorView: View {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         isTitleFocused = false
                             focusedDraftID = nil
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 isEditingEnabled = false
                             }
 
@@ -392,7 +392,7 @@ struct MemoryEditorView: View {
                     } else {
                         // Pencil button: Switch to Edit
                         Button {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 isEditingEnabled = true
                             }
                         } label: {

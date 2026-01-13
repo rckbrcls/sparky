@@ -47,7 +47,7 @@ struct MeView: View {
     var body: some View {
         NavigationStack(path: $settingsNavigationPath) {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     // Greeting title with editable name
                     VStack(alignment: .leading, spacing: 8) {
                         if isEditing {
@@ -150,7 +150,7 @@ struct MeView: View {
 
     private var statsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 ForEach(meStats) { stat in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .firstTextBaseline, spacing: 4) {

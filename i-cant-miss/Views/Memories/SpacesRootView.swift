@@ -19,47 +19,42 @@ struct SpacesRootView: View {
     let onSpaceContextChange: (SpaceModel?) -> Void
     let onSearchActiveChange: (Bool) -> Void
 
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            List {
-                Text("Spaces")
-                    .appLargeTitleStyle()
-                    .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Spaces")
+                        .appLargeTitleStyle()
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
 
-                Section {
-                    ForEach(displaySpaces) { space in
-                        ZStack {
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(displaySpaces) { space in
                             NavigationLink(value: space) {
-                                EmptyView()
+                                SpaceGridItemView(
+                                    space: space,
+                                    count: memoryCounts(for: space).total,
+                                    completedCount: memoryCounts(for: space).completed,
+                                    spaceService: spaceService,
+                                    memoryService: memoryService,
+                                    onEdit: onEditSpace
+                                )
                             }
-                            .opacity(0)
-
-                            SpaceRowView(
-                                space: space,
-                                count: memoryCounts(for: space).total,
-                                completedCount: memoryCounts(for: space).completed,
-                                spaceService: spaceService,
-                                memoryService: memoryService,
-                                onEdit: onEditSpace
-                            )
+                            .buttonStyle(PlainButtonStyle())
+                            .accessibilityHint("Opens details for \(space.name)")
                         }
-                        .accessibilityHint("Opens details for \(space.name)")
-                        .moveDisabled(space.isAllSpaces)
-                        .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
                     }
-                    .onMove(perform: moveSpaces)
+                    .padding(.horizontal, 20)
                 }
             }
-            .listStyle(.plain)
+            .toolbarTitleDisplayMode(.inline)
             .scrollContentBackground(.hidden)
             .scrollIndicators(.hidden)
-            .listSectionSpacing(.compact)
-            .contentMargins(.top, 0, for: .scrollContent)
-            .environment(\.defaultMinListRowHeight, 0)
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height:  70)
             }
@@ -73,7 +68,6 @@ struct SpacesRootView: View {
                     .accessibilityLabel("Create Space")
                 }
             }
-            .toolbarTitleDisplayMode(.inline)
             .navigationDestination(for: SpaceModel.self) { space in
                 SpaceDetailView(
                     space: space,
@@ -116,28 +110,6 @@ struct SpacesRootView: View {
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
         return [SpaceModel.allSpaces] + sortedSpaces
-    }
-
-    private func moveSpaces(from source: IndexSet, to destination: Int) {
-        // Prevent moving to position 0 (All space must stay first)
-        guard destination > 0 else { return }
-
-        // Prevent moving the All space (index 0)
-        if source.contains(0) { return }
-
-        // Create mutable copy of display spaces
-        var reorderedSpaces = displaySpaces
-        reorderedSpaces.move(fromOffsets: source, toOffset: destination)
-
-        // Extract only the user-created spaces (exclude All space) and get their IDs
-        let orderedIDs = reorderedSpaces
-            .filter { !$0.isAllSpaces }
-            .map { $0.id }
-
-        // Persist the new order
-        Task {
-            try? await spaceService.reorderSpaces(orderedIDs)
-        }
     }
 
     private func memoryCounts(for space: SpaceModel) -> (completed: Int, total: Int) {
