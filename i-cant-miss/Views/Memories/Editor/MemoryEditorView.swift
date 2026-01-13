@@ -52,6 +52,7 @@ struct MemoryEditorView: View {
     @State private var showDeleteConfirmation = false
     @Namespace private var toolbarGlassNamespace
     @ObservedObject private var spaceService: SpaceService
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
 
     private let mode: Mode
@@ -360,11 +361,21 @@ struct MemoryEditorView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if case .edit = mode {
                     if isEditingEnabled {
-                        // Checkmark button: Save and switch to View
-                        Button {
-                            // Optimistic UI: Switch to View mode immediately
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            isTitleFocused = false
+                    Button {
+                        feedbackGenerator.impactOccurred()
+                        viewModel.isPinned.toggle()
+                    } label: {
+                        Label(viewModel.isPinned ? "Unpin" : "Pin",
+                              systemImage: viewModel.isPinned ? "pin.fill" : "pin")
+                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
+                    }
+                    .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
+
+                    // Checkmark button: Save and switch to View
+                    Button {
+                        // Optimistic UI: Switch to View mode immediately
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        isTitleFocused = false
                             focusedDraftID = nil
                             withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
                                 isEditingEnabled = false
@@ -395,25 +406,17 @@ struct MemoryEditorView: View {
 
             if case .edit = mode, isEditingEnabled {
                 ToolbarItemGroup(placement: .bottomBar) {
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Image(systemName: "trash")
-                            .foregroundStyle(.red)
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
                     }
 
                     Spacer()
 
                     Button {
-                        viewModel.isPinned.toggle()
-                    } label: {
-                        Label(viewModel.isPinned ? "Unpin" : "Pin",
-                              systemImage: viewModel.isPinned ? "pin.fill" : "pin")
-                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
-                    }
-                    .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
-
-                    Button {
+                        feedbackGenerator.impactOccurred()
                         viewModel.status = viewModel.status == .active ? .completed : .active
                     } label: {
                         Label(viewModel.status.rawValue.capitalized, systemImage: viewModel.status == .active ? "circle" : "checkmark.circle.fill")

@@ -79,8 +79,8 @@ struct MemoryEditorAttachmentsCard: View {
                         .font(.caption2.weight(.medium))
                         .padding(.horizontal, 8)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .cardStyle(cornerRadius: 16)
+                .frame(maxHeight: .infinity)
+                .neutralButtonStyle(cornerRadius: 16, verticalPadding: 0)
             }
         }
         .foregroundStyle(.secondary)

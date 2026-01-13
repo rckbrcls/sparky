@@ -14,4 +14,12 @@ extension View {
             )
             .contentShape(Rectangle())
     }
+
+    func neutralButtonStyle(cornerRadius: CGFloat = 24, verticalPadding: CGFloat = 12) -> some View {
+        self
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, verticalPadding)
+            .cardStyle(cornerRadius: cornerRadius)
+    }
 }

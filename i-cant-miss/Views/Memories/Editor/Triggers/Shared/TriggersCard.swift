@@ -84,15 +84,7 @@ struct TriggersCard: View {
                 Text("Add Trigger")
                 .font(.caption.bold())
             }
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                .foregroundStyle(Color.secondary.opacity(0.4))
-            )
-            .contentShape(Rectangle())
+            .neutralButtonStyle()
         }
         .foregroundStyle(.primary)
         .accessibilityLabel("Add trigger")

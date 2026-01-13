@@ -12,10 +12,7 @@ struct AddSynapseButton: View {
                 Text("Add Synapse")
                     .font(.caption.bold())
             }
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .cardStyle()
+            .neutralButtonStyle()
         }
         .buttonStyle(.plain)
 
