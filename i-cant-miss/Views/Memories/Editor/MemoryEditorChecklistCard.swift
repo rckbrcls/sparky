@@ -43,7 +43,9 @@ struct MemoryEditorChecklistCard: View {
                     .onDrop(of: ["com.icantmiss.synapse"], delegate: SynapseDropDelegate(destinationItem: item, viewModel: viewModel, draggedItem: $draggedSynapse))
 
                     if item.id != viewModel.checkItems.last?.id {
-                         Divider()
+                         Rectangle()
+                             .fill(Color("ElementBorder"))
+                             .frame(height: 2)
                              .padding(.leading, 16)
                     }
                 }

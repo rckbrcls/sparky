@@ -15,12 +15,7 @@ struct AddSynapseButton: View {
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                    .foregroundStyle(Color.secondary.opacity(0.4))
-            )
-            .contentShape(Rectangle())
+            .cardStyle()
         }
         .buttonStyle(.plain)
 

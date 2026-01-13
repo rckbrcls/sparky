@@ -72,19 +72,15 @@ struct MemoryEditorAttachmentsCard: View {
             }
         } label: {
             squareCell { _ in
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        .foregroundStyle(Color.secondary.opacity(0.4))
-
-                    VStack(spacing: 8) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 24, weight: .semibold))
-                        Text("Add Media")
-                            .font(.caption2.weight(.medium))
-                            .padding(.horizontal, 8)
-                    }
+                VStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                    Text("Add Media")
+                        .font(.caption2.weight(.medium))
+                        .padding(.horizontal, 8)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .cardStyle(cornerRadius: 16)
             }
         }
         .foregroundStyle(.secondary)
