@@ -53,10 +53,7 @@ struct MemoryEditorChecklistCard: View {
             }
 
             if isEditingEnabled {
-                if !viewModel.checkItems.isEmpty {
-                     Divider()
-                         .padding(.leading, 16)
-                }
+
                 AddSynapseButton {
                      viewModel.addChecklistItem(title: "", detail: "")
                 }
