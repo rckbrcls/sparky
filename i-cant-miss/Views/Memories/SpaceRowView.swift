@@ -10,6 +10,7 @@ import SwiftUI
 struct SpaceRowView: View {
     let space: SpaceModel
     let count: Int
+    let completedCount: Int
     let spaceService: SpaceService?
     let memoryService: MemoryService?
 
@@ -18,12 +19,14 @@ struct SpaceRowView: View {
     init(
         space: SpaceModel,
         count: Int,
+        completedCount: Int = 0,
         spaceService: SpaceService? = nil,
         memoryService: MemoryService? = nil,
         onEdit: ((SpaceModel) -> Void)? = nil
     ) {
         self.space = space
         self.count = count
+        self.completedCount = completedCount
         self.spaceService = spaceService
         self.memoryService = memoryService
         self.onEdit = onEdit
@@ -45,7 +48,7 @@ struct SpaceRowView: View {
 
             Spacer()
 
-            Text("\(count)")
+            Text("\(completedCount) / \(count)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 

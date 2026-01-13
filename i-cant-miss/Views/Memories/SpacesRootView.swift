@@ -38,7 +38,8 @@ struct SpacesRootView: View {
 
                             SpaceRowView(
                                 space: space,
-                                count: memoryCount(for: space),
+                                count: memoryCounts(for: space).total,
+                                completedCount: memoryCounts(for: space).completed,
                                 spaceService: spaceService,
                                 memoryService: memoryService,
                                 onEdit: onEditSpace
@@ -139,14 +140,20 @@ struct SpacesRootView: View {
         }
     }
 
-    private func memoryCount(for space: SpaceModel) -> Int {
+    private func memoryCounts(for space: SpaceModel) -> (completed: Int, total: Int) {
+        let memories: [MemoryModel]
         if space.isAllSpaces {
-            return memoryService.memories.count
+            memories = memoryService.memories
+        } else {
+            memories = memoryService.memories.filter { memory in
+                guard let spaceID = memory.space?.id else { return false }
+                return spaceID == space.id
+            }
         }
-        return memoryService.memories.filter { memory in
-            guard let spaceID = memory.space?.id else { return false }
-            return spaceID == space.id
-        }.count
+
+        let total = memories.count
+        let completed = memories.filter { $0.isCompleted }.count
+        return (completed, total)
     }
 
     private func refresh() async {
