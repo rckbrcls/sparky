@@ -60,12 +60,22 @@ struct MindDetailView: View {
         resolvedMind.isAllMinds
     }
 
+    private var isInboxMinds: Bool {
+        resolvedMind.isInboxMinds
+    }
+
     private var spacesInMind: [SpaceModel] {
         let filteredSpaces: [SpaceModel]
         if isAllMinds {
             let defaultSpaces = [SpaceModel.allSpaces, SpaceModel.inboxSpaces]
             filteredSpaces = spaceService.spaces
             return defaultSpaces + filteredSpaces
+        } else if isInboxMinds {
+            filteredSpaces = spaceService.spaces.filter { space in
+                // Inclui spaces sem mind ou com mind "All Minds"
+                space.mind == nil || space.mind?.id == MindModel.allMindsIdentifier
+            }
+            return filteredSpaces
         } else {
             filteredSpaces = spaceService.spaces.filter { space in
                 guard let mindID = space.mind?.id else { return false }

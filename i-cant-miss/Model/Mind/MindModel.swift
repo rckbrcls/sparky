@@ -32,6 +32,7 @@ struct MindModel: Identifiable, Hashable {
 
 extension MindModel {
     static let allMindsIdentifier = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
+    static let inboxMindsIdentifier = UUID(uuidString: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")!
 
     static var allMinds: MindModel {
         MindModel(
@@ -44,7 +45,22 @@ extension MindModel {
         )
     }
 
+    static var inboxMinds: MindModel {
+        MindModel(
+            id: inboxMindsIdentifier,
+            name: "Inbox",
+            colorHex: nil,
+            iconName: "tray.fill",
+            sortOrder: Int.min + 1,
+            isDefault: false
+        )
+    }
+
     var isAllMinds: Bool {
         id == MindModel.allMindsIdentifier
+    }
+
+    var isInboxMinds: Bool {
+        id == MindModel.inboxMindsIdentifier
     }
 }

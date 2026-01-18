@@ -97,19 +97,24 @@ struct MindRootView: View {
 
     private var displayMinds: [MindModel] {
         let sortedMinds = mindService.minds
-            .filter { !$0.isDefault } // Filter out the default "All Minds" since we have the virtual "All"
+            .filter { !$0.isDefault && !$0.isAllMinds } // Filter out the default "All Minds" and virtual "All Minds"
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [MindModel.allMinds] + sortedMinds
+        return [MindModel.allMinds, MindModel.inboxMinds] + sortedMinds
     }
 
     private func spaceCounts(for mind: MindModel) -> Int {
         if mind.isAllMinds {
             return spaceService.spaces.count
+        } else if mind.isInboxMinds {
+            return spaceService.spaces.filter { space in
+                // Inclui spaces sem mind ou com mind "All Minds"
+                space.mind == nil || space.mind?.id == MindModel.allMindsIdentifier
+            }.count
         } else {
             return spaceService.spaces.filter { space in
                 guard let mindID = space.mind?.id else { return false }
