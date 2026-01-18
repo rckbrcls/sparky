@@ -35,6 +35,7 @@ struct SpaceModel: Identifiable, Hashable {
 
 extension SpaceModel {
     static let allSpacesIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+    static let inboxSpacesIdentifier = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
 
     static var allSpaces: SpaceModel {
         SpaceModel(
@@ -47,7 +48,22 @@ extension SpaceModel {
         )
     }
 
+    static var inboxSpaces: SpaceModel {
+        SpaceModel(
+            id: inboxSpacesIdentifier,
+            name: "Inbox",
+            colorHex: nil,
+            iconName: "tray.fill",
+            sortOrder: Int.min + 1,
+            isDefault: false
+        )
+    }
+
     var isAllSpaces: Bool {
         id == SpaceModel.allSpacesIdentifier
+    }
+
+    var isInboxSpaces: Bool {
+        id == SpaceModel.inboxSpacesIdentifier
     }
 }

@@ -45,6 +45,7 @@ struct ContentView: View {
     @State private var isMultiSelectionActive = false
     @State private var isSearchActive = false
     @State private var currentSpaceContext: SpaceModel?
+    @State private var currentMindContext: MindModel?
     @State private var quickMemoryRequest: QuickMemoryRequest?
 
     init(environment: AppEnvironment) {
@@ -82,6 +83,9 @@ struct ContentView: View {
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onSpaceContextChange: { space in
                             currentSpaceContext = space
+                        },
+                        onMindContextChange: { mind in
+                            currentMindContext = mind
                         },
                         onSearchActiveChange: handleSearchActiveChange
                     )
@@ -205,6 +209,7 @@ struct ContentView: View {
             // Clear context when switching away from mind tab
             if newTab != .mind {
                 currentSpaceContext = nil
+                currentMindContext = nil
             }
         }
     }
@@ -286,7 +291,18 @@ struct ContentView: View {
         case .calendar:
             calendarNavigationPath = NavigationPath()
         case .mind:
-            spacesNavigationPath = NavigationPath()
+            // Se estiver em SpaceDetailView (tem currentSpaceContext), fazer pop até MindDetailView
+            // Se estiver em MindDetailView (tem currentMindContext mas não currentSpaceContext), limpar e ir para MindRootView
+            // Se já estiver em MindRootView (não tem currentMindContext), não fazer nada
+            if currentSpaceContext != nil {
+                // Está em SpaceDetailView, fazer pop até MindDetailView
+                spacesNavigationPath.removeLast()
+            } else if currentMindContext != nil {
+                // Está em MindDetailView, limpar e ir para MindRootView
+                spacesNavigationPath = NavigationPath()
+                currentMindContext = nil
+            }
+            // Se não tem currentMindContext, já está em MindRootView, não faz nada
         case .me:
             meNavigationPath = NavigationPath()
         }

@@ -267,7 +267,9 @@ struct MemoryCardView: View {
                             Label("No Space", systemImage: "tray")
                         }
 
-                        ForEach(environment.spaceService.spaces.filter { $0.id != SpaceModel.allSpacesIdentifier }, id: \.id) { space in
+                        ForEach(environment.spaceService.spaces.filter { 
+                            $0.id != SpaceModel.allSpacesIdentifier && $0.id != SpaceModel.inboxSpacesIdentifier 
+                        }, id: \.id) { space in
                             Button {
                                 onMoveToSpace(space.id)
                             } label: {

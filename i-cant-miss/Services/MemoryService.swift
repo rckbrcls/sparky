@@ -406,6 +406,7 @@ final class MemoryService: ObservableObject {
         try await mutateMemory(memoryID: id) { memory in
             if let space,
                space.id != SpaceModel.allSpacesIdentifier,
+               space.id != SpaceModel.inboxSpacesIdentifier,
                let spaceEntity = try self.fetchSpace(by: space.id, context: memory.managedObjectContext ?? self.persistence.container.viewContext) {
                 memory.space = spaceEntity
             } else {
@@ -591,6 +592,7 @@ private extension MemoryService {
 
         if let spaceID = draft.spaceID,
            spaceID != SpaceModel.allSpacesIdentifier,
+           spaceID != SpaceModel.inboxSpacesIdentifier,
            let space = try fetchSpace(by: spaceID, context: context) {
             entity.space = space
         } else {

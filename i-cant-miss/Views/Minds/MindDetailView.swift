@@ -18,6 +18,7 @@ struct MindDetailView: View {
     let onEditMind: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
+    let onMindContextChange: ((MindModel?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
 
     @State private var isSearching = false
@@ -31,6 +32,7 @@ struct MindDetailView: View {
         onEditMind: ((MindModel) -> Void)?,
         onMultiSelectionChange: @escaping (Bool) -> Void,
         onSpaceContextChange: @escaping (SpaceModel?) -> Void,
+        onMindContextChange: ((MindModel?) -> Void)?,
         onSearchActiveChange: @escaping (Bool) -> Void
     ) {
         self.mind = mind
@@ -41,6 +43,7 @@ struct MindDetailView: View {
         self.onEditMind = onEditMind
         self.onMultiSelectionChange = onMultiSelectionChange
         self.onSpaceContextChange = onSpaceContextChange
+        self.onMindContextChange = onMindContextChange
         self.onSearchActiveChange = onSearchActiveChange
     }
 
@@ -58,13 +61,17 @@ struct MindDetailView: View {
     }
 
     private var spacesInMind: [SpaceModel] {
+        let filteredSpaces: [SpaceModel]
         if isAllMinds {
-            return spaceService.spaces
+            let defaultSpaces = [SpaceModel.allSpaces, SpaceModel.inboxSpaces]
+            filteredSpaces = spaceService.spaces
+            return defaultSpaces + filteredSpaces
         } else {
-            return spaceService.spaces.filter { space in
+            filteredSpaces = spaceService.spaces.filter { space in
                 guard let mindID = space.mind?.id else { return false }
                 return mindID == mind.id
             }
+            return filteredSpaces
         }
     }
 
@@ -80,6 +87,11 @@ struct MindDetailView: View {
             }
             .onAppear {
                 onMultiSelectionChange(false)
+                onMindContextChange?(resolvedMind)
+            }
+            .onDisappear {
+                // Limpar mind context quando sair do MindDetailView
+                onMindContextChange?(nil)
             }
             .onChange(of: isSearching) { _, newValue in
                 onSearchActiveChange(newValue)
@@ -112,7 +124,8 @@ struct MindDetailView: View {
                                     spaceService: spaceService,
                                     memoryService: memoryService,
                                     mindService: mindService,
-                                    onEdit: nil
+                                    onEdit: nil,
+                                    showOnlyRemaining: true
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -123,13 +136,21 @@ struct MindDetailView: View {
                 }
             }
         }
-        .toolbarTitleDisplayMode(.inline)
+
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 70)
         }
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+            }
+            
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
                     Button {
@@ -164,16 +185,21 @@ struct MindDetailView: View {
             .onAppear {
                 onSpaceContextChange(space)
             }
+            .onDisappear {
+                // Quando sair do SpaceDetailView, manter o mind context
+            }
         }
         .navigationBarBackButtonHidden(true)
-        .navigationTitle(resolvedMind.name)
-        .navigationBarTitleDisplayMode(.large)
     }
 
     private func memoryCounts(for space: SpaceModel) -> (completed: Int, total: Int) {
         let memories: [MemoryModel]
         if space.isAllSpaces {
             memories = memoryService.memories
+        } else if space.isInboxSpaces {
+            memories = memoryService.memories.filter { memory in
+                memory.space == nil
+            }
         } else {
             memories = memoryService.memories.filter { memory in
                 guard let spaceID = memory.space?.id else { return false }

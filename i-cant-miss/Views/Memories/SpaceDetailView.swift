@@ -52,6 +52,10 @@ struct SpaceDetailView: View {
         resolvedSpace.isAllSpaces
     }
 
+    private var isInboxSpace: Bool {
+        resolvedSpace.isInboxSpaces
+    }
+
     private var nonPinnedMemories: [MemoryModel] {
         filteredMemories.filter { !$0.isPinned && !$0.isCompleted }
     }
@@ -90,7 +94,9 @@ struct SpaceDetailView: View {
     }
 
     private var bulkActionSpaces: [SpaceModel] {
-        environment.spaceService.spaces.filter { $0.id != SpaceModel.allSpacesIdentifier }
+        environment.spaceService.spaces.filter { 
+            $0.id != SpaceModel.allSpacesIdentifier && $0.id != SpaceModel.inboxSpacesIdentifier 
+        }
     }
 
     private var selectedMemories: [MemoryModel] {
@@ -166,7 +172,7 @@ struct SpaceDetailView: View {
                 Button {
                     dismiss()
                 } label: {
-                    Image(systemName: "square.grid.2x2")
+                    Image(systemName: "chevron.left")
                 }
             }
 
@@ -398,13 +404,26 @@ struct SpaceDetailView: View {
     }
 
     private var filteredMemories: [MemoryModel] {
-        let targetSpace = isAllSpace ? nil : resolvedSpace
-        let base = memoryService.memories(
-            in: targetSpace,
-            statuses: [],
-            includeCompleted: true,
-            sort: .updatedAtDescending
-        )
+        let base: [MemoryModel]
+        if isAllSpace {
+            base = memoryService.memories(
+                in: nil,
+                statuses: [],
+                includeCompleted: true,
+                sort: .updatedAtDescending
+            )
+        } else if isInboxSpace {
+            base = memoryService.memories.filter { memory in
+                memory.space == nil
+            }
+        } else {
+            base = memoryService.memories(
+                in: resolvedSpace,
+                statuses: [],
+                includeCompleted: true,
+                sort: .updatedAtDescending
+            )
+        }
 
         return base.filter { memory in
             matchesSelectedTrigger(memory)

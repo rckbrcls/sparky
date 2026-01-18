@@ -73,6 +73,9 @@ final class MemoryEditorViewModel: ObservableObject {
         if id == SpaceModel.allSpacesIdentifier {
             return SpaceModel.allSpaces
         }
+        if id == SpaceModel.inboxSpacesIdentifier {
+            return SpaceModel.inboxSpaces
+        }
         return nil
     }
 

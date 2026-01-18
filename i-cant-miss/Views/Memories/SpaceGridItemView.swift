@@ -14,6 +14,7 @@ struct SpaceGridItemView: View {
     let spaceService: SpaceService?
     let memoryService: MemoryService?
     let mindService: MindService?
+    let showOnlyRemaining: Bool
 
     @State private var showingDeleteConfirmation = false
 
@@ -24,7 +25,8 @@ struct SpaceGridItemView: View {
         spaceService: SpaceService? = nil,
         memoryService: MemoryService? = nil,
         mindService: MindService? = nil,
-        onEdit: ((SpaceModel) -> Void)? = nil
+        onEdit: ((SpaceModel) -> Void)? = nil,
+        showOnlyRemaining: Bool = false
     ) {
         self.space = space
         self.count = count
@@ -33,10 +35,22 @@ struct SpaceGridItemView: View {
         self.memoryService = memoryService
         self.mindService = mindService
         self.onEdit = onEdit
+        self.showOnlyRemaining = showOnlyRemaining
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let mind = space.mind {
+                HStack(spacing: 4) {
+                    Image(systemName: mind.iconName ?? "brain.head.profile")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(mind.name)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            
             HStack {
                 Image(systemName: space.iconName ?? "square.grid.2x2")
                     .foregroundStyle(spaceColor)
@@ -45,10 +59,11 @@ struct SpaceGridItemView: View {
 
                 Spacer()
 
-                Text("\(completedCount)/\(count)")
+                Text(displayCount)
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
+            
             Text(space.name)
                 .font(.subheadline)
                 .fontWeight(.medium)
@@ -73,14 +88,28 @@ struct SpaceGridItemView: View {
                     Button {
                         moveToMind(nil)
                     } label: {
-                        Label("No Mind", systemImage: "brain.head.profile")
+                        HStack {
+                            Image(systemName: "brain.head.profile")
+                            Text("No Mind")
+                            Spacer()
+                            if space.mind == nil {
+                                Image(systemName: "checkmark")
+                            }
+                        }
                     }
 
                     ForEach(mindService.minds.filter { !$0.isDefault }, id: \.id) { mind in
                         Button {
                             moveToMind(mind)
                         } label: {
-                            Label(mind.name, systemImage: mind.iconName ?? "brain.head.profile")
+                            HStack {
+                                Image(systemName: mind.iconName ?? "brain.head.profile")
+                                Text(mind.name)
+                                Spacer()
+                                if space.mind?.id == mind.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
                     }
                 } label: {
@@ -140,9 +169,18 @@ struct SpaceGridItemView: View {
 
     private var currentMindLabel: String {
         if let mind = space.mind {
-            return "Current Mind: \(mind.name)"
+            return mind.name
         } else {
-            return "Current Mind: None"
+            return "None"
+        }
+    }
+
+    private var displayCount: String {
+        if showOnlyRemaining {
+            let remaining = count - completedCount
+            return "\(remaining)"
+        } else {
+            return "\(completedCount)/\(count)"
         }
     }
 

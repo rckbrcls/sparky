@@ -50,7 +50,9 @@ struct MemoryTimelineView: View {
     }
 
     private var bulkActionSpaces: [SpaceModel] {
-        environment.spaceService.spaces.filter { $0.id != SpaceModel.allSpacesIdentifier }
+        environment.spaceService.spaces.filter { 
+            $0.id != SpaceModel.allSpacesIdentifier && $0.id != SpaceModel.inboxSpacesIdentifier 
+        }
     }
 
     private var selectedMemories: [MemoryModel] {

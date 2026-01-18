@@ -16,6 +16,7 @@ struct MindRootView: View {
     let onEditMind: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
+    let onMindContextChange: ((MindModel?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
 
     private let columns = [
@@ -76,6 +77,7 @@ struct MindRootView: View {
                     onEditMind: onEditMind,
                     onMultiSelectionChange: onMultiSelectionChange,
                     onSpaceContextChange: onSpaceContextChange,
+                    onMindContextChange: onMindContextChange,
                     onSearchActiveChange: onSearchActiveChange
                 )
             }
@@ -83,10 +85,12 @@ struct MindRootView: View {
         .onAppear {
             onMultiSelectionChange(false)
             onSpaceContextChange(nil)
+            onMindContextChange?(nil)
         }
         .onChange(of: navigationPath) { oldPath, newPath in
             if newPath.isEmpty {
                 onSpaceContextChange(nil)
+                onMindContextChange?(nil)
             }
         }
     }
@@ -134,6 +138,7 @@ struct MindRootView: View {
         onEditMind: nil,
         onMultiSelectionChange: { _ in },
         onSpaceContextChange: { _ in },
+        onMindContextChange: nil,
         onSearchActiveChange: { _ in }
     )
 }
