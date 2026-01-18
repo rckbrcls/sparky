@@ -11,14 +11,14 @@ import UIKit
 
 enum CustomTab: String, CaseIterable {
     case calendar = "Calendar"
-    case memories = "Memories"
+    case mind = "Mind"
     case me = "Me"
 
     var symbol: String {
         switch self {
         case .calendar:
             return "calendar"
-        case .memories:
+        case .mind:
             return "mind"
         case .me:
             return "me"
@@ -35,6 +35,7 @@ struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @State private var editorRoute: MemoryEditorRoute?
     @State private var spaceComposerRequest: SpaceComposerRequest?
+    @State private var mindComposerRequest: MindComposerRequest?
     @State private var activeTab: CustomTab = .calendar
     @State private var calendarNavigationPath = NavigationPath()
     @State private var triggersNavigationPath = NavigationPath()
@@ -65,21 +66,21 @@ struct ContentView: View {
                     .tabBarSpacer()
                 }
 
-                Tab.init(value: .memories){
-                    SpacesRootView(
+                Tab.init(value: .mind){
+                    MindRootView(
+                        mindService: environment.mindService,
                         spaceService: environment.spaceService,
                         memoryService: environment.memoryService,
                         navigationPath: $spacesNavigationPath,
                         onSelectMemory: handleMemorySelection,
-                onCreateSpace: {
-                    presentSpaceCreation()
+                        onCreateMind: {
+                            presentMindCreation()
                         },
-                        onEditSpace: { space in
-                            presentSpaceEdit(for: space)
+                        onEditMind: { mind in
+                            presentMindEdit(for: mind)
                         },
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onSpaceContextChange: { space in
-                            // Update context immediately when space changes
                             currentSpaceContext = space
                         },
                         onSearchActiveChange: handleSearchActiveChange
@@ -129,6 +130,14 @@ struct ContentView: View {
             SpaceComposerView(
                 environment: environment,
                 spaceToEdit: request.spaceToEdit
+            )
+        }
+        .sheet(item: $mindComposerRequest, onDismiss: {
+            mindComposerRequest = nil
+        }) { request in
+            MindComposerView(
+                environment: environment,
+                mindToEdit: request.mindToEdit
             )
         }
         .sheet(item: $quickMemoryRequest, onDismiss: {
@@ -193,8 +202,8 @@ struct ContentView: View {
             }
         }
         .onChange(of: activeTab) { _, newTab in
-            // Clear context when switching away from spaces tab
-            if newTab != .memories {
+            // Clear context when switching away from mind tab
+            if newTab != .mind {
                 currentSpaceContext = nil
             }
         }
@@ -212,7 +221,7 @@ struct ContentView: View {
                         activeTab: $activeTab,
                         tabItemView: { tab in
                         VStack(spacing: 3){
-                            if tab == .memories || tab == .me {
+                            if tab == .mind || tab == .me {
                                 Image(tab.symbol)
                                     .renderingMode(.template)
                                     .resizable()
@@ -264,11 +273,19 @@ struct ContentView: View {
         spaceComposerRequest = SpaceComposerRequest(spaceToEdit: space)
     }
 
+    private func presentMindCreation() {
+        mindComposerRequest = MindComposerRequest(mindToEdit: nil)
+    }
+
+    private func presentMindEdit(for mind: MindModel) {
+        mindComposerRequest = MindComposerRequest(mindToEdit: mind)
+    }
+
     private func handleTabReselection(_ tab: CustomTab) {
         switch tab {
         case .calendar:
             calendarNavigationPath = NavigationPath()
-        case .memories:
+        case .mind:
             spacesNavigationPath = NavigationPath()
         case .me:
             meNavigationPath = NavigationPath()
@@ -315,7 +332,7 @@ struct ContentView: View {
     }
 
     private func targetSpaceForCreation() -> SpaceModel? {
-        guard activeTab == .memories else { return nil }
+        guard activeTab == .mind else { return nil }
         // Use currentSpaceContext if available, otherwise try to extract from navigation path
         if let context = currentSpaceContext {
             return context
@@ -348,6 +365,11 @@ private struct MemoryEditorRoute: Identifiable {
 private struct SpaceComposerRequest: Identifiable {
     let id = UUID()
     let spaceToEdit: SpaceModel?
+}
+
+private struct MindComposerRequest: Identifiable {
+    let id = UUID()
+    let mindToEdit: MindModel?
 }
 
 private struct QuickMemoryRequest: Identifiable {

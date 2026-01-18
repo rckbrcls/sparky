@@ -12,6 +12,7 @@ import Combine
 @MainActor
 final class AppEnvironment: ObservableObject {
     let persistence: PersistenceController
+    let mindService: MindService
     let spaceService: SpaceService
     let memoryService: MemoryService
     let triggerExecutorCoordinator: TriggerExecutorCoordinator
@@ -38,6 +39,7 @@ final class AppEnvironment: ObservableObject {
         self.attachmentStore = MemoryAttachmentStore()
 
         // Initialize services - they will load data synchronously in their init
+        self.mindService = MindService(persistence: persistence)
         self.spaceService = SpaceService(persistence: persistence)
         self.memoryService = MemoryService(persistence: persistence,
                                            spaceService: spaceService,
@@ -65,12 +67,16 @@ final class AppEnvironment: ObservableObject {
         Task {
             isBootstrapping = true
 
+            // Ensure default mind exists (migration)
+            try? await mindService.ensureDefaultMindExists()
+
             // Perform a force refresh to ensure data is up-to-date
+            async let mindsTask = mindService.refresh(force: true)
             async let spacesTask = spaceService.refresh(force: true)
             async let tagsTask = spaceService.refreshTags(force: true)
             async let memoriesTask = memoryService.refresh(force: true)
 
-            _ = await (spacesTask, tagsTask, memoriesTask)
+            _ = await (mindsTask, spacesTask, tagsTask, memoriesTask)
 
             await triggerExecutorCoordinator.scheduled.requestAuthorizationIfNeeded()
 

@@ -13,6 +13,7 @@ struct SpaceGridItemView: View {
     let completedCount: Int
     let spaceService: SpaceService?
     let memoryService: MemoryService?
+    let mindService: MindService?
 
     @State private var showingDeleteConfirmation = false
 
@@ -22,6 +23,7 @@ struct SpaceGridItemView: View {
         completedCount: Int = 0,
         spaceService: SpaceService? = nil,
         memoryService: MemoryService? = nil,
+        mindService: MindService? = nil,
         onEdit: ((SpaceModel) -> Void)? = nil
     ) {
         self.space = space
@@ -29,6 +31,7 @@ struct SpaceGridItemView: View {
         self.completedCount = completedCount
         self.spaceService = spaceService
         self.memoryService = memoryService
+        self.mindService = mindService
         self.onEdit = onEdit
     }
 
@@ -47,7 +50,8 @@ struct SpaceGridItemView: View {
                     .foregroundStyle(.secondary)
             }
             Text(space.name)
-                .font(.headline)
+                .font(.subheadline)
+                .fontWeight(.medium)
                 .foregroundStyle(.primary)
                 .lineLimit(2)
         }
@@ -61,6 +65,26 @@ struct SpaceGridItemView: View {
                     onEdit?(space)
                 } label: {
                     Label("Edit", systemImage: "pencil")
+                }
+            }
+
+            if let mindService = mindService, canEditSpace {
+                Menu {
+                    Button {
+                        moveToMind(nil)
+                    } label: {
+                        Label("No Mind", systemImage: "brain.head.profile")
+                    }
+
+                    ForEach(mindService.minds.filter { !$0.isDefault }, id: \.id) { mind in
+                        Button {
+                            moveToMind(mind)
+                        } label: {
+                            Label(mind.name, systemImage: mind.iconName ?? "brain.head.profile")
+                        }
+                    }
+                } label: {
+                    Label(currentMindLabel, systemImage: "brain.head.profile")
                 }
             }
 
@@ -114,6 +138,14 @@ struct SpaceGridItemView: View {
         return !space.isDefault
     }
 
+    private var currentMindLabel: String {
+        if let mind = space.mind {
+            return "Current Mind: \(mind.name)"
+        } else {
+            return "Current Mind: None"
+        }
+    }
+
     private func deleteSpace(deleteMemories: Bool) {
         guard let service = spaceService else { return }
         guard !space.isAllSpaces,
@@ -124,6 +156,22 @@ struct SpaceGridItemView: View {
                 try await service.deleteSpace(space, deleteMemories: deleteMemories, memoryService: memoryService)
             } catch {
                 assertionFailure("Failed to delete space: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func moveToMind(_ mind: MindModel?) {
+        guard let service = spaceService else { return }
+        guard !space.isAllSpaces else { return }
+
+        Task { @MainActor in
+            do {
+                var updatedSpace = space
+                updatedSpace.mind = mind
+                _ = try await service.updateSpace(updatedSpace)
+                _ = await service.refresh(force: true)
+            } catch {
+                assertionFailure("Failed to move space to mind: \(error.localizedDescription)")
             }
         }
     }

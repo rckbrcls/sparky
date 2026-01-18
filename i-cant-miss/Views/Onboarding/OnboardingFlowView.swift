@@ -228,14 +228,30 @@ private extension OnboardingStep {
 
                 VStack(spacing: 12) {
                     ForEach(OnboardingSampleData.spaces) { entry in
-                        SpaceRowView(space: entry.space, count: entry.count)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(Color.white.opacity(0.06))
-                            )
-                            .allowsHitTesting(false)
+                        HStack(spacing: 12) {
+                            let spaceColor = entry.space.colorHex.flatMap { Color(hex: $0) } ?? .gray
+                            
+                            Image(systemName: entry.space.iconName ?? "square.grid.2x2")
+                                .foregroundStyle(spaceColor)
+                                .frame(width: 32, height: 32)
+                            
+                            Text(entry.space.name)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.9))
+                            
+                            Spacer()
+                            
+                            Text("\(entry.count)")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(Color.white.opacity(0.06))
+                        )
+                        .allowsHitTesting(false)
                     }
                 }
                 .padding(12)

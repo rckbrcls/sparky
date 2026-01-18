@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="true" userDefinedModelVersionIdentifier="">
+    <entity name="Mind" representedClassName="Mind" syncable="YES" codeGenerationType="class">
+        <attribute name="colorHex" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="iconName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isDefault" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
+        <attribute name="sortOrder" optional="NO" attributeType="Integer 16" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
+        <relationship name="spaces" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Space" inverseName="mind" inverseEntity="Space" syncable="YES"/>
+    </entity>
     <entity name="Space" representedClassName="Space" syncable="YES" codeGenerationType="class">
         <attribute name="colorHex" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="iconName" optional="YES" attributeType="String" syncable="YES"/>
@@ -10,6 +19,7 @@
         <relationship name="parent" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Space" inverseName="children" inverseEntity="Space" syncable="YES"/>
         <relationship name="children" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Space" inverseName="parent" inverseEntity="Space" syncable="YES"/>
         <relationship name="memories" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Memory" inverseName="space" inverseEntity="Memory" syncable="YES"/>
+        <relationship name="mind" optional="YES" toMany="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Mind" inverseName="spaces" inverseEntity="Mind" syncable="YES"/>
     </entity>
     <entity name="Memory" representedClassName="Memory" syncable="YES" codeGenerationType="class">
         <attribute name="autoCompleteOnChecklistCompletion" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="0" syncable="YES"/>
@@ -33,6 +43,7 @@
         <attribute name="name" optional="NO" attributeType="String" defaultValueString="" syncable="YES"/>
     </entity>
     <elements>
+        <element name="Mind" positionX="-234" positionY="-18" width="128" height="148"/>
         <element name="Space" positionX="-63" positionY="-18" width="128" height="148"/>
         <element name="Memory" positionX="174" positionY="-18" width="128" height="208"/>
         <element name="Tag" positionX="405" positionY="12" width="128" height="116"/>

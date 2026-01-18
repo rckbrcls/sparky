@@ -1,53 +1,50 @@
 //
-//  SpaceModel.swift
+//  MindModel.swift
 //  i-cant-miss
 //
 
 import Foundation
 
-struct SpaceModel: Identifiable, Hashable {
+struct MindModel: Identifiable, Hashable {
     let id: UUID
     var name: String
     var colorHex: String?
     var iconName: String?
     var sortOrder: Int
     var isDefault: Bool
-    var mind: MindModel?
 
     init(id: UUID,
          name: String,
          colorHex: String? = nil,
          iconName: String? = nil,
          sortOrder: Int = 0,
-         isDefault: Bool = false,
-         mind: MindModel? = nil) {
+         isDefault: Bool = false) {
         self.id = id
         self.name = name
         self.colorHex = colorHex
         self.iconName = iconName
         self.sortOrder = sortOrder
         self.isDefault = isDefault
-        self.mind = mind
     }
 }
 
 // MARK: - Static Members
 
-extension SpaceModel {
-    static let allSpacesIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+extension MindModel {
+    static let allMindsIdentifier = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
 
-    static var allSpaces: SpaceModel {
-        SpaceModel(
-            id: allSpacesIdentifier,
+    static var allMinds: MindModel {
+        MindModel(
+            id: allMindsIdentifier,
             name: "All",
             colorHex: nil,
-            iconName: "square.grid.2x2.fill",
+            iconName: "brain.head.profile",
             sortOrder: Int.min,
             isDefault: true
         )
     }
 
-    var isAllSpaces: Bool {
-        id == SpaceModel.allSpacesIdentifier
+    var isAllMinds: Bool {
+        id == MindModel.allMindsIdentifier
     }
 }

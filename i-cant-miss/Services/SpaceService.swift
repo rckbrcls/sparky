@@ -232,7 +232,8 @@ final class SpaceService: ObservableObject {
         name: String,
         colorHex: String?,
         iconName: String?,
-        isDefault: Bool
+        isDefault: Bool,
+        mindID: UUID? = nil
     ) async throws -> SpaceModel {
         let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
@@ -251,6 +252,15 @@ final class SpaceService: ObservableObject {
                     space.colorHex = colorHex
                     space.iconName = iconName
                     space.isDefault = isDefault
+
+                    if let mindID = mindID {
+                        let request = Mind.fetchRequest()
+                        request.predicate = NSPredicate(format: "id == %@", mindID as CVarArg)
+                        request.fetchLimit = 1
+                        if let mind = try context.fetch(request).first {
+                            space.mind = mind
+                        }
+                    }
 
                     let spaceCount = try self.countSpaces(in: context)
                     space.sortOrder = Int16(spaceCount)
@@ -288,7 +298,14 @@ final class SpaceService: ObservableObject {
                     space.isDefault = model.isDefault
                     space.sortOrder = Int16(model.sortOrder)
 
-
+                    if let mindID = model.mind?.id {
+                        let request = Mind.fetchRequest()
+                        request.predicate = NSPredicate(format: "id == %@", mindID as CVarArg)
+                        request.fetchLimit = 1
+                        space.mind = try context.fetch(request).first
+                    } else {
+                        space.mind = nil
+                    }
 
                     try context.save()
                     continuation.resume(returning: space.objectID)
@@ -529,7 +546,8 @@ extension Space {
             colorHex: colorHex,
             iconName: iconName,
             sortOrder: Int(sortOrder),
-            isDefault: isDefault
+            isDefault: isDefault,
+            mind: mind?.toModel()
         )
     }
 }

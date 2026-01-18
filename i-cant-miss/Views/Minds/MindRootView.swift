@@ -1,20 +1,19 @@
 //
-//  SpacesRootView.swift
+//  MindRootView.swift
 //  i-cant-miss
-//
-//  Created by Codex on 09/03/24.
 //
 
 import SwiftUI
 
-struct SpacesRootView: View {
+struct MindRootView: View {
+    @ObservedObject var mindService: MindService
     @ObservedObject var spaceService: SpaceService
     @ObservedObject var memoryService: MemoryService
     @Binding var navigationPath: NavigationPath
 
     let onSelectMemory: (MemoryModel) -> Void
-    let onCreateSpace: () -> Void
-    let onEditSpace: ((SpaceModel) -> Void)?
+    let onCreateMind: () -> Void
+    let onEditMind: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
     let onSearchActiveChange: (Bool) -> Void
@@ -28,25 +27,24 @@ struct SpacesRootView: View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Spaces")
+                    Text("Minds")
                         .appLargeTitleStyle()
                         .padding(.horizontal, 20)
                         .padding(.bottom, 16)
 
                     LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(displaySpaces) { space in
-                            NavigationLink(value: space) {
-                                SpaceGridItemView(
-                                    space: space,
-                                    count: memoryCounts(for: space).total,
-                                    completedCount: memoryCounts(for: space).completed,
+                        ForEach(displayMinds) { mind in
+                            NavigationLink(value: mind) {
+                                MindGridItemView(
+                                    mind: mind,
+                                    count: spaceCounts(for: mind),
+                                    mindService: mindService,
                                     spaceService: spaceService,
-                                    memoryService: memoryService,
-                                    onEdit: onEditSpace
+                                    onEdit: onEditMind
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .accessibilityHint("Opens details for \(space.name)")
+                            .accessibilityHint("Opens details for \(mind.name)")
                         }
                     }
                     .padding(.horizontal, 20)
@@ -56,36 +54,30 @@ struct SpacesRootView: View {
             .scrollContentBackground(.hidden)
             .scrollIndicators(.hidden)
             .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height:  70)
+                Color.clear.frame(height: 70)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        onCreateSpace()
+                        onCreateMind()
                     } label: {
-                        Image(systemName: "folder.badge.plus")
+                        Image(systemName: "plus")
                     }
-                    .accessibilityLabel("Create Space")
+                    .accessibilityLabel("Create Mind")
                 }
             }
-            .navigationDestination(for: SpaceModel.self) { space in
-                SpaceDetailView(
-                    space: space,
+            .navigationDestination(for: MindModel.self) { mind in
+                MindDetailView(
+                    mind: mind,
+                    mindService: mindService,
                     spaceService: spaceService,
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
-                    onEditSpace: onEditSpace,
+                    onEditMind: onEditMind,
                     onMultiSelectionChange: onMultiSelectionChange,
-                    onSpaceContextChange: { newSpace in
-                        // Immediately notify when space context changes
-                        onSpaceContextChange(newSpace)
-                    },
+                    onSpaceContextChange: onSpaceContextChange,
                     onSearchActiveChange: onSearchActiveChange
                 )
-                .onAppear {
-                    // Ensure context is set immediately when destination appears
-                    onSpaceContextChange(space)
-                }
             }
         }
         .onAppear {
@@ -93,58 +85,53 @@ struct SpacesRootView: View {
             onSpaceContextChange(nil)
         }
         .onChange(of: navigationPath) { oldPath, newPath in
-            // When navigation path changes, if it's empty, clear the context
-            // Otherwise, let SpaceDetailView notify the context
             if newPath.isEmpty {
                 onSpaceContextChange(nil)
             }
         }
     }
 
-    private var displaySpaces: [SpaceModel] {
-        let sortedSpaces = spaceService.spaces
+    private var displayMinds: [MindModel] {
+        let sortedMinds = mindService.minds
+            .filter { !$0.isDefault } // Filter out the default "All Minds" since we have the virtual "All"
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [SpaceModel.allSpaces] + sortedSpaces
+        return [MindModel.allMinds] + sortedMinds
     }
 
-    private func memoryCounts(for space: SpaceModel) -> (completed: Int, total: Int) {
-        let memories: [MemoryModel]
-        if space.isAllSpaces {
-            memories = memoryService.memories
+    private func spaceCounts(for mind: MindModel) -> Int {
+        if mind.isAllMinds {
+            return spaceService.spaces.count
         } else {
-            memories = memoryService.memories.filter { memory in
-                guard let spaceID = memory.space?.id else { return false }
-                return spaceID == space.id
-            }
+            return spaceService.spaces.filter { space in
+                guard let mindID = space.mind?.id else { return false }
+                return mindID == mind.id
+            }.count
         }
-
-        let total = memories.count
-        let completed = memories.filter { $0.isCompleted }.count
-        return (completed, total)
     }
 
     private func refresh() async {
+        async let minds = mindService.refresh(force: true)
         async let spaces = spaceService.refresh(force: true)
-        async let memories = memoryService.refresh(force: true)
-        _ = await (spaces, memories)
+        _ = await (minds, spaces)
     }
 }
 
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
-    return SpacesRootView(
+    return MindRootView(
+        mindService: environment.mindService,
         spaceService: environment.spaceService,
         memoryService: environment.memoryService,
         navigationPath: .constant(NavigationPath()),
         onSelectMemory: { _ in },
-        onCreateSpace: { },
-        onEditSpace: nil,
+        onCreateMind: { },
+        onEditMind: nil,
         onMultiSelectionChange: { _ in },
         onSpaceContextChange: { _ in },
         onSearchActiveChange: { _ in }
