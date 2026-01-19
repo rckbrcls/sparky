@@ -85,6 +85,10 @@ struct MemoryCardView: View {
         return Self.relativeFormatter.localizedString(for: date, relativeTo: now)
     }
 
+    private func createdDateString(for date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .omitted)
+    }
+
     private var title: String {
         guard let memory = memory else { return "Untitled" }
         let trimmed = memory.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -237,7 +241,7 @@ struct MemoryCardView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Text("Created \(relativeDateString(for: memory.createdAt))")
+                    Text(createdDateString(for: memory.createdAt))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
 
