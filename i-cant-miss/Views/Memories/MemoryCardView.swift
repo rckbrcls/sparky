@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import MapKit
 
 struct MemoryCardView: View {
     let memoryID: UUID
@@ -153,6 +154,11 @@ struct MemoryCardView: View {
         }
         return color
     }
+    
+    private var locationTrigger: MemoryTriggerModel? {
+        guard let memory = memory else { return nil }
+        return memory.triggers.first(where: { $0.type == .location && $0.isActive })
+    }
 
     var body: some View {
         if let memory = memory {
@@ -164,125 +170,174 @@ struct MemoryCardView: View {
 
     @ViewBuilder
     private func memoryContent(memory: MemoryModel) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            let spaceIcon = memory.space?.iconName ?? "square.grid.2x2.fill"
-            let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
+        VStack(spacing: 0) {
+            // Map (if has location trigger)
+            if let locationTrigger = locationTrigger, let location = locationTrigger.location {
+                MemoryCardLocationMapView(location: location)
+                    .frame(height: 120)
+                    .clipShape(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 12,
+                            bottomLeadingRadius: 0,
+                            bottomTrailingRadius: 0,
+                            topTrailingRadius: 12
+                        )
+                    )
+                    .overlay(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 12,
+                            bottomLeadingRadius: 0,
+                            bottomTrailingRadius: 0,
+                            topTrailingRadius: 12
+                        )
+                        .stroke(Color("ElementBorder"), lineWidth: 2)
+                    )
+            }
+            
+            // Card content
+            HStack(alignment: .center, spacing: 12) {
+                let spaceIcon = memory.space?.iconName ?? "square.grid.2x2.fill"
+                let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
-            Image(systemName: spaceIcon)
-                .foregroundStyle(spaceColor)
-                .frame(width: 32, height: 32)
-                .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
+                Image(systemName: spaceIcon)
+                    .foregroundStyle(spaceColor)
+                    .frame(width: 32, height: 32)
+                    .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
 
-            VStack(alignment: .leading, spacing: 6) {
-                VStack (alignment: .leading, spacing: 6){
-                    Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                        .strikethrough(isCompletedForDisplay, color: .secondary)
-                        .lineLimit(2)
-
-
-                    if let bodyPreview {
-                        Text(bodyPreview)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    VStack (alignment: .leading, spacing: 6){
+                        Text(title)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
                             .strikethrough(isCompletedForDisplay, color: .secondary)
                             .lineLimit(2)
+
+
+                        if let bodyPreview {
+                            Text(bodyPreview)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .strikethrough(isCompletedForDisplay, color: .secondary)
+                                .lineLimit(2)
+                        }
+
                     }
 
-                }
-
-                if sequentialSummary != nil || scheduledDateText != nil || checklistProgressText != nil {
-                    HStack(spacing: 12) {
-                        if let sequentialSummary {
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrowshape.turn.up.right.circle")
-                                Text(sequentialSummary)
-                                    .strikethrough(isCompletedForDisplay, color: .secondary)
+                    if sequentialSummary != nil || scheduledDateText != nil || checklistProgressText != nil {
+                        HStack(spacing: 12) {
+                            if let sequentialSummary {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrowshape.turn.up.right.circle")
+                                    Text(sequentialSummary)
+                                        .strikethrough(isCompletedForDisplay, color: .secondary)
+                                }
+                                .fontWeight(.medium)
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                            .fontWeight(.medium)
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 10)
-                            .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
 
-                        if let scheduledDateText {
-                            HStack(spacing: 4) {
-                                Image(systemName: "calendar")
-                                Text(scheduledDateText)
-                                    .strikethrough(isCompletedForDisplay, color: .secondary)
+                            if let scheduledDateText {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "calendar")
+                                    Text(scheduledDateText)
+                                        .strikethrough(isCompletedForDisplay, color: .secondary)
+                                }
+                                .fontWeight(.medium)
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                            .fontWeight(.medium)
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 10)
-                            .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
 
-                        if let checklistProgressText {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checklist")
-                                Text(checklistProgressText)
-                                    .strikethrough(isCompletedForDisplay, color: .secondary)
+                            if let checklistProgressText {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checklist")
+                                    Text(checklistProgressText)
+                                        .strikethrough(isCompletedForDisplay, color: .secondary)
+                                }
+                                .fontWeight(.medium)
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                            .fontWeight(.medium)
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 10)
-                            .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
+
+                    HStack(spacing: 8) {
+                        Text(createdDateString(for: memory.createdAt))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+
+                        Text("•")
+                            .foregroundStyle(.tertiary)
+                            .font(.caption2)
+
+                        Text("Updated \(relativeDateString(for: memory.updatedAt))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.top, 2)
                 }
 
-                HStack(spacing: 8) {
-                    Text(createdDateString(for: memory.createdAt))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                Spacer()
 
-                    Text("•")
-                        .foregroundStyle(.tertiary)
-                        .font(.caption2)
-
-                    Text("Updated \(relativeDateString(for: memory.updatedAt))")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                // Completion check circle button
+                // Only show checkbox if:
+                // 1. Memory has no sequence trigger, OR
+                // 2. Memory is the current step in its sequence
+                let shouldShowCheckbox = !memory.hasSequenceTrigger || memory.isCurrentInSequence
+                if let onToggleCompletion = onToggleCompletion, shouldShowCheckbox {
+                    Button {
+                        feedbackGenerator.impactOccurred()
+                        onToggleCompletion()
+                    } label: {
+                        Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.top, 2)
             }
-
-            Spacer()
-
-            // Completion check circle button
-            // Only show checkbox if:
-            // 1. Memory has no sequence trigger, OR
-            // 2. Memory is the current step in its sequence
-            let shouldShowCheckbox = !memory.hasSequenceTrigger || memory.isCurrentInSequence
-            if let onToggleCompletion = onToggleCompletion, shouldShowCheckbox {
-                Button {
-                    feedbackGenerator.impactOccurred()
-                    onToggleCompletion()
-                } label: {
-                    Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: locationTrigger != nil ? 0 : 12,
+                    bottomLeadingRadius: 12,
+                    bottomTrailingRadius: 12,
+                    topTrailingRadius: locationTrigger != nil ? 0 : 12
+                )
+                .fill(Color("ElementBackground"))
+            )
+            .overlay(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: locationTrigger != nil ? 0 : 12,
+                    bottomLeadingRadius: 12,
+                    bottomTrailingRadius: 12,
+                    topTrailingRadius: locationTrigger != nil ? 0 : 12
+                )
+                .stroke(Color("ElementBorder"), lineWidth: 2)
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .cardStyle()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color("ElementBackground"))
+                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+        )
+        .contentShape(Rectangle())
         .contextMenu {
             if isContextMenuEnabled {
                 if let onEdit = onEdit {
