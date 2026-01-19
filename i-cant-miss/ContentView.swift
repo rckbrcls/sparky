@@ -80,6 +80,9 @@ struct ContentView: View {
                         onEditMind: { mind in
                             presentMindEdit(for: mind)
                         },
+                        onAddSpace: { mind in
+                            presentSpaceCreation(for: mind)
+                        },
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onSpaceContextChange: { space in
                             currentSpaceContext = space
@@ -133,7 +136,8 @@ struct ContentView: View {
         }) { request in
             SpaceComposerView(
                 environment: environment,
-                spaceToEdit: request.spaceToEdit
+                spaceToEdit: request.spaceToEdit,
+                mindID: request.mindID
             )
         }
         .sheet(item: $mindComposerRequest, onDismiss: {
@@ -271,11 +275,15 @@ struct ContentView: View {
     }
 
     private func presentSpaceCreation() {
-        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: nil)
+        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: nil, mindID: nil)
     }
 
     private func presentSpaceEdit(for space: SpaceModel) {
-        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: space)
+        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: space, mindID: nil)
+    }
+
+    private func presentSpaceCreation(for mind: MindModel) {
+        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: nil, mindID: mind.id)
     }
 
     private func presentMindCreation() {
@@ -381,6 +389,7 @@ private struct MemoryEditorRoute: Identifiable {
 private struct SpaceComposerRequest: Identifiable {
     let id = UUID()
     let spaceToEdit: SpaceModel?
+    let mindID: UUID?
 }
 
 private struct MindComposerRequest: Identifiable {

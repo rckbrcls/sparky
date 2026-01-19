@@ -117,7 +117,7 @@ struct MindComposerView: View {
             Spacer()
         }
         .presentationDetents([.height(90)])
-        .presentationBackground(.regularMaterial)
+        .presentationBackground(.clear)
         .interactiveDismissDisabled(isSaving)
         .sheet(isPresented: $showIconPicker) {
             IconColorPickerSheet(

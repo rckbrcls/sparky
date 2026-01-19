@@ -76,10 +76,12 @@ struct SpaceComposerView: View {
     @State private var errorMessage: String?
     @State private var showIconPicker = false
     private let spaceToEdit: SpaceModel?
+    private let mindID: UUID?
 
-    init(environment: AppEnvironment, spaceToEdit: SpaceModel? = nil) {
+    init(environment: AppEnvironment, spaceToEdit: SpaceModel? = nil, mindID: UUID? = nil) {
         self.environment = environment
         self.spaceToEdit = spaceToEdit
+        self.mindID = mindID
     }
 
     private var selectedSpaceColor: Color {
@@ -121,7 +123,7 @@ struct SpaceComposerView: View {
             Spacer()
         }
         .presentationDetents([.height(90)])
-        .presentationBackground(.regularMaterial)
+        .presentationBackground(.clear)
         .interactiveDismissDisabled(isSaving)
         .sheet(isPresented: $showIconPicker) {
             IconColorPickerSheet(
@@ -175,7 +177,8 @@ struct SpaceComposerView: View {
                         name: trimmedName,
                         colorHex: selectedColorHex,
                         iconName: selectedIcon,
-                        isDefault: false
+                        isDefault: false,
+                        mindID: mindID
                     )
                 }
 

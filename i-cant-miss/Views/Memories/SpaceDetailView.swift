@@ -56,6 +56,10 @@ struct SpaceDetailView: View {
         resolvedSpace.isInboxSpaces
     }
 
+    private var isAllSpaceForMind: Bool {
+        resolvedSpace.isAllSpaceForMind
+    }
+
     private var nonPinnedMemories: [MemoryModel] {
         filteredMemories.filter { !$0.isPinned && !$0.isCompleted }
     }
@@ -415,6 +419,18 @@ struct SpaceDetailView: View {
         } else if isInboxSpace {
             base = memoryService.memories.filter { memory in
                 memory.space == nil
+            }
+        } else if isAllSpaceForMind {
+            if let mindID = resolvedSpace.mind?.id {
+                base = memoryService.memories.filter { memory in
+                    guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
+                    return memorySpaceMindID == mindID
+                }
+                .sorted { lhs, rhs in
+                    lhs.updatedAt > rhs.updatedAt
+                }
+            } else {
+                base = []
             }
         } else {
             base = memoryService.memories(

@@ -158,12 +158,14 @@ struct SpaceGridItemView: View {
 
     private var canEditSpace: Bool {
         guard !space.isAllSpaces else { return false }
+        guard !space.isAllSpaceForMind else { return false }
         return true
     }
 
     private var canDeleteSpace: Bool {
         guard spaceService != nil else { return false }
         guard !space.isAllSpaces else { return false }
+        guard !space.isAllSpaceForMind else { return false }
         return !space.isDefault
     }
 
@@ -187,6 +189,7 @@ struct SpaceGridItemView: View {
     private func deleteSpace(deleteMemories: Bool) {
         guard let service = spaceService else { return }
         guard !space.isAllSpaces,
+              !space.isAllSpaceForMind,
               !space.isDefault else { return }
 
         Task { @MainActor in
@@ -201,6 +204,7 @@ struct SpaceGridItemView: View {
     private func moveToMind(_ mind: MindModel?) {
         guard let service = spaceService else { return }
         guard !space.isAllSpaces else { return }
+        guard !space.isAllSpaceForMind else { return }
 
         Task { @MainActor in
             do {

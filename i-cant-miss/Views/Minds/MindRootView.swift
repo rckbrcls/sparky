@@ -14,6 +14,7 @@ struct MindRootView: View {
     let onSelectMemory: (MemoryModel) -> Void
     let onCreateMind: () -> Void
     let onEditMind: ((MindModel) -> Void)?
+    let onAddSpace: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
     let onMindContextChange: ((MindModel?) -> Void)?
@@ -75,6 +76,7 @@ struct MindRootView: View {
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     onEditMind: onEditMind,
+                    onAddSpace: onAddSpace,
                     onMultiSelectionChange: onMultiSelectionChange,
                     onSpaceContextChange: onSpaceContextChange,
                     onMindContextChange: onMindContextChange,
@@ -141,6 +143,7 @@ struct MindRootView: View {
         onSelectMemory: { _ in },
         onCreateMind: { },
         onEditMind: nil,
+        onAddSpace: nil,
         onMultiSelectionChange: { _ in },
         onSpaceContextChange: { _ in },
         onMindContextChange: nil,

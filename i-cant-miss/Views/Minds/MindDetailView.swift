@@ -16,6 +16,7 @@ struct MindDetailView: View {
 
     let onSelectMemory: (MemoryModel) -> Void
     let onEditMind: ((MindModel) -> Void)?
+    let onAddSpace: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
     let onMindContextChange: ((MindModel?) -> Void)?
@@ -30,6 +31,7 @@ struct MindDetailView: View {
         memoryService: MemoryService,
         onSelectMemory: @escaping (MemoryModel) -> Void,
         onEditMind: ((MindModel) -> Void)?,
+        onAddSpace: ((MindModel) -> Void)?,
         onMultiSelectionChange: @escaping (Bool) -> Void,
         onSpaceContextChange: @escaping (SpaceModel?) -> Void,
         onMindContextChange: ((MindModel?) -> Void)?,
@@ -41,6 +43,7 @@ struct MindDetailView: View {
         self.memoryService = memoryService
         self.onSelectMemory = onSelectMemory
         self.onEditMind = onEditMind
+        self.onAddSpace = onAddSpace
         self.onMultiSelectionChange = onMultiSelectionChange
         self.onSpaceContextChange = onSpaceContextChange
         self.onMindContextChange = onMindContextChange
@@ -81,7 +84,8 @@ struct MindDetailView: View {
                 guard let mindID = space.mind?.id else { return false }
                 return mindID == mind.id
             }
-            return filteredSpaces
+            let allSpace = SpaceModel.allSpace(for: resolvedMind)
+            return [allSpace] + filteredSpaces
         }
     }
 
@@ -162,20 +166,22 @@ struct MindDetailView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 16) {
-                    Button {
-                        isSearching = true
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                    }
+                Button {
+                    isSearching = true
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+            }
 
-                    if !isAllMinds, onEditMind != nil {
-                        Button {
-                            onEditMind?(resolvedMind)
-                        } label: {
-                            Image(systemName: "pencil")
-                        }
+            if !isAllMinds, let onAddSpace = onAddSpace {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                
+                    Button {
+                        onAddSpace(resolvedMind)
+                    } label: {
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Add Space")
                 }
             }
         }
@@ -209,6 +215,14 @@ struct MindDetailView: View {
         } else if space.isInboxSpaces {
             memories = memoryService.memories.filter { memory in
                 memory.space == nil
+            }
+        } else if space.isAllSpaceForMind {
+            guard let mindID = space.mind?.id else {
+                return (0, 0)
+            }
+            memories = memoryService.memories.filter { memory in
+                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
+                return memorySpaceMindID == mindID
             }
         } else {
             memories = memoryService.memories.filter { memory in
