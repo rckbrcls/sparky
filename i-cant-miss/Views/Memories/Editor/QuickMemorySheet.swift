@@ -152,7 +152,7 @@ struct QuickMemorySheet: View {
             .padding(.horizontal, 20)
             Spacer()
         }
-        .presentationDetents([.height(100)])
+        .presentationDetents([.height(102)])
         .presentationBackground(.clear)
         .onAppear {
             if space?.isAllSpaces == true {
