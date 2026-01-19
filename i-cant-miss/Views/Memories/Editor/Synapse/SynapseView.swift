@@ -47,13 +47,6 @@ struct SynapseView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if !isEditable || focusedField != item.id {
-                    feedbackGenerator.impactOccurred()
-                    onToggle()
-                }
-            }
 
             TextField("Description", text: $item.detail, axis: .vertical)
                 .font(.subheadline)
