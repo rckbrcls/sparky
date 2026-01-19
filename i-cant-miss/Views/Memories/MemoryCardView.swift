@@ -224,7 +224,7 @@ struct MemoryCardView: View {
 
                     }
 
-                    if sequentialSummary != nil || scheduledDateText != nil || checklistProgressText != nil {
+                    if sequentialSummary != nil || scheduledDateText != nil {
                         HStack(spacing: 12) {
                             if let sequentialSummary {
                                 HStack(spacing: 4) {
@@ -246,22 +246,6 @@ struct MemoryCardView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "calendar")
                                     Text(scheduledDateText)
-                                        .strikethrough(isCompletedForDisplay, color: .secondary)
-                                }
-                                .fontWeight(.medium)
-                                .font(.caption2)
-                                .lineLimit(1)
-                                .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 10)
-                                .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-
-                            if let checklistProgressText {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "checklist")
-                                    Text(checklistProgressText)
                                         .strikethrough(isCompletedForDisplay, color: .secondary)
                                 }
                                 .fontWeight(.medium)
@@ -316,8 +300,8 @@ struct MemoryCardView: View {
             .background(
                 UnevenRoundedRectangle(
                     topLeadingRadius: locationTrigger != nil ? 0 : 12,
-                    bottomLeadingRadius: 12,
-                    bottomTrailingRadius: 12,
+                    bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
+                    bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
                     topTrailingRadius: locationTrigger != nil ? 0 : 12
                 )
                 .fill(Color("ElementBackground"))
@@ -325,12 +309,25 @@ struct MemoryCardView: View {
             .overlay(
                 UnevenRoundedRectangle(
                     topLeadingRadius: locationTrigger != nil ? 0 : 12,
-                    bottomLeadingRadius: 12,
-                    bottomTrailingRadius: 12,
+                    bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
+                    bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
                     topTrailingRadius: locationTrigger != nil ? 0 : 12
                 )
                 .stroke(Color("ElementBorder"), lineWidth: 2)
             )
+            
+            // Checklist collapsible section
+            if memory.hasChecklist && !memory.checkItems.isEmpty {
+                MemoryCardChecklistView(
+                    checkItems: memory.checkItems,
+                    onToggleItem: { itemID in
+                        Task {
+                            try? await memoryService.toggleChecklistItemCompletion(memoryID: memory.id, itemID: itemID)
+                        }
+                    },
+                    isCompletedForDisplay: isCompletedForDisplay
+                )
+            }
         }
         .background(
             RoundedRectangle(cornerRadius: 12)

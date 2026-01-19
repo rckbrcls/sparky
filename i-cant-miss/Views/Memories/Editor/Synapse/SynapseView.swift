@@ -14,6 +14,7 @@ struct SynapseView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 Button {
+                    feedbackGenerator.impactOccurred()
                     onToggle()
                 } label: {
                     Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -21,6 +22,7 @@ struct SynapseView: View {
                         .foregroundStyle(item.isCompleted ? .green : .secondary)
                 }
                 .buttonStyle(.plain)
+                
                 TextField("Title", text: $item.title, axis: .vertical)
                     .font(.callout)
                     .foregroundStyle(item.isCompleted ? .secondary : .primary)
@@ -29,8 +31,6 @@ struct SynapseView: View {
                     .disabled(!isEditable)
                     .submitLabel(.next)
                     .focused($focusedField, equals: item.id)
-
-                Spacer()
 
                 if isEditable {
                     Button {
@@ -45,6 +45,13 @@ struct SynapseView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if !isEditable || focusedField != item.id {
+                    feedbackGenerator.impactOccurred()
+                    onToggle()
                 }
             }
 

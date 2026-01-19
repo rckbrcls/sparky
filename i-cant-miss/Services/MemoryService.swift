@@ -393,6 +393,30 @@ final class MemoryService: ObservableObject {
             memory.isPinned.toggle()
         }
     }
+    
+    func toggleChecklistItemCompletion(memoryID: UUID, itemID: UUID) async throws {
+        try await mutateContentsData(memoryID: memoryID) { bundle in
+            guard var checkItems = bundle.checkItems else { return }
+            guard let index = checkItems.firstIndex(where: { $0.id == itemID }) else { return }
+            
+            let item = checkItems[index]
+            let newCompletedState = !item.isCompleted
+            let newCompletedAt = newCompletedState ? Date() : nil
+            
+            checkItems[index] = CheckItemModel(
+                id: item.id,
+                title: item.title,
+                detail: item.detail,
+                isCompleted: newCompletedState,
+                sortOrder: item.sortOrder,
+                createdAt: item.createdAt,
+                updatedAt: Date(),
+                completedAt: newCompletedAt
+            )
+            
+            bundle.checkItems = checkItems
+        }
+    }
 
     func setStatus(memoryID: UUID, status: MemoryStatus) async throws {
         try await mutateMemory(memoryID: memoryID) { memory in
