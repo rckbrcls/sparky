@@ -61,7 +61,7 @@ struct MemoryCardSequentialView: View {
                         }
                     }
                 }
-                .padding(10)
+                .padding(6)
             }
             .background(
                 RoundedRectangle(cornerRadius: 8)
