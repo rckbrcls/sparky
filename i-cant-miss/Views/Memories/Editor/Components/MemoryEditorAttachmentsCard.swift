@@ -1,9 +1,11 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 struct MemoryEditorAttachmentsCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     var isEditable: Bool = true
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     // Callbacks for adding attachments
     var onAddPhoto: () -> Void
@@ -182,6 +184,7 @@ struct MemoryEditorAttachmentsCard: View {
     }
 
     private func removeAttachment(_ attachment: MemoryModel.Attachment) {
+        feedbackGenerator.impactOccurred()
         switch attachment.kind {
         case .photo:
             viewModel.removePhotoAttachment(id: attachment.id)

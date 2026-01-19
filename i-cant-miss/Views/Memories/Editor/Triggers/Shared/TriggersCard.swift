@@ -8,6 +8,7 @@ struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     let memoryLookup: [UUID: MemoryModel]
     var isEditable: Bool = true
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -38,7 +39,10 @@ struct TriggersCard: View {
                         viewModel: viewModel,
                         memoryLookup: memoryLookup,
                         isEditable: isEditable,
-                        onDelete: { viewModel.removeSequentialTrigger() }
+                        onDelete: {
+                            feedbackGenerator.impactOccurred()
+                            viewModel.removeSequentialTrigger()
+                        }
                     )
                 }
 
@@ -113,12 +117,14 @@ struct TriggersCard: View {
     // MARK: - Helper Functions
 
     private func removeTrigger(type: MemoryTriggerType) {
+        feedbackGenerator.impactOccurred()
         if let trigger = viewModel.triggers.first(where: { $0.type == type }) {
             viewModel.removeTrigger(id: trigger.id)
         }
     }
 
     private func createDefaultScheduledTrigger() {
+        feedbackGenerator.impactOccurred()
         let fireDate = Date().addingTimeInterval(3600) // 1 hour from now
         viewModel.setScheduledTrigger(
             fireDate: fireDate,
@@ -130,6 +136,7 @@ struct TriggersCard: View {
     }
 
     private func createDefaultLocationTrigger() {
+        feedbackGenerator.impactOccurred()
         // Default to Apple Park coordinates
         viewModel.addLocationTrigger(
             name: "Select a location",
@@ -143,6 +150,7 @@ struct TriggersCard: View {
 
 
     private func createDefaultSequentialTrigger() {
+        feedbackGenerator.impactOccurred()
         viewModel.updateSequentialTrigger(sequenceID: UUID(), stepIndex: 0, startDate: Date(), currentStepIndex: 0)
     }
 }

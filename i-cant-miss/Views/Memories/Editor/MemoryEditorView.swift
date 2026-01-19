@@ -130,6 +130,7 @@ struct MemoryEditorView: View {
             .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
             .sheet(isPresented: $isShowingAudioRecorder) {
                 AudioRecorderSheet(onSave: { data, url in
+                    feedbackGenerator.impactOccurred()
                     _ = viewModel.addAudioAttachment(data: data, sourceURL: url)
                 })
             }
@@ -504,6 +505,7 @@ struct MemoryEditorView: View {
     // Simplified for fixed model - photos go directly to viewModel.photoAttachments
     private func handleCapturedImage(_ image: UIImage) {
         guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+        feedbackGenerator.impactOccurred()
         let _ = viewModel.addPhotoAttachment(data: data)
         isPresentingCamera = false
         pendingPhotoContentID = nil
@@ -512,6 +514,7 @@ struct MemoryEditorView: View {
 
     // Simplified for fixed model - links go directly to viewModel.linkAttachments
     func handleLinkAdded(_ url: URL) {
+        feedbackGenerator.impactOccurred()
         let _ = viewModel.addLinkAttachment(url: url)
         pendingLinkContentID = nil
         cleanupPendingContentTargets()
@@ -548,6 +551,7 @@ struct MemoryEditorView: View {
 
             guard let data = try? Data(contentsOf: url) else { continue }
             await MainActor.run {
+                feedbackGenerator.impactOccurred()
                 let _ = viewModel.addFileAttachment(
                     data: data,
                     filename: url.lastPathComponent,
@@ -587,6 +591,7 @@ struct MemoryEditorView: View {
             do {
                 if let image = try await item.loadTransferable(type: PhotoPickerLoadedImage.self) {
                     await MainActor.run {
+                        feedbackGenerator.impactOccurred()
                         let _ = viewModel.addPhotoAttachment(data: image.data)
                     }
                 }
