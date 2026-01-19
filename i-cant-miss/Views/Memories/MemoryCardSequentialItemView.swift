@@ -39,12 +39,6 @@ struct MemoryCardSequentialItemView: View {
                 .lineLimit(1)
             
             Spacer(minLength: 4)
-            
-            if isCompletedForDisplay {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.green)
-            }
         }
         .padding(10)
         .frame(width: 140)
