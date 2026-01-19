@@ -25,12 +25,7 @@ struct MemoryCardSequentialItemView: View {
     }
     
     var body: some View {
-        HStack(alignment: .center, spacing: 6) {
-            Image(systemName: spaceIcon)
-                .foregroundStyle(spaceColor)
-                .frame(width: 16, height: 16)
-                .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
-            
+        HStack(alignment: .center, spacing: 6) {  
             Text(title)
                 .font(.caption2)
                 .fontWeight(.medium)
@@ -43,12 +38,12 @@ struct MemoryCardSequentialItemView: View {
         .padding(10)
         .frame(width: 140)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color("ElementBackground"))
                 .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(Color("ElementBorder"), lineWidth: 2)
         )
     }

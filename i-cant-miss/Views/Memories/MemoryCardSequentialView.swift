@@ -43,11 +43,11 @@ struct MemoryCardSequentialView: View {
                 .padding(6)
             }
             .background(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(Color.secondary.opacity(0.1))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(Color("ElementBorder"), lineWidth: 2)
             )
             .padding(.horizontal, 8)
