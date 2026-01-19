@@ -397,6 +397,10 @@ final class MemoryService: ObservableObject {
     func setStatus(memoryID: UUID, status: MemoryStatus) async throws {
         try await mutateMemory(memoryID: memoryID) { memory in
             memory.statusRaw = status.rawValue
+            // Remover pin quando o memory é marcado como concluído
+            if status == .completed {
+                memory.isPinned = false
+            }
         }
 
         // Se a memória foi completada, notificar executor sequencial

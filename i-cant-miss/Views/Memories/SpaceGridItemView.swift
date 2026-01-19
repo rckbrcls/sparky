@@ -11,6 +11,7 @@ struct SpaceGridItemView: View {
     let space: SpaceModel
     let count: Int
     let completedCount: Int
+    let activeCount: Int
     let spaceService: SpaceService?
     let memoryService: MemoryService?
     let mindService: MindService?
@@ -22,6 +23,7 @@ struct SpaceGridItemView: View {
         space: SpaceModel,
         count: Int,
         completedCount: Int = 0,
+        activeCount: Int = 0,
         spaceService: SpaceService? = nil,
         memoryService: MemoryService? = nil,
         mindService: MindService? = nil,
@@ -31,6 +33,7 @@ struct SpaceGridItemView: View {
         self.space = space
         self.count = count
         self.completedCount = completedCount
+        self.activeCount = activeCount
         self.spaceService = spaceService
         self.memoryService = memoryService
         self.mindService = mindService
@@ -59,9 +62,17 @@ struct SpaceGridItemView: View {
 
                 Spacer()
 
-                Text(displayCount)
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+                if activeCount > 0 {
+                    Text("\(activeCount)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .frame(height: 20)
+                        .background(
+                            Circle()
+                                .fill(spaceColor)
+                        )
+                }
             }
             
             Text(space.name)
@@ -223,12 +234,14 @@ struct SpaceGridItemView: View {
     HStack {
         SpaceGridItemView(
             space: SpaceModel(id: UUID(), name: "Inbox"),
-            count: 12
+            count: 12,
+            activeCount: 8
         )
         SpaceGridItemView(
             space: SpaceModel(id: UUID(), name: "Work"),
             count: 5,
-            completedCount: 2
+            completedCount: 2,
+            activeCount: 3
         )
     }
     .padding()

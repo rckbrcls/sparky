@@ -8,6 +8,7 @@ import SwiftUI
 struct MindGridItemView: View {
     let mind: MindModel
     let count: Int
+    let activeCount: Int
     let mindService: MindService?
     let spaceService: SpaceService?
 
@@ -16,12 +17,14 @@ struct MindGridItemView: View {
     init(
         mind: MindModel,
         count: Int,
+        activeCount: Int = 0,
         mindService: MindService? = nil,
         spaceService: SpaceService? = nil,
         onEdit: ((MindModel) -> Void)? = nil
     ) {
         self.mind = mind
         self.count = count
+        self.activeCount = activeCount
         self.mindService = mindService
         self.spaceService = spaceService
         self.onEdit = onEdit
@@ -37,9 +40,17 @@ struct MindGridItemView: View {
 
                 Spacer()
 
-                Text("\(count)")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
+                if activeCount > 0 {
+                    Text("\(activeCount)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .frame(height: 20)
+                        .background(
+                            Circle()
+                                .fill(mindColor)
+                        )
+                }
             }
             Text(mind.name)
                 .font(.subheadline)
@@ -123,11 +134,13 @@ struct MindGridItemView: View {
     HStack {
         MindGridItemView(
             mind: MindModel(id: UUID(), name: "Work"),
-            count: 5
+            count: 5,
+            activeCount: 12
         )
         MindGridItemView(
             mind: MindModel(id: UUID(), name: "Personal"),
-            count: 3
+            count: 3,
+            activeCount: 8
         )
     }
     .padding()

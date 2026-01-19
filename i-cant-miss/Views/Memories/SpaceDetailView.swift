@@ -306,7 +306,7 @@ struct SpaceDetailView: View {
                         Image(systemName: "bolt.fill")
                             .foregroundStyle(Color.blue)
                             .font(.subheadline)
-                        Text("Memories")
+                        Text("Active")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)

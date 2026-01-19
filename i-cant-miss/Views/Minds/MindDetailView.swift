@@ -135,6 +135,7 @@ struct MindDetailView: View {
                                     space: space,
                                     count: memoryCounts(for: space).total,
                                     completedCount: memoryCounts(for: space).completed,
+                                    activeCount: activeMemoryCount(for: space),
                                     spaceService: spaceService,
                                     memoryService: memoryService,
                                     mindService: mindService,
@@ -234,5 +235,31 @@ struct MindDetailView: View {
         let total = memories.count
         let completed = memories.filter { $0.isCompleted }.count
         return (completed, total)
+    }
+
+    private func activeMemoryCount(for space: SpaceModel) -> Int {
+        let memories: [MemoryModel]
+        if space.isAllSpaces {
+            memories = memoryService.memories
+        } else if space.isInboxSpaces {
+            memories = memoryService.memories.filter { memory in
+                memory.space == nil
+            }
+        } else if space.isAllSpaceForMind {
+            guard let mindID = space.mind?.id else {
+                return 0
+            }
+            memories = memoryService.memories.filter { memory in
+                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
+                return memorySpaceMindID == mindID
+            }
+        } else {
+            memories = memoryService.memories.filter { memory in
+                guard let spaceID = memory.space?.id else { return false }
+                return spaceID == space.id
+            }
+        }
+
+        return memories.filter { $0.status == .active }.count
     }
 }

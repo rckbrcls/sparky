@@ -40,6 +40,7 @@ struct MindRootView: View {
                                 MindGridItemView(
                                     mind: mind,
                                     count: spaceCounts(for: mind),
+                                    activeCount: activeMemoryCount(for: mind),
                                     mindService: mindService,
                                     spaceService: spaceService,
                                     onEdit: onEditMind
@@ -123,6 +124,25 @@ struct MindRootView: View {
                 return mindID == mind.id
             }.count
         }
+    }
+
+    private func activeMemoryCount(for mind: MindModel) -> Int {
+        let memories: [MemoryModel]
+        if mind.isAllMinds {
+            memories = memoryService.memories
+        } else if mind.isInboxMinds {
+            memories = memoryService.memories.filter { memory in
+                memory.space == nil
+            }
+        } else {
+            let mindID = mind.id
+            memories = memoryService.memories.filter { memory in
+                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
+                return memorySpaceMindID == mindID
+            }
+        }
+
+        return memories.filter { $0.status == .active }.count
     }
 
     private func refresh() async {
