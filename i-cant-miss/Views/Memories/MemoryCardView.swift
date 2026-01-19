@@ -177,6 +177,7 @@ struct MemoryCardView: View {
                         .fontWeight(.medium)
                         .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
                         .strikethrough(isCompletedForDisplay, color: .secondary)
+                        .lineLimit(2)
 
 
                     if let bodyPreview {
@@ -184,6 +185,7 @@ struct MemoryCardView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .strikethrough(isCompletedForDisplay, color: .secondary)
+                            .lineLimit(2)
                     }
 
                 }
