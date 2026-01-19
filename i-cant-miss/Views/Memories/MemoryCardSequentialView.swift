@@ -29,7 +29,7 @@ struct MemoryCardSequentialView: View {
     var body: some View {
         HStack(spacing: 0) {
             // Data de início à esquerda
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Start Date")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -41,6 +41,7 @@ struct MemoryCardSequentialView: View {
             }
             .padding(.leading, 12)
             .frame(width: 90, alignment: .leading)
+            .padding(.vertical, 4)
             
             // Scroll horizontal com cards das memórias
             ScrollView(.horizontal, showsIndicators: false) {
@@ -60,12 +61,11 @@ struct MemoryCardSequentialView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(10)
             }
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color("ElementBackground").opacity(0.6))
+                    .fill(Color.secondary.opacity(0.1))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -73,7 +73,7 @@ struct MemoryCardSequentialView: View {
             )
             .padding(.horizontal, 8)
         }
-        .frame(height: 120)
+        .padding(.vertical, 8)
         .background(
             UnevenRoundedRectangle(
                 topLeadingRadius: 12,
