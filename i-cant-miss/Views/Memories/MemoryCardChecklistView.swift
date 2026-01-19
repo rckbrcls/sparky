@@ -27,7 +27,7 @@ struct MemoryCardChecklistView: View {
         VStack(spacing: 0) {
             // Collapsed header
             Button {
-                withAnimation(.easeInOut(duration: 0.25)) {
+                withAnimation(.easeInOut(duration: 0.2)) {
                     isExpanded.toggle()
                 }
                 feedbackGenerator.impactOccurred()
@@ -100,7 +100,6 @@ struct MemoryCardChecklistView: View {
                     }
                 }
                 .padding(.bottom, 12)
-                .transition(.opacity)
             }
         }
         .background(
