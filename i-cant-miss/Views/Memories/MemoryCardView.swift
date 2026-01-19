@@ -218,7 +218,6 @@ struct MemoryCardView: View {
                 // Sequential trigger view (se não houver location trigger)
                 MemoryCardSequentialView(
                     memories: sequenceMemories,
-                    startDate: sequential.startDate,
                     displayDate: displayDate
                 )
             }

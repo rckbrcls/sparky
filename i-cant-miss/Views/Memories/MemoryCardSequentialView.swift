@@ -9,7 +9,6 @@ import SwiftUI
 
 struct MemoryCardSequentialView: View {
     let memories: [MemoryModel]
-    let startDate: Date?
     var displayDate: Date?
     
     private func isCompletedForDisplay(memory: MemoryModel) -> Bool {
@@ -21,28 +20,8 @@ struct MemoryCardSequentialView: View {
         return memory.isCompleted
     }
     
-    private func startDateString(for date: Date?) -> String {
-        guard let date = date else { return "No start date" }
-        return date.formatted(date: .abbreviated, time: .omitted)
-    }
-    
     var body: some View {
         HStack(spacing: 0) {
-            // Data de início à esquerda
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Start Date")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                
-                Text(startDateString(for: startDate))
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-            }
-            .padding(.leading, 12)
-            .frame(width: 90, alignment: .leading)
-            .padding(.vertical, 4)
-            
             // Scroll horizontal com cards das memórias
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -139,8 +118,7 @@ struct MemoryCardSequentialView: View {
         completedDates: []
     )
     MemoryCardSequentialView(
-        memories: [memory1, memory2],
-        startDate: Date()
+        memories: [memory1, memory2]
     )
     .padding()
 }
