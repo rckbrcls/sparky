@@ -446,6 +446,47 @@ final class MemoryService: ObservableObject {
         }
     }
 
+    func updateMemoryOrder(memoryIDs: [UUID]) async throws {
+        let objectIDs: [NSManagedObjectID] = try await withCheckedThrowingContinuation { continuation in
+            persistence.performBackgroundTask { context in
+                do {
+                    var updates: [(Memory, Int)] = []
+                    for (index, memoryID) in memoryIDs.enumerated() {
+                        guard let memory = try self.fetchMemory(by: memoryID, context: context) else {
+                            continue
+                        }
+                        updates.append((memory, index))
+                    }
+                    
+                    // Update userOrder for all memories
+                    for (memory, order) in updates {
+                        memory.userOrder = Int16(order)
+                        memory.updatedAt = Date()
+                    }
+                    
+                    try context.save()
+                    let objectIDs = updates.map { $0.0.objectID }
+                    continuation.resume(returning: objectIDs)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+
+        // Update cache for all updated memories
+        for objectID in objectIDs {
+            do {
+                let updatedMemory = try await fetchMemoryFromViewContext(objectID: objectID)
+                updateCachedMemory(updatedMemory)
+            } catch {
+                logger.error("Failed to update cache for memory: \(error.localizedDescription)")
+            }
+        }
+
+        // Refresh to ensure everything is in sync
+        await refresh(force: true)
+    }
+
     func duplicateMemory(memoryID: UUID) async throws {
         guard let memory = memory(id: memoryID) else {
             throw MemoryServiceError.memoryNotFound
@@ -688,7 +729,8 @@ private extension MemoryService {
             audioAttachmentIDs: decoded.audioAttachmentIDs,
             fileAttachmentIDs: decoded.fileAttachmentIDs,
             attachments: decoded.attachments,
-            completedDates: decoded.completedDates
+            completedDates: decoded.completedDates,
+            userOrder: Int(entity.userOrder)
         )
 
         return memory
@@ -928,11 +970,15 @@ private extension MemoryService {
         switch strategy {
         case .manual:
             return memories.sorted { lhs, rhs in
-                let lhsOrder = lhs.space?.sortOrder ?? Int.max
-                let rhsOrder = rhs.space?.sortOrder ?? Int.max
-                if lhsOrder != rhsOrder {
-                    return lhsOrder < rhsOrder
+                // Keep pinned memories at the top
+                if lhs.isPinned != rhs.isPinned {
+                    return lhs.isPinned && !rhs.isPinned
                 }
+                // Sort by userOrder for manual sorting
+                if lhs.userOrder != rhs.userOrder {
+                    return lhs.userOrder < rhs.userOrder
+                }
+                // Fallback to updatedAt if userOrder is the same
                 return lhs.updatedAt > rhs.updatedAt
             }
 

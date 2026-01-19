@@ -5,6 +5,19 @@ struct MemorySortMenu: View {
 
     var body: some View {
         Menu {
+            Section("Ordem") {
+                Button {
+                    sortStrategy = .manual
+                } label: {
+                    HStack {
+                        Text("Ordem Customizada")
+                        if sortStrategy == .manual {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+
             Section("Data de Criação") {
                 Button {
                     sortStrategy = .createdAtAscending

@@ -71,6 +71,8 @@ struct MemoryModel: Identifiable, Hashable {
     var attachments: [Attachment]
     /// Dates on which this memory was marked as completed (for recurring memories)
     var completedDates: [Date]
+    /// Custom user-defined order for manual sorting
+    var userOrder: Int
 
     var hasChecklist: Bool {
         !checkItems.isEmpty

@@ -69,7 +69,8 @@ struct MemoryCardSequentialItemView: View {
         audioAttachmentIDs: [],
         fileAttachmentIDs: [],
         attachments: [],
-        completedDates: []
+        completedDates: [],
+        userOrder: 0
     )
     MemoryCardSequentialItemView(memory: memory, isCompletedForDisplay: false)
         .padding()

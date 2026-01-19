@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SpaceDetailView: View {
     let space: SpaceModel
@@ -34,6 +35,7 @@ struct SpaceDetailView: View {
     @State private var isPinnedExpanded = true
     @State private var isActiveExpanded = true
     @State private var isCompletedExpanded = false
+    @State private var draggedMemoryID: UUID? = nil
 
     private var activeFilterCount: Int {
         if !selectedTriggerTypes.isEmpty && selectedTriggerTypes.count < MemoryTriggerType.allCases.count {
@@ -293,6 +295,18 @@ struct SpaceDetailView: View {
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
+                        .opacity(draggedMemoryID == memory.id ? 0.5 : 1.0)
+                        .onDrag {
+                            guard selectedSortStrategy == .manual, !isMultiSelecting else {
+                                return NSItemProvider()
+                            }
+                            draggedMemoryID = memory.id
+                            return NSItemProvider(object: memory.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.text], isTargeted: nil) { providers in
+                            handleDrop(providers: providers, targetMemoryID: memory.id, memories: pinnedMemories)
+                            return true
+                        }
                     }
                 }
             }
@@ -349,6 +363,18 @@ struct SpaceDetailView: View {
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
+                        .opacity(draggedMemoryID == memory.id ? 0.5 : 1.0)
+                        .onDrag {
+                            guard selectedSortStrategy == .manual, !isMultiSelecting else {
+                                return NSItemProvider()
+                            }
+                            draggedMemoryID = memory.id
+                            return NSItemProvider(object: memory.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.text], isTargeted: nil) { providers in
+                            handleDrop(providers: providers, targetMemoryID: memory.id, memories: nonPinnedMemories)
+                            return true
+                        }
                     }
                 }
             }
@@ -405,6 +431,18 @@ struct SpaceDetailView: View {
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
+                        .opacity(draggedMemoryID == memory.id ? 0.5 : 1.0)
+                        .onDrag {
+                            guard selectedSortStrategy == .manual, !isMultiSelecting else {
+                                return NSItemProvider()
+                            }
+                            draggedMemoryID = memory.id
+                            return NSItemProvider(object: memory.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.text], isTargeted: nil) { providers in
+                            handleDrop(providers: providers, targetMemoryID: memory.id, memories: completedMemories)
+                            return true
+                        }
                     }
                 }
             }
@@ -605,6 +643,76 @@ struct SpaceDetailView: View {
 
         return lhs.updatedAt > rhs.updatedAt
     }
+
+    private func handleDrop(providers: [NSItemProvider], targetMemoryID: UUID, memories: [MemoryModel]) {
+        guard selectedSortStrategy == .manual else {
+            draggedMemoryID = nil
+            return
+        }
+
+        // Try to get the dragged ID from the provider first
+        if let provider = providers.first {
+            provider.loadItem(forTypeIdentifier: "public.text", options: nil) { data, error in
+                var decodedUUID: UUID? = nil
+
+                if error == nil {
+                    // Try to decode UUID from provider data
+                    if let data = data as? Data,
+                       let uuidString = String(data: data, encoding: .utf8),
+                       let uuid = UUID(uuidString: uuidString.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                        decodedUUID = uuid
+                    } else if let string = data as? String,
+                              let uuid = UUID(uuidString: string.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                        decodedUUID = uuid
+                    }
+                }
+
+                // Use decoded UUID or fallback to draggedID from state
+                let finalDraggedID = decodedUUID ?? draggedMemoryID
+
+                DispatchQueue.main.async {
+                    if let draggedID = finalDraggedID, draggedID != targetMemoryID {
+                        self.processDrop(draggedID: draggedID, droppedOnID: targetMemoryID, in: memories)
+                    } else {
+                        draggedMemoryID = nil
+                    }
+                }
+            }
+        } else {
+            // If no provider, try using draggedID from state directly
+            if let draggedID = draggedMemoryID, draggedID != targetMemoryID {
+                processDrop(draggedID: draggedID, droppedOnID: targetMemoryID, in: memories)
+            } else {
+                draggedMemoryID = nil
+            }
+        }
+    }
+
+    private func processDrop(draggedID: UUID, droppedOnID: UUID, in memories: [MemoryModel]) {
+        guard selectedSortStrategy == .manual,
+              let draggedIndex = memories.firstIndex(where: { $0.id == draggedID }),
+              let droppedIndex = memories.firstIndex(where: { $0.id == droppedOnID }),
+              draggedIndex != droppedIndex else {
+            draggedMemoryID = nil
+            return
+        }
+
+        var reorderedMemories = memories
+        let draggedMemory = reorderedMemories.remove(at: draggedIndex)
+        reorderedMemories.insert(draggedMemory, at: droppedIndex)
+
+        let memoryIDs = reorderedMemories.map { $0.id }
+        
+        Task {
+            do {
+                try await memoryService.updateMemoryOrder(memoryIDs: memoryIDs)
+            } catch {
+                // Handle error silently for now
+            }
+        }
+        
+        draggedMemoryID = nil
+    }
 }
 
 private struct SpaceDetailModifiers: ViewModifier {
@@ -679,3 +787,4 @@ private struct SpaceDetailContextModifiers: ViewModifier {
             }
     }
 }
+

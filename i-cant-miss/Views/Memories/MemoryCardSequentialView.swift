@@ -94,7 +94,8 @@ struct MemoryCardSequentialView: View {
         audioAttachmentIDs: [],
         fileAttachmentIDs: [],
         attachments: [],
-        completedDates: []
+        completedDates: [],
+        userOrder: 0
     )
     let memory2 = MemoryModel(
         id: UUID(),
@@ -115,7 +116,8 @@ struct MemoryCardSequentialView: View {
         audioAttachmentIDs: [],
         fileAttachmentIDs: [],
         attachments: [],
-        completedDates: []
+        completedDates: [],
+        userOrder: 0
     )
     MemoryCardSequentialView(
         memories: [memory1, memory2]
