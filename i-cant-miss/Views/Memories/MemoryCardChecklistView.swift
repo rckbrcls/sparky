@@ -27,16 +27,15 @@ struct MemoryCardChecklistView: View {
         VStack(spacing: 0) {
             // Collapsed header
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
-                }
+                isExpanded.toggle()
                 feedbackGenerator.impactOccurred()
             } label: {
                 HStack(spacing: 12) {
                     // Chevron icon
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    Image(systemName: "chevron.down")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
                     
                     // Progress text
                     Text("\(completedCount)/\(totalCount)")
@@ -70,38 +69,37 @@ struct MemoryCardChecklistView: View {
             
             // Expanded content
             if isExpanded {
-                VStack(spacing: 0) {
-                    ForEach(checkItems) { item in
-                        Button {
-                            feedbackGenerator.impactOccurred()
-                            onToggleItem(item.id)
-                        } label: {
-                            HStack(alignment: .center, spacing: 12) {
-                                Text(item.title)
-                                    .font(.callout)
-                                    .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                                    .strikethrough(item.isCompleted, color: .secondary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .font(.body)
-                                    .foregroundStyle(item.isCompleted ? .green : .secondary)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 12)
-                            .contentShape(Rectangle())
+                ForEach(checkItems) { item in
+                    Button {
+                        feedbackGenerator.impactOccurred()
+                        onToggleItem(item.id)
+                    } label: {
+                        HStack(alignment: .center, spacing: 12) {
+                            Text(item.title)
+                                .font(.callout)
+                                .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                                .strikethrough(item.isCompleted, color: .secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .font(.body)
+                                .foregroundStyle(item.isCompleted ? .green : .secondary)
                         }
-                        .buttonStyle(.plain)
-                        
-                        if item.id != checkItems.last?.id {
-                            Divider()
-                                .padding(.leading, 44)
-                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    if item.id != checkItems.last?.id {
+                        Divider()
+                            .padding(.leading, 44)
                     }
                 }
                 .padding(.bottom, 12)
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
         .background(
             UnevenRoundedRectangle(
                 topLeadingRadius: 0,
