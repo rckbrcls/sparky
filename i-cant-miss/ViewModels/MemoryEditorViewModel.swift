@@ -98,6 +98,11 @@ final class MemoryEditorViewModel: ObservableObject {
         sequentialTrigger?.sequential != nil
     }
 
+    var currentMemory: MemoryModel? {
+        guard let memoryID = editingMemoryID else { return nil }
+        return environment.memoryService.memory(id: memoryID)
+    }
+
     var aggregatedBody: String {
         note.trimmingCharacters(in: .whitespacesAndNewlines)
     }

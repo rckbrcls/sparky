@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FilterBadgesBar: View {
     @Binding var selectedTriggerTypes: Set<MemoryTriggerType>
+    @Binding var sortStrategy: MemoryService.SortStrategy
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -27,6 +28,9 @@ struct FilterBadgesBar: View {
                         .foregroundStyle(isTriggerTypeActive(triggerType) ? .white : .primary)
                     }
                 }
+
+                // Sort menu
+                MemorySortMenu(sortStrategy: $sortStrategy)
             }
             .padding(.leading, 20)
             .padding(.vertical, 1) // Prevent border clipping

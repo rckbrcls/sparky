@@ -22,6 +22,7 @@ struct SpaceDetailView: View {
     let onSearchActiveChange: (Bool) -> Void
 
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
+    @State private var selectedSortStrategy: MemoryService.SortStrategy = .updatedAtDescending
 
     @State private var isMultiSelecting = false
     @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
@@ -211,7 +212,8 @@ struct SpaceDetailView: View {
                 .listRowSeparator(.hidden)
 
             FilterBadgesBar(
-                selectedTriggerTypes: $selectedTriggerTypes
+                selectedTriggerTypes: $selectedTriggerTypes,
+                sortStrategy: $selectedSortStrategy
             )
             .listRowInsets(.init(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
@@ -414,21 +416,20 @@ struct SpaceDetailView: View {
                 in: nil,
                 statuses: [],
                 includeCompleted: true,
-                sort: .updatedAtDescending
+                sort: selectedSortStrategy
             )
         } else if isInboxSpace {
-            base = memoryService.memories.filter { memory in
+            let unsorted = memoryService.memories.filter { memory in
                 memory.space == nil
             }
+            base = memoryService.sortedMemories(unsorted, using: selectedSortStrategy)
         } else if isAllSpaceForMind {
             if let mindID = resolvedSpace.mind?.id {
-                base = memoryService.memories.filter { memory in
+                let unsorted = memoryService.memories.filter { memory in
                     guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
                     return memorySpaceMindID == mindID
                 }
-                .sorted { lhs, rhs in
-                    lhs.updatedAt > rhs.updatedAt
-                }
+                base = memoryService.sortedMemories(unsorted, using: selectedSortStrategy)
             } else {
                 base = []
             }
@@ -437,7 +438,7 @@ struct SpaceDetailView: View {
                 in: resolvedSpace,
                 statuses: [],
                 includeCompleted: true,
-                sort: .updatedAtDescending
+                sort: selectedSortStrategy
             )
         }
 

@@ -434,6 +434,14 @@ struct MemoryEditorView: View {
 
     private var titleSectionRow: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if !isEditingEnabled, let memory = viewModel.currentMemory {
+                MemoryEditorMetadataCard(
+                    createdAt: memory.createdAt,
+                    updatedAt: memory.updatedAt
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
             MemoryEditorTitleCard(
                 viewModel: viewModel,
                 spaceService: spaceService,

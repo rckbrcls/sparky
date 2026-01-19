@@ -71,7 +71,19 @@ struct MemoryCardView: View {
         return formatter
     }()
 
-
+    private func relativeDateString(for date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Se for muito recente (menos de 1 minuto), mostra "just now"
+        if let seconds = calendar.dateComponents([.second], from: date, to: now).second,
+           seconds < 60 {
+            return "just now"
+        }
+        
+        // Usa o formato relativo padrão que não mostra segundos
+        return Self.relativeFormatter.localizedString(for: date, relativeTo: now)
+    }
 
     private var title: String {
         guard let memory = memory else { return "Untitled" }
@@ -223,6 +235,21 @@ struct MemoryCardView: View {
                         }
                     }
                 }
+
+                HStack(spacing: 8) {
+                    Text("Created \(relativeDateString(for: memory.createdAt))")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+
+                    Text("•")
+                        .foregroundStyle(.tertiary)
+                        .font(.caption2)
+
+                    Text("Updated \(relativeDateString(for: memory.updatedAt))")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.top, 2)
             }
 
             Spacer()

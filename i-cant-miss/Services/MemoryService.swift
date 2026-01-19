@@ -20,6 +20,9 @@ final class MemoryService: ObservableObject {
     enum SortStrategy {
         case manual
         case updatedAtDescending
+        case updatedAtAscending
+        case createdAtDescending
+        case createdAtAscending
         case dueDateAscending
         case nextTriggerAscending
     }
@@ -893,7 +896,7 @@ private extension MemoryService {
         return try context.fetch(request).first
     }
 
-    func sortedMemories(_ memories: [MemoryModel], using strategy: SortStrategy) -> [MemoryModel] {
+    internal func sortedMemories(_ memories: [MemoryModel], using strategy: SortStrategy) -> [MemoryModel] {
         switch strategy {
         case .manual:
             return memories.sorted { lhs, rhs in
@@ -911,6 +914,30 @@ private extension MemoryService {
                     return lhs.isPinned && !rhs.isPinned
                 }
                 return lhs.updatedAt > rhs.updatedAt
+            }
+
+        case .updatedAtAscending:
+            return memories.sorted { lhs, rhs in
+                if lhs.isPinned != rhs.isPinned {
+                    return lhs.isPinned && !rhs.isPinned
+                }
+                return lhs.updatedAt < rhs.updatedAt
+            }
+
+        case .createdAtDescending:
+            return memories.sorted { lhs, rhs in
+                if lhs.isPinned != rhs.isPinned {
+                    return lhs.isPinned && !rhs.isPinned
+                }
+                return lhs.createdAt > rhs.createdAt
+            }
+
+        case .createdAtAscending:
+            return memories.sorted { lhs, rhs in
+                if lhs.isPinned != rhs.isPinned {
+                    return lhs.isPinned && !rhs.isPinned
+                }
+                return lhs.createdAt < rhs.createdAt
             }
 
         case .dueDateAscending:
