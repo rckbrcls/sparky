@@ -46,8 +46,7 @@ struct MemoryCardSequentialItemView: View {
                     .foregroundStyle(.green)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 10)
+        .padding(10)
         .frame(width: 140)
         .background(
             RoundedRectangle(cornerRadius: 8)
