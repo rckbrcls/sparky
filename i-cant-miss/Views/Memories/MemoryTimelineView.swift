@@ -10,6 +10,7 @@ import SwiftUI
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     @Binding var navigationPath: NavigationPath
     var embedsInNavigationStack: Bool = true
@@ -29,12 +30,14 @@ struct MemoryTimelineView: View {
     init(
         memoryService: MemoryService,
         onSelectMemory: @escaping (MemoryModel) -> Void,
+        onEditMemory: ((MemoryModel) -> Void)? = nil,
         onMultiSelectionChange: @escaping (Bool) -> Void,
         navigationPath: Binding<NavigationPath>,
         embedsInNavigationStack: Bool = true
     ) {
         self.memoryService = memoryService
         self.onSelectMemory = onSelectMemory
+        self.onEditMemory = onEditMemory
         self.onMultiSelectionChange = onMultiSelectionChange
         self._navigationPath = navigationPath
         self.embedsInNavigationStack = embedsInNavigationStack
@@ -217,6 +220,7 @@ struct MemoryTimelineView: View {
             selectedMemoryIDs: selectedMemoryIDs,
             isPerformingBulkAction: isPerformingBulkAction,
             onSelectMemory: onSelectMemory,
+            onEditMemory: onEditMemory,
             onToggleSelection: toggleMemorySelection(_:)
         )
     }

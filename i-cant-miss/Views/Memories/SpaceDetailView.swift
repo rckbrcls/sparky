@@ -16,6 +16,7 @@ struct SpaceDetailView: View {
     @ObservedObject var memoryService: MemoryService
 
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onEditSpace: ((SpaceModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onSpaceContextChange: (SpaceModel?) -> Void
@@ -286,7 +287,8 @@ struct SpaceDetailView: View {
                             isSelected: isMemorySelected(memory),
                             isDisabled: isPerformingBulkAction,
                             onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:)
+                            onToggleSelection: toggleMemorySelection(_:),
+                            onEditMemory: onEditMemory
                         )
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)
@@ -341,7 +343,8 @@ struct SpaceDetailView: View {
                             isSelected: isMemorySelected(memory),
                             isDisabled: isPerformingBulkAction,
                             onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:)
+                            onToggleSelection: toggleMemorySelection(_:),
+                            onEditMemory: onEditMemory
                         )
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)
@@ -396,7 +399,8 @@ struct SpaceDetailView: View {
                             isSelected: isMemorySelected(memory),
                             isDisabled: isPerformingBulkAction,
                             onSelect: onSelectMemory,
-                            onToggleSelection: toggleMemorySelection(_:)
+                            onToggleSelection: toggleMemorySelection(_:),
+                            onEditMemory: onEditMemory
                         )
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)

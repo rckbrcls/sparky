@@ -58,11 +58,13 @@ struct MemoryEditorView: View {
     private let mode: Mode
     private let environment: AppEnvironment
     private let initialTitle: String
+    private let startEditing: Bool
 
-    init(environment: AppEnvironment, mode: Mode, initialTitle: String = "") {
+    init(environment: AppEnvironment, mode: Mode, initialTitle: String = "", startEditing: Bool = false) {
         self.mode = mode
         self.environment = environment
         self.initialTitle = initialTitle
+        self.startEditing = startEditing
         self.spaceService = environment.spaceService
         switch mode {
         case let .create(space, template):
@@ -83,7 +85,7 @@ struct MemoryEditorView: View {
                 defaultSpace: memory.space,
                 template: .blank
             ))
-            _isEditingEnabled = State(initialValue: false)
+            _isEditingEnabled = State(initialValue: startEditing)
         }
     }
 
@@ -221,18 +223,6 @@ struct MemoryEditorView: View {
             }
 
         let metadataSaveConfigured = stateChangeConfigured
-            .onChange(of: viewModel.isPinned) { _, _ in
-                handleMetadataSaveIfNeeded()
-            }
-            .onChange(of: viewModel.selectedSpaceID) { _, _ in
-                handleMetadataSaveIfNeeded()
-            }
-            .onChange(of: viewModel.status) { _, _ in
-                handleMetadataSaveIfNeeded()
-            }
-            .onChange(of: viewModel.autoCompleteChecklist) { _, _ in
-                handleMetadataSaveIfNeeded()
-            }
             .onChange(of: viewModel.checkItems) { _, _ in
                 handleMetadataSaveIfNeeded()
             }
@@ -438,7 +428,8 @@ struct MemoryEditorView: View {
                 viewModel: viewModel,
                 spaceService: spaceService,
                 environment: environment,
-                isTitleFocused: $isTitleFocused
+                isTitleFocused: $isTitleFocused,
+                isEditingEnabled: isEditingEnabled
             )
 
             if isEditingEnabled || viewModel.hasAnyTrigger {

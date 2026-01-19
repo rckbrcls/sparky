@@ -15,11 +15,12 @@ struct CalendarDayView: View {
     let selectedMemoryIDs: Set<MemoryModel.ID>
     let isPerformingBulkAction: Bool
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onToggleSelection: (MemoryModel) -> Void
 
     @State private var displayedDate: Date
     @State private var dayAnchor: Date
-    @State private var expandedPeriods: Set<TimePeriod> = Set(TimePeriod.allCases)
+    @State private var expandedPeriods: Set<CalendarTimePeriod> = Set(CalendarTimePeriod.allCases)
 
     private let calendar = Calendar.current
 
@@ -34,6 +35,7 @@ struct CalendarDayView: View {
         selectedMemoryIDs: Set<MemoryModel.ID>,
         isPerformingBulkAction: Bool,
         onSelectMemory: @escaping (MemoryModel) -> Void,
+        onEditMemory: ((MemoryModel) -> Void)? = nil,
         onToggleSelection: @escaping (MemoryModel) -> Void
     ) {
         self.dataManager = dataManager
@@ -42,6 +44,7 @@ struct CalendarDayView: View {
         self.selectedMemoryIDs = selectedMemoryIDs
         self.isPerformingBulkAction = isPerformingBulkAction
         self.onSelectMemory = onSelectMemory
+        self.onEditMemory = onEditMemory
         self.onToggleSelection = onToggleSelection
 
         let startOfDay = Calendar.current.startOfDay(for: currentDate.wrappedValue)
@@ -53,151 +56,22 @@ struct CalendarDayView: View {
         GeometryReader { proxy in
             TabView(selection: $displayedDate) {
                 ForEach(pages, id: \.self) { day in
-                    List {
-                        dayHeader(for: day)
-                            .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-
-                        let memories = dataManager.memoriesForDate(day)
-
-                        let allDayItems = allDayMemories(from: memories, date: day)
-                        Section {
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    if expandedPeriods.contains(.allDay) {
-                                        expandedPeriods.remove(.allDay)
-                                    } else {
-                                        expandedPeriods.insert(.allDay)
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "calendar")
-                                        .foregroundStyle(Color.cyan)
-                                        .font(.subheadline)
-                                    Text("All Day")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.primary)
-                                    Text("\(allDayItems.count)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.secondary)
-                                        .rotationEffect(.degrees(expandedPeriods.contains(.allDay) ? 90 : 0))
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color.cyan.opacity(0.20))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.cyan.opacity(0.1), lineWidth: 1)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .listRowInsets(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-
-                            if expandedPeriods.contains(.allDay) {
-                                ForEach(allDayItems) { memory in
-                                    MemoryListItemButton(
-                                        memory: memory,
-                                        isMultiSelecting: isMultiSelecting,
-                                        isSelected: selectedMemoryIDs.contains(memory.id),
-                                        isDisabled: isPerformingBulkAction,
-                                        onSelect: onSelectMemory,
-                                        onToggleSelection: onToggleSelection,
-                                        displayDate: day
-                                    )
-                                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-                                }
-                            }
+                    CalendarDayContentView(
+                        day: day,
+                        dataManager: dataManager,
+                        isMultiSelecting: isMultiSelecting,
+                        selectedMemoryIDs: selectedMemoryIDs,
+                        isPerformingBulkAction: isPerformingBulkAction,
+                        onSelectMemory: onSelectMemory,
+                        onEditMemory: onEditMemory,
+                        onToggleSelection: onToggleSelection,
+                        expandedPeriods: $expandedPeriods,
+                        onEnsureMonthDataLoaded: { date in
+                            ensureMonthDataLoaded(for: date)
                         }
-
-                        ForEach(TimePeriod.allCases.filter { $0 != .allDay }, id: \.self) { period in
-                            let periodMemories = memoriesForPeriod(period, from: memories, date: day)
-
-                            Section {
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        if expandedPeriods.contains(period) {
-                                            expandedPeriods.remove(period)
-                                        } else {
-                                            expandedPeriods.insert(period)
-                                        }
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: period.iconName)
-                                            .foregroundStyle(period.color)
-                                            .font(.subheadline)
-                                        Text(period.title)
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(.primary)
-                                        Text("\(periodMemories.count)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.secondary)
-                                            .rotationEffect(.degrees(expandedPeriods.contains(period) ? 90 : 0))
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(period.color.opacity(0.20))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(period.color.opacity(0.1), lineWidth: 1)
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .listRowInsets(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-
-                                if expandedPeriods.contains(period) {
-                                    ForEach(periodMemories) { memory in
-                                        MemoryListItemButton(
-                                            memory: memory,
-                                            isMultiSelecting: isMultiSelecting,
-                                            isSelected: selectedMemoryIDs.contains(memory.id),
-                                            isDisabled: isPerformingBulkAction,
-                                            onSelect: onSelectMemory,
-                                            onToggleSelection: onToggleSelection,
-                                            displayDate: day
-                                        )
-                                        .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
-                                        .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
-                                    }
-                                }
-                            }
-
-                        }
-
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .scrollIndicators(.hidden)
-                    .environment(\.defaultMinListRowHeight, 0)
-                    .safeAreaInset(edge: .bottom) {
-                        Color.clear.frame(height: 70)
-                    }
+                    )
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .tag(day)
-                    .onAppear {
-                        ensureMonthDataLoaded(for: day)
-                    }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -216,55 +90,6 @@ struct CalendarDayView: View {
         }
     }
 
-    private func dayHeader(for date: Date) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(primaryDateTitle(for: date))
-                .appLargeTitleStyle()
-
-            HStack(spacing: 10) {
-                Text(secondaryDateTitle(for: date))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if let label = relativeLabel(for: date) {
-                    Text(label.uppercased())
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.accentColor.opacity(0.12))
-                        .foregroundStyle(Color.accentColor)
-                        .clipShape(Capsule())
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-    }
-
-    private func primaryDateTitle(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: date)
-    }
-
-    private func secondaryDateTitle(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM dd, yyyy"
-        return formatter.string(from: date)
-    }
-
-    private func relativeLabel(for date: Date) -> String? {
-        if calendar.isDateInToday(date) {
-            return "Today"
-        }
-        if calendar.isDateInTomorrow(date) {
-            return "Tomorrow"
-        }
-        if calendar.isDateInYesterday(date) {
-            return "Yesterday"
-        }
-        return nil
-    }
 
     private func ensureMonthDataLoaded(for date: Date) {
         let monthKey = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
@@ -290,132 +115,6 @@ struct CalendarDayView: View {
         }
     }
 
-    private func allDayMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
-        memories.filter { memory in
-            // Check for scheduled all-day triggers
-            if let scheduledTrigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) {
-                if scheduledTrigger.isAllDay {
-                    return true
-                }
-            }
-
-            // Check for sequential triggers - show only if this memory is the current step in the sequence
-            if let seqTrigger = memory.triggers.first(where: { $0.type == .sequential && $0.isActive }),
-               let seqInfo = seqTrigger.sequential {
-                // Only show if startDate has passed (or no startDate set)
-                // Compare using start of day to ensure proper date comparison
-                let dayStart = calendar.startOfDay(for: date)
-                let isStarted: Bool
-                if let startDate = seqInfo.startDate {
-                    let sequenceStartDay = calendar.startOfDay(for: startDate)
-                    isStarted = dayStart >= sequenceStartDay
-                } else {
-                    isStarted = true
-                }
-                // This memory is current if its stepIndex matches the currentStepIndex
-                let isCurrent = seqInfo.stepIndex == seqInfo.currentStepIndex
-                return isStarted && isCurrent
-            }
-
-            return false
-        }
-    }
-
-    private func timedMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
-        memories.filter { memory in
-            guard let trigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) else {
-                return false
-            }
-            return !trigger.isAllDay
-        }
-    }
-
-    private enum TimePeriod: CaseIterable {
-        case allDay     // All day memories (no specific time)
-        case morning    // 06:00 - 12:00
-        case afternoon  // 12:00 - 18:00
-        case evening    // 18:00 - 22:00
-        case night      // 22:00 - 06:00
-
-        var title: String {
-            switch self {
-            case .allDay: return "All Day"
-            case .morning: return "Morning"
-            case .afternoon: return "Afternoon"
-            case .evening: return "Evening"
-            case .night: return "Night"
-            }
-        }
-
-        var iconName: String {
-            switch self {
-            case .allDay: return "calendar"
-            case .morning: return "sunrise.fill"
-            case .afternoon: return "sun.max.fill"
-            case .evening: return "sunset.fill"
-            case .night: return "moon.stars.fill"
-            }
-        }
-
-        var color: Color {
-            switch self {
-            case .allDay: return .cyan
-            case .morning: return .orange
-            case .afternoon: return .yellow
-            case .evening: return .pink
-            case .night: return .indigo
-            }
-        }
-
-        func contains(hour: Int) -> Bool {
-            switch self {
-            case .allDay:
-                return false // All day memories don't have a specific hour
-            case .morning:
-                return hour >= 6 && hour < 12
-            case .afternoon:
-                return hour >= 12 && hour < 18
-            case .evening:
-                return hour >= 18 && hour < 22
-            case .night:
-                return hour >= 22 || hour < 6
-            }
-        }
-    }
-
-    private func memoriesForPeriod(_ period: TimePeriod, from memories: [MemoryModel], date: Date) -> [MemoryModel] {
-        timedMemories(from: memories, date: date).filter { memory in
-            guard let fireDate = fireDateForDay(memory: memory, day: date) else {
-                return false
-            }
-            let hour = calendar.component(.hour, from: fireDate)
-            return period.contains(hour: hour)
-        }
-    }
-
-    /// Returns the fire date for a memory on a specific day, regardless of whether the date is in the past.
-    /// This is used for calendar display where we need to show the scheduled time even for past events.
-    private func fireDateForDay(memory: MemoryModel, day: Date) -> Date? {
-        let dayStart = calendar.startOfDay(for: day)
-        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
-            return nil
-        }
-
-        // Get all dates for this memory on the specified day
-        let datesOnDay = memory.dates(from: dayStart, to: dayEnd)
-        if let matchingDate = datesOnDay.first {
-            return matchingDate
-        }
-
-        // Fallback: check if the memory has a scheduled trigger with a fireDate on this day
-        for trigger in memory.triggers where trigger.type == .scheduled && trigger.isActive {
-            if let fireDate = trigger.fireDate, calendar.isDate(fireDate, inSameDayAs: day) {
-                return fireDate
-            }
-        }
-
-        return nil
-    }
 
 }
 
@@ -432,6 +131,7 @@ struct CalendarDayView: View {
         selectedMemoryIDs: [],
         isPerformingBulkAction: false,
         onSelectMemory: { _ in },
+        onEditMemory: nil,
         onToggleSelection: { _ in }
     )
     .environmentObject(environment)

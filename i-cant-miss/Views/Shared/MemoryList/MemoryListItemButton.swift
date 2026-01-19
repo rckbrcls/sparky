@@ -7,6 +7,7 @@ struct MemoryListItemButton: View {
     let isDisabled: Bool
     let onSelect: (MemoryModel) -> Void
     let onToggleSelection: ((MemoryModel) -> Void)?
+    let onEditMemory: ((MemoryModel) -> Void)?
     /// Optional date context for date-aware completion (used in CalendarDayView)
     var displayDate: Date?
 
@@ -66,7 +67,8 @@ struct MemoryListItemButton: View {
                     onToggleCompletion: { Task { await toggleMemoryCompletion() } },
                     onDelete: { Task { await deleteMemory() } },
                     onMoveToSpace: { spaceID in Task { await moveMemory(to: spaceID) } },
-                    onUpdateStatus: { status in Task { await setMemoryStatus(status) } }
+                    onUpdateStatus: { status in Task { await setMemoryStatus(status) } },
+                    onEdit: onEditMemory != nil ? { onEditMemory?(memory) } : nil
                 )
                 .overlay(selectionOverlay)
                 .overlay(alignment: .topTrailing) {

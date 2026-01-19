@@ -12,60 +12,76 @@ struct MemoryEditorTitleCard: View {
     @ObservedObject var spaceService: SpaceService
     let environment: AppEnvironment
     var isTitleFocused: FocusState<Bool>.Binding
+    let isEditingEnabled: Bool
 
     @State private var showSpaceComposer = false
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Menu {
-                Picker("Space", selection: $viewModel.selectedSpaceID) {
-                    Label("No Space", systemImage: "square.grid.2x2")
-                        .tag(nil as UUID?)
+            if isEditingEnabled {
+                Menu {
+                    Picker("Space", selection: $viewModel.selectedSpaceID) {
+                        Label("No Space", systemImage: "square.grid.2x2")
+                            .tag(nil as UUID?)
 
-                    ForEach(spaceService.spaces) { space in
-                        Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
-                            .tag(Optional(space.id))
+                        ForEach(spaceService.spaces) { space in
+                            Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
+                                .tag(Optional(space.id))
+                        }
                     }
-                }
 
-                Divider()
+                    Divider()
 
-                Button {
-                    showSpaceComposer = true
+                    Button {
+                        showSpaceComposer = true
+                    } label: {
+                        Label("Create New Space", systemImage: "plus.circle")
+                    }
                 } label: {
-                    Label("Create New Space", systemImage: "plus.circle")
+                    Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
+                        .foregroundStyle(selectedSpaceColor)
+                        .frame(width: 36, height: 36)
+                        .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
                 }
-            } label: {
+                .sheet(isPresented: $showSpaceComposer) {
+                    SpaceComposerView(environment: environment)
+                }
+            } else {
                 Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
                     .foregroundStyle(selectedSpaceColor)
                     .frame(width: 36, height: 36)
                     .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
             }
-            .sheet(isPresented: $showSpaceComposer) {
-                SpaceComposerView(environment: environment)
-            }
 
-            TextField("Memory", text: $viewModel.title, axis: .vertical)
-                .font(.custom("Vollkorn-Regular", size: 20))
-                .multilineTextAlignment(.leading)
-                .submitLabel(.done)
-                .focused(isTitleFocused)
-                .onSubmit {
-                    isTitleFocused.wrappedValue = false
-                }
-                .onChange(of: viewModel.title) { _, newValue in
-                    guard newValue.contains(where: { $0.isNewline }) else { return }
-                    let sanitized = newValue
-                        .split(whereSeparator: \.isNewline)
-                        .joined(separator: " ")
-                    if sanitized != newValue {
-                        viewModel.title = sanitized
-                    }
-                    DispatchQueue.main.async {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            if isEditingEnabled {
+                TextField("Memory", text: $viewModel.title, axis: .vertical)
+                    .font(.custom("Vollkorn-Regular", size: 20))
+                    .multilineTextAlignment(.leading)
+                    .submitLabel(.done)
+                    .focused(isTitleFocused)
+                    .onSubmit {
                         isTitleFocused.wrappedValue = false
                     }
-                }
+                    .onChange(of: viewModel.title) { _, newValue in
+                        guard newValue.contains(where: { $0.isNewline }) else { return }
+                        let sanitized = newValue
+                            .split(whereSeparator: \.isNewline)
+                            .joined(separator: " ")
+                        if sanitized != newValue {
+                            viewModel.title = sanitized
+                        }
+                        DispatchQueue.main.async {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            isTitleFocused.wrappedValue = false
+                        }
+                    }
+            } else {
+                Text(viewModel.title.isEmpty ? "Memory" : viewModel.title)
+                    .font(.custom("Vollkorn-Regular", size: 20))
+                    .multilineTextAlignment(.leading)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.horizontal)
         .padding(.vertical, 12)

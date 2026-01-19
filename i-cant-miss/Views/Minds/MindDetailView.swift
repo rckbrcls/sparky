@@ -15,6 +15,7 @@ struct MindDetailView: View {
     @ObservedObject var memoryService: MemoryService
 
     let onSelectMemory: (MemoryModel) -> Void
+    let onEditMemory: ((MemoryModel) -> Void)?
     let onEditMind: ((MindModel) -> Void)?
     let onAddSpace: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
@@ -30,6 +31,7 @@ struct MindDetailView: View {
         spaceService: SpaceService,
         memoryService: MemoryService,
         onSelectMemory: @escaping (MemoryModel) -> Void,
+        onEditMemory: ((MemoryModel) -> Void)? = nil,
         onEditMind: ((MindModel) -> Void)?,
         onAddSpace: ((MindModel) -> Void)?,
         onMultiSelectionChange: @escaping (Bool) -> Void,
@@ -42,6 +44,7 @@ struct MindDetailView: View {
         self.spaceService = spaceService
         self.memoryService = memoryService
         self.onSelectMemory = onSelectMemory
+        self.onEditMemory = onEditMemory
         self.onEditMind = onEditMind
         self.onAddSpace = onAddSpace
         self.onMultiSelectionChange = onMultiSelectionChange
@@ -192,6 +195,7 @@ struct MindDetailView: View {
                 spaceService: spaceService,
                 memoryService: memoryService,
                 onSelectMemory: onSelectMemory,
+                onEditMemory: onEditMemory,
                 onEditSpace: nil,
                 onMultiSelectionChange: onMultiSelectionChange,
                 onSpaceContextChange: { newSpace in

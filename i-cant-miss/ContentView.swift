@@ -47,6 +47,9 @@ struct ContentView: View {
     @State private var currentSpaceContext: SpaceModel?
     @State private var currentMindContext: MindModel?
     @State private var quickMemoryRequest: QuickMemoryRequest?
+    @State private var longPressTimer: Timer?
+    @State private var hasTriggeredLongPress = false
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -60,6 +63,7 @@ struct ContentView: View {
                     MemoryTimelineView(
                         memoryService: environment.memoryService,
                         onSelectMemory: handleMemorySelection,
+                        onEditMemory: handleMemoryEdit,
                         onMultiSelectionChange: handleMultiSelectionChange,
                         navigationPath: $calendarNavigationPath,
                         embedsInNavigationStack: true
@@ -74,6 +78,7 @@ struct ContentView: View {
                         memoryService: environment.memoryService,
                         navigationPath: $spacesNavigationPath,
                         onSelectMemory: handleMemorySelection,
+                        onEditMemory: handleMemoryEdit,
                         onCreateMind: {
                             presentMindCreation()
                         },
@@ -127,7 +132,8 @@ struct ContentView: View {
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,
-                    mode: .edit(memory: memory)
+                    mode: .edit(memory: memory),
+                    startEditing: route.startEditing
                 )
             }
         }
@@ -216,6 +222,11 @@ struct ContentView: View {
                 currentMindContext = nil
             }
         }
+        .onDisappear {
+            // Limpa o timer quando a view desaparece
+            longPressTimer?.invalidate()
+            longPressTimer = nil
+        }
     }
 
     @ViewBuilder
@@ -270,8 +281,21 @@ struct ContentView: View {
         quickMemoryRequest = QuickMemoryRequest(space: space)
     }
 
+    private func openMemoryEditorDirectly() {
+        feedbackGenerator.impactOccurred()
+        editorRoute = MemoryEditorRoute(
+            mode: .create(space: targetSpaceForCreation(), template: .blank)
+        )
+    }
+
     private func handleMemorySelection(_ memory: MemoryModel) {
         editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+    }
+
+    private func handleMemoryEdit(_ memory: MemoryModel) {
+        var route = MemoryEditorRoute(mode: .edit(memory: memory))
+        route.startEditing = true
+        editorRoute = route
     }
 
     private func presentSpaceCreation() {
@@ -333,14 +357,40 @@ struct ContentView: View {
     }
 
     private var addMemoryButton: some View {
-        Button(action: { prepareMemoryCreation(for: targetSpaceForCreation()) }) {
-            Image("plus")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 60, height: 60)
-        }
-        .buttonStyle(.plain)
-        .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+        Image("plus")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 60, height: 60)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        // Quando começa a pressionar, inicia o timer se ainda não iniciou
+                        if longPressTimer == nil {
+                            hasTriggeredLongPress = false
+                            longPressTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
+                                // Após 0.5 segundos, executa o long press
+                                hasTriggeredLongPress = true
+                                openMemoryEditorDirectly()
+                                longPressTimer?.invalidate()
+                                longPressTimer = nil
+                            }
+                        }
+                    }
+                    .onEnded { _ in
+                        // Quando solta
+                        let wasLongPress = hasTriggeredLongPress
+                        longPressTimer?.invalidate()
+                        longPressTimer = nil
+                        hasTriggeredLongPress = false
+                        
+                        // Se não foi long press, executa ação normal
+                        if !wasLongPress {
+                            prepareMemoryCreation(for: targetSpaceForCreation())
+                        }
+                    }
+            )
+            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
     }
 
     private func handleMultiSelectionChange(_ isSelecting: Bool) {
@@ -384,6 +434,7 @@ private struct MemoryEditorRoute: Identifiable {
     let id = UUID()
     let mode: Mode
     var initialTitle: String = ""
+    var startEditing: Bool = false
 }
 
 private struct SpaceComposerRequest: Identifiable {
