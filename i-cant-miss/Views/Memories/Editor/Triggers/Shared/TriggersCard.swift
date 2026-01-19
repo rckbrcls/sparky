@@ -811,6 +811,7 @@ private struct SequentialTriggerInlineForm: View {
                                 SequentialItemRow(
                                     item: item,
                                     currentMemoryID: viewModel.editingMemoryID,
+                                    memoryLookup: memoryLookup,
                                     isEditable: isEditable,
                                     canMoveUp: index > 0,
                                     canMoveDown: index < sequenceItems.count - 1,
@@ -1004,15 +1005,40 @@ private struct SequentialTriggerInlineForm: View {
 private struct SequentialItemRow: View {
     let item: SequentialItem
     let currentMemoryID: UUID?
+    let memoryLookup: [UUID: MemoryModel]
     let isEditable: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
     let onMoveUp: () -> Void
     let onMoveDown: () -> Void
     let onDelete: () -> Void
+    
+    private var memory: MemoryModel? {
+        memoryLookup[item.id]
+    }
+    
+    private var spaceIcon: String {
+        memory?.space?.iconName ?? "square.grid.2x2.fill"
+    }
+    
+    private var spaceColor: Color {
+        memory?.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
+    }
+    
+    private var title: String {
+        let trimmed = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Untitled" : trimmed
+    }
+    
+    private var isCompletedForDisplay: Bool {
+        if let memory = memory {
+            return memory.isCompleted
+        }
+        return false
+    }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
             if isEditable {
                 Menu {
                     if canMoveUp {
@@ -1028,9 +1054,9 @@ private struct SequentialItemRow: View {
                     }
                 } label: {
                     Image(systemName: "arrow.up.arrow.down")
-                        .font(.caption)
+                        .font(.body)
                         .foregroundStyle(.primary)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 36, height: 36)
                         .background(Color(uiColor: .secondarySystemFill))
                         .clipShape(Circle())
                 }
@@ -1039,36 +1065,48 @@ private struct SequentialItemRow: View {
                 .disabled(!canMoveUp && !canMoveDown)
             }
 
-
-
-                Text(item.title.isEmpty ? "Untitled" : item.title)
-                    .font(.subheadline)
-                    .lineLimit(1)
-                    .foregroundStyle(.primary)
-
-
-            Spacer()
-
+            if !isEditable {
+                Image(systemName: spaceIcon)
+                    .foregroundStyle(spaceColor)
+                    .frame(width: 20, height: 20)
+                    .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
+            }
+            
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle((!isEditable && isCompletedForDisplay) ? .secondary : .primary)
+                .strikethrough(!isEditable && isCompletedForDisplay, color: .secondary)
+                .lineLimit(1)
+            
+            Spacer(minLength: 8)
+            
             if item.isCurrent {
                 Image(systemName: "circle.circle")
-                    .font(.caption.bold())
+                    .font(.subheadline.bold())
                     .foregroundStyle(Color.accentColor)
             } else if isEditable {
                 Button {
                     withAnimation { onDelete() }
                 } label: {
                     Image(systemName: "xmark")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-                    .contentShape(Rectangle())
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity)
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(.tertiarySystemBackground))
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color("ElementBackground"))
+                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color("ElementBorder"), lineWidth: 2)
         )
     }
 }
