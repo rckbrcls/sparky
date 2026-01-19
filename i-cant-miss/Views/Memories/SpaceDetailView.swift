@@ -60,6 +60,10 @@ struct SpaceDetailView: View {
         resolvedSpace.isInboxSpaces
     }
 
+    private var isLimboSpace: Bool {
+        resolvedSpace.isLimboSpaces
+    }
+
     private var isAllSpaceForMind: Bool {
         resolvedSpace.isAllSpaceForMind
     }
@@ -103,7 +107,9 @@ struct SpaceDetailView: View {
 
     private var bulkActionSpaces: [SpaceModel] {
         environment.spaceService.spaces.filter { 
-            $0.id != SpaceModel.allSpacesIdentifier && $0.id != SpaceModel.inboxSpacesIdentifier 
+            $0.id != SpaceModel.allSpacesIdentifier && 
+            $0.id != SpaceModel.inboxSpacesIdentifier &&
+            $0.id != SpaceModel.limboSpacesIdentifier
         }
     }
 
@@ -460,7 +466,7 @@ struct SpaceDetailView: View {
                 includeCompleted: true,
                 sort: selectedSortStrategy
             )
-        } else if isInboxSpace {
+        } else if isInboxSpace || isLimboSpace {
             let unsorted = memoryService.memories.filter { memory in
                 memory.space == nil
             }

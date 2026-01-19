@@ -128,13 +128,6 @@ struct MemoryCardView: View {
         return "\(completed)/\(total)"
     }
 
-    private var sequentialSummary: String? {
-        guard let memory = memory,
-              let sequential = memory.triggers.first(where: { $0.type == .sequential })?.sequential else {
-            return nil
-        }
-        return "Step \(sequential.stepIndex + 1)"
-    }
 
     private var statusBadge: (text: String, systemImage: String, color: Color)? {
         guard let memory = memory else { return nil }
@@ -165,22 +158,6 @@ struct MemoryCardView: View {
         return memory.triggers.first(where: { $0.type == .sequential && $0.isActive })
     }
     
-    private var sequenceMemories: [MemoryModel] {
-        guard let memory = memory,
-              let sequential = sequentialTrigger?.sequential else {
-            return []
-        }
-        let sequenceID = sequential.sequenceID
-        return memoryService.memories
-            .filter { mem in
-                mem.triggers.contains { $0.type == .sequential && $0.sequential?.sequenceID == sequenceID }
-            }
-            .sorted { lhs, rhs in
-                let lhsIndex = lhs.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex ?? 0
-                let rhsIndex = rhs.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex ?? 0
-                return lhsIndex < rhsIndex
-            }
-    }
 
     var body: some View {
         if let memory = memory {
@@ -193,7 +170,7 @@ struct MemoryCardView: View {
     @ViewBuilder
     private func memoryContent(memory: MemoryModel) -> some View {
         VStack(spacing: 0) {
-            // Map (if has location trigger) - prioridade sobre sequential
+            // Map (if has location trigger)
             if let locationTrigger = locationTrigger, let location = locationTrigger.location {
                 MemoryCardLocationMapView(location: location)
                     .frame(height: 120)
@@ -214,12 +191,6 @@ struct MemoryCardView: View {
                         )
                         .stroke(Color("ElementBorder"), lineWidth: 2)
                     )
-            } else if let sequential = sequentialTrigger?.sequential, !sequenceMemories.isEmpty {
-                // Sequential trigger view (se não houver location trigger)
-                MemoryCardSequentialView(
-                    memories: sequenceMemories,
-                    displayDate: displayDate
-                )
             }
             
             // Card content
@@ -311,19 +282,19 @@ struct MemoryCardView: View {
             .padding(12)
             .background(
                 UnevenRoundedRectangle(
-                    topLeadingRadius: (locationTrigger != nil || sequentialTrigger != nil) ? 0 : 12,
+                    topLeadingRadius: locationTrigger != nil ? 0 : 12,
                     bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
                     bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    topTrailingRadius: (locationTrigger != nil || sequentialTrigger != nil) ? 0 : 12
+                    topTrailingRadius: locationTrigger != nil ? 0 : 12
                 )
                 .fill(Color("ElementBackground"))
             )
             .overlay(
                 UnevenRoundedRectangle(
-                    topLeadingRadius: (locationTrigger != nil || sequentialTrigger != nil) ? 0 : 12,
+                    topLeadingRadius: locationTrigger != nil ? 0 : 12,
                     bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
                     bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    topTrailingRadius: (locationTrigger != nil || sequentialTrigger != nil) ? 0 : 12
+                    topTrailingRadius: locationTrigger != nil ? 0 : 12
                 )
                 .stroke(Color("ElementBorder"), lineWidth: 2)
             )

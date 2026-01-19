@@ -36,6 +36,7 @@ struct SpaceModel: Identifiable, Hashable {
 extension SpaceModel {
     static let allSpacesIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
     static let inboxSpacesIdentifier = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    static let limboSpacesIdentifier = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
     static let mindAllSpacePrefix = "22222222-2222-2222-2222-222222222222"
 
     static var allSpaces: SpaceModel {
@@ -60,6 +61,17 @@ extension SpaceModel {
         )
     }
 
+    static var limboSpaces: SpaceModel {
+        SpaceModel(
+            id: limboSpacesIdentifier,
+            name: "Limbo",
+            colorHex: nil,
+            iconName: "tray",
+            sortOrder: Int.min + 2,
+            isDefault: false
+        )
+    }
+
     static func allSpace(for mind: MindModel) -> SpaceModel {
         let deterministicID = deterministicUUID(for: mind.id)
         return SpaceModel(
@@ -79,6 +91,10 @@ extension SpaceModel {
 
     var isInboxSpaces: Bool {
         id == SpaceModel.inboxSpacesIdentifier
+    }
+
+    var isLimboSpaces: Bool {
+        id == SpaceModel.limboSpacesIdentifier
     }
 
     func isAllSpace(for mind: MindModel?) -> Bool {

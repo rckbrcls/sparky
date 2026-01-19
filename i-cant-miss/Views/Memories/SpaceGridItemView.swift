@@ -42,52 +42,43 @@ struct SpaceGridItemView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let mind = space.mind {
-                HStack(spacing: 4) {
-                    Image(systemName: mind.iconName ?? "brain.head.profile")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(mind.name)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            HStack {
+        HStack(alignment: .top, spacing: 12) {
+            // Lado esquerdo: ícone e título do space
+            VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: space.iconName ?? "square.grid.2x2")
                     .foregroundStyle(spaceColor)
                     .frame(width: 32, height: 32)
                     .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
-
-                Spacer()
-
-                if activeCount > 0 {
-                    Text("\(activeCount)")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .frame(height: 20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(spaceColor)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(darkerBorderColor(for: spaceColor), lineWidth: 1)
-                                )
-                        )
-                }
+                
+                Text(space.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
             }
             
-            Text(space.name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(.primary)
-                .lineLimit(2)
+            Spacer()
+            
+            // Lado direito: active memories
+            if activeCount > 0 {
+                Text("\(activeCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .frame(height: 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(spaceColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(darkerBorderColor(for: spaceColor), lineWidth: 1)
+                            )
+                    )
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 60)
+        .frame(minHeight: 100)
         .cardStyle()
         .contextMenu {
             if canEditSpace {

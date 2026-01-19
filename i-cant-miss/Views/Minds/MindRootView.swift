@@ -35,23 +35,40 @@ struct MindRootView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 16)
 
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(displayMinds) { mind in
-                            NavigationLink(value: mind) {
-                                MindGridItemView(
-                                    mind: mind,
-                                    count: spaceCounts(for: mind),
-                                    activeCount: activeMemoryCount(for: mind),
-                                    mindService: mindService,
-                                    spaceService: spaceService,
-                                    onEdit: onEditMind
-                                )
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .accessibilityHint("Opens details for \(mind.name)")
+                    VStack(spacing: 12) {
+                        NavigationLink(value: SpaceModel.limboSpaces) {
+                            LimboCardView(
+                                space: SpaceModel.limboSpaces,
+                                count: limboMemoryCounts().total,
+                                completedCount: limboMemoryCounts().completed,
+                                activeCount: limboActiveMemoryCount(),
+                                spaceService: spaceService,
+                                memoryService: memoryService,
+                                mindService: mindService
+                            )
                         }
+                        .buttonStyle(PlainButtonStyle())
+                        .accessibilityHint("Opens limbo details")
+                        .padding(.horizontal, 20)
+                        
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(displayMinds) { mind in
+                                NavigationLink(value: mind) {
+                                    MindGridItemView(
+                                        mind: mind,
+                                        count: spaceCounts(for: mind),
+                                        activeCount: activeMemoryCount(for: mind),
+                                        mindService: mindService,
+                                        spaceService: spaceService,
+                                        onEdit: onEditMind
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .accessibilityHint("Opens details for \(mind.name)")
+                            }
+                        }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
                 }
             }
             .toolbarTitleDisplayMode(.inline)
@@ -86,6 +103,24 @@ struct MindRootView: View {
                     onSearchActiveChange: onSearchActiveChange
                 )
             }
+            .navigationDestination(for: SpaceModel.self) { space in
+                SpaceDetailView(
+                    space: space,
+                    spaceService: spaceService,
+                    memoryService: memoryService,
+                    onSelectMemory: onSelectMemory,
+                    onEditMemory: onEditMemory,
+                    onEditSpace: nil,
+                    onMultiSelectionChange: onMultiSelectionChange,
+                    onSpaceContextChange: { newSpace in
+                        onSpaceContextChange(newSpace)
+                    },
+                    onSearchActiveChange: onSearchActiveChange
+                )
+                .onAppear {
+                    onSpaceContextChange(space)
+                }
+            }
         }
         .onAppear {
             onMultiSelectionChange(false)
@@ -109,17 +144,12 @@ struct MindRootView: View {
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [MindModel.allMinds, MindModel.inboxMinds] + sortedMinds
+        return [MindModel.allMinds] + sortedMinds
     }
 
     private func spaceCounts(for mind: MindModel) -> Int {
         if mind.isAllMinds {
             return spaceService.spaces.count
-        } else if mind.isInboxMinds {
-            return spaceService.spaces.filter { space in
-                // Inclui spaces sem mind ou com mind "All Minds"
-                space.mind == nil || space.mind?.id == MindModel.allMindsIdentifier
-            }.count
         } else {
             return spaceService.spaces.filter { space in
                 guard let mindID = space.mind?.id else { return false }
@@ -132,10 +162,6 @@ struct MindRootView: View {
         let memories: [MemoryModel]
         if mind.isAllMinds {
             memories = memoryService.memories
-        } else if mind.isInboxMinds {
-            memories = memoryService.memories.filter { memory in
-                memory.space == nil
-            }
         } else {
             let mindID = mind.id
             memories = memoryService.memories.filter { memory in
@@ -144,6 +170,22 @@ struct MindRootView: View {
             }
         }
 
+        return memories.filter { $0.status == .active }.count
+    }
+
+    private func limboMemoryCounts() -> (completed: Int, total: Int) {
+        let memories = memoryService.memories.filter { memory in
+            memory.space == nil
+        }
+        let total = memories.count
+        let completed = memories.filter { $0.isCompleted }.count
+        return (completed, total)
+    }
+
+    private func limboActiveMemoryCount() -> Int {
+        let memories = memoryService.memories.filter { memory in
+            memory.space == nil
+        }
         return memories.filter { $0.status == .active }.count
     }
 

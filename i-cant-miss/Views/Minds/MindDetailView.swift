@@ -66,22 +66,12 @@ struct MindDetailView: View {
         resolvedMind.isAllMinds
     }
 
-    private var isInboxMinds: Bool {
-        resolvedMind.isInboxMinds
-    }
-
     private var spacesInMind: [SpaceModel] {
         let filteredSpaces: [SpaceModel]
         if isAllMinds {
-            let defaultSpaces = [SpaceModel.allSpaces, SpaceModel.inboxSpaces]
+            let defaultSpaces = [SpaceModel.allSpaces]
             filteredSpaces = spaceService.spaces
             return defaultSpaces + filteredSpaces
-        } else if isInboxMinds {
-            filteredSpaces = spaceService.spaces.filter { space in
-                // Inclui spaces sem mind ou com mind "All Minds"
-                space.mind == nil || space.mind?.id == MindModel.allMindsIdentifier
-            }
-            return filteredSpaces
         } else {
             filteredSpaces = spaceService.spaces.filter { space in
                 guard let mindID = space.mind?.id else { return false }
@@ -217,10 +207,6 @@ struct MindDetailView: View {
         let memories: [MemoryModel]
         if space.isAllSpaces {
             memories = memoryService.memories
-        } else if space.isInboxSpaces {
-            memories = memoryService.memories.filter { memory in
-                memory.space == nil
-            }
         } else if space.isAllSpaceForMind {
             guard let mindID = space.mind?.id else {
                 return (0, 0)
@@ -245,10 +231,6 @@ struct MindDetailView: View {
         let memories: [MemoryModel]
         if space.isAllSpaces {
             memories = memoryService.memories
-        } else if space.isInboxSpaces {
-            memories = memoryService.memories.filter { memory in
-                memory.space == nil
-            }
         } else if space.isAllSpaceForMind {
             guard let mindID = space.mind?.id else {
                 return 0
