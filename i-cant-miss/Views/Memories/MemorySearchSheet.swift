@@ -26,6 +26,14 @@ struct MemorySearchSheet: View {
         spaceService.space(id: space.id) ?? space
     }
 
+    private var isAllSpaceForMind: Bool {
+        resolvedSpace.isAllSpaceForMind
+    }
+
+    private var isInboxSpace: Bool {
+        resolvedSpace.isInboxSpaces
+    }
+
     // We need spaceService to resolve the space correctly if it updates,
     // although for search strictly we might just trust the passed space or resolvedSpace.
     // Let's grab it from init.
@@ -97,27 +105,75 @@ struct MemorySearchSheet: View {
     }
 
     private var recentMemories: [MemoryModel] {
-        // Fetch top 10 most recently updated memories in this space
-        let allInSpace = memoryService.memories(
-            in: isAllSpace ? nil : resolvedSpace,
-            statuses: [], // All statuses? Or just active?
-            // Usually "Recent" implies things I interacted with.
-            // Let's include everything for now, or maybe just active/completed?
-            // The user said "recent memories", usually implies updated or accessed.
-            includeCompleted: true,
-            sort: .updatedAtDescending
-        )
+        let allInSpace: [MemoryModel]
+        
+        if isAllSpace {
+            allInSpace = memoryService.memories(
+                in: nil,
+                statuses: [],
+                includeCompleted: true,
+                sort: .updatedAtDescending
+            )
+        } else if isInboxSpace {
+            let unsorted = memoryService.memories.filter { memory in
+                memory.space == nil
+            }
+            allInSpace = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
+        } else if isAllSpaceForMind {
+            guard let mindID = resolvedSpace.mind?.id else {
+                return []
+            }
+            let unsorted = memoryService.memories.filter { memory in
+                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
+                return memorySpaceMindID == mindID
+            }
+            allInSpace = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
+        } else {
+            allInSpace = memoryService.memories(
+                in: resolvedSpace,
+                statuses: [],
+                includeCompleted: true,
+                sort: .updatedAtDescending
+            )
+        }
+        
         return Array(allInSpace.prefix(3))
     }
 
     private var searchResults: [MemoryModel] {
         guard !searchText.isEmpty else { return [] }
-        let allInSpace = memoryService.memories(
-            in: isAllSpace ? nil : resolvedSpace,
-            statuses: [],
-            includeCompleted: true,
-            sort: .updatedAtDescending
-        )
+        
+        let allInSpace: [MemoryModel]
+        
+        if isAllSpace {
+            allInSpace = memoryService.memories(
+                in: nil,
+                statuses: [],
+                includeCompleted: true,
+                sort: .updatedAtDescending
+            )
+        } else if isInboxSpace {
+            let unsorted = memoryService.memories.filter { memory in
+                memory.space == nil
+            }
+            allInSpace = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
+        } else if isAllSpaceForMind {
+            guard let mindID = resolvedSpace.mind?.id else {
+                return []
+            }
+            let unsorted = memoryService.memories.filter { memory in
+                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
+                return memorySpaceMindID == mindID
+            }
+            allInSpace = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
+        } else {
+            allInSpace = memoryService.memories(
+                in: resolvedSpace,
+                statuses: [],
+                includeCompleted: true,
+                sort: .updatedAtDescending
+            )
+        }
 
         let lowercasedSearch = searchText.lowercased()
         return allInSpace.filter { memory in

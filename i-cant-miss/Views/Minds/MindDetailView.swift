@@ -96,7 +96,7 @@ struct MindDetailView: View {
         baseView
             .fullScreenCover(isPresented: $isSearching) {
                 MemorySearchSheet(
-                    space: SpaceModel.allSpaces,
+                    space: SpaceModel.allSpace(for: resolvedMind),
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     spaceService: spaceService
