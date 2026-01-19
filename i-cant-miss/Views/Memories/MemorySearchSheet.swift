@@ -110,34 +110,34 @@ struct MemorySearchSheet: View {
         if isAllSpace {
             allInSpace = memoryService.memories(
                 in: nil,
-                statuses: [],
-                includeCompleted: true,
-                sort: .updatedAtDescending
+                statuses: [.active],
+                includeCompleted: false,
+                sort: .createdAtDescending
             )
         } else if isInboxSpace {
             let unsorted = memoryService.memories.filter { memory in
-                memory.space == nil
+                memory.space == nil && memory.status == .active
             }
-            allInSpace = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
+            allInSpace = memoryService.sortedMemories(unsorted, using: .createdAtDescending)
         } else if isAllSpaceForMind {
             guard let mindID = resolvedSpace.mind?.id else {
                 return []
             }
             let unsorted = memoryService.memories.filter { memory in
                 guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
-                return memorySpaceMindID == mindID
+                return memorySpaceMindID == mindID && memory.status == .active
             }
-            allInSpace = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
+            allInSpace = memoryService.sortedMemories(unsorted, using: .createdAtDescending)
         } else {
             allInSpace = memoryService.memories(
                 in: resolvedSpace,
-                statuses: [],
-                includeCompleted: true,
-                sort: .updatedAtDescending
+                statuses: [.active],
+                includeCompleted: false,
+                sort: .createdAtDescending
             )
         }
         
-        return Array(allInSpace.prefix(3))
+        return Array(allInSpace.prefix(5))
     }
 
     private var searchResults: [MemoryModel] {
