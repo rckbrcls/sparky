@@ -253,21 +253,6 @@ struct MemoryCardView: View {
                         }
 
                     }
-
-                    HStack(spacing: 8) {
-                        Text(createdDateString(for: memory.createdAt))
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-
-                        Text("•")
-                            .foregroundStyle(.tertiary)
-                            .font(.caption2)
-
-                        Text("Updated \(relativeDateString(for: memory.updatedAt))")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.top, 2)
                 }
 
                 Spacer()
