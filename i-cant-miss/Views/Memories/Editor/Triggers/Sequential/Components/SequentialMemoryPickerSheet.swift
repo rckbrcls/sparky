@@ -61,7 +61,7 @@ struct SequentialMemoryPickerSheet: View {
                     )
                 } label: {
                     HStack {
-                        Image(systemName: lobe.iconName ?? "square.grid.2x2")
+                        Image(systemName: lobe.iconName ?? "brain.fill")
                             .foregroundStyle(Color(hex: lobe.colorHex ?? "") ?? .gray)
                             .frame(width: 24, height: 24)
 
@@ -211,7 +211,7 @@ private struct SequentialMemoryPickerRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            let lobeIcon = memory.lobe?.iconName ?? "square.grid.2x2"
+            let lobeIcon = memory.lobe?.iconName ?? "brain.fill"
             let lobeColor = memory.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
             Image(systemName: lobeIcon)

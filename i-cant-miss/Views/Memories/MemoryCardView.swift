@@ -195,7 +195,7 @@ struct MemoryCardView: View {
             
             // Card content
             HStack(alignment: .center, spacing: 12) {
-                let lobeIcon = memory.lobe?.iconName ?? "square.grid.2x2.fill"
+                let lobeIcon = memory.lobe?.iconName ?? "brain.fill"
                 let lobeColor = memory.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
                 Image(systemName: lobeIcon)

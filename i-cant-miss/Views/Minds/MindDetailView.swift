@@ -115,7 +115,7 @@ struct MindDetailView: View {
 
                 if lobesInMind.isEmpty {
                     EmptyStateView(
-                        systemImage: "square.grid.2x2",
+                        systemImage: "brain.fill",
                         title: "No Lobes",
                         message: "This mind doesn't have any lobes yet."
                     )

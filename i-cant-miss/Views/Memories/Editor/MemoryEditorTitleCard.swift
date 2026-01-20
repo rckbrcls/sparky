@@ -21,11 +21,11 @@ struct MemoryEditorTitleCard: View {
             if isEditingEnabled {
                 Menu {
                     Picker("Lobe", selection: $viewModel.selectedLobeID) {
-                        Label("No Lobe", systemImage: "square.grid.2x2")
+                        Label("No Lobe", systemImage: "brain.fill")
                             .tag(nil as UUID?)
 
                         ForEach(lobeService.lobes) { lobe in
-                            Label(lobe.name, systemImage: lobe.iconName ?? "square.grid.2x2")
+                            Label(lobe.name, systemImage: lobe.iconName ?? "brain.fill")
                                 .tag(Optional(lobe.id))
                         }
                     }
@@ -38,7 +38,7 @@ struct MemoryEditorTitleCard: View {
                         Label("Create New Lobe", systemImage: "plus.circle")
                     }
                 } label: {
-                    Image(systemName: viewModel.selectedLobe?.iconName ?? "square.grid.2x2")
+                    Image(systemName: viewModel.selectedLobe?.iconName ?? "brain.fill")
                         .foregroundStyle(selectedLobeColor)
                         .frame(width: 36, height: 36)
                         .glassEffect(.regular.tint(selectedLobeColor.opacity(0.15)))
@@ -47,7 +47,7 @@ struct MemoryEditorTitleCard: View {
                     LobeComposerView(environment: environment)
                 }
             } else {
-                Image(systemName: viewModel.selectedLobe?.iconName ?? "square.grid.2x2")
+                Image(systemName: viewModel.selectedLobe?.iconName ?? "brain.fill")
                     .foregroundStyle(selectedLobeColor)
                     .frame(width: 36, height: 36)
                     .glassEffect(.regular.tint(selectedLobeColor.opacity(0.15)))

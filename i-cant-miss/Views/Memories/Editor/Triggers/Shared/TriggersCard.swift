@@ -1018,7 +1018,7 @@ private struct SequentialItemRow: View {
     }
     
     private var spaceIcon: String {
-        memory?.lobe?.iconName ?? "square.grid.2x2.fill"
+        memory?.lobe?.iconName ?? "brain.fill"
     }
     
     private var spaceColor: Color {

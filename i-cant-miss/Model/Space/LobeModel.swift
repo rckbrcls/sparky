@@ -44,7 +44,7 @@ extension LobeModel {
             id: allLobesIdentifier,
             name: "All",
             colorHex: nil,
-            iconName: "square.grid.2x2.fill",
+            iconName: "brain.fill",
             sortOrder: Int.min,
             isDefault: true
         )
@@ -78,7 +78,7 @@ extension LobeModel {
             id: deterministicID,
             name: "All",
             colorHex: nil,
-            iconName: "square.grid.2x2.fill",
+            iconName: "brain.fill",
             sortOrder: Int.min,
             isDefault: false,
             mind: mind

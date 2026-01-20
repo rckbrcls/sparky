@@ -70,7 +70,7 @@ struct LobeComposerView: View {
     let environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
-    @State private var selectedIcon: String = "square.grid.2x2.fill"
+    @State private var selectedIcon: String = "brain.fill"
     @State private var selectedColorHex: String = Color.PresetColors.all.first?.hex ?? "#6366F1"
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -134,7 +134,7 @@ struct LobeComposerView: View {
         .onAppear {
             if let lobeToEdit = lobeToEdit {
                 name = lobeToEdit.name
-                selectedIcon = lobeToEdit.iconName ?? "square.grid.2x2.fill"
+                selectedIcon = lobeToEdit.iconName ?? "brain.fill"
                 selectedColorHex = lobeToEdit.colorHex ?? Color.PresetColors.all.first?.hex ?? "#6366F1"
             }
         }

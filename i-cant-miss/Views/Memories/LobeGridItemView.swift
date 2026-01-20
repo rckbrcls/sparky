@@ -45,7 +45,7 @@ struct LobeGridItemView: View {
         HStack(alignment: .top, spacing: 12) {
             // Lado esquerdo: ícone e título do lobe
             VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: lobe.iconName ?? "square.grid.2x2")
+                Image(systemName: lobe.iconName ?? "brain.fill")
                     .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)
                     .glassEffect(.regular.tint(lobeColor.opacity(0.15)))

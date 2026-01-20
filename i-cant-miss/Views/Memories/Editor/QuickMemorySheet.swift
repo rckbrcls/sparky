@@ -166,17 +166,17 @@ struct QuickMemorySheet: View {
     private var lobeIconMenu: some View {
         Menu {
             Picker("Lobe", selection: $selectedLobeID) {
-                Label("No Lobe", systemImage: "square.grid.2x2")
+                Label("No Lobe", systemImage: "brain.fill")
                     .tag(nil as UUID?)
 
                 ForEach(availableLobes) { lobe in
                     // Use the lobe's icon
-                    Label(lobe.name, systemImage: lobe.iconName ?? "square.grid.2x2")
+                    Label(lobe.name, systemImage: lobe.iconName ?? "brain.fill")
                         .tag(Optional(lobe.id))
                 }
             }
         } label: {
-            Image(systemName: selectedLobe?.iconName ?? "square.grid.2x2")
+            Image(systemName: selectedLobe?.iconName ?? "brain.fill")
                 .foregroundStyle(lobeColor)
                     .frame(width: 36, height: 36)
                     .glassEffect(.regular.tint(lobeColor.opacity(0.15)))

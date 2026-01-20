@@ -167,7 +167,7 @@ private extension IconColorPickerSheet {
         IconSection(
             title: "Organization",
             icons: [
-                "square.grid.2x2.fill",
+                "brain.fill",
                 "square.grid.3x3.fill",
                 "square.grid.4x3.fill",
                 "folder.fill",
@@ -467,7 +467,7 @@ private extension IconColorPickerSheet {
 }
 
 #Preview {
-    @Previewable @State var icon = "square.grid.2x2.fill"
+    @Previewable @State var icon = "brain.fill"
     @Previewable @State var colorHex = Color.PresetColors.all.first?.hex ?? "#6366F1"
 
     IconColorPickerSheet(selectedIcon: $icon, selectedColorHex: $colorHex)
