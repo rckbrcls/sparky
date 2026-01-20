@@ -4,7 +4,7 @@ This document describes the implementation of infinite scroll for calendar views
 
 ## Overview
 
-The calendar views (Year, Month, Day) use a lazy loading approach with infinite scroll, allowing users to navigate through time without loading all data upfront. This improves performance and memory usage significantly.
+The calendar views (Month, Day) use a lazy loading approach with infinite scroll, allowing users to navigate through time without loading all data upfront. This improves performance and memory usage significantly.
 
 ## Architecture
 
@@ -28,12 +28,12 @@ The calendar views (Year, Month, Day) use a lazy loading approach with infinite 
                               │
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
-┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-│ CalendarYearView │ │CalendarMonthView │ │ CalendarDayView  │
-│ - Years scroll   │ │ - Months scroll  │ │ - Days scroll    │
-│ - ±2 initial     │ │ - ±6 initial     │ │ - ±7 initial     │
-│ - +3 expansion   │ │ - +6 expansion   │ │ - +14 expansion  │
-└──────────────────┘ └──────────────────┘ └──────────────────┘
+┌──────────────────┐ ┌──────────────────┐
+│CalendarMonthView │ │ CalendarDayView  │
+│ - Months scroll  │ │ - Days scroll    │
+│ - ±6 initial     │ │ - ±7 initial     │
+│ - +6 expansion   │ │ - +14 expansion  │
+└──────────────────┘ └──────────────────┘
 ```
 
 ## Files
@@ -42,7 +42,6 @@ The calendar views (Year, Month, Day) use a lazy loading approach with infinite 
 |------|-------------|
 | `CalendarDataManager.swift` | Manages memory data with lazy loading by period |
 | `InfiniteScrollModifier.swift` | Generic infinite scroll infrastructure |
-| `CalendarYearView.swift` | Year-level calendar with infinite scroll |
 | `CalendarMonthView.swift` | Month-level calendar with infinite scroll |
 | `CalendarDayView.swift` | Day-level calendar with week grouping |
 
@@ -103,12 +102,6 @@ struct InfiniteScrollConfig {
     let forwardBatchSize: Int    // Items to load when scrolling down
     let debounceInterval: TimeInterval  // Prevent rapid consecutive loads
 
-    static let years = InfiniteScrollConfig(
-        backwardBatchSize: 3,
-        forwardBatchSize: 3,
-        debounceInterval: 0.1
-    )
-
     static let months = InfiniteScrollConfig(
         backwardBatchSize: 6,
         forwardBatchSize: 6,
@@ -126,13 +119,6 @@ struct InfiniteScrollConfig {
 ### Factory Methods
 
 ```swift
-// For years
-InfiniteScrollState.years(
-    initialYear: 2025,
-    range: 2,  // ±2 years initially
-    onLoadYear: { year in dataManager.ensureYearLoaded(year) }
-)
-
 // For months
 InfiniteScrollState.months(
     centerMonth: Date(),
@@ -241,6 +227,5 @@ The week summary adapts to date ranges:
 
 | View | Initial Range | Expansion Size |
 |------|---------------|----------------|
-| Year | Current year ± 2 years | +3 years |
 | Month | Current month ± 6 months | +6 months |
 | Day | Current day ± 7 days | +14 days |

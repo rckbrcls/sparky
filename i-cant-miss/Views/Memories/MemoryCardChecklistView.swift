@@ -61,8 +61,8 @@ struct MemoryCardChecklistView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 10)
+                .padding(.top, 6)
+                .padding(.bottom, 6)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -76,7 +76,8 @@ struct MemoryCardChecklistView: View {
                     } label: {
                         HStack(alignment: .center, spacing: 12) {
                             Text(item.title)
-                                .font(.callout)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
                                 .foregroundStyle(item.isCompleted ? .secondary : .primary)
                                 .strikethrough(item.isCompleted, color: .secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,7 +87,7 @@ struct MemoryCardChecklistView: View {
                                 .foregroundStyle(item.isCompleted ? .green : .secondary)
                         }
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 6)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -96,7 +97,7 @@ struct MemoryCardChecklistView: View {
                             .padding(.leading, 44)
                     }
                 }
-                .padding(.bottom, 12)
+                .padding(.bottom, 6)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isExpanded)

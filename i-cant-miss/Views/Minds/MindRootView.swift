@@ -49,11 +49,10 @@ struct MindRootView: View {
                                         isMindsExpanded.toggle()
                                     }
                                 } label: {
-                                    HStack(spacing: 6) {
+                                    HStack {
                                         Image(systemName: "brain.head.profile")
                                             .foregroundStyle(Color.purple)
-                                            .font(.caption)
-                                            .frame(width: 14, height: 14)
+                                            .font(.subheadline)
                                         Text("Minds")
                                             .font(.caption)
                                             .fontWeight(.medium)
@@ -112,11 +111,10 @@ struct MindRootView: View {
                                         isLobesExpanded.toggle()
                                     }
                                 } label: {
-                                    HStack(spacing: 6) {
+                                    HStack {
                                         Image(systemName: "brain.fill")
                                             .foregroundStyle(Color.gray)
-                                            .font(.caption)
-                                            .frame(width: 14, height: 14)
+                                            .font(.subheadline)
                                         Text("Lobes")
                                             .font(.caption)
                                             .fontWeight(.medium)

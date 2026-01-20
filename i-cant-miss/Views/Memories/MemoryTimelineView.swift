@@ -105,7 +105,7 @@ struct MemoryTimelineView: View {
                     )
                 } else {
                     ToolbarItemGroup(placement: .navigationBarLeading) {
-                        if viewMode != .year {
+                        if case .day = viewMode {
                             Button {
                                 navigateBack()
                             } label: {
@@ -175,26 +175,11 @@ struct MemoryTimelineView: View {
     @ViewBuilder
     private var currentView: some View {
         switch viewMode {
-        case .year:
-            yearView
         case .month(let month):
             monthView(month: month)
         case .day(let day):
             dayView(day: day)
         }
-    }
-
-    private var yearView: some View {
-        CalendarYearView(
-            dataManager: calendarDataManager,
-            selectedYear: $selectedYear,
-            onSelectMonth: { month in
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    selectedMonth = month
-                    viewMode = .month(month)
-                }
-            }
-        )
     }
 
     private func monthView(month: Date) -> some View {
@@ -226,15 +211,10 @@ struct MemoryTimelineView: View {
     }
 
     private var backButtonTitle: String {
-        switch viewMode {
-        case .year:
-            return ""
-        case .month(let month):
-            let year = Calendar.current.component(.year, from: month)
-            return String(year)
-        case .day(let day):
+        if case .day(let day) = viewMode {
             return monthAbbreviation(from: day)
         }
+        return ""
     }
 
     private func monthAbbreviation(from date: Date) -> String {
@@ -275,10 +255,8 @@ struct MemoryTimelineView: View {
     private func navigateBack() {
         withAnimation(.easeInOut(duration: 0.25)) {
             switch viewMode {
-            case .year:
-                break
             case .month:
-                viewMode = .year
+                break
             case .day:
                 viewMode = .month(selectedMonth)
             }
