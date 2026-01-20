@@ -63,23 +63,26 @@ struct MemoryCardDateTimeView: View {
                 .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
                 .frame(width: 20)
             
-            VStack(alignment: .leading, spacing: 4) {
-                // Date and time
-                HStack(spacing: 8) {
-                    Text(dateString)
+            HStack(spacing: 8) {
+                if let timeString = timeString {
+                    Text(timeString)
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
                         .strikethrough(isCompletedForDisplay, color: .secondary)
                     
-                    if let timeString = timeString {
-                        Text(timeString)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                            .strikethrough(isCompletedForDisplay, color: .secondary)
-                    }
+                    Circle()
+                        .fill(isCompletedForDisplay ? Color.secondary.opacity(0.7) : Color.secondary)
+                        .frame(width: 4, height: 4)
                 }
+                
+                Text(dateString)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
+                    .strikethrough(isCompletedForDisplay, color: .secondary)
+                
+                Spacer(minLength: 0)
                 
                 // Recurrence
                 if let recurrenceString = recurrenceString {
@@ -89,10 +92,9 @@ struct MemoryCardDateTimeView: View {
                         .strikethrough(isCompletedForDisplay, color: .secondary)
                 }
             }
-            
-            Spacer()
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, 12)
+        .padding(.trailing, 8)
         .padding(.vertical, 10)
     }
 }

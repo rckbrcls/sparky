@@ -140,7 +140,7 @@ struct MindRootView: View {
                             .padding(.bottom, isLobesExpanded ? 12 : 0)
                             
                             if isLobesExpanded {
-                                VStack(spacing: 12) {
+                                LazyVGrid(columns: columns, spacing: 12) {
                                     // Lobe Limbo - shows memories without lobe
                                     NavigationLink(value: LobeModel.limboLobes) {
                                         LimboCardView(
@@ -152,48 +152,46 @@ struct MindRootView: View {
                                             memoryService: memoryService,
                                             mindService: mindService
                                         )
-                                    } 
+                                    }
                                     .buttonStyle(PlainButtonStyle())
                                     .accessibilityHint("Opens limbo details")
-                                    .padding(.horizontal, 20)
-                                    LazyVGrid(columns: columns, spacing: 12) {
-                                        // All Lobes card - shows all memories
-                                        NavigationLink(value: LobeModel.allLobes) {
+                                    
+                                    // All Lobes card - shows all memories
+                                    NavigationLink(value: LobeModel.allLobes) {
+                                        LobeGridItemView(
+                                            lobe: LobeModel.allLobes,
+                                            count: memoryCounts(for: LobeModel.allLobes).total,
+                                            completedCount: memoryCounts(for: LobeModel.allLobes).completed,
+                                            activeCount: activeMemoryCount(for: LobeModel.allLobes),
+                                            lobeService: lobeService,
+                                            memoryService: memoryService,
+                                            mindService: mindService,
+                                            onEdit: nil,
+                                            showOnlyRemaining: true
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .accessibilityHint("Opens details for all lobes")
+                                    
+                                    ForEach(displayLobesWithoutMind) { lobe in
+                                        NavigationLink(value: lobe) {
                                             LobeGridItemView(
-                                                lobe: LobeModel.allLobes,
-                                                count: memoryCounts(for: LobeModel.allLobes).total,
-                                                completedCount: memoryCounts(for: LobeModel.allLobes).completed,
-                                                activeCount: activeMemoryCount(for: LobeModel.allLobes),
+                                                lobe: lobe,
+                                                count: memoryCounts(for: lobe).total,
+                                                completedCount: memoryCounts(for: lobe).completed,
+                                                activeCount: activeMemoryCount(for: lobe),
                                                 lobeService: lobeService,
                                                 memoryService: memoryService,
                                                 mindService: mindService,
-                                                onEdit: nil,
+                                                onEdit: onEditLobe,
                                                 showOnlyRemaining: true
                                             )
                                         }
                                         .buttonStyle(PlainButtonStyle())
-                                        .accessibilityHint("Opens details for all lobes")
-                                        
-                                        ForEach(displayLobesWithoutMind) { lobe in
-                                            NavigationLink(value: lobe) {
-                                                LobeGridItemView(
-                                                    lobe: lobe,
-                                                    count: memoryCounts(for: lobe).total,
-                                                    completedCount: memoryCounts(for: lobe).completed,
-                                                    activeCount: activeMemoryCount(for: lobe),
-                                                    lobeService: lobeService,
-                                                    memoryService: memoryService,
-                                                    mindService: mindService,
-                                                    onEdit: onEditLobe,
-                                                    showOnlyRemaining: true
-                                                )
-                                            }
-                                            .buttonStyle(PlainButtonStyle())
-                                            .accessibilityHint("Opens details for \(lobe.name)")
-                                        }
+                                        .accessibilityHint("Opens details for \(lobe.name)")
                                     }
-                                    .padding(.horizontal, 20)
                                 }
+                                .padding(.horizontal, 20)
                             }
                         }
                     }
