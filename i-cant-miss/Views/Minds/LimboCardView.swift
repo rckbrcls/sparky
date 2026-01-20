@@ -34,7 +34,7 @@ struct LimboCardView: View {
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
                 Image(systemName: lobe.iconName ?? "tray")
                     .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)

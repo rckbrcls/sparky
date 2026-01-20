@@ -8,7 +8,7 @@
 import SwiftUI
 
 private enum OnboardingStep: Int, CaseIterable, Identifiable {
-    case welcome, triggers, lobes, memories
+    case welcome, organization, triggers, features
 
     var id: Int { rawValue }
     var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
@@ -18,7 +18,6 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
 struct OnboardingFlowView: View {
     let onFinish: () -> Void
 
-    @EnvironmentObject private var environment: AppEnvironment
     @State private var currentStep: OnboardingStep = .welcome
 
     var body: some View {
@@ -26,8 +25,10 @@ struct OnboardingFlowView: View {
             background
                 .ignoresSafeArea()
 
-            VStack(spacing: 32) {
+            VStack(spacing: 0) {
                 header
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
 
                 TabView(selection: $currentStep) {
                     ForEach(OnboardingStep.allCases) { step in
@@ -37,12 +38,11 @@ struct OnboardingFlowView: View {
                 }
                 .applyPageTabStyle()
                 .animation(.easeInOut(duration: 0.3), value: currentStep)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 footer
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 32)
             }
-            .padding(.vertical, 32)
-
         }
     }
 
@@ -56,38 +56,34 @@ struct OnboardingFlowView: View {
             title: step.title,
             message: step.message
         ) {
-            step.visual(environment: environment)
+            step.visual
         }
     }
 
     private var background: some View {
         RadialGradient(
             colors: [
-                Color.accentColor.opacity(0.35),
-                Color.accentColor.opacity(0.15),
+                Color.accentColor.opacity(0.20),
+                Color.accentColor.opacity(0.08),
                 Color(.systemBackground)
             ],
             center: .center,
-            startRadius: 120,
-            endRadius: 620
+            startRadius: 80,
+            endRadius: 400
         )
-    }
-
-    private var leadingBadge: some View {
-        Label("I Can't Miss", systemImage: "sparkles")
-            .font(.footnote.weight(.semibold))
-            .padding(.vertical, 6)
-            .padding(.horizontal, 10)
-            .background(
-                Capsule()
-                    .fill(Color.white.opacity(0.12))
-            )
-            .foregroundStyle(.white.opacity(0.9))
     }
 
     private var header: some View {
         HStack {
-            leadingBadge
+            Label("Sparky", systemImage: "sparkles")
+                .font(.footnote.weight(.semibold))
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(
+                    Capsule()
+                        .fill(Color.accentColor.opacity(0.15))
+                )
+                .foregroundStyle(.primary)
 
             Spacer(minLength: 0)
 
@@ -95,35 +91,31 @@ struct OnboardingFlowView: View {
                 Button("Skip") {
                     onFinish()
                 }
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.secondary)
             }
         }
-        .padding(.top, 8)
-        .padding(.horizontal, 24)
     }
 
     private var footer: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             HStack(spacing: 8) {
                 ForEach(OnboardingStep.allCases) { step in
                     Capsule()
-                        .fill(step == currentStep ? Color.white : Color.white.opacity(0.35))
+                        .fill(step == currentStep ? Color.accentColor : Color.accentColor.opacity(0.3))
                         .frame(width: step == currentStep ? 24 : 8, height: 8)
                         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: currentStep)
                 }
             }
 
             Button(action: continueAction) {
-                Text(isLastStep ? "Get started" : "Continue")
-                    .font(.title3.bold())
+                Text(isLastStep ? "Get Started" : "Continue")
+                    .font(.title3.weight(.semibold))
                     .frame(maxWidth: .infinity)
-                    .padding()
+                    .padding(.vertical, 16)
             }
             .buttonStyle(.glassProminent)
-            .shadow(color: Color.accentColor.opacity(0.2), radius: 16, y: 8)
         }
-        .padding(.horizontal, 24)
     }
 
     private func continueAction() {
@@ -138,354 +130,206 @@ struct OnboardingFlowView: View {
     }
 }
 
+// MARK: - Step Content
+
 private extension OnboardingStep {
     var title: String {
         switch self {
         case .welcome:
-            return "Capture what matters"
+            return "Never miss what matters"
+        case .organization:
+            return "Organize by context"
         case .triggers:
-            return "Smart triggers"
-        case .lobes:
-            return "Lobes for every plan"
-        case .memories:
-            return "Timeline of wins"
+            return "Smart reminders"
+        case .features:
+            return "Rich content"
         }
     }
 
     var message: String {
         switch self {
         case .welcome:
-            return "Turn commitments into living memories so the right trigger always finds you."
+            return "Manage tasks and reminders with intelligence"
+        case .organization:
+            return "Minds → Lobes → Memories"
         case .triggers:
-            return "Time, place, people for nudges right on cue."
-        case .lobes:
-            return "Group every promise into Lobes that stay organized and easy to scan."
-        case .memories:
-            return "Review notes, checklists, and media in a single, evolving storyline."
+            return "Time, location, person, or sequence"
+        case .features:
+            return "Text, checklists, photos, links, and more"
         }
     }
 
     @ViewBuilder
-    func visual(environment: AppEnvironment) -> some View {
+    var visual: some View {
         switch self {
         case .welcome:
-            VStack(spacing: 18) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 52, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .white.opacity(0.35), radius: 12, y: 4)
-
-                VStack(spacing: 10) {
-                    OnboardingHighlightRow(
-                        icon: "pencil",
-                        title: "Capture commitments and ideas",
-                        accent: Color.white.opacity(0.85)
-                    )
-                    OnboardingHighlightRow(
-                        icon: "bell.badge.fill",
-                        title: "Stay aligned with personal alerts",
-                        accent: Color.white.opacity(0.75)
-                    )
-                    OnboardingHighlightRow(
-                        icon: "bolt.fill",
-                        title: "Auto-schedule follow-ups fast",
-                        accent: Color.white.opacity(0.65)
-                    )
-                }
-                .padding(16)
-                .liquidGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-
+            WelcomeVisual()
+        case .organization:
+            OrganizationVisual()
         case .triggers:
-            VStack(spacing: 16) {
-                OnboardingMiniCard(
-                    icon: "clock.badge.checkmark",
-                    title: "Smart schedules",
-                    description: "Pick one-off dates or simple repeats in seconds.",
-                    accent: Color.blue
-                )
+            TriggersVisual()
+        case .features:
+            FeaturesVisual()
+        }
+    }
+}
 
-                OnboardingMiniCard(
-                    icon: "mappin.and.ellipse",
-                    title: "Places that matter",
-                    description: "Arrive or leave and get nudged right on time.",
-                    accent: Color.green
-                )
+// MARK: - Visual Components
 
-                OnboardingMiniCard(
-                    icon: "person.2.wave.2.fill",
-                    title: "Shared triggers",
-                    description: "Loop in the right people to remember together.",
-                    accent: Color.pink
-                )
-            }
+private struct WelcomeVisual: View {
+    var body: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 64, weight: .light))
+                .foregroundStyle(Color.accentColor)
 
-        case .lobes:
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Sample Lobes")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.85))
-
-                VStack(spacing: 12) {
-                    ForEach(OnboardingSampleData.lobes) { entry in
-                        HStack(spacing: 12) {
-                            let lobeColor = entry.lobe.colorHex.flatMap { Color(hex: $0) } ?? .gray
-                            
-                            Image(systemName: entry.lobe.iconName ?? "square.grid.2x2")
-                                .foregroundStyle(lobeColor)
-                                .frame(width: 32, height: 32)
-                            
-                            Text(entry.lobe.name)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.9))
-                            
-                            Spacer()
-                            
-                            Text("\(entry.count)")
-                                .font(.caption.bold())
-                                .foregroundStyle(.white.opacity(0.7))
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(Color.white.opacity(0.06))
-                        )
-                        .allowsHitTesting(false)
-                    }
-                }
-                .padding(12)
-                .liquidGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.clear,
-                                    Color.black.opacity(0.25),
-                                    Color.black.opacity(0.45)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 90)
-                        .padding(.horizontal, 6)
-                        .padding(.bottom, 4)
-                        .allowsHitTesting(false)
-                        .blendMode(.softLight)
-                }
-                .allowsHitTesting(false)
-            }
-
-        case .memories:
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(OnboardingSampleData.memories) { memory in
-                    MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService)
-                        .environmentObject(environment)
-                        .allowsHitTesting(false)
-                }
-            }
-            .padding(.horizontal, 4)
-            .overlay(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.clear,
-                                Color.black.opacity(0.25),
-                                Color.black.opacity(0.45)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 80)
-                    .padding(.horizontal, 4)
-                    .padding(.bottom, 4)
-                    .allowsHitTesting(false)
-                    .blendMode(.softLight)
+            VStack(spacing: 12) {
+                SimpleFeature(icon: "square.and.pencil", text: "Capture")
+                SimpleFeature(icon: "bell.badge", text: "Remind")
+                SimpleFeature(icon: "arrow.triangle.2.circlepath", text: "Automate")
             }
         }
     }
 }
 
-// MARK: - Sample Content
-
-private enum OnboardingSampleData {
-    struct LobeEntry: Identifiable {
-        let id = UUID()
-        let lobe: LobeModel
-        let count: Int
-    }
-
-    static let lobes: [LobeEntry] = {
-        let work = LobeModel(
-            id: UUID(),
-            name: "Work",
-            colorHex: "#F97316",
-            iconName: "briefcase.fill",
-            sortOrder: 0
-        )
-
-        let family = LobeModel(
-            id: UUID(),
-            name: "Family",
-            colorHex: "#EC4899",
-            iconName: "heart.circle.fill",
-            sortOrder: 1
-        )
-
-        let adventures = LobeModel(
-            id: UUID(),
-            name: "Adventures",
-            colorHex: "#14B8A6",
-            iconName: "airplane",
-            sortOrder: 2
-        )
-
-        return [
-            LobeEntry(lobe: work, count: 24),
-            LobeEntry(lobe: family, count: 12),
-            LobeEntry(lobe: adventures, count: 6)
-        ]
-    }()
-
-    static let memories: [MemoryModel] = {
-        guard
-            let workLobe = lobes.first(where: { $0.lobe.name == "Work" })?.lobe,
-            let adventureLobe = lobes.first(where: { $0.lobe.name == "Adventures" })?.lobe
-        else {
-            return []
+private struct OrganizationVisual: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            HierarchyItem(icon: "brain.head.profile", text: "Mind", color: .blue)
+            Image(systemName: "arrow.down")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 16) {
+                HierarchyItem(icon: "folder.fill", text: "Lobe", color: .orange)
+                HierarchyItem(icon: "folder.fill", text: "Lobe", color: .pink)
+            }
+            Image(systemName: "arrow.down")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                HierarchyItem(icon: "doc.text", text: "Memory", color: .green, compact: true)
+                HierarchyItem(icon: "doc.text", text: "Memory", color: .green, compact: true)
+                HierarchyItem(icon: "doc.text", text: "Memory", color: .green, compact: true)
+            }
         }
+        .padding(.vertical, 8)
+    }
+}
 
-        let now = Date()
-        let calendar = Calendar.current
+private struct TriggersVisual: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            SimpleTrigger(icon: "clock.fill", text: "Scheduled", color: .blue)
+            SimpleTrigger(icon: "mappin.circle.fill", text: "Location", color: .green)
+            SimpleTrigger(icon: "person.circle.fill", text: "Person", color: .pink)
+            SimpleTrigger(icon: "arrow.triangle.branch", text: "Sequential", color: .purple)
+        }
+    }
+}
 
-        let travelChecklist: [CheckItemModel] = [
-            CheckItemModel(
-                id: UUID(),
-                title: "Confirm hotel pickup",
-                detail: nil,
-                isCompleted: true,
-                sortOrder: 0,
-                createdAt: now.addingTimeInterval(-86_400 * 6),
-                updatedAt: now.addingTimeInterval(-86_400 * 5),
-                completedAt: now.addingTimeInterval(-86_400 * 5)
-            ),
-            CheckItemModel(
-                id: UUID(),
-                title: "Pack camera gear",
-                detail: nil,
-                isCompleted: true,
-                sortOrder: 1,
-                createdAt: now.addingTimeInterval(-86_400 * 5),
-                updatedAt: now.addingTimeInterval(-86_400 * 3),
-                completedAt: now.addingTimeInterval(-86_400 * 3)
-            ),
-            CheckItemModel(
-                id: UUID(),
-                title: "Download offline maps",
-                detail: nil,
-                isCompleted: false,
-                sortOrder: 2,
-                createdAt: now.addingTimeInterval(-86_400 * 4),
-                updatedAt: now.addingTimeInterval(-3_600),
-                completedAt: nil
+private struct FeaturesVisual: View {
+    var body: some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: 16) {
+            ContentIcon(icon: "doc.text", color: .blue)
+            ContentIcon(icon: "checklist", color: .green)
+            ContentIcon(icon: "photo", color: .orange)
+            ContentIcon(icon: "link", color: .cyan)
+            ContentIcon(icon: "waveform", color: .purple)
+            ContentIcon(icon: "doc", color: .gray)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Supporting Views
+
+private struct SimpleFeature: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 32, height: 32)
+            Text(text)
+                .font(.body.weight(.medium))
+                .foregroundStyle(.primary)
+            Spacer()
+        }
+    }
+}
+
+private struct HierarchyItem: View {
+    let icon: String
+    let text: String
+    let color: Color
+    var compact: Bool = false
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(compact ? .body : .title3)
+                .foregroundStyle(color)
+                .frame(width: compact ? 28 : 40, height: compact ? 28 : 40)
+                .background(
+                    Circle()
+                        .fill(color.opacity(0.15))
+                )
+            if !compact {
+                Text(text)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct SimpleTrigger: View {
+    let icon: String
+    let text: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(color)
+                .frame(width: 40, height: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(color.opacity(0.15))
+                )
+            Text(text)
+                .font(.body.weight(.medium))
+                .foregroundStyle(.primary)
+            Spacer()
+        }
+    }
+}
+
+private struct ContentIcon: View {
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        Image(systemName: icon)
+            .font(.title2)
+            .foregroundStyle(color)
+            .frame(width: 50, height: 50)
+            .background(
+                Circle()
+                    .fill(color.opacity(0.15))
             )
-        ]
-
-        let travelTrigger = MemoryTriggerModel(
-            id: UUID(),
-            type: .location,
-            fireDate: calendar.date(byAdding: .day, value: 3, to: now),
-            startDate: now,
-            recurrenceRule: nil,
-            timeZoneIdentifier: TimeZone.current.identifier,
-            weekdayMask: 0,
-            isActive: true,
-            location: MemoryTriggerModel.TriggerLocation(
-                latitude: -22.9068,
-                longitude: -43.1729,
-                radius: 300,
-                name: "GRU Airport",
-                event: .onEntry
-            ),
-            sequential: nil,
-            spacedStage: 0,
-            lastReviewDate: nil,
-            ignoreCount: 0
-        )
-
-        let investorTrigger = MemoryTriggerModel(
-            id: UUID(),
-            type: .scheduled,
-            fireDate: calendar.date(byAdding: .hour, value: 6, to: now),
-            startDate: now,
-            recurrenceRule: RecurrenceRule(frequency: .weekly, interval: 1),
-            timeZoneIdentifier: TimeZone.current.identifier,
-            weekdayMask: 0,
-            isActive: true,
-            location: nil,
-            sequential: nil,
-            spacedStage: 0,
-            lastReviewDate: nil,
-            ignoreCount: 0
-        )
-
-        let travelMemory = MemoryModel(
-            id: UUID(),
-            title: "Atacama Desert Trip",
-            body: "Checklist done. Trigger fires as soon as you arrive at GRU.",
-            createdAt: now.addingTimeInterval(-86_400 * 10),
-            updatedAt: now,
-            status: .active,
-            isPinned: true,
-            dueDate: calendar.date(byAdding: .day, value: 12, to: now),
-            lobe: adventureLobe,
-            triggers: [travelTrigger],
-            checkItems: travelChecklist,
-            autoCompleteOnChecklistCompletion: false,
-            note: "Checklist done. Trigger fires as soon as you arrive at GRU.",
-            photoAttachmentIDs: [],
-            linkAttachmentIDs: [],
-            audioAttachmentIDs: [],
-            fileAttachmentIDs: [],
-            attachments: [],
-            completedDates: [],
-            userOrder: 0
-        )
-
-        let investorMemory = MemoryModel(
-            id: UUID(),
-            title: "Investor update with Maya",
-            body: "Share growth metrics and highlight the new trigger-first onboarding.",
-            createdAt: now.addingTimeInterval(-86_400 * 2),
-            updatedAt: now,
-            status: .active,
-            isPinned: false,
-            dueDate: calendar.date(byAdding: .day, value: 2, to: now),
-            lobe: workLobe,
-            triggers: [investorTrigger],
-            checkItems: [],
-            autoCompleteOnChecklistCompletion: false,
-            note: "Share growth metrics and highlight the new trigger-first onboarding.",
-            photoAttachmentIDs: [],
-            linkAttachmentIDs: [],
-            audioAttachmentIDs: [],
-            fileAttachmentIDs: [],
-            attachments: [],
-            completedDates: [],
-            userOrder: 0
-        )
-
-        return [travelMemory, investorMemory]
-    }()
+    }
 }
 
-// MARK: - Building Blocks
+// MARK: - Slide Container
 
 private struct OnboardingSlide<Visual: View>: View {
     let title: String
@@ -493,109 +337,39 @@ private struct OnboardingSlide<Visual: View>: View {
     @ViewBuilder let visual: Visual
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer(minLength: 0)
+        VStack(spacing: 20) {
+            Spacer()
 
-            VStack(spacing: 14) {
+            VStack(spacing: 8) {
                 Text(title)
-                    .font(.largeTitle.bold())
+                    .font(.system(size: 28, weight: .bold))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
 
                 Text(message)
-                    .font(.body)
+                    .font(.subheadline)
                     .multilineTextAlignment(.center)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .frame(maxWidth: 420)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
             }
 
             visual
-                .frame(maxWidth: 480)
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
 
-            Spacer(minLength: 0)
+            Spacer()
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .ignoresSafeArea(edges: .top)
-    }
-}
-
-private struct OnboardingHighlightRow: View {
-    let icon: String
-    let title: String
-    let accent: Color
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.headline.weight(.semibold))
-                .frame(width: 32, height: 32)
-                .background(
-                    Circle()
-                        .fill(accent.opacity(0.18))
-                )
-                .foregroundStyle(accent)
-
-            Text(title)
-                .font(.callout.weight(.medium))
-                .foregroundStyle(Color.white.opacity(0.9))
-
-            Spacer(minLength: 0)
-        }
-    }
-}
-
-private struct OnboardingMiniCard: View {
-    let icon: String
-    let title: String
-    let description: String
-    let accent: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(accent)
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(accent.opacity(0.22))
-                )
-
-            Text(title)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.white)
-
-            Text(description)
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.8))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .liquidGlass(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 // MARK: - Utilities
 
 private extension View {
-    func zeroContentMarginsIfAvailable() -> some View {
-        contentMargins(.zero, for: .scrollContent)
-    }
-
     func applyPageTabStyle() -> some View {
         self.tabViewStyle(.page(indexDisplayMode: .never))
     }
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
-    environment.bootstrap()
-    return OnboardingFlowView(onFinish: {})
-        .environmentObject(environment)
+    OnboardingFlowView(onFinish: {})
 }

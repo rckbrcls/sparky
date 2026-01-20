@@ -85,8 +85,14 @@ struct ContentView: View {
                         onEditMind: { mind in
                             presentMindEdit(for: mind)
                         },
+                        onEditLobe: { lobe in
+                            presentLobeEdit(for: lobe)
+                        },
                         onAddLobe: { mind in
                             presentLobeCreation(for: mind)
+                        },
+                        onAddLobeWithoutMind: {
+                            presentLobeCreation()
                         },
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onLobeContextChange: { lobe in

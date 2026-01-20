@@ -15,7 +15,9 @@ struct MindRootView: View {
     let onEditMemory: ((MemoryModel) -> Void)?
     let onCreateMind: () -> Void
     let onEditMind: ((MindModel) -> Void)?
+    let onEditLobe: ((LobeModel) -> Void)?
     let onAddLobe: ((MindModel) -> Void)?
+    let onAddLobeWithoutMind: (() -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     let onLobeContextChange: (LobeModel?) -> Void
     let onMindContextChange: ((MindModel?) -> Void)?
@@ -66,6 +68,24 @@ struct MindRootView: View {
                                 .buttonStyle(PlainButtonStyle())
                                 .accessibilityHint("Opens details for \(mind.name)")
                             }
+                            
+                            ForEach(displayLobesWithoutMind) { lobe in
+                                NavigationLink(value: lobe) {
+                                    LobeGridItemView(
+                                        lobe: lobe,
+                                        count: memoryCounts(for: lobe).total,
+                                        completedCount: memoryCounts(for: lobe).completed,
+                                        activeCount: activeMemoryCount(for: lobe),
+                                        lobeService: lobeService,
+                                        memoryService: memoryService,
+                                        mindService: mindService,
+                                        onEdit: onEditLobe,
+                                        showOnlyRemaining: true
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .accessibilityHint("Opens details for \(lobe.name)")
+                            }
                         }
                         .padding(.horizontal, 20)
                     }
@@ -79,12 +99,23 @@ struct MindRootView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        onCreateMind()
+                    Menu {
+                        Button {
+                            onCreateMind()
+                        } label: {
+                            Label("Add Mind", systemImage: "brain.head.profile")
+                        }
+                        
+                        Button {
+                            onAddLobeWithoutMind?()
+                        } label: {
+                            Label("Add Lobe", systemImage: "square.grid.2x2")
+                        }
+                        .disabled(onAddLobeWithoutMind == nil)
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .accessibilityLabel("Create Mind")
+                    .accessibilityLabel("Add")
                 }
             }
             .navigationDestination(for: MindModel.self) { mind in
@@ -110,7 +141,7 @@ struct MindRootView: View {
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     onEditMemory: onEditMemory,
-                    onEditLobe: nil,
+                    onEditLobe: onEditLobe,
                     onMultiSelectionChange: onMultiSelectionChange,
                     onLobeContextChange: { newLobe in
                         onLobeContextChange(newLobe)
@@ -145,6 +176,18 @@ struct MindRootView: View {
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
         return [MindModel.allMinds] + sortedMinds
+    }
+    
+    private var displayLobesWithoutMind: [LobeModel] {
+        lobeService.lobes
+            .filter { lobe in
+                guard !lobe.isAllLobes else { return false }
+                guard !lobe.isAllLobeForMind else { return false }
+                return lobe.mind == nil
+            }
+            .sorted { lhs, rhs in
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
     }
 
     private func lobeCounts(for mind: MindModel) -> Int {
@@ -188,6 +231,24 @@ struct MindRootView: View {
         }
         return memories.filter { $0.status == .active }.count
     }
+    
+    private func memoryCounts(for lobe: LobeModel) -> (completed: Int, total: Int) {
+        let memories = memoryService.memories.filter { memory in
+            guard let lobeID = memory.lobe?.id else { return false }
+            return lobeID == lobe.id
+        }
+        let total = memories.count
+        let completed = memories.filter { $0.isCompleted }.count
+        return (completed, total)
+    }
+    
+    private func activeMemoryCount(for lobe: LobeModel) -> Int {
+        let memories = memoryService.memories.filter { memory in
+            guard let lobeID = memory.lobe?.id else { return false }
+            return lobeID == lobe.id
+        }
+        return memories.filter { $0.status == .active }.count
+    }
 
     private func refresh() async {
         async let minds = mindService.refresh(force: true)
@@ -208,7 +269,9 @@ struct MindRootView: View {
         onEditMemory: nil,
         onCreateMind: { },
         onEditMind: nil,
+        onEditLobe: nil,
         onAddLobe: nil,
+        onAddLobeWithoutMind: nil,
         onMultiSelectionChange: { _ in },
         onLobeContextChange: { _ in },
         onMindContextChange: nil,
