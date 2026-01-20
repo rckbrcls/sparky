@@ -27,17 +27,17 @@ final class MemoryService: ObservableObject {
         case nextTriggerAscending
     }
 
-    struct SpaceFilterKey: Hashable {
-        let spaceIDs: Set<UUID>
+    struct LobeFilterKey: Hashable {
+        let lobeIDs: Set<UUID>
         let statuses: Set<MemoryStatus>
         let includeCompleted: Bool
         let sort: SortStrategy
 
-        init(spaceIDs: Set<UUID>,
+        init(lobeIDs: Set<UUID>,
              statuses: Set<MemoryStatus>,
              includeCompleted: Bool,
              sort: SortStrategy) {
-            self.spaceIDs = spaceIDs
+            self.lobeIDs = lobeIDs
             self.statuses = statuses
             self.includeCompleted = includeCompleted
             self.sort = sort
@@ -49,12 +49,12 @@ final class MemoryService: ObservableObject {
     @Published private(set) var lastRefreshed: Date?
 
     private let persistence: PersistenceController
-    private let spaceService: SpaceService
+    private let lobeService: LobeService
     private let attachmentStore: MemoryAttachmentStore
     private let cacheTTL: TimeInterval
     private var refreshTimer: AnyCancellable?
-    private var cache: [SpaceFilterKey: [MemoryModel]] = [:]
-    private var cacheTimestamps: [SpaceFilterKey: Date] = [:]
+    private var cache: [LobeFilterKey: [MemoryModel]] = [:]
+    private var cacheTimestamps: [LobeFilterKey: Date] = [:]
     private let logger = Logger(subsystem: "i-cant-miss", category: "MemoryService")
     private let jsonEncoder = JSONEncoder()
     private let jsonDecoder = JSONDecoder()
@@ -62,11 +62,11 @@ final class MemoryService: ObservableObject {
     var triggerExecutorCoordinator: TriggerExecutorCoordinator?
 
     init(persistence: PersistenceController,
-         spaceService: SpaceService,
+         lobeService: LobeService,
          attachmentStore: MemoryAttachmentStore,
          cacheTTL: TimeInterval = 30) {
         self.persistence = persistence
-        self.spaceService = spaceService
+        self.lobeService = lobeService
         self.attachmentStore = attachmentStore
         self.cacheTTL = cacheTTL
 
@@ -125,23 +125,23 @@ final class MemoryService: ObservableObject {
         }
     }
 
-    func memories(in space: SpaceModel?,
+    func memories(in lobe: LobeModel?,
                   statuses: Set<MemoryStatus> = [],
                   includeCompleted: Bool = true,
                   sort: SortStrategy = .updatedAtDescending) -> [MemoryModel] {
-        let spaceIDs: Set<UUID>
-        if let space {
-            if space.isAllSpaces {
-                spaceIDs = []
+        let lobeIDs: Set<UUID>
+        if let lobe {
+            if lobe.isAllLobes {
+                lobeIDs = []
             } else {
-                spaceIDs = [space.id]
+                lobeIDs = [lobe.id]
             }
         } else {
-            spaceIDs = []
+            lobeIDs = []
         }
 
-        let key = SpaceFilterKey(
-            spaceIDs: spaceIDs,
+        let key = LobeFilterKey(
+            lobeIDs: lobeIDs,
             statuses: statuses,
             includeCompleted: includeCompleted,
             sort: sort
@@ -155,10 +155,10 @@ final class MemoryService: ObservableObject {
 
         var filtered = memories
 
-        if !spaceIDs.isEmpty {
+        if !lobeIDs.isEmpty {
             filtered = filtered.filter { memory in
-                guard let spaceID = memory.space?.id else { return false }
-                return spaceIDs.contains(spaceID)
+                guard let lobeID = memory.lobe?.id else { return false }
+                return lobeIDs.contains(lobeID)
             }
         }
 
@@ -228,7 +228,7 @@ final class MemoryService: ObservableObject {
         return memories
             .filter { memory in
                 guard memory.status == .active else { return false }
-                guard memory.space == nil else { return false } // Memórias com space não aparecem na aba Triggers
+                guard memory.lobe == nil else { return false } // Memórias com lobe não aparecem na aba Triggers
 
                 // Não deve ter nenhum trigger scheduled ativo
                 let hasScheduled = memory.triggers.contains {
@@ -433,12 +433,12 @@ final class MemoryService: ObservableObject {
         }
     }
 
-    func moveMemory(_ id: UUID, to space: SpaceModel?) async throws {
+    func moveMemory(_ id: UUID, to lobe: LobeModel?) async throws {
         try await mutateMemory(memoryID: id) { memory in
-            if let space,
-               space.id != SpaceModel.allSpacesIdentifier,
-               space.id != SpaceModel.inboxSpacesIdentifier,
-               let spaceEntity = try self.fetchSpace(by: space.id, context: memory.managedObjectContext ?? self.persistence.container.viewContext) {
+            if let lobe,
+               lobe.id != LobeModel.allLobesIdentifier,
+               lobe.id != LobeModel.inboxLobesIdentifier,
+               let spaceEntity = try self.fetchSpace(by: lobe.id, context: memory.managedObjectContext ?? self.persistence.container.viewContext) {
                 memory.space = spaceEntity
             } else {
                 memory.space = nil
@@ -550,7 +550,7 @@ final class MemoryService: ObservableObject {
             status: .active, // Reset status to active
             isPinned: memory.isPinned,
             dueDate: memory.dueDate,
-            spaceID: memory.space?.id,
+            lobeID: memory.lobe?.id,
             triggers: newTriggers,
             note: memory.note, // Fixed field
             checkItems: newCheckItems,
@@ -662,10 +662,10 @@ private extension MemoryService {
         entity.contentsData = try jsonEncoder.encode(bundle)
         entity.body = draft.note
 
-        if let spaceID = draft.spaceID,
-           spaceID != SpaceModel.allSpacesIdentifier,
-           spaceID != SpaceModel.inboxSpacesIdentifier,
-           let space = try fetchSpace(by: spaceID, context: context) {
+        if let lobeID = draft.lobeID,
+           lobeID != LobeModel.allLobesIdentifier,
+           lobeID != LobeModel.inboxLobesIdentifier,
+           let space = try fetchSpace(by: lobeID, context: context) {
             entity.space = space
         } else {
             entity.space = nil
@@ -719,7 +719,7 @@ private extension MemoryService {
             status: MemoryStatus(rawValue: entity.statusRaw ?? MemoryStatus.active.rawValue) ?? .active,
             isPinned: entity.isPinned,
             dueDate: entity.dueDate,
-            space: entity.space?.toModel(),
+            lobe: entity.space?.toModel(),
             triggers: triggers,
             checkItems: decoded.checkItems,
             autoCompleteOnChecklistCompletion: entity.autoCompleteOnChecklistCompletion,

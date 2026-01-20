@@ -136,7 +136,7 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             status: resetStatus ? .active : memory.status,
             isPinned: memory.isPinned,
             dueDate: memory.dueDate,
-            spaceID: memory.space?.id,
+            lobeID: memory.lobe?.id,
             triggers: updatedTriggers,
             note: memory.note,
             checkItems: checkItemDrafts,

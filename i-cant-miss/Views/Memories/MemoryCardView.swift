@@ -22,12 +22,12 @@ struct MemoryCardView: View {
     var onTogglePin: (() -> Void)?
     var onToggleCompletion: (() -> Void)?
     var onDelete: (() -> Void)?
-    var onMoveToSpace: ((UUID?) -> Void)?
+    var onMoveToLobe: ((UUID?) -> Void)?
     var onUpdateStatus: ((MemoryStatus) -> Void)?
     var onEdit: (() -> Void)?
 
     private var isContextMenuEnabled: Bool {
-        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToSpace != nil || onEdit != nil
+        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToLobe != nil || onEdit != nil
     }
 
     init(
@@ -37,7 +37,7 @@ struct MemoryCardView: View {
         onTogglePin: (() -> Void)? = nil,
         onToggleCompletion: (() -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
-        onMoveToSpace: ((UUID?) -> Void)? = nil,
+        onMoveToLobe: ((UUID?) -> Void)? = nil,
         onUpdateStatus: ((MemoryStatus) -> Void)? = nil,
         onEdit: (() -> Void)? = nil
     ) {
@@ -47,7 +47,7 @@ struct MemoryCardView: View {
         self.onTogglePin = onTogglePin
         self.onToggleCompletion = onToggleCompletion
         self.onDelete = onDelete
-        self.onMoveToSpace = onMoveToSpace
+        self.onMoveToLobe = onMoveToLobe
         self.onUpdateStatus = onUpdateStatus
         self.onEdit = onEdit
     }
@@ -141,7 +141,7 @@ struct MemoryCardView: View {
 
     private var spaceAccent: Color {
         guard let memory = memory,
-              let hex = memory.space?.colorHex,
+              let hex = memory.lobe?.colorHex,
               let color = Color(hex: hex) else {
             return .accentColor
         }
@@ -195,13 +195,13 @@ struct MemoryCardView: View {
             
             // Card content
             HStack(alignment: .center, spacing: 12) {
-                let spaceIcon = memory.space?.iconName ?? "square.grid.2x2.fill"
-                let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
+                let lobeIcon = memory.lobe?.iconName ?? "square.grid.2x2.fill"
+                let lobeColor = memory.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
-                Image(systemName: spaceIcon)
-                    .foregroundStyle(spaceColor)
+                Image(systemName: lobeIcon)
+                    .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)
-                    .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
+                    .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
 
                 VStack(alignment: .leading, spacing: 6) {
                     VStack (alignment: .leading, spacing: 6){
@@ -339,25 +339,25 @@ struct MemoryCardView: View {
                 }
 
 
-                if let onMoveToSpace = onMoveToSpace {
+                if let onMoveToLobe = onMoveToLobe {
                     Menu {
                         Button {
-                            onMoveToSpace(nil)
+                            onMoveToLobe(nil)
                         } label: {
-                            Label("No Space", systemImage: "tray")
+                            Label("No Lobe", systemImage: "tray")
                         }
 
-                        ForEach(environment.spaceService.spaces.filter { 
-                            $0.id != SpaceModel.allSpacesIdentifier && $0.id != SpaceModel.inboxSpacesIdentifier 
-                        }, id: \.id) { space in
+                        ForEach(environment.lobeService.lobes.filter { 
+                            $0.id != LobeModel.allLobesIdentifier && $0.id != LobeModel.inboxLobesIdentifier 
+                        }, id: \.id) { lobe in
                             Button {
-                                onMoveToSpace(space.id)
+                                onMoveToLobe(lobe.id)
                             } label: {
-                                Label(space.name, systemImage: space.iconName ?? "folder")
+                                Label(lobe.name, systemImage: lobe.iconName ?? "folder")
                             }
                         }
                     } label: {
-                        Label("Move to Space", systemImage: "folder")
+                        Label("Move to Lobe", systemImage: "folder")
                     }
                 }
 

@@ -13,7 +13,7 @@ import Combine
 final class AppEnvironment: ObservableObject {
     let persistence: PersistenceController
     let mindService: MindService
-    let spaceService: SpaceService
+    let lobeService: LobeService
     let memoryService: MemoryService
     let triggerExecutorCoordinator: TriggerExecutorCoordinator
     let settings: SettingsStore
@@ -40,9 +40,9 @@ final class AppEnvironment: ObservableObject {
 
         // Initialize services - they will load data synchronously in their init
         self.mindService = MindService(persistence: persistence)
-        self.spaceService = SpaceService(persistence: persistence)
+        self.lobeService = LobeService(persistence: persistence)
         self.memoryService = MemoryService(persistence: persistence,
-                                           spaceService: spaceService,
+                                           lobeService: lobeService,
                                            attachmentStore: attachmentStore)
         self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings, memoryService: memoryService)
 
@@ -72,11 +72,11 @@ final class AppEnvironment: ObservableObject {
 
             // Perform a force refresh to ensure data is up-to-date
             async let mindsTask = mindService.refresh(force: true)
-            async let spacesTask = spaceService.refresh(force: true)
-            async let tagsTask = spaceService.refreshTags(force: true)
+            async let lobesTask = lobeService.refresh(force: true)
+            async let tagsTask = lobeService.refreshTags(force: true)
             async let memoriesTask = memoryService.refresh(force: true)
 
-            _ = await (mindsTask, spacesTask, tagsTask, memoriesTask)
+            _ = await (mindsTask, lobesTask, tagsTask, memoriesTask)
 
             await triggerExecutorCoordinator.scheduled.requestAuthorizationIfNeeded()
 

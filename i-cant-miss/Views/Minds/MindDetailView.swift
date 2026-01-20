@@ -11,15 +11,15 @@ struct MindDetailView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var mindService: MindService
-    @ObservedObject var spaceService: SpaceService
+    @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
 
     let onSelectMemory: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
     let onEditMind: ((MindModel) -> Void)?
-    let onAddSpace: ((MindModel) -> Void)?
+    let onAddLobe: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
-    let onSpaceContextChange: (SpaceModel?) -> Void
+    let onLobeContextChange: (LobeModel?) -> Void
     let onMindContextChange: ((MindModel?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
 
@@ -28,27 +28,27 @@ struct MindDetailView: View {
     init(
         mind: MindModel,
         mindService: MindService,
-        spaceService: SpaceService,
+        lobeService: LobeService,
         memoryService: MemoryService,
         onSelectMemory: @escaping (MemoryModel) -> Void,
         onEditMemory: ((MemoryModel) -> Void)? = nil,
         onEditMind: ((MindModel) -> Void)?,
-        onAddSpace: ((MindModel) -> Void)?,
+        onAddLobe: ((MindModel) -> Void)?,
         onMultiSelectionChange: @escaping (Bool) -> Void,
-        onSpaceContextChange: @escaping (SpaceModel?) -> Void,
+        onLobeContextChange: @escaping (LobeModel?) -> Void,
         onMindContextChange: ((MindModel?) -> Void)?,
         onSearchActiveChange: @escaping (Bool) -> Void
     ) {
         self.mind = mind
         self.mindService = mindService
-        self.spaceService = spaceService
+        self.lobeService = lobeService
         self.memoryService = memoryService
         self.onSelectMemory = onSelectMemory
         self.onEditMemory = onEditMemory
         self.onEditMind = onEditMind
-        self.onAddSpace = onAddSpace
+        self.onAddLobe = onAddLobe
         self.onMultiSelectionChange = onMultiSelectionChange
-        self.onSpaceContextChange = onSpaceContextChange
+        self.onLobeContextChange = onLobeContextChange
         self.onMindContextChange = onMindContextChange
         self.onSearchActiveChange = onSearchActiveChange
     }
@@ -66,19 +66,19 @@ struct MindDetailView: View {
         resolvedMind.isAllMinds
     }
 
-    private var spacesInMind: [SpaceModel] {
-        let filteredSpaces: [SpaceModel]
+    private var lobesInMind: [LobeModel] {
+        let filteredLobes: [LobeModel]
         if isAllMinds {
-            let defaultSpaces = [SpaceModel.allSpaces]
-            filteredSpaces = spaceService.spaces
-            return defaultSpaces + filteredSpaces
+            let defaultLobes = [LobeModel.allLobes]
+            filteredLobes = lobeService.lobes
+            return defaultLobes + filteredLobes
         } else {
-            filteredSpaces = spaceService.spaces.filter { space in
-                guard let mindID = space.mind?.id else { return false }
+            filteredLobes = lobeService.lobes.filter { lobe in
+                guard let mindID = lobe.mind?.id else { return false }
                 return mindID == mind.id
             }
-            let allSpace = SpaceModel.allSpace(for: resolvedMind)
-            return [allSpace] + filteredSpaces
+            let allLobe = LobeModel.allLobe(for: resolvedMind)
+            return [allLobe] + filteredLobes
         }
     }
 
@@ -86,10 +86,10 @@ struct MindDetailView: View {
         baseView
             .fullScreenCover(isPresented: $isSearching) {
                 MemorySearchSheet(
-                    space: SpaceModel.allSpace(for: resolvedMind),
+                    lobe: LobeModel.allLobe(for: resolvedMind),
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
-                    spaceService: spaceService
+                    lobeService: lobeService
                 )
             }
             .onAppear {
@@ -113,23 +113,23 @@ struct MindDetailView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 16)
 
-                if spacesInMind.isEmpty {
+                if lobesInMind.isEmpty {
                     EmptyStateView(
                         systemImage: "square.grid.2x2",
-                        title: "No Spaces",
-                        message: "This mind doesn't have any spaces yet."
+                        title: "No Lobes",
+                        message: "This mind doesn't have any lobes yet."
                     )
                     .padding(.horizontal, 20)
                 } else {
                     LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(spacesInMind) { space in
-                            NavigationLink(value: space) {
-                                SpaceGridItemView(
-                                    space: space,
-                                    count: memoryCounts(for: space).total,
-                                    completedCount: memoryCounts(for: space).completed,
-                                    activeCount: activeMemoryCount(for: space),
-                                    spaceService: spaceService,
+                        ForEach(lobesInMind) { lobe in
+                            NavigationLink(value: lobe) {
+                                LobeGridItemView(
+                                    lobe: lobe,
+                                    count: memoryCounts(for: lobe).total,
+                                    completedCount: memoryCounts(for: lobe).completed,
+                                    activeCount: activeMemoryCount(for: lobe),
+                                    lobeService: lobeService,
                                     memoryService: memoryService,
                                     mindService: mindService,
                                     onEdit: nil,
@@ -137,7 +137,7 @@ struct MindDetailView: View {
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .accessibilityHint("Opens details for \(space.name)")
+                            .accessibilityHint("Opens details for \(lobe.name)")
                         }
                     }
                     .padding(.horizontal, 20)
@@ -167,58 +167,58 @@ struct MindDetailView: View {
                 }
             }
 
-            if !isAllMinds, let onAddSpace = onAddSpace {
+            if !isAllMinds, let onAddLobe = onAddLobe {
                 ToolbarItem(placement: .navigationBarTrailing) {
                 
                     Button {
-                        onAddSpace(resolvedMind)
+                        onAddLobe(resolvedMind)
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .accessibilityLabel("Add Space")
+                    .accessibilityLabel("Add Lobe")
                 }
             }
         }
-        .navigationDestination(for: SpaceModel.self) { space in
-            SpaceDetailView(
-                space: space,
-                spaceService: spaceService,
+        .navigationDestination(for: LobeModel.self) { lobe in
+            LobeDetailView(
+                lobe: lobe,
+                lobeService: lobeService,
                 memoryService: memoryService,
                 onSelectMemory: onSelectMemory,
                 onEditMemory: onEditMemory,
-                onEditSpace: nil,
+                onEditLobe: nil,
                 onMultiSelectionChange: onMultiSelectionChange,
-                onSpaceContextChange: { newSpace in
-                    onSpaceContextChange(newSpace)
+                onLobeContextChange: { newLobe in
+                    onLobeContextChange(newLobe)
                 },
                 onSearchActiveChange: onSearchActiveChange
             )
             .onAppear {
-                onSpaceContextChange(space)
+                onLobeContextChange(lobe)
             }
             .onDisappear {
-                // Quando sair do SpaceDetailView, manter o mind context
+                // Quando sair do LobeDetailView, manter o mind context
             }
         }
         .navigationBarBackButtonHidden(true)
     }
 
-    private func memoryCounts(for space: SpaceModel) -> (completed: Int, total: Int) {
+    private func memoryCounts(for lobe: LobeModel) -> (completed: Int, total: Int) {
         let memories: [MemoryModel]
-        if space.isAllSpaces {
+        if lobe.isAllLobes {
             memories = memoryService.memories
-        } else if space.isAllSpaceForMind {
-            guard let mindID = space.mind?.id else {
+        } else if lobe.isAllLobeForMind {
+            guard let mindID = lobe.mind?.id else {
                 return (0, 0)
             }
             memories = memoryService.memories.filter { memory in
-                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
-                return memorySpaceMindID == mindID
+                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
+                return memoryLobeMindID == mindID
             }
         } else {
             memories = memoryService.memories.filter { memory in
-                guard let spaceID = memory.space?.id else { return false }
-                return spaceID == space.id
+                guard let lobeID = memory.lobe?.id else { return false }
+                return lobeID == lobe.id
             }
         }
 
@@ -227,22 +227,22 @@ struct MindDetailView: View {
         return (completed, total)
     }
 
-    private func activeMemoryCount(for space: SpaceModel) -> Int {
+    private func activeMemoryCount(for lobe: LobeModel) -> Int {
         let memories: [MemoryModel]
-        if space.isAllSpaces {
+        if lobe.isAllLobes {
             memories = memoryService.memories
-        } else if space.isAllSpaceForMind {
-            guard let mindID = space.mind?.id else {
+        } else if lobe.isAllLobeForMind {
+            guard let mindID = lobe.mind?.id else {
                 return 0
             }
             memories = memoryService.memories.filter { memory in
-                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
-                return memorySpaceMindID == mindID
+                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
+                return memoryLobeMindID == mindID
             }
         } else {
             memories = memoryService.memories.filter { memory in
-                guard let spaceID = memory.space?.id else { return false }
-                return spaceID == space.id
+                guard let lobeID = memory.lobe?.id else { return false }
+                return lobeID == lobe.id
             }
         }
 

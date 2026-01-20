@@ -21,12 +21,12 @@ struct i_cant_missApp: App {
                 .task {
                     appEnvironment.bootstrap()
                 }
-                .onChange(of: scenePhase) { oldPhase, newPhase in
+                .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         // Refresh data when app becomes active
                         Task {
-                            await appEnvironment.spaceService.refresh(force: false)
-                            await appEnvironment.spaceService.refreshTags(force: false)
+                            await appEnvironment.lobeService.refresh(force: false)
+                            await appEnvironment.lobeService.refreshTags(force: false)
                             await appEnvironment.memoryService.refresh(force: false)
                         }
                     }

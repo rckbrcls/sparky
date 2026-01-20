@@ -18,7 +18,7 @@ enum MemoryEditorTemplate {
 @MainActor
 final class MemoryEditorViewModel: ObservableObject {
     @Published var title: String = ""
-    @Published var selectedSpaceID: UUID?
+    @Published var selectedLobeID: UUID?
     @Published var status: MemoryStatus = .active
     @Published var isPinned: Bool = false
     @Published var autoCompleteChecklist: Bool
@@ -38,43 +38,43 @@ final class MemoryEditorViewModel: ObservableObject {
     private var existingMemory: MemoryModel?
     private var persistedMemoryID: UUID?
     private let template: MemoryEditorTemplate
-    private let defaultSpace: SpaceModel?
+    private let defaultLobe: LobeModel?
 
     init(environment: AppEnvironment,
          attachmentStore: MemoryAttachmentStore,
          memory: MemoryModel?,
-         defaultSpace: SpaceModel?,
+         defaultLobe: LobeModel?,
          template: MemoryEditorTemplate,
          initialTitle: String = "") {
         self.environment = environment
         self.attachmentStore = attachmentStore
         self.existingMemory = memory
         self.template = template
-        self.defaultSpace = defaultSpace
+        self.defaultLobe = defaultLobe
         self.autoCompleteChecklist = memory?.autoCompleteOnChecklistCompletion ?? false
         self.persistedMemoryID = memory?.id
         self.title = initialTitle
         configureInitialState()
     }
 
-    var availableSpaces: [SpaceModel] {
-        environment.spaceService.spaces
+    var availableLobes: [LobeModel] {
+        environment.lobeService.lobes
     }
 
     var editingMemoryID: UUID? {
         persistedMemoryID ?? existingMemory?.id
     }
 
-    var selectedSpace: SpaceModel? {
-        guard let id = selectedSpaceID else { return nil }
-        if let space = environment.spaceService.space(id: id) {
-            return space
+    var selectedLobe: LobeModel? {
+        guard let id = selectedLobeID else { return nil }
+        if let lobe = environment.lobeService.lobe(id: id) {
+            return lobe
         }
-        if id == SpaceModel.allSpacesIdentifier {
-            return SpaceModel.allSpaces
+        if id == LobeModel.allLobesIdentifier {
+            return LobeModel.allLobes
         }
-        if id == SpaceModel.inboxSpacesIdentifier {
-            return SpaceModel.inboxSpaces
+        if id == LobeModel.inboxLobesIdentifier {
+            return LobeModel.inboxLobes
         }
         return nil
     }
@@ -119,7 +119,7 @@ final class MemoryEditorViewModel: ObservableObject {
         if title != original.title { return true }
         if status != original.status { return true }
         if isPinned != original.isPinned { return true }
-        if selectedSpaceID != original.space?.id { return true }
+        if selectedLobeID != original.lobe?.id { return true }
         if autoCompleteChecklist != original.autoCompleteOnChecklistCompletion { return true }
 
         // Compare note
@@ -430,7 +430,7 @@ final class MemoryEditorViewModel: ObservableObject {
             status: status,
             isPinned: isPinned,
             dueDate: nil,
-            spaceID: selectedSpaceID,
+            lobeID: selectedLobeID,
             triggers: triggerModels,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
@@ -479,7 +479,7 @@ final class MemoryEditorViewModel: ObservableObject {
             status: status,
             isPinned: isPinned,
             dueDate: nil,
-            spaceID: selectedSpaceID,
+            lobeID: selectedLobeID,
             triggers: triggerModels,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
@@ -513,13 +513,13 @@ private extension MemoryEditorViewModel {
         if let memory = existingMemory {
             apply(memory: memory)
         } else {
-            // When creating a new memory, prefer the provided defaultSpace (if any)
-            // so that creations from a specific space/subspace are scoped correctly.
-            // If it's the "All" space, default to no space (nil)
-            if defaultSpace?.isAllSpaces == true {
-                selectedSpaceID = nil
+            // When creating a new memory, prefer the provided defaultLobe (if any)
+            // so that creations from a specific lobe/sublobe are scoped correctly.
+            // If it's the "All" lobe, default to no lobe (nil)
+            if defaultLobe?.isAllLobes == true {
+                selectedLobeID = nil
             } else {
-                selectedSpaceID = defaultSpace?.id
+                selectedLobeID = defaultLobe?.id
             }
             applyTemplate(template)
         }
@@ -528,7 +528,7 @@ private extension MemoryEditorViewModel {
     func apply(memory: MemoryModel) {
         persistedMemoryID = memory.id
         title = memory.title
-        selectedSpaceID = memory.space?.id
+        selectedLobeID = memory.lobe?.id
         status = memory.status
         isPinned = memory.isPinned
         triggers = memory.triggers.map { draft(from: $0) }

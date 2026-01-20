@@ -1,5 +1,5 @@
 //
-//  SpaceComposerView.swift
+//  LobeComposerView.swift
 //  i-cant-miss
 //
 //  Created by Codex on 31/10/25.
@@ -10,7 +10,7 @@ import UIKit
 
 // MARK: - Auto Focus TextField
 
-private struct SpaceAutoFocusTextField: UIViewRepresentable {
+private struct LobeAutoFocusTextField: UIViewRepresentable {
     @Binding var text: String
     let placeholder: String
     let font: UIFont
@@ -46,9 +46,9 @@ private struct SpaceAutoFocusTextField: UIViewRepresentable {
     }
 
     class Coordinator: NSObject, UITextFieldDelegate {
-        var parent: SpaceAutoFocusTextField
+        var parent: LobeAutoFocusTextField
 
-        init(_ parent: SpaceAutoFocusTextField) {
+        init(_ parent: LobeAutoFocusTextField) {
             self.parent = parent
         }
 
@@ -64,9 +64,9 @@ private struct SpaceAutoFocusTextField: UIViewRepresentable {
     }
 }
 
-// MARK: - Space Composer View
+// MARK: - Lobe Composer View
 
-struct SpaceComposerView: View {
+struct LobeComposerView: View {
     let environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
@@ -75,16 +75,16 @@ struct SpaceComposerView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var showIconPicker = false
-    private let spaceToEdit: SpaceModel?
+    private let lobeToEdit: LobeModel?
     private let mindID: UUID?
 
-    init(environment: AppEnvironment, spaceToEdit: SpaceModel? = nil, mindID: UUID? = nil) {
+    init(environment: AppEnvironment, lobeToEdit: LobeModel? = nil, mindID: UUID? = nil) {
         self.environment = environment
-        self.spaceToEdit = spaceToEdit
+        self.lobeToEdit = lobeToEdit
         self.mindID = mindID
     }
 
-    private var selectedSpaceColor: Color {
+    private var selectedLobeColor: Color {
         Color(hex: selectedColorHex) ?? .accentColor
     }
 
@@ -105,13 +105,13 @@ struct SpaceComposerView: View {
             HStack(alignment: .center, spacing: 12) {
                 iconButton
 
-                SpaceAutoFocusTextField(
+                LobeAutoFocusTextField(
                     text: $name,
-                    placeholder: "Space name",
+                    placeholder: "Lobe name",
                     font: titleFont,
                     onSubmit: {
                         guard canSave else { return }
-                        saveSpace()
+                        saveLobe()
                     }
                 )
                 .frame(height: 30)
@@ -132,10 +132,10 @@ struct SpaceComposerView: View {
             )
         }
         .onAppear {
-            if let spaceToEdit = spaceToEdit {
-                name = spaceToEdit.name
-                selectedIcon = spaceToEdit.iconName ?? "square.grid.2x2.fill"
-                selectedColorHex = spaceToEdit.colorHex ?? Color.PresetColors.all.first?.hex ?? "#6366F1"
+            if let lobeToEdit = lobeToEdit {
+                name = lobeToEdit.name
+                selectedIcon = lobeToEdit.iconName ?? "square.grid.2x2.fill"
+                selectedColorHex = lobeToEdit.colorHex ?? Color.PresetColors.all.first?.hex ?? "#6366F1"
             }
         }
     }
@@ -145,18 +145,18 @@ struct SpaceComposerView: View {
             showIconPicker = true
         } label: {
             Image(systemName: selectedIcon)
-                .foregroundStyle(selectedSpaceColor)
+                .foregroundStyle(selectedLobeColor)
                 .frame(width: 36, height: 36)
-                .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
+                .glassEffect(.regular.tint(selectedLobeColor.opacity(0.15)))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Select icon and color")
     }
 
-    private func saveSpace() {
+    private func saveLobe() {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
-            errorMessage = "Provide a name for the space."
+            errorMessage = "Provide a name for the lobe."
             return
         }
 
@@ -165,15 +165,15 @@ struct SpaceComposerView: View {
 
         Task {
             do {
-                if let spaceToEdit = spaceToEdit {
-                    var updatedSpace = spaceToEdit
-                    updatedSpace.name = trimmedName
-                    updatedSpace.colorHex = selectedColorHex
-                    updatedSpace.iconName = selectedIcon
+                if let lobeToEdit = lobeToEdit {
+                    var updatedLobe = lobeToEdit
+                    updatedLobe.name = trimmedName
+                    updatedLobe.colorHex = selectedColorHex
+                    updatedLobe.iconName = selectedIcon
 
-                    _ = try await environment.spaceService.updateSpace(updatedSpace)
+                    _ = try await environment.lobeService.updateLobe(updatedLobe)
                 } else {
-                    _ = try await environment.spaceService.createSpace(
+                    _ = try await environment.lobeService.createLobe(
                         name: trimmedName,
                         colorHex: selectedColorHex,
                         iconName: selectedIcon,
@@ -182,7 +182,7 @@ struct SpaceComposerView: View {
                     )
                 }
 
-                _ = await environment.spaceService.refresh(force: true)
+                _ = await environment.lobeService.refresh(force: true)
 
                 await MainActor.run {
                     isSaving = false
@@ -201,5 +201,5 @@ struct SpaceComposerView: View {
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
-    return SpaceComposerView(environment: environment)
+    return LobeComposerView(environment: environment)
 }

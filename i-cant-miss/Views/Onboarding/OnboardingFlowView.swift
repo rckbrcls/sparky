@@ -8,7 +8,7 @@
 import SwiftUI
 
 private enum OnboardingStep: Int, CaseIterable, Identifiable {
-    case welcome, triggers, spaces, memories
+    case welcome, triggers, lobes, memories
 
     var id: Int { rawValue }
     var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
@@ -145,8 +145,8 @@ private extension OnboardingStep {
             return "Capture what matters"
         case .triggers:
             return "Smart triggers"
-        case .spaces:
-            return "Spaces for every plan"
+        case .lobes:
+            return "Lobes for every plan"
         case .memories:
             return "Timeline of wins"
         }
@@ -158,8 +158,8 @@ private extension OnboardingStep {
             return "Turn commitments into living memories so the right trigger always finds you."
         case .triggers:
             return "Time, place, people for nudges right on cue."
-        case .spaces:
-            return "Group every promise into Spaces that stay organized and easy to scan."
+        case .lobes:
+            return "Group every promise into Lobes that stay organized and easy to scan."
         case .memories:
             return "Review notes, checklists, and media in a single, evolving storyline."
         }
@@ -220,22 +220,22 @@ private extension OnboardingStep {
                 )
             }
 
-        case .spaces:
+        case .lobes:
             VStack(alignment: .leading, spacing: 18) {
-                Text("Sample Spaces")
+                Text("Sample Lobes")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.85))
 
                 VStack(spacing: 12) {
-                    ForEach(OnboardingSampleData.spaces) { entry in
+                    ForEach(OnboardingSampleData.lobes) { entry in
                         HStack(spacing: 12) {
-                            let spaceColor = entry.space.colorHex.flatMap { Color(hex: $0) } ?? .gray
+                            let lobeColor = entry.lobe.colorHex.flatMap { Color(hex: $0) } ?? .gray
                             
-                            Image(systemName: entry.space.iconName ?? "square.grid.2x2")
-                                .foregroundStyle(spaceColor)
+                            Image(systemName: entry.lobe.iconName ?? "square.grid.2x2")
+                                .foregroundStyle(lobeColor)
                                 .frame(width: 32, height: 32)
                             
-                            Text(entry.space.name)
+                            Text(entry.lobe.name)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.white.opacity(0.9))
                             
@@ -315,14 +315,14 @@ private extension OnboardingStep {
 // MARK: - Sample Content
 
 private enum OnboardingSampleData {
-    struct SpaceEntry: Identifiable {
+    struct LobeEntry: Identifiable {
         let id = UUID()
-        let space: SpaceModel
+        let lobe: LobeModel
         let count: Int
     }
 
-    static let spaces: [SpaceEntry] = {
-        let work = SpaceModel(
+    static let lobes: [LobeEntry] = {
+        let work = LobeModel(
             id: UUID(),
             name: "Work",
             colorHex: "#F97316",
@@ -330,7 +330,7 @@ private enum OnboardingSampleData {
             sortOrder: 0
         )
 
-        let family = SpaceModel(
+        let family = LobeModel(
             id: UUID(),
             name: "Family",
             colorHex: "#EC4899",
@@ -338,7 +338,7 @@ private enum OnboardingSampleData {
             sortOrder: 1
         )
 
-        let adventures = SpaceModel(
+        let adventures = LobeModel(
             id: UUID(),
             name: "Adventures",
             colorHex: "#14B8A6",
@@ -347,16 +347,16 @@ private enum OnboardingSampleData {
         )
 
         return [
-            SpaceEntry(space: work, count: 24),
-            SpaceEntry(space: family, count: 12),
-            SpaceEntry(space: adventures, count: 6)
+            LobeEntry(lobe: work, count: 24),
+            LobeEntry(lobe: family, count: 12),
+            LobeEntry(lobe: adventures, count: 6)
         ]
     }()
 
     static let memories: [MemoryModel] = {
         guard
-            let workSpace = spaces.first(where: { $0.space.name == "Work" })?.space,
-            let adventureSpace = spaces.first(where: { $0.space.name == "Adventures" })?.space
+            let workLobe = lobes.first(where: { $0.lobe.name == "Work" })?.lobe,
+            let adventureLobe = lobes.first(where: { $0.lobe.name == "Adventures" })?.lobe
         else {
             return []
         }
@@ -444,7 +444,7 @@ private enum OnboardingSampleData {
             status: .active,
             isPinned: true,
             dueDate: calendar.date(byAdding: .day, value: 12, to: now),
-            space: adventureSpace,
+            lobe: adventureLobe,
             triggers: [travelTrigger],
             checkItems: travelChecklist,
             autoCompleteOnChecklistCompletion: false,
@@ -467,7 +467,7 @@ private enum OnboardingSampleData {
             status: .active,
             isPinned: false,
             dueDate: calendar.date(byAdding: .day, value: 2, to: now),
-            space: workSpace,
+            lobe: workLobe,
             triggers: [investorTrigger],
             checkItems: [],
             autoCompleteOnChecklistCompletion: false,

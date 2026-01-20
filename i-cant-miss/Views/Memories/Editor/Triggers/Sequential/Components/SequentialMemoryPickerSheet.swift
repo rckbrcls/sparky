@@ -15,8 +15,8 @@ struct SequentialMemoryPickerSheet: View {
     @State private var searchText = ""
     @Environment(\.dismiss) private var dismiss
 
-    private var spaceService: SpaceService {
-        viewModel.environment.spaceService
+    private var lobeService: LobeService {
+        viewModel.environment.lobeService
     }
 
     private var memoryService: MemoryService {
@@ -48,10 +48,10 @@ struct SequentialMemoryPickerSheet: View {
 
     private var spacesList: some View {
         Section {
-            ForEach(displaySpaces) { space in
+            ForEach(displayLobes) { lobe in
                 NavigationLink {
-                    SequentialSpaceDetailView(
-                        space: space,
+                    SequentialLobeDetailView(
+                        lobe: lobe,
                         viewModel: viewModel,
                         excludedMemoryIDs: excludedMemoryIDs,
                         onSelect: { memory in
@@ -61,16 +61,16 @@ struct SequentialMemoryPickerSheet: View {
                     )
                 } label: {
                     HStack {
-                        Image(systemName: space.iconName ?? "square.grid.2x2")
-                            .foregroundStyle(Color(hex: space.colorHex ?? "") ?? .gray)
+                        Image(systemName: lobe.iconName ?? "square.grid.2x2")
+                            .foregroundStyle(Color(hex: lobe.colorHex ?? "") ?? .gray)
                             .frame(width: 24, height: 24)
 
-                        Text(space.name)
+                        Text(lobe.name)
                             .foregroundStyle(.primary)
 
                         Spacer()
 
-                        Text("\(memoryCount(for: space))")
+                        Text("\(memoryCount(for: lobe))")
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -82,7 +82,7 @@ struct SequentialMemoryPickerSheet: View {
                 .listRowSeparator(.hidden)
             }
         } header: {
-            Text("Spaces")
+            Text("Lobes")
         }
     }
 
@@ -111,24 +111,24 @@ struct SequentialMemoryPickerSheet: View {
         }
     }
 
-    private var displaySpaces: [SpaceModel] {
-        let sortedSpaces = spaceService.spaces
+    private var displayLobes: [LobeModel] {
+        let sortedLobes = lobeService.lobes
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [SpaceModel.allSpaces] + sortedSpaces
+        return [LobeModel.allLobes] + sortedLobes
     }
 
-    private func memoryCount(for space: SpaceModel) -> Int {
-        if space.isAllSpaces {
+    private func memoryCount(for lobe: LobeModel) -> Int {
+        if lobe.isAllLobes {
             return memoryService.memories.filter { !isExcluded($0) }.count
         }
         return memoryService.memories.filter { memory in
-            guard let spaceID = memory.space?.id else { return false }
-            return spaceID == space.id && !isExcluded(memory)
+            guard let lobeID = memory.lobe?.id else { return false }
+            return lobeID == lobe.id && !isExcluded(memory)
         }.count
     }
 
@@ -139,7 +139,7 @@ struct SequentialMemoryPickerSheet: View {
         return memoryService.memories.filter { memory in
             guard !isExcluded(memory) else { return false }
             return memory.title.localizedCaseInsensitiveContains(trimmed) ||
-                   (memory.space?.name ?? "").localizedCaseInsensitiveContains(trimmed)
+                   (memory.lobe?.name ?? "").localizedCaseInsensitiveContains(trimmed)
         }
     }
 
@@ -151,8 +151,8 @@ struct SequentialMemoryPickerSheet: View {
     }
 }
 
-private struct SequentialSpaceDetailView: View {
-    let space: SpaceModel
+private struct SequentialLobeDetailView: View {
+    let lobe: LobeModel
     @ObservedObject var viewModel: MemoryEditorViewModel
     let excludedMemoryIDs: Set<UUID>
     let onSelect: (MemoryModel) -> Void
@@ -163,10 +163,10 @@ private struct SequentialSpaceDetailView: View {
         let all = viewModel.environment.memoryService.memories
         let filtered: [MemoryModel]
 
-        if space.isAllSpaces {
+        if lobe.isAllLobes {
             filtered = all
         } else {
-            filtered = all.filter { $0.space?.id == space.id }
+            filtered = all.filter { $0.lobe?.id == lobe.id }
         }
 
         // Filter out excluded and apply search
@@ -201,8 +201,8 @@ private struct SequentialSpaceDetailView: View {
             }
         }
         .listStyle(.plain)
-        .searchable(text: $searchText, prompt: "Search in \(space.name)")
-        .navigationTitle(space.name)
+        .searchable(text: $searchText, prompt: "Search in \(lobe.name)")
+        .navigationTitle(lobe.name)
     }
 }
 
@@ -211,11 +211,11 @@ private struct SequentialMemoryPickerRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            let spaceIcon = memory.space?.iconName ?? "square.grid.2x2"
-            let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
+            let lobeIcon = memory.lobe?.iconName ?? "square.grid.2x2"
+            let lobeColor = memory.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
-            Image(systemName: spaceIcon)
-                .foregroundStyle(spaceColor)
+            Image(systemName: lobeIcon)
+                .foregroundStyle(lobeColor)
                 .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -223,8 +223,8 @@ private struct SequentialMemoryPickerRow: View {
                     .foregroundStyle(memory.isCompleted ? .secondary : .primary)
                     .strikethrough(memory.isCompleted, color: .secondary)
 
-                if let spaceName = memory.space?.name {
-                    Text(spaceName)
+                if let lobeName = memory.lobe?.name {
+                    Text(lobeName)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

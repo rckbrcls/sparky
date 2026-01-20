@@ -8,12 +8,12 @@
 import SwiftUI
 
 struct MemoryMultiSelectToolbarContent: ToolbarContent {
-    let availableSpaces: [SpaceModel]
+    let availableLobes: [LobeModel]
     let isPerformingBulkAction: Bool
     let canPerformDeletion: Bool
     let isStatusEnabled: Bool
-    let isSpaceEnabled: Bool
-    let onSelectSpace: (SpaceModel) -> Void
+    let isLobeEnabled: Bool
+    let onSelectLobe: (LobeModel) -> Void
     let onSelectStatus: (MemoryStatus) -> Void
     let onDelete: () -> Void
     let onDone: () -> Void
@@ -27,7 +27,7 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
             .accessibilityLabel("Delete selected memories")
 
             statusMenu
-            spaceMenu
+            lobeMenu
 
             Button(action: onDone) {
                 Text("Done")
@@ -37,20 +37,20 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
         }
     }
 
-    private var spaceMenu: some View {
+    private var lobeMenu: some View {
         Menu {
-            ForEach(availableSpaces, id: \.id) { space in
+            ForEach(availableLobes, id: \.id) { lobe in
                 Button {
-                    onSelectSpace(space)
+                    onSelectLobe(lobe)
                 } label: {
-                    Label(space.name, systemImage: space.iconName ?? "folder")
+                    Label(lobe.name, systemImage: lobe.iconName ?? "folder")
                 }
             }
         } label: {
-            Label("Space", systemImage: "folder")
+            Label("Lobe", systemImage: "folder")
         }
-        .disabled(!isSpaceEnabled || isPerformingBulkAction)
-        .accessibilityLabel("Move to space")
+        .disabled(!isLobeEnabled || isPerformingBulkAction)
+        .accessibilityLabel("Move to lobe")
     }
 
     private var statusMenu: some View {

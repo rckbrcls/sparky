@@ -1,5 +1,5 @@
 //
-//  SpaceDetailView.swift
+//  LobeDetailView.swift
 //  i-cant-miss
 //
 //  Created by Codex on 09/03/24.
@@ -8,19 +8,19 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct SpaceDetailView: View {
-    let space: SpaceModel
+struct LobeDetailView: View {
+    let lobe: LobeModel
 
     @EnvironmentObject private var environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var spaceService: SpaceService
+    @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
 
     let onSelectMemory: (MemoryModel) -> Void
     let onEditMemory: ((MemoryModel) -> Void)?
-    let onEditSpace: ((SpaceModel) -> Void)?
+    let onEditLobe: ((LobeModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
-    let onSpaceContextChange: (SpaceModel?) -> Void
+    let onLobeContextChange: (LobeModel?) -> Void
     let onSearchActiveChange: (Bool) -> Void
 
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
@@ -48,24 +48,24 @@ struct SpaceDetailView: View {
         activeFilterCount > 0
     }
 
-    private var resolvedSpace: SpaceModel {
-        spaceService.space(id: space.id) ?? space
+    private var resolvedLobe: LobeModel {
+        lobeService.lobe(id: lobe.id) ?? lobe
     }
 
-    private var isAllSpace: Bool {
-        resolvedSpace.isAllSpaces
+    private var isAllLobe: Bool {
+        resolvedLobe.isAllLobes
     }
 
-    private var isInboxSpace: Bool {
-        resolvedSpace.isInboxSpaces
+    private var isInboxLobe: Bool {
+        resolvedLobe.isInboxLobes
     }
 
-    private var isLimboSpace: Bool {
-        resolvedSpace.isLimboSpaces
+    private var isLimboLobe: Bool {
+        resolvedLobe.isLimboLobes
     }
 
-    private var isAllSpaceForMind: Bool {
-        resolvedSpace.isAllSpaceForMind
+    private var isAllLobeForMind: Bool {
+        resolvedLobe.isAllLobeForMind
     }
 
     private var nonPinnedMemories: [MemoryModel] {
@@ -102,14 +102,14 @@ struct SpaceDetailView: View {
             }
             return "\(selectedMemoryIDs.count) Selected"
         }
-        return resolvedSpace.name
+        return resolvedLobe.name
     }
 
-    private var bulkActionSpaces: [SpaceModel] {
-        environment.spaceService.spaces.filter { 
-            $0.id != SpaceModel.allSpacesIdentifier && 
-            $0.id != SpaceModel.inboxSpacesIdentifier &&
-            $0.id != SpaceModel.limboSpacesIdentifier
+    private var bulkActionLobes: [LobeModel] {
+        environment.lobeService.lobes.filter { 
+            $0.id != LobeModel.allLobesIdentifier && 
+            $0.id != LobeModel.inboxLobesIdentifier &&
+            $0.id != LobeModel.limboLobesIdentifier
         }
     }
 
@@ -131,52 +131,52 @@ struct SpaceDetailView: View {
 
     var body: some View {
         baseView
-            .modifier(SpaceDetailModifiers(
+            .modifier(LobeDetailModifiers(
                 showingDeleteConfirmation: $showingDeleteConfirmation,
                 bulkActionErrorMessage: $bulkActionErrorMessage,
                 deleteConfirmationMessage: deleteConfirmationMessage,
                 isPerformingBulkAction: isPerformingBulkAction,
                 onDelete: performBulkDeletion
             ))
-            .modifier(SpaceDetailContextModifiers(
+            .modifier(LobeDetailContextModifiers(
                 isMultiSelecting: isMultiSelecting,
-                spaceID: space.id,
-                spaceService: spaceService,
+                lobeID: lobe.id,
+                lobeService: lobeService,
                 onMultiSelectionChange: onMultiSelectionChange,
-                onNotifyContext: notifySpaceContextChange,
-                resolvedSpaceProvider: { resolvedSpace }
+                onNotifyContext: notifyLobeContextChange,
+                resolvedLobeProvider: { resolvedLobe }
             ))
             .fullScreenCover(isPresented: $isSearching) {
                 MemorySearchSheet(
-                    space: space,
+                    lobe: lobe,
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
-                    spaceService: spaceService
+                    lobeService: lobeService
                 )
             }
     }
 
     private var baseView: some View {
-        spaceDetailList
+        lobeDetailList
             .navigationBarBackButtonHidden(true)
             .toolbar { toolbarContent }
     }
 
-    private func notifySpaceContextChange() {
-        // Always notify with the resolved space to ensure context is up to date
-        onSpaceContextChange(resolvedSpace)
+    private func notifyLobeContextChange() {
+        // Always notify with the resolved lobe to ensure context is up to date
+        onLobeContextChange(resolvedLobe)
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if isMultiSelecting {
             MemoryMultiSelectToolbarContent(
-                availableSpaces: bulkActionSpaces,
+                availableLobes: bulkActionLobes,
                 isPerformingBulkAction: isPerformingBulkAction,
                 canPerformDeletion: canMoveSelection,
                 isStatusEnabled: canMoveSelection,
-                isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
-                onSelectSpace: { space in performMove(to: space) },
+                isLobeEnabled: canMoveSelection && !bulkActionLobes.isEmpty,
+                onSelectLobe: { lobe in performMove(to: lobe) },
                 onSelectStatus: { status in performStatusUpdate(to: status) },
                 onDelete: { showingDeleteConfirmation = true },
                 onDone: { toggleMultiSelection() }
@@ -212,7 +212,7 @@ struct SpaceDetailView: View {
 
 
 
-    private var spaceDetailList: some View {
+    private var lobeDetailList: some View {
         List {
             Text(navigationTitleText)
                 .appLargeTitleStyle()
@@ -459,23 +459,23 @@ struct SpaceDetailView: View {
 
     private var filteredMemories: [MemoryModel] {
         let base: [MemoryModel]
-        if isAllSpace {
+        if isAllLobe {
             base = memoryService.memories(
                 in: nil,
                 statuses: [],
                 includeCompleted: true,
                 sort: selectedSortStrategy
             )
-        } else if isInboxSpace || isLimboSpace {
+        } else if isInboxLobe || isLimboLobe {
             let unsorted = memoryService.memories.filter { memory in
-                memory.space == nil
+                memory.lobe == nil
             }
             base = memoryService.sortedMemories(unsorted, using: selectedSortStrategy)
-        } else if isAllSpaceForMind {
-            if let mindID = resolvedSpace.mind?.id {
+        } else if isAllLobeForMind {
+            if let mindID = resolvedLobe.mind?.id {
                 let unsorted = memoryService.memories.filter { memory in
-                    guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
-                    return memorySpaceMindID == mindID
+                    guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
+                    return memoryLobeMindID == mindID
                 }
                 base = memoryService.sortedMemories(unsorted, using: selectedSortStrategy)
             } else {
@@ -483,7 +483,7 @@ struct SpaceDetailView: View {
             }
         } else {
             base = memoryService.memories(
-                in: resolvedSpace,
+                in: resolvedLobe,
                 statuses: [],
                 includeCompleted: true,
                 sort: selectedSortStrategy
@@ -541,9 +541,9 @@ struct SpaceDetailView: View {
         showingDeleteConfirmation = false
     }
 
-    private func performMove(to space: SpaceModel) {
+    private func performMove(to lobe: LobeModel) {
         performBulkAction { processor, ids in
-            await processor.moveMemories(ids, to: space)
+            await processor.moveMemories(ids, to: lobe)
         }
     }
 
@@ -721,7 +721,7 @@ struct SpaceDetailView: View {
     }
 }
 
-private struct SpaceDetailModifiers: ViewModifier {
+private struct LobeDetailModifiers: ViewModifier {
     @Binding var showingDeleteConfirmation: Bool
     @Binding var bulkActionErrorMessage: String?
     let deleteConfirmationMessage: String
@@ -755,16 +755,16 @@ private struct SpaceDetailModifiers: ViewModifier {
     }
 }
 
-private struct SpaceDetailContextModifiers: ViewModifier {
+private struct LobeDetailContextModifiers: ViewModifier {
     let isMultiSelecting: Bool
-    let spaceID: UUID
-    @ObservedObject var spaceService: SpaceService
+    let lobeID: UUID
+    @ObservedObject var lobeService: LobeService
     let onMultiSelectionChange: (Bool) -> Void
     let onNotifyContext: () -> Void
-    let resolvedSpaceProvider: () -> SpaceModel
+    let resolvedLobeProvider: () -> LobeModel
 
-    private var resolvedSpace: SpaceModel {
-        resolvedSpaceProvider()
+    private var resolvedLobe: LobeModel {
+        resolvedLobeProvider()
     }
 
     func body(content: Content) -> some View {
@@ -776,19 +776,19 @@ private struct SpaceDetailContextModifiers: ViewModifier {
                 onMultiSelectionChange(isMultiSelecting)
                 onNotifyContext()
             }
-            .onReceive(spaceService.$spaces) { _ in
+            .onReceive(lobeService.$lobes) { _ in
                 onNotifyContext()
             }
-            .onChange(of: resolvedSpace.id) { _, _ in
+            .onChange(of: resolvedLobe.id) { _, _ in
                 onNotifyContext()
             }
             .onDisappear {
                 onMultiSelectionChange(false)
             }
-            .task(id: resolvedSpace.id) {
+            .task(id: resolvedLobe.id) {
                 onNotifyContext()
             }
-            .onChange(of: spaceID) { _, _ in
+            .onChange(of: lobeID) { _, _ in
                 onNotifyContext()
             }
     }

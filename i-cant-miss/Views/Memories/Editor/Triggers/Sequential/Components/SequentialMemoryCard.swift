@@ -13,14 +13,14 @@ struct SequentialMemoryCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            // Space Icon
-            let spaceIcon = memory.space?.iconName ?? "square.grid.2x2.fill"
-            let spaceColor = memory.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
+            // Lobe Icon
+            let lobeIcon = memory.lobe?.iconName ?? "square.grid.2x2.fill"
+            let lobeColor = memory.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
-            Image(systemName: spaceIcon)
-                .foregroundStyle(spaceColor)
+            Image(systemName: lobeIcon)
+                .foregroundStyle(lobeColor)
                 .frame(width: 32, height: 32)
-                .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
+                .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
 
             // Content
             VStack(alignment: .leading, spacing: 4) {
@@ -31,8 +31,8 @@ struct SequentialMemoryCard: View {
                     .strikethrough(memory.isCompleted, color: .secondary)
                     .lineLimit(1)
 
-                if let spaceName = memory.space?.name {
-                    Text(spaceName)
+                if let lobeName = memory.lobe?.name {
+                    Text(lobeName)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -67,7 +67,7 @@ struct SequentialMemoryCard: View {
         status: .active,
         isPinned: false,
         dueDate: nil,
-        space: nil,
+        lobe: nil,
         triggers: [],
         checkItems: [],
         autoCompleteOnChecklistCompletion: false,

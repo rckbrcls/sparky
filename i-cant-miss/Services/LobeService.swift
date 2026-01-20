@@ -1,5 +1,5 @@
 //
-//  SpaceService.swift
+//  LobeService.swift
 //  i-cant-miss
 //
 //  Created by Codex on 09/03/24.
@@ -9,18 +9,18 @@ import Combine
 @preconcurrency import CoreData
 import os.log
 
-enum SpaceServiceError: LocalizedError {
-    case cannotDeleteDefaultSpace
-    case spaceNotFound
+enum LobeServiceError: LocalizedError {
+    case cannotDeleteDefaultLobe
+    case lobeNotFound
     case tagNotFound
     case validationFailed(String)
 
     var errorDescription: String? {
         switch self {
-        case .cannotDeleteDefaultSpace:
-            return "Default spaces cannot be deleted."
-        case .spaceNotFound:
-            return "The space could not be found."
+        case .cannotDeleteDefaultLobe:
+            return "Default lobes cannot be deleted."
+        case .lobeNotFound:
+            return "The lobe could not be found."
         case .tagNotFound:
             return "The tag could not be found."
         case .validationFailed(let message):
@@ -30,16 +30,16 @@ enum SpaceServiceError: LocalizedError {
 }
 
 @MainActor
-final class SpaceService: ObservableObject {
-    @Published private(set) var spaces: [SpaceModel] = []
+final class LobeService: ObservableObject {
+    @Published private(set) var lobes: [LobeModel] = []
     @Published private(set) var tags: [TagModel] = []
     @Published private(set) var lastRefreshed: Date?
 
     private let persistence: PersistenceController
     private let cacheTTL: TimeInterval
     private var refreshTimer: AnyCancellable?
-    private var spaceIndex: [UUID: SpaceModel] = [:]
-    private let logger = Logger(subsystem: "i-cant-miss", category: "SpaceService")
+    private var lobeIndex: [UUID: LobeModel] = [:]
+    private let logger = Logger(subsystem: "i-cant-miss", category: "LobeService")
     private var lastTagsRefresh: Date?
 
     init(persistence: PersistenceController, cacheTTL: TimeInterval = 30) {
@@ -58,7 +58,7 @@ final class SpaceService: ObservableObject {
     private func loadInitialData() {
         let context = persistence.container.viewContext
 
-        var spaceModels: [SpaceModel] = []
+        var lobeModels: [LobeModel] = []
         var tagModels: [TagModel]
 
         do {
@@ -72,8 +72,8 @@ final class SpaceService: ObservableObject {
             let spaceResults = try context.fetch(spaceRequest)
 
             for space in spaceResults {
-                let spaceModel = space.toModel()
-                spaceModels.append(spaceModel)
+                let lobeModel = space.toModel()
+                lobeModels.append(lobeModel)
             }
 
             // Load tags
@@ -84,16 +84,16 @@ final class SpaceService: ObservableObject {
             let tagResults = try context.fetch(tagRequest)
             tagModels = tagResults.map { $0.toModel() }
         } catch {
-            logger.error("Failed to load initial spaces/tags: \(error.localizedDescription)")
+            logger.error("Failed to load initial lobes/tags: \(error.localizedDescription)")
             tagModels = []
         }
 
-        // Deduplicate spaces by id to avoid duplicates
-        var deduplicated: [UUID: SpaceModel] = [:]
-        for space in spaceModels {
-            deduplicated[space.id] = space
+        // Deduplicate lobes by id to avoid duplicates
+        var deduplicated: [UUID: LobeModel] = [:]
+        for lobe in lobeModels {
+            deduplicated[lobe.id] = lobe
         }
-        let orderedSpaces = deduplicated
+        let orderedLobes = deduplicated
             .values
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
@@ -103,7 +103,7 @@ final class SpaceService: ObservableObject {
             }
 
         // Update properties directly - we're already on MainActor
-        self.spaces = Array(orderedSpaces)
+        self.lobes = Array(orderedLobes)
         self.tags = tagModels
         self.lastRefreshed = Date()
         self.lastTagsRefresh = Date()
@@ -123,11 +123,11 @@ final class SpaceService: ObservableObject {
     }
 
     @discardableResult
-    func refresh(force: Bool) async -> [SpaceModel] {
+    func refresh(force: Bool) async -> [LobeModel] {
         if !force,
            let last = lastRefreshed,
            Date().timeIntervalSince(last) < cacheTTL {
-            return spaces
+            return lobes
         }
 
         let context = persistence.container.viewContext
@@ -140,19 +140,19 @@ final class SpaceService: ObservableObject {
 
         do {
             let spaces = try context.fetch(request)
-            var nextSpaces: [SpaceModel] = []
+            var nextLobes: [LobeModel] = []
 
             for space in spaces {
-                let spaceModel = space.toModel()
-                nextSpaces.append(spaceModel)
+                let lobeModel = space.toModel()
+                nextLobes.append(lobeModel)
             }
 
             // Deduplicate by id to avoid duplicates.
-            var deduplicated: [UUID: SpaceModel] = [:]
-            for space in nextSpaces {
-                deduplicated[space.id] = space
+            var deduplicated: [UUID: LobeModel] = [:]
+            for lobe in nextLobes {
+                deduplicated[lobe.id] = lobe
             }
-            let orderedSpaces = deduplicated
+            let orderedLobes = deduplicated
                 .values
                 .sorted { lhs, rhs in
                     if lhs.sortOrder != rhs.sortOrder {
@@ -161,13 +161,13 @@ final class SpaceService: ObservableObject {
                     return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
                 }
 
-            self.spaces = Array(orderedSpaces)
+            self.lobes = Array(orderedLobes)
             lastRefreshed = Date()
             rebuildIndex()
-            return Array(orderedSpaces)
+            return Array(orderedLobes)
         } catch {
-            logger.error("Failed to refresh spaces: \(error.localizedDescription)")
-            return spaces
+            logger.error("Failed to refresh lobes: \(error.localizedDescription)")
+            return lobes
         }
     }
 
@@ -196,50 +196,50 @@ final class SpaceService: ObservableObject {
     }
 
     private func rebuildIndex() {
-        spaceIndex.removeAll(keepingCapacity: true)
-        for space in spaces {
-            spaceIndex[space.id] = space
+        lobeIndex.removeAll(keepingCapacity: true)
+        for lobe in lobes {
+            lobeIndex[lobe.id] = lobe
         }
     }
 
-    func space(id: UUID) -> SpaceModel? {
-        spaceIndex[id]
+    func lobe(id: UUID) -> LobeModel? {
+        lobeIndex[id]
     }
 
-    func defaultSpace() -> SpaceModel? {
-        spaces.first(where: { $0.isDefault })
+    func defaultLobe() -> LobeModel? {
+        lobes.first(where: { $0.isDefault })
     }
 
 
 
-    func memoryIDs(in space: SpaceModel) -> [UUID] {
+    func memoryIDs(in lobe: LobeModel) -> [UUID] {
         let context = persistence.container.viewContext
         do {
-            guard let spaceEntity = try fetchSpace(by: space.id, context: context) else {
+            guard let spaceEntity = try fetchSpace(by: lobe.id, context: context) else {
                 return []
             }
             let memories = spaceEntity.memories as? Set<Memory> ?? []
             return memories.compactMap { $0.id }
         } catch {
-            logger.error("Failed to fetch memories for space: \(error.localizedDescription)")
+            logger.error("Failed to fetch memories for lobe: \(error.localizedDescription)")
             return []
         }
     }
 
     // MARK: - CRUD Operations
 
-    func createSpace(
+    func createLobe(
         name: String,
         colorHex: String?,
         iconName: String?,
         isDefault: Bool,
         mindID: UUID? = nil
-    ) async throws -> SpaceModel {
+    ) async throws -> LobeModel {
         let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        throw SpaceServiceError.validationFailed("Space name is required")
+                        throw LobeServiceError.validationFailed("Lobe name is required")
                     }
 
                     if isDefault {
@@ -276,16 +276,16 @@ final class SpaceService: ObservableObject {
         return try await fetchSpaceFromViewContext(objectID: objectID)
     }
 
-    func updateSpace(_ model: SpaceModel) async throws -> SpaceModel {
+    func updateLobe(_ model: LobeModel) async throws -> LobeModel {
         let objectID: NSManagedObjectID = try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
                     guard let space = try self.fetchSpace(by: model.id, context: context) else {
-                        throw SpaceServiceError.spaceNotFound
+                        throw LobeServiceError.lobeNotFound
                     }
 
                     guard !model.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        throw SpaceServiceError.validationFailed("Space name is required")
+                        throw LobeServiceError.validationFailed("Lobe name is required")
                     }
 
                     if model.isDefault {
@@ -318,34 +318,34 @@ final class SpaceService: ObservableObject {
         return try await fetchSpaceFromViewContext(objectID: objectID)
     }
 
-    func reorderSpaces(_ orderedIDs: [UUID]) async throws {
+    func reorderLobes(_ orderedIDs: [UUID]) async throws {
         // Optimistic update on main thread
-        let currentSpaces = self.spaces
-        var spaceMap = Dictionary(uniqueKeysWithValues: currentSpaces.map { ($0.id, $0) })
+        let currentLobes = self.lobes
+        var lobeMap = Dictionary(uniqueKeysWithValues: currentLobes.map { ($0.id, $0) })
 
-        var newOrderedSpaces: [SpaceModel] = []
+        var newOrderedLobes: [LobeModel] = []
 
-        // Add reordered spaces
+        // Add reordered lobes
         for (index, id) in orderedIDs.enumerated() {
-            if let space = spaceMap[id] {
-                let updatedSpace = SpaceModel(
-                    id: space.id,
-                    name: space.name,
-                    colorHex: space.colorHex,
-                    iconName: space.iconName,
+            if let lobe = lobeMap[id] {
+                let updatedLobe = LobeModel(
+                    id: lobe.id,
+                    name: lobe.name,
+                    colorHex: lobe.colorHex,
+                    iconName: lobe.iconName,
                     sortOrder: index, // Update sort order
-                    isDefault: space.isDefault
+                    isDefault: lobe.isDefault
                 )
-                newOrderedSpaces.append(updatedSpace)
-                spaceMap.removeValue(forKey: id)
+                newOrderedLobes.append(updatedLobe)
+                lobeMap.removeValue(forKey: id)
             }
         }
 
-        // Add any remaining spaces (shouldn't happen in normal flow, but safe fallback)
-        let remainingSpaces = currentSpaces.filter { spaceMap.keys.contains($0.id) }
-        newOrderedSpaces.append(contentsOf: remainingSpaces)
+        // Add any remaining lobes (shouldn't happen in normal flow, but safe fallback)
+        let remainingLobes = currentLobes.filter { lobeMap.keys.contains($0.id) }
+        newOrderedLobes.append(contentsOf: remainingLobes)
 
-        self.spaces = newOrderedSpaces
+        self.lobes = newOrderedLobes
         rebuildIndex()
 
         // Persist to database
@@ -368,22 +368,22 @@ final class SpaceService: ObservableObject {
         }
     }
 
-    func deleteSpace(_ space: SpaceModel, deleteMemories: Bool = false, memoryService: MemoryService? = nil) async throws {
-        guard !space.isDefault else {
-            throw SpaceServiceError.cannotDeleteDefaultSpace
+    func deleteLobe(_ lobe: LobeModel, deleteMemories: Bool = false, memoryService: MemoryService? = nil) async throws {
+        guard !lobe.isDefault else {
+            throw LobeServiceError.cannotDeleteDefaultLobe
         }
 
         // If deleteMemories is true and memoryService is provided, use it to delete memories (which also cleans up attachments)
         if deleteMemories, let memoryService = memoryService {
-            let memoryIDs = memoryIDs(in: space)
+            let memoryIDs = memoryIDs(in: lobe)
             try await memoryService.deleteMemories(ids: memoryIDs)
         }
 
         try await withCheckedThrowingContinuation { continuation in
             persistence.performBackgroundTask { context in
                 do {
-                    guard let spaceEntity = try self.fetchSpace(by: space.id, context: context) else {
-                        throw SpaceServiceError.spaceNotFound
+                    guard let spaceEntity = try self.fetchSpace(by: lobe.id, context: context) else {
+                        throw LobeServiceError.lobeNotFound
                     }
 
                     // If deleteMemories is true but memoryService was not provided, delete memories directly in Core Data
@@ -419,7 +419,7 @@ final class SpaceService: ObservableObject {
             persistence.performBackgroundTask { context in
                 do {
                     guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        throw SpaceServiceError.validationFailed("Tag name is required")
+                        throw LobeServiceError.validationFailed("Tag name is required")
                     }
 
                     let tag = Tag(context: context)
@@ -443,7 +443,7 @@ final class SpaceService: ObservableObject {
             persistence.performBackgroundTask { context in
                 do {
                     guard let tag = try self.fetchTag(by: id, context: context) else {
-                        throw SpaceServiceError.tagNotFound
+                        throw LobeServiceError.tagNotFound
                     }
                     context.delete(tag)
                     try context.save()
@@ -471,13 +471,13 @@ final class SpaceService: ObservableObject {
         return try context.fetch(request).first
     }
 
-    private func fetchSpaceFromViewContext(objectID: NSManagedObjectID) async throws -> SpaceModel {
+    private func fetchSpaceFromViewContext(objectID: NSManagedObjectID) async throws -> LobeModel {
         return try await withCheckedThrowingContinuation { continuation in
             let viewContext = persistence.container.viewContext
             viewContext.perform {
                 do {
                     guard let space = try viewContext.existingObject(with: objectID) as? Space else {
-                        throw SpaceServiceError.spaceNotFound
+                        throw LobeServiceError.lobeNotFound
                     }
                     continuation.resume(returning: space.toModel())
                 } catch {
@@ -493,7 +493,7 @@ final class SpaceService: ObservableObject {
             viewContext.perform {
                 do {
                     guard let tag = try viewContext.existingObject(with: objectID) as? Tag else {
-                        throw SpaceServiceError.tagNotFound
+                        throw LobeServiceError.tagNotFound
                     }
                     continuation.resume(returning: tag.toModel())
                 } catch {
@@ -539,8 +539,8 @@ final class SpaceService: ObservableObject {
 // MARK: - Core Data Extensions
 
 extension Space {
-    func toModel() -> SpaceModel {
-        SpaceModel(
+    func toModel() -> LobeModel {
+        LobeModel(
             id: id ?? UUID(),
             name: name ?? "Untitled",
             colorHex: colorHex,

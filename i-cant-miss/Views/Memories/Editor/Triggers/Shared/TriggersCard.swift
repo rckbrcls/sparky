@@ -1018,11 +1018,11 @@ private struct SequentialItemRow: View {
     }
     
     private var spaceIcon: String {
-        memory?.space?.iconName ?? "square.grid.2x2.fill"
+        memory?.lobe?.iconName ?? "square.grid.2x2.fill"
     }
     
     private var spaceColor: Color {
-        memory?.space?.colorHex.flatMap { Color(hex: $0) } ?? .gray
+        memory?.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
     }
     
     private var title: String {
@@ -1128,7 +1128,7 @@ fileprivate extension MemoryDraft {
             status: model.status,
             isPinned: model.isPinned,
             dueDate: model.dueDate,
-            spaceID: model.space?.id,
+            lobeID: model.lobe?.id,
             triggers: triggers,
             note: model.note,
             checkItems: model.checkItems.map { CheckItemDraft(id: $0.id, title: $0.title, detail: $0.detail ?? "", isCompleted: $0.isCompleted, sortOrder: $0.sortOrder, createdAt: $0.createdAt, completedAt: $0.completedAt) },

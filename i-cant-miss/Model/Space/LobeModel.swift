@@ -1,11 +1,11 @@
 //
-//  SpaceModel.swift
+//  LobeModel.swift
 //  i-cant-miss
 //
 
 import Foundation
 
-struct SpaceModel: Identifiable, Hashable {
+struct LobeModel: Identifiable, Hashable {
     let id: UUID
     var name: String
     var colorHex: String?
@@ -33,15 +33,15 @@ struct SpaceModel: Identifiable, Hashable {
 
 // MARK: - Static Members
 
-extension SpaceModel {
-    static let allSpacesIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
-    static let inboxSpacesIdentifier = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-    static let limboSpacesIdentifier = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
-    static let mindAllSpacePrefix = "22222222-2222-2222-2222-222222222222"
+extension LobeModel {
+    static let allLobesIdentifier = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+    static let inboxLobesIdentifier = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    static let limboLobesIdentifier = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+    static let mindAllLobePrefix = "22222222-2222-2222-2222-222222222222"
 
-    static var allSpaces: SpaceModel {
-        SpaceModel(
-            id: allSpacesIdentifier,
+    static var allLobes: LobeModel {
+        LobeModel(
+            id: allLobesIdentifier,
             name: "All",
             colorHex: nil,
             iconName: "square.grid.2x2.fill",
@@ -50,9 +50,9 @@ extension SpaceModel {
         )
     }
 
-    static var inboxSpaces: SpaceModel {
-        SpaceModel(
-            id: inboxSpacesIdentifier,
+    static var inboxLobes: LobeModel {
+        LobeModel(
+            id: inboxLobesIdentifier,
             name: "Inbox",
             colorHex: nil,
             iconName: "tray.fill",
@@ -61,9 +61,9 @@ extension SpaceModel {
         )
     }
 
-    static var limboSpaces: SpaceModel {
-        SpaceModel(
-            id: limboSpacesIdentifier,
+    static var limboLobes: LobeModel {
+        LobeModel(
+            id: limboLobesIdentifier,
             name: "Limbo",
             colorHex: nil,
             iconName: "tray",
@@ -72,9 +72,9 @@ extension SpaceModel {
         )
     }
 
-    static func allSpace(for mind: MindModel) -> SpaceModel {
+    static func allLobe(for mind: MindModel) -> LobeModel {
         let deterministicID = deterministicUUID(for: mind.id)
-        return SpaceModel(
+        return LobeModel(
             id: deterministicID,
             name: "All",
             colorHex: nil,
@@ -85,27 +85,27 @@ extension SpaceModel {
         )
     }
 
-    var isAllSpaces: Bool {
-        id == SpaceModel.allSpacesIdentifier
+    var isAllLobes: Bool {
+        id == LobeModel.allLobesIdentifier
     }
 
-    var isInboxSpaces: Bool {
-        id == SpaceModel.inboxSpacesIdentifier
+    var isInboxLobes: Bool {
+        id == LobeModel.inboxLobesIdentifier
     }
 
-    var isLimboSpaces: Bool {
-        id == SpaceModel.limboSpacesIdentifier
+    var isLimboLobes: Bool {
+        id == LobeModel.limboLobesIdentifier
     }
 
-    func isAllSpace(for mind: MindModel?) -> Bool {
+    func isAllLobe(for mind: MindModel?) -> Bool {
         guard let mind = mind else { return false }
-        let expectedID = SpaceModel.deterministicUUID(for: mind.id)
+        let expectedID = LobeModel.deterministicUUID(for: mind.id)
         return id == expectedID && self.mind?.id == mind.id
     }
 
-    var isAllSpaceForMind: Bool {
+    var isAllLobeForMind: Bool {
         guard let mind = mind else { return false }
-        return isAllSpace(for: mind)
+        return isAllLobe(for: mind)
     }
 
     private static func deterministicUUID(for mindID: UUID) -> UUID {

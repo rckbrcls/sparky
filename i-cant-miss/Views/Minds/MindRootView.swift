@@ -7,7 +7,7 @@ import SwiftUI
 
 struct MindRootView: View {
     @ObservedObject var mindService: MindService
-    @ObservedObject var spaceService: SpaceService
+    @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
     @Binding var navigationPath: NavigationPath
 
@@ -15,9 +15,9 @@ struct MindRootView: View {
     let onEditMemory: ((MemoryModel) -> Void)?
     let onCreateMind: () -> Void
     let onEditMind: ((MindModel) -> Void)?
-    let onAddSpace: ((MindModel) -> Void)?
+    let onAddLobe: ((MindModel) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
-    let onSpaceContextChange: (SpaceModel?) -> Void
+    let onLobeContextChange: (LobeModel?) -> Void
     let onMindContextChange: ((MindModel?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
 
@@ -36,13 +36,13 @@ struct MindRootView: View {
                         .padding(.bottom, 16)
 
                     VStack(spacing: 12) {
-                        NavigationLink(value: SpaceModel.limboSpaces) {
+                        NavigationLink(value: LobeModel.limboLobes) {
                             LimboCardView(
-                                space: SpaceModel.limboSpaces,
+                                lobe: LobeModel.limboLobes,
                                 count: limboMemoryCounts().total,
                                 completedCount: limboMemoryCounts().completed,
                                 activeCount: limboActiveMemoryCount(),
-                                spaceService: spaceService,
+                                lobeService: lobeService,
                                 memoryService: memoryService,
                                 mindService: mindService
                             )
@@ -56,10 +56,10 @@ struct MindRootView: View {
                                 NavigationLink(value: mind) {
                                     MindGridItemView(
                                         mind: mind,
-                                        count: spaceCounts(for: mind),
+                                        count: lobeCounts(for: mind),
                                         activeCount: activeMemoryCount(for: mind),
                                         mindService: mindService,
-                                        spaceService: spaceService,
+                                        lobeService: lobeService,
                                         onEdit: onEditMind
                                     )
                                 }
@@ -91,45 +91,45 @@ struct MindRootView: View {
                 MindDetailView(
                     mind: mind,
                     mindService: mindService,
-                    spaceService: spaceService,
+                    lobeService: lobeService,
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     onEditMemory: onEditMemory,
                     onEditMind: onEditMind,
-                    onAddSpace: onAddSpace,
+                    onAddLobe: onAddLobe,
                     onMultiSelectionChange: onMultiSelectionChange,
-                    onSpaceContextChange: onSpaceContextChange,
+                    onLobeContextChange: onLobeContextChange,
                     onMindContextChange: onMindContextChange,
                     onSearchActiveChange: onSearchActiveChange
                 )
             }
-            .navigationDestination(for: SpaceModel.self) { space in
-                SpaceDetailView(
-                    space: space,
-                    spaceService: spaceService,
+            .navigationDestination(for: LobeModel.self) { lobe in
+                LobeDetailView(
+                    lobe: lobe,
+                    lobeService: lobeService,
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     onEditMemory: onEditMemory,
-                    onEditSpace: nil,
+                    onEditLobe: nil,
                     onMultiSelectionChange: onMultiSelectionChange,
-                    onSpaceContextChange: { newSpace in
-                        onSpaceContextChange(newSpace)
+                    onLobeContextChange: { newLobe in
+                        onLobeContextChange(newLobe)
                     },
                     onSearchActiveChange: onSearchActiveChange
                 )
                 .onAppear {
-                    onSpaceContextChange(space)
+                    onLobeContextChange(lobe)
                 }
             }
         }
         .onAppear {
             onMultiSelectionChange(false)
-            onSpaceContextChange(nil)
+            onLobeContextChange(nil)
             onMindContextChange?(nil)
         }
         .onChange(of: navigationPath) { oldPath, newPath in
             if newPath.isEmpty {
-                onSpaceContextChange(nil)
+                onLobeContextChange(nil)
                 onMindContextChange?(nil)
             }
         }
@@ -147,12 +147,12 @@ struct MindRootView: View {
         return [MindModel.allMinds] + sortedMinds
     }
 
-    private func spaceCounts(for mind: MindModel) -> Int {
+    private func lobeCounts(for mind: MindModel) -> Int {
         if mind.isAllMinds {
-            return spaceService.spaces.count
+            return lobeService.lobes.count
         } else {
-            return spaceService.spaces.filter { space in
-                guard let mindID = space.mind?.id else { return false }
+            return lobeService.lobes.filter { lobe in
+                guard let mindID = lobe.mind?.id else { return false }
                 return mindID == mind.id
             }.count
         }
@@ -165,8 +165,8 @@ struct MindRootView: View {
         } else {
             let mindID = mind.id
             memories = memoryService.memories.filter { memory in
-                guard let memorySpaceMindID = memory.space?.mind?.id else { return false }
-                return memorySpaceMindID == mindID
+                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
+                return memoryLobeMindID == mindID
             }
         }
 
@@ -175,7 +175,7 @@ struct MindRootView: View {
 
     private func limboMemoryCounts() -> (completed: Int, total: Int) {
         let memories = memoryService.memories.filter { memory in
-            memory.space == nil
+            memory.lobe == nil
         }
         let total = memories.count
         let completed = memories.filter { $0.isCompleted }.count
@@ -184,15 +184,15 @@ struct MindRootView: View {
 
     private func limboActiveMemoryCount() -> Int {
         let memories = memoryService.memories.filter { memory in
-            memory.space == nil
+            memory.lobe == nil
         }
         return memories.filter { $0.status == .active }.count
     }
 
     private func refresh() async {
         async let minds = mindService.refresh(force: true)
-        async let spaces = spaceService.refresh(force: true)
-        _ = await (minds, spaces)
+        async let lobes = lobeService.refresh(force: true)
+        _ = await (minds, lobes)
     }
 }
 
@@ -201,16 +201,16 @@ struct MindRootView: View {
     environment.bootstrap()
     return MindRootView(
         mindService: environment.mindService,
-        spaceService: environment.spaceService,
+        lobeService: environment.lobeService,
         memoryService: environment.memoryService,
         navigationPath: .constant(NavigationPath()),
         onSelectMemory: { _ in },
         onEditMemory: nil,
         onCreateMind: { },
         onEditMind: nil,
-        onAddSpace: nil,
+        onAddLobe: nil,
         onMultiSelectionChange: { _ in },
-        onSpaceContextChange: { _ in },
+        onLobeContextChange: { _ in },
         onMindContextChange: nil,
         onSearchActiveChange: { _ in }
     )

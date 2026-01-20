@@ -9,9 +9,9 @@ import SwiftUI
 
 struct CalendarColorHelper {
     static func color(for memory: MemoryModel) -> Color {
-        // Check space color first
-        if let space = memory.space,
-           let colorHex = space.colorHex,
+        // Check lobe color first
+        if let lobe = memory.lobe,
+           let colorHex = lobe.colorHex,
            let color = Color(hex: colorHex) {
             return color
         }

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MemoryEditorTitleCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @ObservedObject var spaceService: SpaceService
+    @ObservedObject var lobeService: LobeService
     let environment: AppEnvironment
     var isTitleFocused: FocusState<Bool>.Binding
     let isEditingEnabled: Bool
@@ -20,13 +20,13 @@ struct MemoryEditorTitleCard: View {
         HStack(alignment: .center, spacing: 12) {
             if isEditingEnabled {
                 Menu {
-                    Picker("Space", selection: $viewModel.selectedSpaceID) {
-                        Label("No Space", systemImage: "square.grid.2x2")
+                    Picker("Lobe", selection: $viewModel.selectedLobeID) {
+                        Label("No Lobe", systemImage: "square.grid.2x2")
                             .tag(nil as UUID?)
 
-                        ForEach(spaceService.spaces) { space in
-                            Label(space.name, systemImage: space.iconName ?? "square.grid.2x2")
-                                .tag(Optional(space.id))
+                        ForEach(lobeService.lobes) { lobe in
+                            Label(lobe.name, systemImage: lobe.iconName ?? "square.grid.2x2")
+                                .tag(Optional(lobe.id))
                         }
                     }
 
@@ -35,22 +35,22 @@ struct MemoryEditorTitleCard: View {
                     Button {
                         showSpaceComposer = true
                     } label: {
-                        Label("Create New Space", systemImage: "plus.circle")
+                        Label("Create New Lobe", systemImage: "plus.circle")
                     }
                 } label: {
-                    Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
-                        .foregroundStyle(selectedSpaceColor)
+                    Image(systemName: viewModel.selectedLobe?.iconName ?? "square.grid.2x2")
+                        .foregroundStyle(selectedLobeColor)
                         .frame(width: 36, height: 36)
-                        .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
+                        .glassEffect(.regular.tint(selectedLobeColor.opacity(0.15)))
                 }
                 .sheet(isPresented: $showSpaceComposer) {
-                    SpaceComposerView(environment: environment)
+                    LobeComposerView(environment: environment)
                 }
             } else {
-                Image(systemName: viewModel.selectedSpace?.iconName ?? "square.grid.2x2")
-                    .foregroundStyle(selectedSpaceColor)
+                Image(systemName: viewModel.selectedLobe?.iconName ?? "square.grid.2x2")
+                    .foregroundStyle(selectedLobeColor)
                     .frame(width: 36, height: 36)
-                    .glassEffect(.regular.tint(selectedSpaceColor.opacity(0.15)))
+                    .glassEffect(.regular.tint(selectedLobeColor.opacity(0.15)))
             }
 
             if isEditingEnabled {
@@ -88,8 +88,8 @@ struct MemoryEditorTitleCard: View {
         .cardStyle(cornerRadius: 24)
     }
 
-    private var selectedSpaceColor: Color {
-        if let hex = viewModel.selectedSpace?.colorHex,
+    private var selectedLobeColor: Color {
+        if let hex = viewModel.selectedLobe?.colorHex,
            let color = Color(hex: hex) {
             return color
         }

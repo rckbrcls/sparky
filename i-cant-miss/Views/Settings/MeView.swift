@@ -11,7 +11,7 @@ struct MeView: View {
     @ObservedObject private var environment: AppEnvironment
     @ObservedObject private var settings: SettingsStore
     @ObservedObject private var memoryService: MemoryService
-    @ObservedObject private var spaceService: SpaceService
+    @ObservedObject private var lobeService: LobeService
     @Binding private var settingsNavigationPath: NavigationPath
 
     @StateObject private var viewModel: MeViewModel
@@ -34,7 +34,7 @@ struct MeView: View {
         self.environment = environment
         _settings = ObservedObject(wrappedValue: environment.settings)
         _memoryService = ObservedObject(wrappedValue: environment.memoryService)
-        _spaceService = ObservedObject(wrappedValue: environment.spaceService)
+        _lobeService = ObservedObject(wrappedValue: environment.lobeService)
         _settingsNavigationPath = settingsNavigationPath
         _viewModel = StateObject(wrappedValue: MeViewModel(memoryService: environment.memoryService))
     }
@@ -264,13 +264,13 @@ struct MeView: View {
     private var meStats: [Stat] {
         let memories = memoryService.memories
         let completedMemories = memories.filter { $0.status == .completed }
-        let spaceCount = spaceService.spaces.count
+        let lobeCount = lobeService.lobes.count
 
         return [
             Stat(title: "Streak", value: "\(viewModel.streakDays)"),
             Stat(title: "Completed", value: "\(completedMemories.count)"),
             Stat(title: "Memories", value: "\(memories.count)"),
-            Stat(title: "Spaces", value: "\(spaceCount)"),
+            Stat(title: "Lobes", value: "\(lobeCount)"),
         ]
     }
 

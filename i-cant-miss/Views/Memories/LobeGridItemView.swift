@@ -1,5 +1,5 @@
 //
-//  SpaceGridItemView.swift
+//  LobeGridItemView.swift
 //  i-cant-miss
 //
 //  Created by Codex on 09/03/24.
@@ -7,12 +7,12 @@
 
 import SwiftUI
 
-struct SpaceGridItemView: View {
-    let space: SpaceModel
+struct LobeGridItemView: View {
+    let lobe: LobeModel
     let count: Int
     let completedCount: Int
     let activeCount: Int
-    let spaceService: SpaceService?
+    let lobeService: LobeService?
     let memoryService: MemoryService?
     let mindService: MindService?
     let showOnlyRemaining: Bool
@@ -20,21 +20,21 @@ struct SpaceGridItemView: View {
     @State private var showingDeleteConfirmation = false
 
     init(
-        space: SpaceModel,
+        lobe: LobeModel,
         count: Int,
         completedCount: Int = 0,
         activeCount: Int = 0,
-        spaceService: SpaceService? = nil,
+        lobeService: LobeService? = nil,
         memoryService: MemoryService? = nil,
         mindService: MindService? = nil,
-        onEdit: ((SpaceModel) -> Void)? = nil,
+        onEdit: ((LobeModel) -> Void)? = nil,
         showOnlyRemaining: Bool = false
     ) {
-        self.space = space
+        self.lobe = lobe
         self.count = count
         self.completedCount = completedCount
         self.activeCount = activeCount
-        self.spaceService = spaceService
+        self.lobeService = lobeService
         self.memoryService = memoryService
         self.mindService = mindService
         self.onEdit = onEdit
@@ -43,14 +43,14 @@ struct SpaceGridItemView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Lado esquerdo: ícone e título do space
+            // Lado esquerdo: ícone e título do lobe
             VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: space.iconName ?? "square.grid.2x2")
-                    .foregroundStyle(spaceColor)
+                Image(systemName: lobe.iconName ?? "square.grid.2x2")
+                    .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)
-                    .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
+                    .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
                 
-                Text(space.name)
+                Text(lobe.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
@@ -68,10 +68,10 @@ struct SpaceGridItemView: View {
                     .frame(height: 20)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(spaceColor)
+                            .fill(lobeColor)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .stroke(darkerBorderColor(for: spaceColor), lineWidth: 1)
+                                    .stroke(darkerBorderColor(for: lobeColor), lineWidth: 1)
                             )
                     )
             }
@@ -81,15 +81,15 @@ struct SpaceGridItemView: View {
         .frame(minHeight: 100)
         .cardStyle()
         .contextMenu {
-            if canEditSpace {
+            if canEditLobe {
                 Button {
-                    onEdit?(space)
+                    onEdit?(lobe)
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
             }
 
-            if let mindService = mindService, canEditSpace {
+            if let mindService = mindService, canEditLobe {
                 Menu {
                     Button {
                         moveToMind(nil)
@@ -98,7 +98,7 @@ struct SpaceGridItemView: View {
                             Image(systemName: "brain.head.profile")
                             Text("No Mind")
                             Spacer()
-                            if space.mind == nil {
+                            if lobe.mind == nil {
                                 Image(systemName: "checkmark")
                             }
                         }
@@ -112,7 +112,7 @@ struct SpaceGridItemView: View {
                                 Image(systemName: mind.iconName ?? "brain.head.profile")
                                 Text(mind.name)
                                 Spacer()
-                                if space.mind?.id == mind.id {
+                                if lobe.mind?.id == mind.id {
                                     Image(systemName: "checkmark")
                                 }
                             }
@@ -123,7 +123,7 @@ struct SpaceGridItemView: View {
                 }
             }
 
-            if canDeleteSpace {
+            if canDeleteLobe {
                 Button(role: .destructive) {
                     Task { @MainActor in
                         showingDeleteConfirmation = true
@@ -133,30 +133,30 @@ struct SpaceGridItemView: View {
                 }
             }
         }
-        .alert("Delete Space", isPresented: $showingDeleteConfirmation) {
-            Button("Delete Space Only", role: .destructive) {
-                deleteSpace(deleteMemories: false)
+        .alert("Delete Lobe", isPresented: $showingDeleteConfirmation) {
+            Button("Delete Lobe Only", role: .destructive) {
+                deleteLobe(deleteMemories: false)
             }
             if count > 0 {
-                Button("Delete Space and Memories", role: .destructive) {
-                    deleteSpace(deleteMemories: true)
+                Button("Delete Lobe and Memories", role: .destructive) {
+                    deleteLobe(deleteMemories: true)
                 }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             if count > 0 {
-                Text("This space contains \(count) memory\(count == 1 ? "" : "ies"). Do you want to delete the space only (memories will be moved to \"No Space\") or delete the space and all its memories?")
+                Text("This lobe contains \(count) memory\(count == 1 ? "" : "ies"). Do you want to delete the lobe only (memories will be moved to \"No Lobe\") or delete the lobe and all its memories?")
             } else {
-                Text("Are you sure you want to delete this space?")
+                Text("Are you sure you want to delete this lobe?")
             }
         }
     }
 
     /// Optional closure called when user taps edit swipe action
-    var onEdit: ((SpaceModel) -> Void)?
+    var onEdit: ((LobeModel) -> Void)?
 
-    private var spaceColor: Color {
-        if let hex = space.colorHex, let color = Color(hex: hex) {
+    private var lobeColor: Color {
+        if let hex = lobe.colorHex, let color = Color(hex: hex) {
             return color
         }
         return .gray
@@ -179,21 +179,21 @@ struct SpaceGridItemView: View {
         return color.opacity(0.6)
     }
 
-    private var canEditSpace: Bool {
-        guard !space.isAllSpaces else { return false }
-        guard !space.isAllSpaceForMind else { return false }
+    private var canEditLobe: Bool {
+        guard !lobe.isAllLobes else { return false }
+        guard !lobe.isAllLobeForMind else { return false }
         return true
     }
 
-    private var canDeleteSpace: Bool {
-        guard spaceService != nil else { return false }
-        guard !space.isAllSpaces else { return false }
-        guard !space.isAllSpaceForMind else { return false }
-        return !space.isDefault
+    private var canDeleteLobe: Bool {
+        guard lobeService != nil else { return false }
+        guard !lobe.isAllLobes else { return false }
+        guard !lobe.isAllLobeForMind else { return false }
+        return !lobe.isDefault
     }
 
     private var currentMindLabel: String {
-        if let mind = space.mind {
+        if let mind = lobe.mind {
             return mind.name
         } else {
             return "None"
@@ -209,34 +209,34 @@ struct SpaceGridItemView: View {
         }
     }
 
-    private func deleteSpace(deleteMemories: Bool) {
-        guard let service = spaceService else { return }
-        guard !space.isAllSpaces,
-              !space.isAllSpaceForMind,
-              !space.isDefault else { return }
+    private func deleteLobe(deleteMemories: Bool) {
+        guard let service = lobeService else { return }
+        guard !lobe.isAllLobes,
+              !lobe.isAllLobeForMind,
+              !lobe.isDefault else { return }
 
         Task { @MainActor in
             do {
-                try await service.deleteSpace(space, deleteMemories: deleteMemories, memoryService: memoryService)
+                try await service.deleteLobe(lobe, deleteMemories: deleteMemories, memoryService: memoryService)
             } catch {
-                assertionFailure("Failed to delete space: \(error.localizedDescription)")
+                assertionFailure("Failed to delete lobe: \(error.localizedDescription)")
             }
         }
     }
 
     private func moveToMind(_ mind: MindModel?) {
-        guard let service = spaceService else { return }
-        guard !space.isAllSpaces else { return }
-        guard !space.isAllSpaceForMind else { return }
+        guard let service = lobeService else { return }
+        guard !lobe.isAllLobes else { return }
+        guard !lobe.isAllLobeForMind else { return }
 
         Task { @MainActor in
             do {
-                var updatedSpace = space
-                updatedSpace.mind = mind
-                _ = try await service.updateSpace(updatedSpace)
+                var updatedLobe = lobe
+                updatedLobe.mind = mind
+                _ = try await service.updateLobe(updatedLobe)
                 _ = await service.refresh(force: true)
             } catch {
-                assertionFailure("Failed to move space to mind: \(error.localizedDescription)")
+                assertionFailure("Failed to move lobe to mind: \(error.localizedDescription)")
             }
         }
     }
@@ -244,13 +244,13 @@ struct SpaceGridItemView: View {
 
 #Preview {
     HStack {
-        SpaceGridItemView(
-            space: SpaceModel(id: UUID(), name: "Inbox"),
+        LobeGridItemView(
+            lobe: LobeModel(id: UUID(), name: "Inbox"),
             count: 12,
             activeCount: 8
         )
-        SpaceGridItemView(
-            space: SpaceModel(id: UUID(), name: "Work"),
+        LobeGridItemView(
+            lobe: LobeModel(id: UUID(), name: "Work"),
             count: 5,
             completedCount: 2,
             activeCount: 3

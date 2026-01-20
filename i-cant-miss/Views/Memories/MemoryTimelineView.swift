@@ -52,9 +52,9 @@ struct MemoryTimelineView: View {
         self._viewMode = State(initialValue: .day(now))
     }
 
-    private var bulkActionSpaces: [SpaceModel] {
-        environment.spaceService.spaces.filter { 
-            $0.id != SpaceModel.allSpacesIdentifier && $0.id != SpaceModel.inboxSpacesIdentifier 
+    private var bulkActionLobes: [LobeModel] {
+        environment.lobeService.lobes.filter { 
+            $0.id != LobeModel.allLobesIdentifier && $0.id != LobeModel.inboxLobesIdentifier && $0.id != LobeModel.limboLobesIdentifier
         }
     }
 
@@ -93,12 +93,12 @@ struct MemoryTimelineView: View {
             .toolbar {
                 if isMultiSelecting {
                     MemoryMultiSelectToolbarContent(
-                        availableSpaces: bulkActionSpaces,
+                        availableLobes: bulkActionLobes,
                         isPerformingBulkAction: isPerformingBulkAction,
                         canPerformDeletion: canMoveSelection,
                         isStatusEnabled: canMoveSelection,
-                        isSpaceEnabled: canMoveSelection && !bulkActionSpaces.isEmpty,
-                        onSelectSpace: { space in performMove(to: space) },
+                        isLobeEnabled: canMoveSelection && !bulkActionLobes.isEmpty,
+                        onSelectLobe: { lobe in performMove(to: lobe) },
                         onSelectStatus: { status in performStatusUpdate(to: status) },
                         onDelete: { showingDeleteConfirmation = true },
                         onDone: { toggleMultiSelection() }
@@ -309,9 +309,9 @@ struct MemoryTimelineView: View {
         showingDeleteConfirmation = false
     }
 
-    private func performMove(to space: SpaceModel) {
+    private func performMove(to lobe: LobeModel) {
         performBulkAction { processor, ids in
-            await processor.moveMemories(ids, to: space)
+            await processor.moveMemories(ids, to: lobe)
         }
     }
 

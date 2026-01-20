@@ -6,65 +6,64 @@
 import SwiftUI
 
 struct LimboCardView: View {
-    let space: SpaceModel
+    let lobe: LobeModel
     let count: Int
     let completedCount: Int
     let activeCount: Int
-    let spaceService: SpaceService?
+    let lobeService: LobeService?
     let memoryService: MemoryService?
     let mindService: MindService?
 
     init(
-        space: SpaceModel,
+        lobe: LobeModel,
         count: Int,
         completedCount: Int = 0,
         activeCount: Int = 0,
-        spaceService: SpaceService? = nil,
+        lobeService: LobeService? = nil,
         memoryService: MemoryService? = nil,
         mindService: MindService? = nil
     ) {
-        self.space = space
+        self.lobe = lobe
         self.count = count
         self.completedCount = completedCount
         self.activeCount = activeCount
-        self.spaceService = spaceService
+        self.lobeService = lobeService
         self.memoryService = memoryService
         self.mindService = mindService
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: space.iconName ?? "tray")
-                    .foregroundStyle(spaceColor)
+        HStack {
+            VStack(alignment: .leading, spacing: 12) {
+                Image(systemName: lobe.iconName ?? "tray")
+                    .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)
-                    .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
 
-                Spacer()
-
-                if activeCount > 0 {
-                    Text("\(activeCount)")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .frame(height: 20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(spaceColor)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(darkerBorderColor(for: spaceColor), lineWidth: 1)
-                                )
-                        )
-                }
+                    .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
+                Text(lobe.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
             }
-            .frame(maxWidth: .infinity)
             
-            Text(space.name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(.primary)
-                .lineLimit(2)
+            Spacer()
+
+            if activeCount > 0 {
+                Text("\(activeCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .frame(height: 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(lobeColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(darkerBorderColor(for: lobeColor), lineWidth: 1)
+                            )
+                    )
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -72,7 +71,7 @@ struct LimboCardView: View {
         .cardStyle()
     }
 
-    private var spaceColor: Color {
+    private var lobeColor: Color {
         .purple
     }
 

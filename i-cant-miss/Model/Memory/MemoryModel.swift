@@ -58,7 +58,7 @@ struct MemoryModel: Identifiable, Hashable {
     var status: MemoryStatus
     var isPinned: Bool
     var dueDate: Date?
-    var space: SpaceModel?
+    var lobe: LobeModel?
     var triggers: [MemoryTriggerModel]
     var checkItems: [CheckItemModel]
     var autoCompleteOnChecklistCompletion: Bool

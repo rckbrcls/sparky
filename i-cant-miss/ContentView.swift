@@ -34,7 +34,7 @@ enum CustomTab: String, CaseIterable {
 struct ContentView: View {
     @ObservedObject private var environment: AppEnvironment
     @State private var editorRoute: MemoryEditorRoute?
-    @State private var spaceComposerRequest: SpaceComposerRequest?
+    @State private var lobeComposerRequest: LobeComposerRequest?
     @State private var mindComposerRequest: MindComposerRequest?
     @State private var activeTab: CustomTab = .calendar
     @State private var calendarNavigationPath = NavigationPath()
@@ -44,7 +44,7 @@ struct ContentView: View {
     @State private var showingOnboarding = false
     @State private var isMultiSelectionActive = false
     @State private var isSearchActive = false
-    @State private var currentSpaceContext: SpaceModel?
+    @State private var currentLobeContext: LobeModel?
     @State private var currentMindContext: MindModel?
     @State private var quickMemoryRequest: QuickMemoryRequest?
     @State private var longPressTimer: Timer?
@@ -74,7 +74,7 @@ struct ContentView: View {
                 Tab.init(value: .mind){
                     MindRootView(
                         mindService: environment.mindService,
-                        spaceService: environment.spaceService,
+                        lobeService: environment.lobeService,
                         memoryService: environment.memoryService,
                         navigationPath: $spacesNavigationPath,
                         onSelectMemory: handleMemorySelection,
@@ -85,12 +85,12 @@ struct ContentView: View {
                         onEditMind: { mind in
                             presentMindEdit(for: mind)
                         },
-                        onAddSpace: { mind in
-                            presentSpaceCreation(for: mind)
+                        onAddLobe: { mind in
+                            presentLobeCreation(for: mind)
                         },
                         onMultiSelectionChange: handleMultiSelectionChange,
-                        onSpaceContextChange: { space in
-                            currentSpaceContext = space
+                        onLobeContextChange: { lobe in
+                            currentLobeContext = lobe
                         },
                         onMindContextChange: { mind in
                             currentMindContext = mind
@@ -123,10 +123,10 @@ struct ContentView: View {
         }
         .fullScreenCover(item: $editorRoute) { route in
             switch route.mode {
-            case let .create(space, template):
+            case let .create(lobe, template):
                 MemoryEditorView(
                     environment: environment,
-                    mode: .create(space: space, template: template),
+                    mode: .create(lobe: lobe, template: template),
                     initialTitle: route.initialTitle
                 )
             case let .edit(memory):
@@ -137,12 +137,12 @@ struct ContentView: View {
                 )
             }
         }
-        .sheet(item: $spaceComposerRequest, onDismiss: {
-            spaceComposerRequest = nil
+        .sheet(item: $lobeComposerRequest, onDismiss: {
+            lobeComposerRequest = nil
         }) { request in
-            SpaceComposerView(
+            LobeComposerView(
                 environment: environment,
-                spaceToEdit: request.spaceToEdit,
+                lobeToEdit: request.lobeToEdit,
                 mindID: request.mindID
             )
         }
@@ -159,14 +159,14 @@ struct ContentView: View {
         }) { request in
             QuickMemorySheet(
                 environment: environment,
-                space: request.space,
-                onExpandToEditor: { space, title in
+                lobe: request.lobe,
+                onExpandToEditor: { lobe, title in
                     editorRoute = MemoryEditorRoute(
-                        mode: .create(space: space, template: .blank),
+                        mode: .create(lobe: lobe, template: .blank),
                         initialTitle: title
                     )
                 },
-                onQuickCreate: { space, title, reminderMinutes in
+                onQuickCreate: { lobe, title, reminderMinutes in
                     Task {
                         // Create triggers array with single alarm if selected
                         var triggers: [MemoryTriggerModel] = []
@@ -184,7 +184,7 @@ struct ContentView: View {
                             status: .active,
                             isPinned: false,
                             dueDate: nil,
-                            spaceID: space?.id,
+                            lobeID: lobe?.id,
                             triggers: triggers,
                             note: nil,
                             checkItems: [],
@@ -218,7 +218,7 @@ struct ContentView: View {
         .onChange(of: activeTab) { _, newTab in
             // Clear context when switching away from mind tab
             if newTab != .mind {
-                currentSpaceContext = nil
+                currentLobeContext = nil
                 currentMindContext = nil
             }
         }
@@ -277,14 +277,14 @@ struct ContentView: View {
         .frame(height: 55)
     }
 
-    private func prepareMemoryCreation(for space: SpaceModel?) {
-        quickMemoryRequest = QuickMemoryRequest(space: space)
+    private func prepareMemoryCreation(for lobe: LobeModel?) {
+        quickMemoryRequest = QuickMemoryRequest(lobe: lobe)
     }
 
     private func openMemoryEditorDirectly() {
         feedbackGenerator.impactOccurred()
         editorRoute = MemoryEditorRoute(
-            mode: .create(space: targetSpaceForCreation(), template: .blank)
+            mode: .create(lobe: targetLobeForCreation(), template: .blank)
         )
     }
 
@@ -298,16 +298,16 @@ struct ContentView: View {
         editorRoute = route
     }
 
-    private func presentSpaceCreation() {
-        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: nil, mindID: nil)
+    private func presentLobeCreation() {
+        lobeComposerRequest = LobeComposerRequest(lobeToEdit: nil, mindID: nil)
     }
 
-    private func presentSpaceEdit(for space: SpaceModel) {
-        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: space, mindID: nil)
+    private func presentLobeEdit(for lobe: LobeModel) {
+        lobeComposerRequest = LobeComposerRequest(lobeToEdit: lobe, mindID: nil)
     }
 
-    private func presentSpaceCreation(for mind: MindModel) {
-        spaceComposerRequest = SpaceComposerRequest(spaceToEdit: nil, mindID: mind.id)
+    private func presentLobeCreation(for mind: MindModel) {
+        lobeComposerRequest = LobeComposerRequest(lobeToEdit: nil, mindID: mind.id)
     }
 
     private func presentMindCreation() {
@@ -323,11 +323,11 @@ struct ContentView: View {
         case .calendar:
             calendarNavigationPath = NavigationPath()
         case .mind:
-            // Se estiver em SpaceDetailView (tem currentSpaceContext), fazer pop até MindDetailView
-            // Se estiver em MindDetailView (tem currentMindContext mas não currentSpaceContext), limpar e ir para MindRootView
+            // Se estiver em LobeDetailView (tem currentLobeContext), fazer pop até MindDetailView
+            // Se estiver em MindDetailView (tem currentMindContext mas não currentLobeContext), limpar e ir para MindRootView
             // Se já estiver em MindRootView (não tem currentMindContext), não fazer nada
-            if currentSpaceContext != nil {
-                // Está em SpaceDetailView, fazer pop até MindDetailView
+            if currentLobeContext != nil {
+                // Está em LobeDetailView, fazer pop até MindDetailView
                 spacesNavigationPath.removeLast()
             } else if currentMindContext != nil {
                 // Está em MindDetailView, limpar e ir para MindRootView
@@ -386,7 +386,7 @@ struct ContentView: View {
                         
                         // Se não foi long press, executa ação normal
                         if !wasLongPress {
-                            prepareMemoryCreation(for: targetSpaceForCreation())
+                            prepareMemoryCreation(for: targetLobeForCreation())
                         }
                     }
             )
@@ -405,21 +405,21 @@ struct ContentView: View {
         }
     }
 
-    private func targetSpaceForCreation() -> SpaceModel? {
+    private func targetLobeForCreation() -> LobeModel? {
         guard activeTab == .mind else { return nil }
-        // Use currentSpaceContext if available, otherwise try to extract from navigation path
-        if let context = currentSpaceContext {
+        // Use currentLobeContext if available, otherwise try to extract from navigation path
+        if let context = currentLobeContext {
             return context
         }
-        // Fallback: try to get the last space from navigation path
+        // Fallback: try to get the last lobe from navigation path
         // This is a workaround since NavigationPath doesn't expose its items directly
-        // The SpaceDetailView should have already notified the context, but this is a safety net
-        return extractLastSpaceFromNavigationPath()
+        // The LobeDetailView should have already notified the context, but this is a safety net
+        return extractLastLobeFromNavigationPath()
     }
 
-    private func extractLastSpaceFromNavigationPath() -> SpaceModel? {
-        // NavigationPath doesn't expose items directly, so we rely on currentSpaceContext
-        // which should be set by SpaceDetailView.onAppear
+    private func extractLastLobeFromNavigationPath() -> LobeModel? {
+        // NavigationPath doesn't expose items directly, so we rely on currentLobeContext
+        // which should be set by LobeDetailView.onAppear
         // If it's nil here, it means we're at the root, so return nil
         return nil
     }
@@ -427,7 +427,7 @@ struct ContentView: View {
 
 private struct MemoryEditorRoute: Identifiable {
     enum Mode {
-        case create(space: SpaceModel?, template: MemoryEditorTemplate)
+        case create(lobe: LobeModel?, template: MemoryEditorTemplate)
         case edit(memory: MemoryModel)
     }
 
@@ -437,9 +437,9 @@ private struct MemoryEditorRoute: Identifiable {
     var startEditing: Bool = false
 }
 
-private struct SpaceComposerRequest: Identifiable {
+private struct LobeComposerRequest: Identifiable {
     let id = UUID()
-    let spaceToEdit: SpaceModel?
+    let lobeToEdit: LobeModel?
     let mindID: UUID?
 }
 
@@ -450,7 +450,7 @@ private struct MindComposerRequest: Identifiable {
 
 private struct QuickMemoryRequest: Identifiable {
     let id = UUID()
-    let space: SpaceModel?
+    let lobe: LobeModel?
 }
 
 extension View{

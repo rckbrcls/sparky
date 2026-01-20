@@ -16,7 +16,7 @@ import Combine
 
 struct MemoryEditorView: View {
     enum Mode {
-        case create(space: SpaceModel?, template: MemoryEditorTemplate)
+        case create(lobe: LobeModel?, template: MemoryEditorTemplate)
         case edit(memory: MemoryModel)
     }
 
@@ -51,7 +51,7 @@ struct MemoryEditorView: View {
 
     @State private var showDeleteConfirmation = false
     @Namespace private var toolbarGlassNamespace
-    @ObservedObject private var spaceService: SpaceService
+    @ObservedObject private var lobeService: LobeService
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
 
@@ -65,14 +65,14 @@ struct MemoryEditorView: View {
         self.environment = environment
         self.initialTitle = initialTitle
         self.startEditing = startEditing
-        self.spaceService = environment.spaceService
+        self.lobeService = environment.lobeService
         switch mode {
-        case let .create(space, template):
+        case let .create(lobe, template):
             _viewModel = StateObject(wrappedValue: MemoryEditorViewModel(
                 environment: environment,
                 attachmentStore: environment.attachmentStore,
                 memory: nil,
-                defaultSpace: space,
+                defaultLobe: lobe,
                 template: template,
                 initialTitle: initialTitle
             ))
@@ -82,7 +82,7 @@ struct MemoryEditorView: View {
                 environment: environment,
                 attachmentStore: environment.attachmentStore,
                 memory: memory,
-                defaultSpace: memory.space,
+                defaultLobe: memory.lobe,
                 template: .blank
             ))
             _isEditingEnabled = State(initialValue: startEditing)
@@ -427,7 +427,7 @@ struct MemoryEditorView: View {
         VStack(alignment: .leading, spacing: 12) {
             MemoryEditorTitleCard(
                 viewModel: viewModel,
-                spaceService: spaceService,
+                lobeService: lobeService,
                 environment: environment,
                 isTitleFocused: $isTitleFocused,
                 isEditingEnabled: isEditingEnabled
@@ -693,5 +693,5 @@ private struct EditingSwipeActionModifier: ViewModifier {
 #Preview {
     let environment = AppEnvironment(persistence: PersistenceController.preview)
     environment.bootstrap()
-    return MemoryEditorView(environment: environment, mode: .create(space: nil, template: .blank))
+    return MemoryEditorView(environment: environment, mode: .create(lobe: nil, template: .blank))
 }
