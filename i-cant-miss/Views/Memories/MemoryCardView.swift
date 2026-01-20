@@ -153,6 +153,11 @@ struct MemoryCardView: View {
         return memory.triggers.first(where: { $0.type == .location && $0.isActive })
     }
     
+    private var scheduledTrigger: MemoryTriggerModel? {
+        guard let memory = memory else { return nil }
+        return memory.triggers.first(where: { $0.type == .scheduled && $0.isActive })
+    }
+    
     private var sequentialTrigger: MemoryTriggerModel? {
         guard let memory = memory else { return nil }
         return memory.triggers.first(where: { $0.type == .sequential && $0.isActive })
@@ -170,24 +175,50 @@ struct MemoryCardView: View {
     @ViewBuilder
     private func memoryContent(memory: MemoryModel) -> some View {
         VStack(spacing: 0) {
+            // DateTime trigger (if has scheduled trigger)
+            if let scheduledTrigger = scheduledTrigger {
+                MemoryCardDateTimeView(
+                    trigger: scheduledTrigger,
+                    isCompletedForDisplay: isCompletedForDisplay
+                )
+                .background(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 12,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 12
+                    )
+                    .fill(Color("ElementBackground"))
+                )
+                .overlay(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 12,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 12
+                    )
+                    .stroke(Color("ElementBorder"), lineWidth: 2)
+                )
+            }
+            
             // Map (if has location trigger)
             if let locationTrigger = locationTrigger, let location = locationTrigger.location {
                 MemoryCardLocationMapView(location: location)
                     .frame(height: 120)
                     .clipShape(
                         UnevenRoundedRectangle(
-                            topLeadingRadius: 12,
+                            topLeadingRadius: scheduledTrigger != nil ? 0 : 12,
                             bottomLeadingRadius: 0,
                             bottomTrailingRadius: 0,
-                            topTrailingRadius: 12
+                            topTrailingRadius: scheduledTrigger != nil ? 0 : 12
                         )
                     )
                     .overlay(
                         UnevenRoundedRectangle(
-                            topLeadingRadius: 12,
+                            topLeadingRadius: scheduledTrigger != nil ? 0 : 12,
                             bottomLeadingRadius: 0,
                             bottomTrailingRadius: 0,
-                            topTrailingRadius: 12
+                            topTrailingRadius: scheduledTrigger != nil ? 0 : 12
                         )
                         .stroke(Color("ElementBorder"), lineWidth: 2)
                     )
@@ -221,26 +252,6 @@ struct MemoryCardView: View {
                                 .lineLimit(2)
                         }
 
-                    }
-
-                    if scheduledDateText != nil {
-                        HStack(spacing: 12) {
-                            if let scheduledDateText {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "calendar")
-                                    Text(scheduledDateText)
-                                        .strikethrough(isCompletedForDisplay, color: .secondary)
-                                }
-                                .fontWeight(.medium)
-                                .font(.caption2)
-                                .lineLimit(1)
-                                .foregroundStyle(isCompletedForDisplay ? Color.secondary : Color.primary.opacity(0.7))
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 10)
-                                .background(.secondary.opacity(isCompletedForDisplay ? 0.1 : 0.2))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                        }
                     }
 
                     HStack(spacing: 8) {
@@ -282,19 +293,19 @@ struct MemoryCardView: View {
             .padding(12)
             .background(
                 UnevenRoundedRectangle(
-                    topLeadingRadius: locationTrigger != nil ? 0 : 12,
+                    topLeadingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12,
                     bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
                     bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    topTrailingRadius: locationTrigger != nil ? 0 : 12
+                    topTrailingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12
                 )
                 .fill(Color("ElementBackground"))
             )
             .overlay(
                 UnevenRoundedRectangle(
-                    topLeadingRadius: locationTrigger != nil ? 0 : 12,
+                    topLeadingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12,
                     bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
                     bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    topTrailingRadius: locationTrigger != nil ? 0 : 12
+                    topTrailingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12
                 )
                 .stroke(Color("ElementBorder"), lineWidth: 2)
             )

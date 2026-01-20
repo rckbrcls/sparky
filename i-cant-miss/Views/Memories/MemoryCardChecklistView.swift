@@ -76,18 +76,18 @@ struct MemoryCardChecklistView: View {
                     } label: {
                         HStack(alignment: .center, spacing: 12) {
                             Text(item.title)
-                                .font(.subheadline)
+                                .font(.caption)
                                 .fontWeight(.medium)
                                 .foregroundStyle(item.isCompleted ? .secondary : .primary)
                                 .strikethrough(item.isCompleted, color: .secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
                             Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .font(.body)
+                                .font(.caption)
                                 .foregroundStyle(item.isCompleted ? .green : .secondary)
                         }
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 10)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

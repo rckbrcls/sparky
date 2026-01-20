@@ -43,43 +43,41 @@ struct MindRootView: View {
                     VStack(spacing: 12) {
                         // Minds Collapsible Section
                         VStack(spacing: 0) {
-                            HStack {
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        isMindsExpanded.toggle()
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "brain.head.profile")
-                                            .foregroundStyle(Color.purple)
-                                            .font(.subheadline)
-                                        Text("Minds")
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(.primary)
-                                        Text("\(displayMinds.count)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.secondary)
-                                            .rotationEffect(.degrees(isMindsExpanded ? 90 : 0))
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.purple.opacity(0.15))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.purple.opacity(0.1), lineWidth: 1)
-                                    )
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isMindsExpanded.toggle()
                                 }
-                                .buttonStyle(.plain)
-                                Spacer()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "brain.head.profile")
+                                        .foregroundStyle(Color.purple)
+                                        .font(.subheadline)
+                                    Text("Minds")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.primary)
+                                    Text("\(displayMinds.count)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.secondary)
+                                        .rotationEffect(.degrees(isMindsExpanded ? 90 : 0))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.purple.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.purple.opacity(0.1), lineWidth: 1)
+                                )
                             }
+                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 20)
-                            .padding(.bottom, isMindsExpanded ? 8 : 0)
+                            .padding(.bottom, isMindsExpanded ? 12 : 0)
                             
                             if isMindsExpanded {
                                 LazyVGrid(columns: columns, spacing: 12) {
@@ -105,43 +103,41 @@ struct MindRootView: View {
                         
                         // Lobes Collapsible Section
                         VStack(spacing: 0) {
-                            HStack {
-                                Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        isLobesExpanded.toggle()
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "brain.fill")
-                                            .foregroundStyle(Color.gray)
-                                            .font(.subheadline)
-                                        Text("Lobes")
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(.primary)
-                                        Text("\(displayLobesWithoutMind.count)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.secondary)
-                                            .rotationEffect(.degrees(isLobesExpanded ? 90 : 0))
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.gray.opacity(0.15))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.gray.opacity(0.1), lineWidth: 1)
-                                    )
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isLobesExpanded.toggle()
                                 }
-                                .buttonStyle(.plain)
-                                Spacer()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "brain.fill")
+                                        .foregroundStyle(Color.gray)
+                                        .font(.subheadline)
+                                    Text("Lobes")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.primary)
+                                    Text("\(displayLobesWithoutMind.count)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.secondary)
+                                        .rotationEffect(.degrees(isLobesExpanded ? 90 : 0))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.gray.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+                                )
                             }
+                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 20)
-                            .padding(.bottom, isLobesExpanded ? 8 : 0)
+                            .padding(.bottom, isLobesExpanded ? 12 : 0)
                             
                             if isLobesExpanded {
                                 VStack(spacing: 12) {
@@ -156,33 +152,47 @@ struct MindRootView: View {
                                             memoryService: memoryService,
                                             mindService: mindService
                                         )
-                                    }
+                                    } 
                                     .buttonStyle(PlainButtonStyle())
                                     .accessibilityHint("Opens limbo details")
                                     .padding(.horizontal, 20)
-                                    
-                                    if !displayLobesWithoutMind.isEmpty {
-                                        LazyVGrid(columns: columns, spacing: 12) {
-                                            ForEach(displayLobesWithoutMind) { lobe in
-                                                NavigationLink(value: lobe) {
-                                                    LobeGridItemView(
-                                                        lobe: lobe,
-                                                        count: memoryCounts(for: lobe).total,
-                                                        completedCount: memoryCounts(for: lobe).completed,
-                                                        activeCount: activeMemoryCount(for: lobe),
-                                                        lobeService: lobeService,
-                                                        memoryService: memoryService,
-                                                        mindService: mindService,
-                                                        onEdit: onEditLobe,
-                                                        showOnlyRemaining: true
-                                                    )
-                                                }
-                                                .buttonStyle(PlainButtonStyle())
-                                                .accessibilityHint("Opens details for \(lobe.name)")
-                                            }
+                                    LazyVGrid(columns: columns, spacing: 12) {
+                                        // All Lobes card - shows all memories
+                                        NavigationLink(value: LobeModel.allLobes) {
+                                            LobeGridItemView(
+                                                lobe: LobeModel.allLobes,
+                                                count: memoryCounts(for: LobeModel.allLobes).total,
+                                                completedCount: memoryCounts(for: LobeModel.allLobes).completed,
+                                                activeCount: activeMemoryCount(for: LobeModel.allLobes),
+                                                lobeService: lobeService,
+                                                memoryService: memoryService,
+                                                mindService: mindService,
+                                                onEdit: nil,
+                                                showOnlyRemaining: true
+                                            )
                                         }
-                                        .padding(.horizontal, 20)
+                                        .buttonStyle(PlainButtonStyle())
+                                        .accessibilityHint("Opens details for all lobes")
+                                        
+                                        ForEach(displayLobesWithoutMind) { lobe in
+                                            NavigationLink(value: lobe) {
+                                                LobeGridItemView(
+                                                    lobe: lobe,
+                                                    count: memoryCounts(for: lobe).total,
+                                                    completedCount: memoryCounts(for: lobe).completed,
+                                                    activeCount: activeMemoryCount(for: lobe),
+                                                    lobeService: lobeService,
+                                                    memoryService: memoryService,
+                                                    mindService: mindService,
+                                                    onEdit: onEditLobe,
+                                                    showOnlyRemaining: true
+                                                )
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                            .accessibilityHint("Opens details for \(lobe.name)")
+                                        }
                                     }
+                                    .padding(.horizontal, 20)
                                 }
                             }
                         }
@@ -331,9 +341,14 @@ struct MindRootView: View {
     }
     
     private func memoryCounts(for lobe: LobeModel) -> (completed: Int, total: Int) {
-        let memories = memoryService.memories.filter { memory in
-            guard let lobeID = memory.lobe?.id else { return false }
-            return lobeID == lobe.id
+        let memories: [MemoryModel]
+        if lobe.isAllLobes {
+            memories = memoryService.memories
+        } else {
+            memories = memoryService.memories.filter { memory in
+                guard let lobeID = memory.lobe?.id else { return false }
+                return lobeID == lobe.id
+            }
         }
         let total = memories.count
         let completed = memories.filter { $0.isCompleted }.count
@@ -341,9 +356,14 @@ struct MindRootView: View {
     }
     
     private func activeMemoryCount(for lobe: LobeModel) -> Int {
-        let memories = memoryService.memories.filter { memory in
-            guard let lobeID = memory.lobe?.id else { return false }
-            return lobeID == lobe.id
+        let memories: [MemoryModel]
+        if lobe.isAllLobes {
+            memories = memoryService.memories
+        } else {
+            memories = memoryService.memories.filter { memory in
+                guard let lobeID = memory.lobe?.id else { return false }
+                return lobeID == lobe.id
+            }
         }
         return memories.filter { $0.status == .active }.count
     }
