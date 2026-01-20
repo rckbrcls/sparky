@@ -33,13 +33,13 @@ struct LimboCardView: View {
     }
 
     var body: some View {
-        HStack {
-            HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: lobe.iconName ?? "tray")
                     .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)
-
                     .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
+                
                 Text(lobe.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -48,7 +48,7 @@ struct LimboCardView: View {
             }
             
             Spacer()
-
+            
             if activeCount > 0 {
                 Text("\(activeCount)")
                     .font(.caption2.bold())
@@ -67,7 +67,7 @@ struct LimboCardView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 60)
+        .frame(minHeight: 100)
         .cardStyle()
     }
 
