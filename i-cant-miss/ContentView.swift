@@ -363,7 +363,7 @@ struct ContentView: View {
     }
 
     private var addMemoryButton: some View {
-        Image(systemName: "brain")
+        Image(systemName: "brain.fill")
             .font(.system(size: 22, weight: .medium))
             .frame(width: 60, height: 60)
             .contentShape(Rectangle())
