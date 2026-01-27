@@ -965,8 +965,12 @@ private extension MemoryService {
         request.fetchLimit = 1
         return try context.fetch(request).first
     }
+}
 
-    internal func sortedMemories(_ memories: [MemoryModel], using strategy: SortStrategy) -> [MemoryModel] {
+// MARK: - Internal helpers
+
+extension MemoryService {
+    func sortedMemories(_ memories: [MemoryModel], using strategy: SortStrategy) -> [MemoryModel] {
         switch strategy {
         case .manual:
             return memories.sorted { lhs, rhs in

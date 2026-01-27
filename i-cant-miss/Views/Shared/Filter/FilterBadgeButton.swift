@@ -40,7 +40,7 @@ private extension View {
     @ViewBuilder
     func applySolidStyle(isToggle: Bool, isActive: Bool) -> some View {
         let isSelected = isToggle && isActive
-        return self
+        self
             .background(
                 Capsule()
                     .fill(isSelected ? Color(uiColor: .systemGray6) : Color.clear)

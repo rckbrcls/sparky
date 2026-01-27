@@ -374,7 +374,7 @@ final class MindService: ObservableObject {
         }
 
         if !hasDefaultMind {
-            let defaultMindID = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<UUID, Error>) in
+            _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<UUID, Error>) in
                 persistence.performBackgroundTask { context in
                     do {
                         let defaultMind = Mind(context: context)
