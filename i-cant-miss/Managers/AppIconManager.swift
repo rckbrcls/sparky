@@ -4,9 +4,6 @@ import Combine
 
 enum AppIcon: String, CaseIterable, Identifiable {
     case primary = "AppIcon"
-    case calendar = "AppIconCalendar"
-    case folder = "AppIconFolder"
-    case location = "AppIconLocation"
     case memory = "AppIconMemory"
 
     var id: String { rawValue }
@@ -14,9 +11,6 @@ enum AppIcon: String, CaseIterable, Identifiable {
     var displayTitle: String {
         switch self {
         case .primary: return "Default"
-        case .calendar: return "Calendar"
-        case .folder: return "Folder"
-        case .location: return "Location"
         case .memory: return "Memory"
         }
     }
