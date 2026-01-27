@@ -89,7 +89,7 @@ struct LobeComposerView: View {
     }
 
     private var titleFont: UIFont {
-        guard let font = UIFont(name: "Vollkorn-Regular", size: 20) else {
+        guard let font = UIFont(name: "PlayfairDisplay-Regular", size: 20) else {
             return .systemFont(ofSize: 20, weight: .bold)
         }
         let descriptor = font.fontDescriptor.withSymbolicTraits(.traitBold)

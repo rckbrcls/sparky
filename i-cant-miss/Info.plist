@@ -5,8 +5,8 @@
 
 	<key>UIAppFonts</key>
 	<array>
-		<string>Vollkorn-VariableFont_wght.ttf</string>
-		<string>Vollkorn-Italic-VariableFont_wght.ttf</string>
+		<string>PlayfairDisplay-VariableFont_wght.ttf</string>
+		<string>PlayfairDisplay-Italic-VariableFont_wght.ttf</string>
 	</array>
 </dict>
 </plist>

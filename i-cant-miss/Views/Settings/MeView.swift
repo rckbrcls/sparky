@@ -117,7 +117,6 @@ struct MeView: View {
                 switch route {
                 case .settings:
                     SettingsView(
-                        environment: environment,
                         navigationPath: $settingsNavigationPath,
                         embedsInNavigationStack: false
                     )
