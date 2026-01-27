@@ -363,11 +363,11 @@ struct ContentView: View {
     }
 
     private var addMemoryButton: some View {
-        Image("plus")
-            .resizable()
-            .scaledToFit()
+        Image(systemName: "plus")
+            .font(.system(size: 22, weight: .medium))
             .frame(width: 60, height: 60)
             .contentShape(Rectangle())
+            .glassEffect(.regular.interactive().tint(Color.accent), in: .circle)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
@@ -396,7 +396,6 @@ struct ContentView: View {
                         }
                     }
             )
-            .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
     }
 
     private func handleMultiSelectionChange(_ isSelecting: Bool) {
