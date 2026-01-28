@@ -22,7 +22,7 @@ struct LobesTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Memories")
+                Text("Lobes")
                     .appLargeTitleStyle()
                     .padding(.horizontal, 20)
                     .padding(.bottom, 16)

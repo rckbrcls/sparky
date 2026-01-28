@@ -57,11 +57,11 @@ struct MindRootView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Picker("View", selection: $selectedTab) {
-                        Image(systemName: "brain.head.profile").tag(Tab.minds)
-                        Image(systemName: "brain").tag(Tab.memories)
+                        Label("Minds", systemImage: "brain.head.profile").tag(Tab.minds)
+                        Label("Lobes", systemImage: "brain").tag(Tab.memories)
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 100)
+                    .frame(width: 200)
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
