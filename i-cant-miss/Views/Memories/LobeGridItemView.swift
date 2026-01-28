@@ -49,16 +49,16 @@ struct LobeGridItemView: View {
                     .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)
                     .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
-                
+
                 Text(lobe.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                     .lineLimit(2)
             }
-            
+
             Spacer()
-            
+
             // Lado direito: active memories
             if activeCount > 0 {
                 Text("\(activeCount)")
@@ -156,6 +156,9 @@ struct LobeGridItemView: View {
     var onEdit: ((LobeModel) -> Void)?
 
     private var lobeColor: Color {
+        if lobe.isAllLobes {
+            return .accentColor
+        }
         if let hex = lobe.colorHex, let color = Color(hex: hex) {
             return color
         }
@@ -169,12 +172,12 @@ struct LobeGridItemView: View {
         var saturation: CGFloat = 0
         var brightness: CGFloat = 0
         var alpha: CGFloat = 0
-        
+
         if uiColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
             // Reduz o brightness em 30% para criar uma borda mais escura
             return Color(hue: hue, saturation: saturation, brightness: max(0, brightness * 0.7), opacity: alpha)
         }
-        
+
         // Fallback: usar a cor com opacity reduzida
         return color.opacity(0.6)
     }

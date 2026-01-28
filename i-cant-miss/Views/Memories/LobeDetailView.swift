@@ -106,8 +106,8 @@ struct LobeDetailView: View {
     }
 
     private var bulkActionLobes: [LobeModel] {
-        environment.lobeService.lobes.filter { 
-            $0.id != LobeModel.allLobesIdentifier && 
+        environment.lobeService.lobes.filter {
+            $0.id != LobeModel.allLobesIdentifier &&
             $0.id != LobeModel.inboxLobesIdentifier &&
             $0.id != LobeModel.limboLobesIdentifier
         }
@@ -258,28 +258,28 @@ struct LobeDetailView: View {
                 } label: {
                     HStack {
                         Image(systemName: "pin.fill")
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(.elementBorder)
                             .font(.subheadline)
                         Text("Pinned")
                             .font(.caption)
                             .fontWeight(.medium)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.elementBorder)
                         Text("\(pinnedMemories.count)")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.elementBorder)
                         Image(systemName: "chevron.right")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.elementBorder)
                             .rotationEffect(.degrees(isPinnedExpanded ? 90 : 0))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.orange.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Color.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.orange.opacity(0.1), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.accentColor.opacity(0.8), lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -326,28 +326,28 @@ struct LobeDetailView: View {
                 } label: {
                     HStack {
                         Image(systemName: "bolt.fill")
-                            .foregroundStyle(Color.blue)
+                            .foregroundStyle(.elementBorder)
                             .font(.subheadline)
                         Text("Active")
                             .font(.caption)
                             .fontWeight(.medium)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.elementBorder)
                         Text("\(nonPinnedMemories.count)")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.elementBorder)
                         Image(systemName: "chevron.right")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.elementBorder)
                             .rotationEffect(.degrees(isActiveExpanded ? 90 : 0))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.blue.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Color.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.blue.opacity(0.1), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.accentColor.opacity(0.8), lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -394,28 +394,28 @@ struct LobeDetailView: View {
                 } label: {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.green)
+                            .foregroundStyle(.elementBorder)
                             .font(.subheadline)
                         Text("Completed")
                             .font(.caption)
                             .fontWeight(.medium)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.elementBorder)
                         Text("\(completedMemories.count)")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.elementBorder)
                         Image(systemName: "chevron.right")
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.elementBorder)
                             .rotationEffect(.degrees(isCompletedExpanded ? 90 : 0))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.green.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Color.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.green.opacity(0.1), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.accentColor.opacity(0.8), lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -708,7 +708,7 @@ struct LobeDetailView: View {
         reorderedMemories.insert(draggedMemory, at: droppedIndex)
 
         let memoryIDs = reorderedMemories.map { $0.id }
-        
+
         Task {
             do {
                 try await memoryService.updateMemoryOrder(memoryIDs: memoryIDs)
@@ -716,7 +716,7 @@ struct LobeDetailView: View {
                 // Handle error silently for now
             }
         }
-        
+
         draggedMemoryID = nil
     }
 }
@@ -793,4 +793,3 @@ private struct LobeDetailContextModifiers: ViewModifier {
             }
     }
 }
-

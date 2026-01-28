@@ -17,28 +17,30 @@ struct CalendarPeriodHeaderButton: View {
         Button(action: onToggle) {
             HStack {
                 Image(systemName: period.iconName)
-                    .foregroundStyle(period.color)
-                    .font(.subheadline)
+                    .font(.caption2)
+                    .foregroundStyle(.elementBorder)
+
                 Text(period.title)
-                    .font(.caption)
+                    .font(.caption2)
                     .fontWeight(.medium)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.elementBorder)
+
                 Text("\(count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.caption2)
+                    .foregroundStyle(.elementBorder)
+
                 Image(systemName: "chevron.right")
-                    .font(.caption)
+                    .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.elementBorder)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(period.color.opacity(0.20))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(6)
+            .background(Color.accentColor)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(period.color.opacity(0.1), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.accentColor.opacity(0.8), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

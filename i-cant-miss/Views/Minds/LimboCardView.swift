@@ -39,16 +39,16 @@ struct LimboCardView: View {
                     .foregroundStyle(lobeColor)
                     .frame(width: 32, height: 32)
                     .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
-                
+
                 Text(lobe.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                     .lineLimit(2)
             }
-            
+
             Spacer()
-            
+
             if activeCount > 0 {
                 Text("\(activeCount)")
                     .font(.caption2.bold())
@@ -72,7 +72,7 @@ struct LimboCardView: View {
     }
 
     private var lobeColor: Color {
-        .purple
+        .accentColor
     }
 
     private func darkerBorderColor(for color: Color) -> Color {
@@ -81,11 +81,11 @@ struct LimboCardView: View {
         var saturation: CGFloat = 0
         var brightness: CGFloat = 0
         var alpha: CGFloat = 0
-        
+
         if uiColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
             return Color(hue: hue, saturation: saturation, brightness: max(0, brightness * 0.7), opacity: alpha)
         }
-        
+
         return color.opacity(0.6)
     }
 }
