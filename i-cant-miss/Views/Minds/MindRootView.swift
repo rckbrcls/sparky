@@ -61,7 +61,7 @@ struct MindRootView: View {
                         Label("Lobes", systemImage: "brain").tag(Tab.memories)
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 200)
+                    .frame(width: 150)
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
