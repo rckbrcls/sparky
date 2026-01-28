@@ -27,7 +27,7 @@ enum AppIcon: String, CaseIterable, Identifiable {
     // Helper to get the preview image name (matching the asset catalog)
     var previewImageName: String {
         switch self {
-        case .primary: return "AppIcon-Preview"
+        case .primary: return "memory"
         case .box: return "box"
         case .think: return "think"
         }
