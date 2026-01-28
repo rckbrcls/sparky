@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "memory.png",
+      "filename" : "box.jpg",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "memory@2x.png",
+      "filename" : "box@2x.jpg",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "memory@3x.png",
+      "filename" : "box@3x.jpg",
       "idiom" : "universal",
       "scale" : "3x"
     }
