@@ -4,14 +4,16 @@ import Combine
 
 enum AppIcon: String, CaseIterable, Identifiable {
     case primary = "AppIcon"
-    case memory = "AppIconMemory"
+    case box = "AppIcon-box"
+    case think = "AppIcon-think"
 
     var id: String { rawValue }
 
     var displayTitle: String {
         switch self {
         case .primary: return "Default"
-        case .memory: return "Memory"
+        case .box: return "Box"
+        case .think: return "Think"
         }
     }
 
@@ -24,7 +26,11 @@ enum AppIcon: String, CaseIterable, Identifiable {
 
     // Helper to get the preview image name (matching the asset catalog)
     var previewImageName: String {
-        return rawValue + "-Preview"
+        switch self {
+        case .primary: return "AppIcon-Preview"
+        case .box: return "box"
+        case .think: return "think"
+        }
     }
 }
 
