@@ -190,15 +190,15 @@ struct MemoryCardView: View {
                     )
                     .fill(Color("ElementBackground"))
                 )
-                .overlay(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 12,
-                        bottomLeadingRadius: 0,
-                        bottomTrailingRadius: 0,
-                        topTrailingRadius: 12
-                    )
-                    .stroke(Color("ElementBorder"), lineWidth: 2)
-                )
+//                .overlay(
+//                    UnevenRoundedRectangle(
+//                        topLeadingRadius: 12,
+//                        bottomLeadingRadius: 0,
+//                        bottomTrailingRadius: 0,
+//                        topTrailingRadius: 12
+//                    )
+//                    .stroke(Color("ElementBorder"), lineWidth: 2)
+//                )
             }
             
             // Map (if has location trigger)
@@ -213,15 +213,15 @@ struct MemoryCardView: View {
                             topTrailingRadius: scheduledTrigger != nil ? 0 : 12
                         )
                     )
-                    .overlay(
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: scheduledTrigger != nil ? 0 : 12,
-                            bottomLeadingRadius: 0,
-                            bottomTrailingRadius: 0,
-                            topTrailingRadius: scheduledTrigger != nil ? 0 : 12
-                        )
-                        .stroke(Color("ElementBorder"), lineWidth: 2)
-                    )
+//                    .overlay(
+//                        UnevenRoundedRectangle(
+//                            topLeadingRadius: scheduledTrigger != nil ? 0 : 12,
+//                            bottomLeadingRadius: 0,
+//                            bottomTrailingRadius: 0,
+//                            topTrailingRadius: scheduledTrigger != nil ? 0 : 12
+//                        )
+//                        .stroke(Color("ElementBorder"), lineWidth: 2)
+//                    )
             }
             
             // Card content
@@ -229,10 +229,14 @@ struct MemoryCardView: View {
                 let lobeIcon = memory.lobe?.iconName ?? "brain.fill"
                 let lobeColor = memory.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
 
-                Image(systemName: lobeIcon)
-                    .foregroundStyle(lobeColor)
-                    .frame(width: 32, height: 32)
-                    .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
+//                Image(systemName: lobeIcon)
+//                    .foregroundStyle(lobeColor)
+//                    .frame(width: 32, height: 32)
+//                    .background(
+//                        RoundedRectangle(cornerRadius: 12)
+//                        .fill(lobeColor.opacity(0.15))
+//                        .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+//                    )
 
                 VStack(alignment: .leading, spacing: 6) {
                     VStack (alignment: .leading, spacing: 6){
@@ -285,15 +289,15 @@ struct MemoryCardView: View {
                 )
                 .fill(Color("ElementBackground"))
             )
-            .overlay(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12,
-                    bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    topTrailingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12
-                )
-                .stroke(Color("ElementBorder"), lineWidth: 2)
-            )
+//            .overlay(
+//                UnevenRoundedRectangle(
+//                    topLeadingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12,
+//                    bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
+//                    bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
+//                    topTrailingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12
+//                )
+//                .stroke(Color("ElementBorder"), lineWidth: 2)
+//            )
             
             // Checklist collapsible section
             if memory.hasChecklist && !memory.checkItems.isEmpty {

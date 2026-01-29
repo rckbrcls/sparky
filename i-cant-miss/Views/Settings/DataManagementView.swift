@@ -13,12 +13,12 @@ struct DataManagementView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var environment: AppEnvironment
     @StateObject private var viewModel: DataManagementViewModel
-    
+
     init() {
         // ViewModel will be initialized in onAppear with environment
         _viewModel = StateObject(wrappedValue: DataManagementViewModel(environment: nil))
     }
-    
+
     var body: some View {
         List {
             Text("Data Management")
@@ -26,11 +26,11 @@ struct DataManagementView: View {
                 .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-            
+
             Section {
                 exportSection
             }
-            
+
             Section {
                 importSection
             }
@@ -40,7 +40,7 @@ struct DataManagementView: View {
         .listStyle(.plain)
         .navigationBarTitleDisplayMode(.inline)
         .fileExporter(
-            isPresented: $viewModel.isExporting,
+            isPresented: $viewModel.showFileExporter,
             document: viewModel.exportDocument,
             contentType: .json,
             defaultFilename: viewModel.exportFilename
@@ -73,16 +73,16 @@ struct DataManagementView: View {
             viewModel.updateEnvironment(environment)
         }
     }
-    
+
     private var exportSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Export Data")
                 .font(.headline)
-            
+
             Text("Export all your memories, minds, and lobes to a JSON file for backup or migration.")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Picker("Export Options", selection: $viewModel.exportOptions) {
                 Text("Full Export").tag(DataExportService.ExportOptions.full)
                 Text("Without Attachments").tag(DataExportService.ExportOptions.withoutAttachments)
@@ -90,14 +90,14 @@ struct DataManagementView: View {
                 Text("Active Only (No Attachments)").tag(DataExportService.ExportOptions.activeOnlyWithoutAttachments)
             }
             .pickerStyle(.menu)
-            
+
             Button {
                 Task {
                     await viewModel.exportData()
                 }
             } label: {
                 HStack {
-                    if viewModel.isExporting {
+                    if viewModel.isExportingData {
                         ProgressView()
                             .scaleEffect(0.8)
                     } else {
@@ -108,20 +108,20 @@ struct DataManagementView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(viewModel.isExporting)
+            .disabled(viewModel.isExportingData)
         }
         .padding(.vertical, 8)
     }
-    
+
     private var importSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Import Data")
                 .font(.headline)
-            
+
             Text("Import memories, minds, and lobes from a previously exported JSON file.")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Button {
                 viewModel.isImporting = true
             } label: {
@@ -146,7 +146,8 @@ struct DataManagementView: View {
 @MainActor
 final class DataManagementViewModel: ObservableObject {
     @Published var exportOptions: DataExportService.ExportOptions = .full
-    @Published var isExporting = false
+    @Published var isExportingData = false
+    @Published var showFileExporter = false
     @Published var isImporting = false
     @Published var showExportAlert = false
     @Published var showImportAlert = false
@@ -154,18 +155,18 @@ final class DataManagementViewModel: ObservableObject {
     @Published var exportMessage = ""
     @Published var importMessage = ""
     @Published var errorMessage = ""
-    
+
     var exportDocument: ExportDocument?
     var exportFilename: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         return "sparky-export-\(formatter.string(from: Date())).json"
     }
-    
+
     private var environment: AppEnvironment?
     private var exportService: DataExportService?
     private var importService: DataImportService?
-    
+
     init(environment: AppEnvironment?) {
         self.environment = environment
         if let env = environment {
@@ -183,7 +184,7 @@ final class DataManagementViewModel: ObservableObject {
             )
         }
     }
-    
+
     func updateEnvironment(_ environment: AppEnvironment) {
         self.environment = environment
         self.exportService = DataExportService(
@@ -199,23 +200,23 @@ final class DataManagementViewModel: ObservableObject {
             attachmentStore: environment.attachmentStore
         )
     }
-    
+
     func exportData() async {
         guard let exportService = exportService else { return }
-        isExporting = true
-        defer { isExporting = false }
-        
+        isExportingData = true
+        defer { isExportingData = false }
+
         do {
             let data = try await exportService.export(options: exportOptions)
             exportDocument = ExportDocument(data: data)
-            exportMessage = "Export completed successfully. Choose where to save the file."
-            showExportAlert = true
+            // exportMessage = "Export completed successfully. Choose where to save the file."
+            showFileExporter = true
         } catch {
             errorMessage = error.localizedDescription
             showErrorAlert = true
         }
     }
-    
+
     func handleExportResult(_ result: Result<URL, Error>) {
         switch result {
         case .success:
@@ -226,18 +227,18 @@ final class DataManagementViewModel: ObservableObject {
             showErrorAlert = true
         }
     }
-    
+
     func handleImportResult(_ result: Result<[URL], Error>) {
         Task {
             await performImport(result: result)
         }
     }
-    
+
     private func performImport(result: Result<[URL], Error>) async {
         guard let importService = importService else { return }
         isImporting = true
         defer { isImporting = false }
-        
+
         switch result {
         case .success(let urls):
             guard let url = urls.first else {
@@ -245,27 +246,34 @@ final class DataManagementViewModel: ObservableObject {
                 showErrorAlert = true
                 return
             }
-            
+
+            guard url.startAccessingSecurityScopedResource() else {
+                errorMessage = "Permission denied to access the selected file."
+                showErrorAlert = true
+                return
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
             do {
                 let importResult = try await importService.importFromFile(at: url)
-                
+
                 var message = "Import completed!\n\n"
                 message += "• Minds: \(importResult.importedMinds)\n"
                 message += "• Lobes: \(importResult.importedLobes)\n"
                 message += "• Memories: \(importResult.importedMemories)\n"
                 message += "• Attachments: \(importResult.importedAttachments)"
-                
+
                 if importResult.hasErrors {
                     message += "\n\nSome items failed to import. Check the logs for details."
                 }
-                
+
                 importMessage = message
                 showImportAlert = true
             } catch {
                 errorMessage = error.localizedDescription
                 showErrorAlert = true
             }
-            
+
         case .failure(let error):
             errorMessage = "Failed to read import file: \(error.localizedDescription)"
             showErrorAlert = true
@@ -275,20 +283,20 @@ final class DataManagementViewModel: ObservableObject {
 
 struct ExportDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.json] }
-    
+
     var data: Data
-    
+
     init(data: Data) {
         self.data = data
     }
-    
+
     init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else {
             throw CocoaError(.fileReadCorruptFile)
         }
         self.data = data
     }
-    
+
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: data)
     }
