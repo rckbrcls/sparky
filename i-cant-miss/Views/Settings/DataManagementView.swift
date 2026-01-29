@@ -88,6 +88,8 @@ struct DataManagementView: View {
                 Text("Without Attachments").tag(DataExportService.ExportOptions.withoutAttachments)
                 Text("Active Only").tag(DataExportService.ExportOptions.activeOnly)
                 Text("Active Only (No Attachments)").tag(DataExportService.ExportOptions.activeOnlyWithoutAttachments)
+                Text("Memories grouped by Lobe (No Attachments)").tag(DataExportService.ExportOptions.memoriesByLobe)
+                Text("Active Memories grouped by Lobe (No Attachments)").tag(DataExportService.ExportOptions.activeMemoriesByLobe)
             }
             .pickerStyle(.menu)
 
@@ -207,7 +209,15 @@ final class DataManagementViewModel: ObservableObject {
         defer { isExportingData = false }
 
         do {
-            let data = try await exportService.export(options: exportOptions)
+            let data: Data
+            switch exportOptions {
+            case .memoriesByLobe:
+                data = try await exportService.exportGroupedByLobe(activeOnly: false)
+            case .activeMemoriesByLobe:
+                data = try await exportService.exportGroupedByLobe(activeOnly: true)
+            default:
+                data = try await exportService.export(options: exportOptions)
+            }
             exportDocument = ExportDocument(data: data)
             // exportMessage = "Export completed successfully. Choose where to save the file."
             showFileExporter = true
