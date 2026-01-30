@@ -8,12 +8,12 @@
 import SwiftUI
 
 struct MemoryMultiSelectToolbarContent: ToolbarContent {
-    let availableLobes: [LobeModel]
+    let availableLobes: [Space]
     let isPerformingBulkAction: Bool
     let canPerformDeletion: Bool
     let isStatusEnabled: Bool
     let isLobeEnabled: Bool
-    let onSelectLobe: (LobeModel) -> Void
+    let onSelectLobe: (Space) -> Void
     let onSelectStatus: (MemoryStatus) -> Void
     let onDelete: () -> Void
     let onDone: () -> Void

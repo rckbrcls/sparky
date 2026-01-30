@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct LimboCardView: View {
-    let lobe: LobeModel
+    let lobe: Space
     let count: Int
     let completedCount: Int
     let activeCount: Int
@@ -15,7 +15,7 @@ struct LimboCardView: View {
     let mindService: MindService?
 
     init(
-        lobe: LobeModel,
+        lobe: Space,
         count: Int,
         completedCount: Int = 0,
         activeCount: Int = 0,

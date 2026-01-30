@@ -9,15 +9,15 @@ import SwiftUI
 
 struct CalendarPeriodSection: View {
     let period: CalendarTimePeriod
-    let memories: [MemoryModel]
+    let memories: [Memory]
     let date: Date
     let isExpanded: Bool
     let isMultiSelecting: Bool
-    let selectedMemoryIDs: Set<MemoryModel.ID>
+    let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
-    let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-    let onToggleSelection: (MemoryModel) -> Void
+    let onSelectMemory: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
+    let onToggleSelection: (Memory) -> Void
     let onToggleExpanded: () -> Void
 
     var body: some View {

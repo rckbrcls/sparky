@@ -1,12 +1,16 @@
 //
-//  MemoryModel.swift
+//  Memory.swift
 //  i-cant-miss
 //
 
 import Foundation
+import SwiftData
 
-struct MemoryModel: Identifiable, Hashable {
-    struct AttachmentKind: RawRepresentable, Hashable, Codable {
+@Model
+final class Memory: Identifiable {
+    // MARK: - Nested Types
+
+    struct AttachmentKind: RawRepresentable, Hashable, Codable, Sendable {
         let rawValue: String
 
         init(rawValue: String) {
@@ -19,7 +23,7 @@ struct MemoryModel: Identifiable, Hashable {
         static let file = AttachmentKind(rawValue: "file")
     }
 
-    struct Attachment: Identifiable, Hashable {
+    struct Attachment: Identifiable, Hashable, Sendable {
         let id: UUID
         var kind: AttachmentKind
         var data: Data
@@ -50,29 +54,80 @@ struct MemoryModel: Identifiable, Hashable {
         }
     }
 
-    let id: UUID
+    // MARK: - Persisted Properties
+
+    @Attribute(.unique) var id: UUID
     var title: String
     var body: String?
-    var createdAt: Date
-    var updatedAt: Date
-    var status: MemoryStatus
+    var statusRaw: String
     var isPinned: Bool
+    var priorityRaw: Int?
     var dueDate: Date?
-    var lobe: LobeModel?
-    var triggers: [MemoryTriggerModel]
-    var checkItems: [CheckItemModel]
-    var autoCompleteOnChecklistCompletion: Bool
-    // Fixed content attributes (replacing dynamic contents array)
-    var note: String?
-    var photoAttachmentIDs: [UUID]
-    var linkAttachmentIDs: [UUID]
-    var audioAttachmentIDs: [UUID]
-    var fileAttachmentIDs: [UUID]
-    var attachments: [Attachment]
-    /// Dates on which this memory was marked as completed (for recurring memories)
-    var completedDates: [Date]
-    /// Custom user-defined order for manual sorting
+    var createdAt: Date?
+    var updatedAt: Date?
     var userOrder: Int
+    var autoCompleteOnChecklistCompletion: Bool
+
+    /// JSON-encoded MemoryContentBundle
+    @Attribute(.externalStorage) var contentsData: Data?
+
+    /// JSON-encoded trigger array
+    @Attribute(.externalStorage) var triggersData: Data?
+
+    var space: Space?
+
+    // MARK: - Transient Properties (not persisted, populated by service)
+
+    @Transient var triggers: [MemoryTriggerModel] = []
+    @Transient var checkItems: [CheckItemModel] = []
+    @Transient var note: String?
+    @Transient var photoAttachmentIDs: [UUID] = []
+    @Transient var linkAttachmentIDs: [UUID] = []
+    @Transient var audioAttachmentIDs: [UUID] = []
+    @Transient var fileAttachmentIDs: [UUID] = []
+    @Transient var attachments: [Attachment] = []
+    @Transient var completedDates: [Date] = []
+
+    // MARK: - Initialization
+
+    init(
+        id: UUID = UUID(),
+        title: String = "Untitled",
+        body: String? = nil,
+        statusRaw: String = "active",
+        isPinned: Bool = false,
+        priorityRaw: Int? = nil,
+        dueDate: Date? = nil,
+        createdAt: Date? = nil,
+        updatedAt: Date? = nil,
+        userOrder: Int = 0,
+        autoCompleteOnChecklistCompletion: Bool = false,
+        contentsData: Data? = nil,
+        triggersData: Data? = nil,
+        space: Space? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.body = body
+        self.statusRaw = statusRaw
+        self.isPinned = isPinned
+        self.priorityRaw = priorityRaw
+        self.dueDate = dueDate
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.userOrder = userOrder
+        self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
+        self.contentsData = contentsData
+        self.triggersData = triggersData
+        self.space = space
+    }
+
+    // MARK: - Computed Properties
+
+    var status: MemoryStatus {
+        get { MemoryStatus(rawValue: statusRaw) ?? .active }
+        set { statusRaw = newValue.rawValue }
+    }
 
     var hasChecklist: Bool {
         !checkItems.isEmpty
@@ -94,38 +149,32 @@ struct MemoryModel: Identifiable, Hashable {
         status == .completed
     }
 
-    /// Returns true if this memory has a sequence trigger
     var hasSequenceTrigger: Bool {
         triggers.contains { $0.type == .sequential && $0.sequential != nil }
     }
 
-    /// Returns true if this memory is the current step in its sequence and the sequence has started
     var isCurrentInSequence: Bool {
         guard let seqTrigger = triggers.first(where: { $0.type == .sequential }),
               let seq = seqTrigger.sequential else {
             return false
         }
 
-        // Check if sequence has started
         if let startDate = seq.startDate {
             let calendar = Calendar.current
             if calendar.startOfDay(for: Date()) < calendar.startOfDay(for: startDate) {
-                return false // Sequence hasn't started yet
+                return false
             }
         }
 
-        // Check if this memory is the current step
         return seq.stepIndex == seq.currentStepIndex
     }
 
-    /// Returns true if this memory is part of a sequence but not the current step
     var isNextInSequence: Bool {
         guard let seqTrigger = triggers.first(where: { $0.type == .sequential }),
               let seq = seqTrigger.sequential else {
             return false
         }
 
-        // If sequence hasn't started, all memories are "next"
         if let startDate = seq.startDate {
             let calendar = Calendar.current
             if calendar.startOfDay(for: Date()) < calendar.startOfDay(for: startDate) {
@@ -136,20 +185,17 @@ struct MemoryModel: Identifiable, Hashable {
         return seq.stepIndex != seq.currentStepIndex
     }
 
-    /// Checks if this memory is completed for a specific date (for recurring memories)
-    /// - Parameter date: The date to check completion for
-    /// - Returns: True if the memory was marked as completed on that specific date
+    // MARK: - Methods
+
     func isCompleted(for date: Date) -> Bool {
-        // If the memory status is completed globally, it's completed for all dates
         if status == .completed {
             return true
         }
-        // Check if this specific date is in the completedDates array
         let calendar = Calendar.current
         return completedDates.contains { calendar.isDate($0, inSameDayAs: date) }
     }
 
-    nonisolated func nextFireDate(referenceDate: Date = Date()) -> Date? {
+    func nextFireDate(referenceDate: Date = Date()) -> Date? {
         let activeTriggers = triggers.filter { $0.isActive }
         guard !activeTriggers.isEmpty else { return nil }
 
@@ -163,9 +209,7 @@ struct MemoryModel: Identifiable, Hashable {
         return nextDates.min()
     }
 
-    /// Returns all occurrence dates for this memory within the specified date range
-    /// This is essential for calendar views that need to show all occurrences of recurring events
-    nonisolated func dates(from startDate: Date, to endDate: Date) -> [Date] {
+    func dates(from startDate: Date, to endDate: Date) -> [Date] {
         let activeTriggers = triggers.filter { $0.isActive }
         guard !activeTriggers.isEmpty else { return [] }
 
@@ -180,16 +224,19 @@ struct MemoryModel: Identifiable, Hashable {
         return Array(allDates).sorted()
     }
 
-    /// Returns all occurrence dates for this memory within the specified date range (Range<Date> version)
-    nonisolated func dates(within range: Range<Date>) -> [Date] {
+    func dates(within range: Range<Date>) -> [Date] {
         return dates(from: range.lowerBound, to: range.upperBound)
     }
 
     func shouldAutoCompleteChecklist(autoCompleteEnabled: Bool) -> Bool {
         autoCompleteOnChecklistCompletion || autoCompleteEnabled
     }
+}
 
-    static func == (lhs: MemoryModel, rhs: MemoryModel) -> Bool {
+// MARK: - Hashable
+
+extension Memory: Hashable {
+    static func == (lhs: Memory, rhs: Memory) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -198,14 +245,9 @@ struct MemoryModel: Identifiable, Hashable {
     }
 }
 
-// MARK: - Reminder Trigger Convenience Methods
+// MARK: - Static Factory Methods
 
-extension MemoryModel {
-    /// Creates a single-time alarm trigger that fires once after X minutes
-    /// - Parameters:
-    ///   - minutes: The number of minutes from now when the alarm should fire (default: 15)
-    ///   - fromDate: The reference date to calculate from (default: now)
-    /// - Returns: A configured MemoryTriggerModel for a single alarm notification
+extension Memory {
     static func createSingleAlarmTrigger(
         minutes: Int = 15,
         fromDate: Date = Date()
@@ -217,7 +259,7 @@ extension MemoryModel {
             type: .scheduled,
             fireDate: fireDate,
             startDate: nil,
-            recurrenceRule: nil, // No recurrence - single alarm only
+            recurrenceRule: nil,
             timeZoneIdentifier: TimeZone.current.identifier,
             weekdayMask: 0,
             isActive: true,

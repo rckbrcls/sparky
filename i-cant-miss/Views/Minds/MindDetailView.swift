@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct MindDetailView: View {
-    let mind: MindModel
+    let mind: Mind
 
     @EnvironmentObject private var environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
@@ -14,29 +14,29 @@ struct MindDetailView: View {
     @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
 
-    let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-    let onEditMind: ((MindModel) -> Void)?
-    let onAddLobe: ((MindModel) -> Void)?
+    let onSelectMemory: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
+    let onEditMind: ((Mind) -> Void)?
+    let onAddLobe: ((Mind) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
-    let onLobeContextChange: (LobeModel?) -> Void
-    let onMindContextChange: ((MindModel?) -> Void)?
+    let onLobeContextChange: (Space?) -> Void
+    let onMindContextChange: ((Mind?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
 
     @State private var isSearching = false
 
     init(
-        mind: MindModel,
+        mind: Mind,
         mindService: MindService,
         lobeService: LobeService,
         memoryService: MemoryService,
-        onSelectMemory: @escaping (MemoryModel) -> Void,
-        onEditMemory: ((MemoryModel) -> Void)? = nil,
-        onEditMind: ((MindModel) -> Void)?,
-        onAddLobe: ((MindModel) -> Void)?,
+        onSelectMemory: @escaping (Memory) -> Void,
+        onEditMemory: ((Memory) -> Void)? = nil,
+        onEditMind: ((Mind) -> Void)?,
+        onAddLobe: ((Mind) -> Void)?,
         onMultiSelectionChange: @escaping (Bool) -> Void,
-        onLobeContextChange: @escaping (LobeModel?) -> Void,
-        onMindContextChange: ((MindModel?) -> Void)?,
+        onLobeContextChange: @escaping (Space?) -> Void,
+        onMindContextChange: ((Mind?) -> Void)?,
         onSearchActiveChange: @escaping (Bool) -> Void
     ) {
         self.mind = mind
@@ -58,7 +58,7 @@ struct MindDetailView: View {
         GridItem(.flexible(), spacing: 12)
     ]
 
-    private var resolvedMind: MindModel {
+    private var resolvedMind: Mind {
         mindService.mind(id: mind.id) ?? mind
     }
 
@@ -66,10 +66,10 @@ struct MindDetailView: View {
         resolvedMind.isAllMinds
     }
 
-    private var lobesInMind: [LobeModel] {
-        let filteredLobes: [LobeModel]
+    private var lobesInMind: [Space] {
+        let filteredLobes: [Space]
         if isAllMinds {
-            let defaultLobes = [LobeModel.allLobes]
+            let defaultLobes = [Space.allSpaces]
             filteredLobes = lobeService.lobes
             return defaultLobes + filteredLobes
         } else {
@@ -77,7 +77,7 @@ struct MindDetailView: View {
                 guard let mindID = lobe.mind?.id else { return false }
                 return mindID == mind.id
             }
-            let allLobe = LobeModel.allLobe(for: resolvedMind)
+            let allLobe = Space.allLobe(for: resolvedMind)
             return [allLobe] + filteredLobes
         }
     }
@@ -86,7 +86,7 @@ struct MindDetailView: View {
         baseView
             .fullScreenCover(isPresented: $isSearching) {
                 MemorySearchSheet(
-                    lobe: LobeModel.allLobe(for: resolvedMind),
+                    lobe: Space.allLobe(for: resolvedMind),
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     lobeService: lobeService
@@ -179,7 +179,7 @@ struct MindDetailView: View {
                 }
             }
         }
-        .navigationDestination(for: LobeModel.self) { lobe in
+        .navigationDestination(for: Space.self) { lobe in
             LobeDetailView(
                 lobe: lobe,
                 lobeService: lobeService,
@@ -203,9 +203,9 @@ struct MindDetailView: View {
         .navigationBarBackButtonHidden(true)
     }
 
-    private func memoryCounts(for lobe: LobeModel) -> (completed: Int, total: Int) {
-        let memories: [MemoryModel]
-        if lobe.isAllLobes {
+    private func memoryCounts(for lobe: Space) -> (completed: Int, total: Int) {
+        let memories: [Memory]
+        if lobe.isAllSpaces {
             memories = memoryService.memories
         } else if lobe.isAllLobeForMind {
             guard let mindID = lobe.mind?.id else {
@@ -227,9 +227,9 @@ struct MindDetailView: View {
         return (completed, total)
     }
 
-    private func activeMemoryCount(for lobe: LobeModel) -> Int {
-        let memories: [MemoryModel]
-        if lobe.isAllLobes {
+    private func activeMemoryCount(for lobe: Space) -> Int {
+        let memories: [Memory]
+        if lobe.isAllSpaces {
             memories = memoryService.memories
         } else if lobe.isAllLobeForMind {
             guard let mindID = lobe.mind?.id else {

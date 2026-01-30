@@ -69,15 +69,15 @@ struct QuickMemorySheet: View {
     @ObservedObject private var lobeService: LobeService
 
     let environment: AppEnvironment
-    let lobe: LobeModel?
-    let onExpandToEditor: (LobeModel?, String) -> Void
-    let onQuickCreate: (LobeModel?, String, Int?) -> Void // Added Int? for reminder minutes
+    let lobe: Space?
+    let onExpandToEditor: (Space?, String) -> Void
+    let onQuickCreate: (Space?, String, Int?) -> Void // Added Int? for reminder minutes
 
     @State private var title: String = ""
     @State private var selectedLobeID: UUID?
     @State private var selectedReminderMinutes: Int? = nil // nil means no reminder selected
 
-    init(environment: AppEnvironment, lobe: LobeModel?, onExpandToEditor: @escaping (LobeModel?, String) -> Void, onQuickCreate: @escaping (LobeModel?, String, Int?) -> Void) {
+    init(environment: AppEnvironment, lobe: Space?, onExpandToEditor: @escaping (Space?, String) -> Void, onQuickCreate: @escaping (Space?, String, Int?) -> Void) {
         self.environment = environment
         self.lobeService = environment.lobeService
         self.lobe = lobe
@@ -85,11 +85,11 @@ struct QuickMemorySheet: View {
         self.onQuickCreate = onQuickCreate
     }
 
-    private var availableLobes: [LobeModel] {
+    private var availableLobes: [Space] {
         lobeService.lobes
     }
 
-    private var selectedLobe: LobeModel? {
+    private var selectedLobe: Space? {
         guard let id = selectedLobeID else { return nil }
         return availableLobes.first { $0.id == id }
     }
@@ -155,7 +155,7 @@ struct QuickMemorySheet: View {
         .presentationDetents([.height(110)])
         .presentationBackground(.clear)
         .onAppear {
-            if lobe?.isAllLobes == true {
+            if lobe?.isAllSpaces == true {
                 selectedLobeID = nil
             } else {
                 selectedLobeID = lobe?.id
@@ -231,7 +231,7 @@ struct QuickMemorySheet: View {
 #Preview {
     QuickMemorySheet(
         environment: {
-            let env = AppEnvironment(persistence: PersistenceController.preview)
+            let env = AppEnvironment(dataController: DataController.preview)
             env.bootstrap()
             return env
         }(),

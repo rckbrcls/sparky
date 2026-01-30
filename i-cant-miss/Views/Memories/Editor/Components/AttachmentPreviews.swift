@@ -124,7 +124,7 @@ struct LinkPreviewCard: View {
 // MARK: - File Preview
 
 struct FilePreviewCard: View {
-    let attachment: MemoryModel.Attachment
+    let attachment: Memory.Attachment
     @State private var thumbnail: UIImage?
     @State private var isLoading = true
 

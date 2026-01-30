@@ -44,8 +44,8 @@ struct ContentView: View {
     @State private var showingOnboarding = false
     @State private var isMultiSelectionActive = false
     @State private var isSearchActive = false
-    @State private var currentLobeContext: LobeModel?
-    @State private var currentMindContext: MindModel?
+    @State private var currentLobeContext: Space?
+    @State private var currentMindContext: Mind?
     @State private var quickMemoryRequest: QuickMemoryRequest?
     @State private var longPressTimer: Timer?
     @State private var hasTriggeredLongPress = false
@@ -177,7 +177,7 @@ struct ContentView: View {
                         // Create triggers array with single alarm if selected
                         var triggers: [MemoryTriggerModel] = []
                         if let minutes = reminderMinutes {
-                            let alarmTrigger = MemoryModel.createSingleAlarmTrigger(
+                            let alarmTrigger = Memory.createSingleAlarmTrigger(
                                 minutes: minutes,
                                 fromDate: Date()
                             )
@@ -283,7 +283,7 @@ struct ContentView: View {
         .frame(height: 55)
     }
 
-    private func prepareMemoryCreation(for lobe: LobeModel?) {
+    private func prepareMemoryCreation(for lobe: Space?) {
         quickMemoryRequest = QuickMemoryRequest(lobe: lobe)
     }
 
@@ -294,11 +294,11 @@ struct ContentView: View {
         )
     }
 
-    private func handleMemorySelection(_ memory: MemoryModel) {
+    private func handleMemorySelection(_ memory: Memory) {
         editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 
-    private func handleMemoryEdit(_ memory: MemoryModel) {
+    private func handleMemoryEdit(_ memory: Memory) {
         var route = MemoryEditorRoute(mode: .edit(memory: memory))
         route.startEditing = true
         editorRoute = route
@@ -308,11 +308,11 @@ struct ContentView: View {
         lobeComposerRequest = LobeComposerRequest(lobeToEdit: nil, mindID: nil)
     }
 
-    private func presentLobeEdit(for lobe: LobeModel) {
+    private func presentLobeEdit(for lobe: Space) {
         lobeComposerRequest = LobeComposerRequest(lobeToEdit: lobe, mindID: nil)
     }
 
-    private func presentLobeCreation(for mind: MindModel) {
+    private func presentLobeCreation(for mind: Mind) {
         lobeComposerRequest = LobeComposerRequest(lobeToEdit: nil, mindID: mind.id)
     }
 
@@ -320,7 +320,7 @@ struct ContentView: View {
         mindComposerRequest = MindComposerRequest(mindToEdit: nil)
     }
 
-    private func presentMindEdit(for mind: MindModel) {
+    private func presentMindEdit(for mind: Mind) {
         mindComposerRequest = MindComposerRequest(mindToEdit: mind)
     }
 
@@ -411,7 +411,7 @@ struct ContentView: View {
         }
     }
 
-    private func targetLobeForCreation() -> LobeModel? {
+    private func targetLobeForCreation() -> Space? {
         guard activeTab == .mind else { return nil }
         // Use currentLobeContext if available, otherwise try to extract from navigation path
         if let context = currentLobeContext {
@@ -423,7 +423,7 @@ struct ContentView: View {
         return extractLastLobeFromNavigationPath()
     }
 
-    private func extractLastLobeFromNavigationPath() -> LobeModel? {
+    private func extractLastLobeFromNavigationPath() -> Space? {
         // NavigationPath doesn't expose items directly, so we rely on currentLobeContext
         // which should be set by LobeDetailView.onAppear
         // If it's nil here, it means we're at the root, so return nil
@@ -433,8 +433,8 @@ struct ContentView: View {
 
 private struct MemoryEditorRoute: Identifiable {
     enum Mode {
-        case create(lobe: LobeModel?, template: MemoryEditorTemplate)
-        case edit(memory: MemoryModel)
+        case create(lobe: Space?, template: MemoryEditorTemplate)
+        case edit(memory: Memory)
     }
 
     let id = UUID()
@@ -445,18 +445,18 @@ private struct MemoryEditorRoute: Identifiable {
 
 private struct LobeComposerRequest: Identifiable {
     let id = UUID()
-    let lobeToEdit: LobeModel?
+    let lobeToEdit: Space?
     let mindID: UUID?
 }
 
 private struct MindComposerRequest: Identifiable {
     let id = UUID()
-    let mindToEdit: MindModel?
+    let mindToEdit: Mind?
 }
 
 private struct QuickMemoryRequest: Identifiable {
     let id = UUID()
-    let lobe: LobeModel?
+    let lobe: Space?
 }
 
 extension View{
@@ -470,7 +470,7 @@ extension View{
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return ContentView(environment: environment)
         .environmentObject(environment)

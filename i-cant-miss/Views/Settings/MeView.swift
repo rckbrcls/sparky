@@ -286,7 +286,7 @@ struct MeView: View {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return MeView(environment: environment, settingsNavigationPath: .constant(NavigationPath()))
         .environmentObject(environment)

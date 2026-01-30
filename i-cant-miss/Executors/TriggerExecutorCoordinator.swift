@@ -24,7 +24,7 @@ final class TriggerExecutorCoordinator {
     }
 
     /// Registra um trigger específico
-    func register(trigger: any TriggerProtocol, for memory: MemoryModel) async {
+    func register(trigger: any TriggerProtocol, for memory: Memory) async {
         switch trigger.type {
         case .scheduled:
             await scheduledExecutor.register(trigger: trigger, for: memory)
@@ -58,7 +58,7 @@ final class TriggerExecutorCoordinator {
     }
 
     /// Sincroniza todos os triggers de uma lista de memórias
-    func sync(memories: [MemoryModel]) async {
+    func sync(memories: [Memory]) async {
         await scheduledExecutor.sync(memories: memories)
         await locationExecutor.sync(memories: memories)
 
@@ -66,7 +66,7 @@ final class TriggerExecutorCoordinator {
     }
 
     /// Atualiza triggers de uma memória específica
-    func sync(memory: MemoryModel) async {
+    func sync(memory: Memory) async {
         await sync(memories: [memory])
     }
 }

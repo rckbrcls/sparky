@@ -48,7 +48,7 @@ final class MeViewModel: ObservableObject {
 
     // MARK: - Logic
 
-    private func calculateStats(memories: [MemoryModel]) {
+    private func calculateStats(memories: [Memory]) {
         calculateMemberSince(memories: memories)
 
         let allCompletionDates = extractCompletionDates(from: memories)
@@ -57,7 +57,7 @@ final class MeViewModel: ObservableObject {
         calculateCompletionRate(memories: memories)
     }
 
-    private func extractCompletionDates(from memories: [MemoryModel]) -> Set<Date> {
+    private func extractCompletionDates(from memories: [Memory]) -> Set<Date> {
         var dates = Set<Date>()
         let calendar = Calendar.current
 
@@ -77,7 +77,7 @@ final class MeViewModel: ObservableObject {
         return dates
     }
 
-    private func calculateMemberSince(memories: [MemoryModel]) {
+    private func calculateMemberSince(memories: [Memory]) {
         if let firstMemory = memories.min(by: { $0.createdAt < $1.createdAt }) {
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
@@ -146,7 +146,7 @@ final class MeViewModel: ObservableObject {
         heatmapData = map
     }
 
-    private func calculateCompletionRate(memories: [MemoryModel]) {
+    private func calculateCompletionRate(memories: [Memory]) {
         guard !memories.isEmpty else {
             completionRate = 0.0
             return

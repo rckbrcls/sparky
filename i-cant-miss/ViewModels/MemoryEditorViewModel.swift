@@ -26,24 +26,24 @@ final class MemoryEditorViewModel: ObservableObject {
     // Fixed content properties (replacing dynamic contentQueue)
     @Published var note: String = ""
     @Published var checkItems: [CheckItemDraft] = []
-    @Published var photoAttachments: [MemoryModel.Attachment] = []
-    @Published var linkAttachments: [MemoryModel.Attachment] = []
-    @Published var audioAttachments: [MemoryModel.Attachment] = []
-    @Published var fileAttachments: [MemoryModel.Attachment] = []
+    @Published var photoAttachments: [Memory.Attachment] = []
+    @Published var linkAttachments: [Memory.Attachment] = []
+    @Published var audioAttachments: [Memory.Attachment] = []
+    @Published var fileAttachments: [Memory.Attachment] = []
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
 
     let environment: AppEnvironment
     private let attachmentStore: MemoryAttachmentStore
-    private var existingMemory: MemoryModel?
+    private var existingMemory: Memory?
     private var persistedMemoryID: UUID?
     private let template: MemoryEditorTemplate
-    private let defaultLobe: LobeModel?
+    private let defaultLobe: Space?
 
     init(environment: AppEnvironment,
          attachmentStore: MemoryAttachmentStore,
-         memory: MemoryModel?,
-         defaultLobe: LobeModel?,
+         memory: Memory?,
+         defaultLobe: Space?,
          template: MemoryEditorTemplate,
          initialTitle: String = "") {
         self.environment = environment
@@ -57,7 +57,7 @@ final class MemoryEditorViewModel: ObservableObject {
         configureInitialState()
     }
 
-    var availableLobes: [LobeModel] {
+    var availableLobes: [Space] {
         environment.lobeService.lobes
     }
 
@@ -65,16 +65,16 @@ final class MemoryEditorViewModel: ObservableObject {
         persistedMemoryID ?? existingMemory?.id
     }
 
-    var selectedLobe: LobeModel? {
+    var selectedLobe: Space? {
         guard let id = selectedLobeID else { return nil }
         if let lobe = environment.lobeService.lobe(id: id) {
             return lobe
         }
-        if id == LobeModel.allLobesIdentifier {
-            return LobeModel.allLobes
+        if id == Space.allSpacesIdentifier {
+            return Space.allSpaces
         }
-        if id == LobeModel.inboxLobesIdentifier {
-            return LobeModel.inboxLobes
+        if id == Space.inboxIdentifier {
+            return Space.inbox
         }
         return nil
     }
@@ -98,7 +98,7 @@ final class MemoryEditorViewModel: ObservableObject {
         sequentialTrigger?.sequential != nil
     }
 
-    var currentMemory: MemoryModel? {
+    var currentMemory: Memory? {
         guard let memoryID = editingMemoryID else { return nil }
         return environment.memoryService.memory(id: memoryID)
     }
@@ -174,7 +174,7 @@ final class MemoryEditorViewModel: ObservableObject {
         return false
     }
 
-    private var allAttachments: [MemoryModel.Attachment] {
+    private var allAttachments: [Memory.Attachment] {
         photoAttachments + linkAttachments + audioAttachments + fileAttachments
     }
 
@@ -225,8 +225,8 @@ final class MemoryEditorViewModel: ObservableObject {
     // MARK: - Photo Attachment Methods
 
     @MainActor
-    func addPhotoAttachment(data: Data) -> MemoryModel.Attachment {
-        let attachment = MemoryModel.Attachment(
+    func addPhotoAttachment(data: Data) -> Memory.Attachment {
+        let attachment = Memory.Attachment(
             id: UUID(),
             kind: .photo,
             data: data,
@@ -244,11 +244,11 @@ final class MemoryEditorViewModel: ObservableObject {
     // MARK: - Link Attachment Methods
 
     @MainActor
-    func addLinkAttachment(url: URL) -> MemoryModel.Attachment? {
+    func addLinkAttachment(url: URL) -> Memory.Attachment? {
         let alreadyExists = linkAttachments.contains { $0.url?.absoluteString == url.absoluteString }
         guard !alreadyExists else { return nil }
 
-        let attachment = MemoryModel.Attachment(
+        let attachment = Memory.Attachment(
             id: UUID(),
             kind: .link,
             data: Data(),
@@ -267,8 +267,8 @@ final class MemoryEditorViewModel: ObservableObject {
     // MARK: - Audio Attachment Methods
 
     @MainActor
-    func addAudioAttachment(data: Data, sourceURL: URL?) -> MemoryModel.Attachment {
-        let attachment = MemoryModel.Attachment(
+    func addAudioAttachment(data: Data, sourceURL: URL?) -> Memory.Attachment {
+        let attachment = Memory.Attachment(
             id: UUID(),
             kind: .audio,
             data: data,
@@ -287,8 +287,8 @@ final class MemoryEditorViewModel: ObservableObject {
     // MARK: - File Attachment Methods
 
     @MainActor
-    func addFileAttachment(data: Data, filename: String?, sourceURL: URL?) -> MemoryModel.Attachment {
-        let attachment = MemoryModel.Attachment(
+    func addFileAttachment(data: Data, filename: String?, sourceURL: URL?) -> Memory.Attachment {
+        let attachment = Memory.Attachment(
             id: UUID(),
             kind: .file,
             data: data,
@@ -446,7 +446,7 @@ final class MemoryEditorViewModel: ObservableObject {
         defer { isSaving = false }
 
         do {
-            let savedMemory: MemoryModel
+            let savedMemory: Memory
             if editingMemoryID != nil {
                 savedMemory = try await environment.memoryService.updateMemory(from: draft)
             } else {
@@ -516,7 +516,7 @@ private extension MemoryEditorViewModel {
             // When creating a new memory, prefer the provided defaultLobe (if any)
             // so that creations from a specific lobe/sublobe are scoped correctly.
             // If it's the "All" lobe, default to no lobe (nil)
-            if defaultLobe?.isAllLobes == true {
+            if defaultLobe?.isAllSpaces == true {
                 selectedLobeID = nil
             } else {
                 selectedLobeID = defaultLobe?.id
@@ -525,7 +525,7 @@ private extension MemoryEditorViewModel {
         }
     }
 
-    func apply(memory: MemoryModel) {
+    func apply(memory: Memory) {
         persistedMemoryID = memory.id
         title = memory.title
         selectedLobeID = memory.lobe?.id

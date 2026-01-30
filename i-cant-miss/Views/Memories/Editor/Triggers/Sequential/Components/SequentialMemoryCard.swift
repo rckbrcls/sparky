@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SequentialMemoryCard: View {
-    let memory: MemoryModel
+    let memory: Memory
     let onDelete: () -> Void
 
     var body: some View {
@@ -58,7 +58,7 @@ struct SequentialMemoryCard: View {
 }
 
 #Preview {
-    let memory = MemoryModel(
+    let memory = Memory(
         id: UUID(),
         title: "Sample Memory",
         body: "This is a sample memory body.",

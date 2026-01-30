@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LobePicker: View {
     @Binding var selection: UUID?
-    let lobes: [LobeModel]
+    let lobes: [Space]
 
     private var selectedLobeName: String {
         guard let selection = selection else {

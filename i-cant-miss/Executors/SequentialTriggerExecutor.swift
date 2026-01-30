@@ -29,7 +29,7 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
         // Triggers sequenciais não precisam de desregistro ativo
     }
 
-    func sync(memories: [MemoryModel]) async {
+    func sync(memories: [Memory]) async {
         // Sync não é necessário para triggers sequenciais
         // Eles são processados quando memórias são completadas
     }
@@ -83,7 +83,7 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
     ///   - startDate: Data de início da sequência
     ///   - resetStatus: Se true, reseta o status para .active (usado quando a memória se torna a "current")
     ///   - memoryService: Serviço para persistir as alterações
-    private func updateCurrentStepIndex(memory: MemoryModel, newCurrentStepIndex: Int, startDate: Date?, resetStatus: Bool, in memoryService: MemoryService) async {
+    private func updateCurrentStepIndex(memory: Memory, newCurrentStepIndex: Int, startDate: Date?, resetStatus: Bool, in memoryService: MemoryService) async {
         var updatedTriggers = memory.triggers
 
         guard let index = updatedTriggers.firstIndex(where: { $0.type == .sequential }),

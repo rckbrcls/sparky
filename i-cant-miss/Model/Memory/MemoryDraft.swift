@@ -20,7 +20,7 @@ struct MemoryDraft: Identifiable, Hashable {
     var linkAttachmentIDs: [UUID]
     var audioAttachmentIDs: [UUID]
     var fileAttachmentIDs: [UUID]
-    var attachments: [MemoryModel.Attachment]
+    var attachments: [Memory.Attachment]
     var autoCompleteOnChecklistCompletion: Bool
     /// Dates on which this memory was marked as completed (for recurring memories)
     var completedDates: [Date]
@@ -38,7 +38,7 @@ struct MemoryDraft: Identifiable, Hashable {
          linkAttachmentIDs: [UUID] = [],
          audioAttachmentIDs: [UUID] = [],
          fileAttachmentIDs: [UUID] = [],
-         attachments: [MemoryModel.Attachment] = [],
+         attachments: [Memory.Attachment] = [],
          autoCompleteOnChecklistCompletion: Bool = false,
          completedDates: [Date] = []) {
         self.id = id

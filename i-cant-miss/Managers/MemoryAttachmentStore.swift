@@ -41,7 +41,7 @@ actor MemoryAttachmentStore {
         try? Self.ensureDirectoryExists(fileManager: fileManager, at: rootDirectory)
     }
 
-    func attachments(for memoryID: UUID) async -> [MemoryModel.Attachment] {
+    func attachments(for memoryID: UUID) async -> [Memory.Attachment] {
         let directory = directoryURL(for: memoryID)
         guard fileManager.fileExists(atPath: directory.path) else { return [] }
 
@@ -116,9 +116,9 @@ actor MemoryAttachmentStore {
 
         return await MainActor.run {
             sortedResources.map { resource in
-                MemoryModel.Attachment(
+                Memory.Attachment(
                     id: resource.id,
-                    kind: MemoryModel.AttachmentKind(rawValue: resource.kindRawValue),
+                    kind: Memory.AttachmentKind(rawValue: resource.kindRawValue),
                     data: resource.data,
                     createdAt: resource.createdAt,
                     url: resource.url,
@@ -129,7 +129,7 @@ actor MemoryAttachmentStore {
     }
 
     func replaceAttachments(for memoryID: UUID,
-                             with attachments: [MemoryModel.Attachment]) throws {
+                             with attachments: [Memory.Attachment]) throws {
         let directory = directoryURL(for: memoryID)
 
         if fileManager.fileExists(atPath: directory.path) {

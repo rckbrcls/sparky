@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct MemoryListItemButton: View {
-    let memory: MemoryModel
+    let memory: Memory
     let isMultiSelecting: Bool
     let isSelected: Bool
     let isDisabled: Bool
-    let onSelect: (MemoryModel) -> Void
-    let onToggleSelection: ((MemoryModel) -> Void)?
-    let onEditMemory: ((MemoryModel) -> Void)?
+    let onSelect: (Memory) -> Void
+    let onToggleSelection: ((Memory) -> Void)?
+    let onEditMemory: ((Memory) -> Void)?
     /// Optional date context for date-aware completion (used in CalendarDayView)
     var displayDate: Date?
 

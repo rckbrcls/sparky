@@ -55,7 +55,7 @@ final class ScheduledTriggerExecutor: TriggerExecutorProtocol {
         // O coordenador deve passar as informações necessárias
     }
 
-    func register(trigger: any TriggerProtocol, for memory: MemoryModel) async {
+    func register(trigger: any TriggerProtocol, for memory: Memory) async {
         await requestAuthorizationIfNeeded()
         guard let scheduled = trigger as? ScheduledTrigger else { return }
         guard scheduled.isActive, memory.status == .active else {
@@ -100,7 +100,7 @@ final class ScheduledTriggerExecutor: TriggerExecutorProtocol {
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
-    func sync(memories: [MemoryModel]) async {
+    func sync(memories: [Memory]) async {
         await requestAuthorizationIfNeeded()
         let identifiers = await pendingIdentifiers()
         center.removePendingNotificationRequests(withIdentifiers: identifiers)

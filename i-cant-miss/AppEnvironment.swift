@@ -11,7 +11,7 @@ import Combine
 
 @MainActor
 final class AppEnvironment: ObservableObject {
-    let persistence: PersistenceController
+    let dataController: DataController
     let mindService: MindService
     let lobeService: LobeService
     let memoryService: MemoryService
@@ -33,15 +33,15 @@ final class AppEnvironment: ObservableObject {
 
     private var cancellables: Set<AnyCancellable> = []
 
-    init(persistence: PersistenceController) {
-        self.persistence = persistence
+    init(dataController: DataController) {
+        self.dataController = dataController
         self.settings = SettingsStore()
         self.attachmentStore = MemoryAttachmentStore()
 
         // Initialize services - they will load data synchronously in their init
-        self.mindService = MindService(persistence: persistence)
-        self.lobeService = LobeService(persistence: persistence)
-        self.memoryService = MemoryService(persistence: persistence,
+        self.mindService = MindService(dataController: dataController)
+        self.lobeService = LobeService(dataController: dataController)
+        self.memoryService = MemoryService(dataController: dataController,
                                            lobeService: lobeService,
                                            attachmentStore: attachmentStore)
         self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings, memoryService: memoryService)

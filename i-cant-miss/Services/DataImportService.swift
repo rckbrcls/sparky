@@ -330,10 +330,10 @@ final class DataImportService {
             do {
                 let rawKind = exportedAttachment.kind
                 let allowedKinds: Set<String> = [
-                    MemoryModel.AttachmentKind.photo.rawValue,
-                    MemoryModel.AttachmentKind.link.rawValue,
-                    MemoryModel.AttachmentKind.audio.rawValue,
-                    MemoryModel.AttachmentKind.file.rawValue
+                    Memory.AttachmentKind.photo.rawValue,
+                    Memory.AttachmentKind.link.rawValue,
+                    Memory.AttachmentKind.audio.rawValue,
+                    Memory.AttachmentKind.file.rawValue
                 ]
                 
                 guard allowedKinds.contains(rawKind) else {
@@ -341,7 +341,7 @@ final class DataImportService {
                     continue
                 }
                 
-                let kind = MemoryModel.AttachmentKind(rawValue: rawKind)
+                let kind = Memory.AttachmentKind(rawValue: rawKind)
 
                 // Decode attachment data
                 var data: Data?
@@ -360,7 +360,7 @@ final class DataImportService {
                     continue
                 }
                 
-                let newAttachment = MemoryModel.Attachment(
+                let newAttachment = Memory.Attachment(
                     id: UUID(), // New ID
                     kind: kind,
                     data: attachmentData,

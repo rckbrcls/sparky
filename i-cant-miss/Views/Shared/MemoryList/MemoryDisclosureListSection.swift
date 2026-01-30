@@ -4,13 +4,13 @@ struct MemoryDisclosureListSection: View {
     let title: String
     let systemImage: String
     @Binding var isExpanded: Bool
-    let memories: [MemoryModel]
+    let memories: [Memory]
     let isMultiSelecting: Bool
-    let selectedMemoryIDs: Set<MemoryModel.ID>
+    let selectedMemoryIDs: Set<Memory.ID>
     let isDisabled: Bool
-    let onSelect: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-    let onToggleSelection: ((MemoryModel) -> Void)?
+    let onSelect: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
+    let onToggleSelection: ((Memory) -> Void)?
 
     @ViewBuilder
     var body: some View {

@@ -2,13 +2,13 @@ import SwiftUI
 import UIKit
 
 struct MemoryEditorPhotoCarouselView: View {
-    let attachments: [MemoryModel.Attachment]
+    let attachments: [Memory.Attachment]
     let onDismiss: () -> Void
     @State private var selectedIndex: Int
     @State private var scrollPosition: Int?
 
     init(
-        attachments: [MemoryModel.Attachment],
+        attachments: [Memory.Attachment],
         initialIndex: Int,
         onDismiss: @escaping () -> Void
     ) {
@@ -105,7 +105,7 @@ struct MemoryEditorPhotoCarouselView: View {
         }
     }
 
-    private func carouselItem(for attachment: MemoryModel.Attachment) -> some View {
+    private func carouselItem(for attachment: Memory.Attachment) -> some View {
         ZStack {
             Color.black
                 .ignoresSafeArea()

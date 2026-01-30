@@ -9,8 +9,8 @@ import SwiftUI
 
 struct MemoryTimelineView: View {
     @ObservedObject var memoryService: MemoryService
-    let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
+    let onSelectMemory: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
     @Binding var navigationPath: NavigationPath
     var embedsInNavigationStack: Bool = true
@@ -21,7 +21,7 @@ struct MemoryTimelineView: View {
     @State private var selectedYear: Int
     @State private var selectedMonth: Date
     @State private var selectedDate: Date
-    @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
+    @State private var selectedMemoryIDs: Set<Memory.ID> = []
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
@@ -29,8 +29,8 @@ struct MemoryTimelineView: View {
 
     init(
         memoryService: MemoryService,
-        onSelectMemory: @escaping (MemoryModel) -> Void,
-        onEditMemory: ((MemoryModel) -> Void)? = nil,
+        onSelectMemory: @escaping (Memory) -> Void,
+        onEditMemory: ((Memory) -> Void)? = nil,
         onMultiSelectionChange: @escaping (Bool) -> Void,
         navigationPath: Binding<NavigationPath>,
         embedsInNavigationStack: Bool = true
@@ -52,13 +52,13 @@ struct MemoryTimelineView: View {
         self._viewMode = State(initialValue: .day(now))
     }
 
-    private var bulkActionLobes: [LobeModel] {
+    private var bulkActionLobes: [Space] {
         environment.lobeService.lobes.filter { 
-            $0.id != LobeModel.allLobesIdentifier && $0.id != LobeModel.inboxLobesIdentifier && $0.id != LobeModel.limboLobesIdentifier
+            $0.id != Space.allSpacesIdentifier && $0.id != Space.inboxIdentifier && $0.id != Space.limboIdentifier
         }
     }
 
-    private var selectedMemories: [MemoryModel] {
+    private var selectedMemories: [Memory] {
         selectedMemoryIDs.compactMap { memoryService.memory(id: $0) }
     }
 
@@ -263,7 +263,7 @@ struct MemoryTimelineView: View {
         }
     }
 
-    private func toggleMemorySelection(_ memory: MemoryModel) {
+    private func toggleMemorySelection(_ memory: Memory) {
         let id = memory.id
         if selectedMemoryIDs.contains(id) {
             selectedMemoryIDs.remove(id)
@@ -287,7 +287,7 @@ struct MemoryTimelineView: View {
         showingDeleteConfirmation = false
     }
 
-    private func performMove(to lobe: LobeModel) {
+    private func performMove(to lobe: Space) {
         performBulkAction { processor, ids in
             await processor.moveMemories(ids, to: lobe)
         }
@@ -300,7 +300,7 @@ struct MemoryTimelineView: View {
     }
 
     private func performBulkAction(
-        _ action: @escaping (MemoryBulkActionProcessor, Set<MemoryModel.ID>) async -> MemoryBulkActionProcessor.MemoryBulkActionResult
+        _ action: @escaping (MemoryBulkActionProcessor, Set<Memory.ID>) async -> MemoryBulkActionProcessor.MemoryBulkActionResult
     ) {
         let ids = selectedMemoryIDs
         guard !ids.isEmpty, !isPerformingBulkAction else { return }
@@ -353,7 +353,7 @@ struct MemoryTimelineView: View {
         }
     }
 
-    private func deleteMemories(withIDs ids: Set<MemoryModel.ID>) async {
+    private func deleteMemories(withIDs ids: Set<Memory.ID>) async {
         for id in ids {
             do {
                 try await environment.memoryService.deleteMemory(id: id)
@@ -365,7 +365,7 @@ struct MemoryTimelineView: View {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return MemoryTimelineView(
         memoryService: environment.memoryService,

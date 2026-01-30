@@ -110,7 +110,7 @@ struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return ContentView(environment: environment)
 }

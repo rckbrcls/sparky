@@ -16,8 +16,8 @@ import Combine
 
 struct MemoryEditorView: View {
     enum Mode {
-        case create(lobe: LobeModel?, template: MemoryEditorTemplate)
-        case edit(memory: MemoryModel)
+        case create(lobe: Space?, template: MemoryEditorTemplate)
+        case edit(memory: Memory)
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -266,7 +266,7 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var memoryLookup: [UUID: MemoryModel] {
+    private var memoryLookup: [UUID: Memory] {
         Dictionary(uniqueKeysWithValues: viewModel.environment.memoryService.memories.map { ($0.id, $0) })
     }
 
@@ -485,7 +485,7 @@ struct MemoryEditorView: View {
         isPresentingFileImporter = true
     }
 
-    private func presentPhotoViewerForFixedPhotos(at index: Int, clickedAttachment: MemoryModel.Attachment) {
+    private func presentPhotoViewerForFixedPhotos(at index: Int, clickedAttachment: Memory.Attachment) {
         selectedAttachmentIndex = index
         selectedPhotoContentID = UUID()
         isPhotoViewerPresented = true
@@ -567,7 +567,7 @@ struct MemoryEditorView: View {
         }
     }
 
-    private func presentFilePreview(for attachment: MemoryModel.Attachment) {
+    private func presentFilePreview(for attachment: Memory.Attachment) {
         guard !attachment.data.isEmpty else { return }
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(attachment.id.uuidString)_preview_\(attachment.filename ?? "file")")
@@ -650,7 +650,7 @@ struct MemoryEditorView: View {
         Color(.systemBackground)
     }
 
-    private func handleAttachmentTap(_ attachment: MemoryModel.Attachment) {
+    private func handleAttachmentTap(_ attachment: Memory.Attachment) {
         switch attachment.kind {
         case .photo:
             if let index = viewModel.photoAttachments.firstIndex(where: { $0.id == attachment.id }) {
@@ -691,7 +691,7 @@ private struct EditingSwipeActionModifier: ViewModifier {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return MemoryEditorView(environment: environment, mode: .create(lobe: nil, template: .blank))
 }

@@ -19,5 +19,5 @@ protocol TriggerExecutorProtocol {
     func unregisterAll(for memoryID: UUID) async
 
     /// Atualiza todos os triggers de uma lista de memórias
-    func sync(memories: [MemoryModel]) async
+    func sync(memories: [Memory]) async
 }

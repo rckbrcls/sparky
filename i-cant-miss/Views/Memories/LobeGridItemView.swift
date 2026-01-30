@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LobeGridItemView: View {
-    let lobe: LobeModel
+    let lobe: Space
     let count: Int
     let completedCount: Int
     let activeCount: Int
@@ -20,14 +20,14 @@ struct LobeGridItemView: View {
     @State private var showingDeleteConfirmation = false
 
     init(
-        lobe: LobeModel,
+        lobe: Space,
         count: Int,
         completedCount: Int = 0,
         activeCount: Int = 0,
         lobeService: LobeService? = nil,
         memoryService: MemoryService? = nil,
         mindService: MindService? = nil,
-        onEdit: ((LobeModel) -> Void)? = nil,
+        onEdit: ((Space) -> Void)? = nil,
         showOnlyRemaining: Bool = false
     ) {
         self.lobe = lobe
@@ -153,10 +153,10 @@ struct LobeGridItemView: View {
     }
 
     /// Optional closure called when user taps edit swipe action
-    var onEdit: ((LobeModel) -> Void)?
+    var onEdit: ((Space) -> Void)?
 
     private var lobeColor: Color {
-        if lobe.isAllLobes {
+        if lobe.isAllSpaces {
             return .accentColor
         }
         if let hex = lobe.colorHex, let color = Color(hex: hex) {
@@ -183,14 +183,14 @@ struct LobeGridItemView: View {
     }
 
     private var canEditLobe: Bool {
-        guard !lobe.isAllLobes else { return false }
+        guard !lobe.isAllSpaces else { return false }
         guard !lobe.isAllLobeForMind else { return false }
         return true
     }
 
     private var canDeleteLobe: Bool {
         guard lobeService != nil else { return false }
-        guard !lobe.isAllLobes else { return false }
+        guard !lobe.isAllSpaces else { return false }
         guard !lobe.isAllLobeForMind else { return false }
         return !lobe.isDefault
     }
@@ -214,7 +214,7 @@ struct LobeGridItemView: View {
 
     private func deleteLobe(deleteMemories: Bool) {
         guard let service = lobeService else { return }
-        guard !lobe.isAllLobes,
+        guard !lobe.isAllSpaces,
               !lobe.isAllLobeForMind,
               !lobe.isDefault else { return }
 
@@ -227,9 +227,9 @@ struct LobeGridItemView: View {
         }
     }
 
-    private func moveToMind(_ mind: MindModel?) {
+    private func moveToMind(_ mind: Mind?) {
         guard let service = lobeService else { return }
-        guard !lobe.isAllLobes else { return }
+        guard !lobe.isAllSpaces else { return }
         guard !lobe.isAllLobeForMind else { return }
 
         Task { @MainActor in
@@ -248,12 +248,12 @@ struct LobeGridItemView: View {
 #Preview {
     HStack {
         LobeGridItemView(
-            lobe: LobeModel(id: UUID(), name: "Inbox"),
+            lobe: Space(id: UUID(), name: "Inbox"),
             count: 12,
             activeCount: 8
         )
         LobeGridItemView(
-            lobe: LobeModel(id: UUID(), name: "Work"),
+            lobe: Space(id: UUID(), name: "Work"),
             count: 5,
             completedCount: 2,
             activeCount: 3

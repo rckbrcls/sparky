@@ -15,9 +15,9 @@ struct MemoryEditorAttachmentsCard: View {
     var onAddFile: () -> Void
 
     // Callbacks for interactions
-    var onAttachmentTap: (MemoryModel.Attachment) -> Void
+    var onAttachmentTap: (Memory.Attachment) -> Void
 
-    private var allAttachments: [MemoryModel.Attachment] {
+    private var allAttachments: [Memory.Attachment] {
         viewModel.photoAttachments + viewModel.linkAttachments + viewModel.audioAttachments + viewModel.fileAttachments
     }
 
@@ -89,7 +89,7 @@ struct MemoryEditorAttachmentsCard: View {
     }
 
     @ViewBuilder
-    private func attachmentCell(for attachment: MemoryModel.Attachment) -> some View {
+    private func attachmentCell(for attachment: Memory.Attachment) -> some View {
         squareCell { size in
             ZStack {
                 // Background
@@ -183,7 +183,7 @@ struct MemoryEditorAttachmentsCard: View {
         .aspectRatio(1, contentMode: .fit)
     }
 
-    private func removeAttachment(_ attachment: MemoryModel.Attachment) {
+    private func removeAttachment(_ attachment: Memory.Attachment) {
         feedbackGenerator.impactOccurred()
         switch attachment.kind {
         case .photo:

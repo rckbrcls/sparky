@@ -10,7 +10,7 @@ import SwiftUI
 struct SequentialMemoryPickerSheet: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     let excludedMemoryIDs: Set<UUID>
-    let onSelect: (MemoryModel) -> Void
+    let onSelect: (Memory) -> Void
 
     @State private var searchText = ""
     @Environment(\.dismiss) private var dismiss
@@ -111,7 +111,7 @@ struct SequentialMemoryPickerSheet: View {
         }
     }
 
-    private var displayLobes: [LobeModel] {
+    private var displayLobes: [Space] {
         let sortedLobes = lobeService.lobes
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
@@ -119,11 +119,11 @@ struct SequentialMemoryPickerSheet: View {
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [LobeModel.allLobes] + sortedLobes
+        return [Space.allSpaces] + sortedLobes
     }
 
-    private func memoryCount(for lobe: LobeModel) -> Int {
-        if lobe.isAllLobes {
+    private func memoryCount(for lobe: Space) -> Int {
+        if lobe.isAllSpaces {
             return memoryService.memories.filter { !isExcluded($0) }.count
         }
         return memoryService.memories.filter { memory in
@@ -132,7 +132,7 @@ struct SequentialMemoryPickerSheet: View {
         }.count
     }
 
-    private func filteredMemories(query: String) -> [MemoryModel] {
+    private func filteredMemories(query: String) -> [Memory] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 
@@ -143,7 +143,7 @@ struct SequentialMemoryPickerSheet: View {
         }
     }
 
-    private func isExcluded(_ memory: MemoryModel) -> Bool {
+    private func isExcluded(_ memory: Memory) -> Bool {
         if let editingID = viewModel.editingMemoryID, memory.id == editingID {
             return true
         }
@@ -152,18 +152,18 @@ struct SequentialMemoryPickerSheet: View {
 }
 
 private struct SequentialLobeDetailView: View {
-    let lobe: LobeModel
+    let lobe: Space
     @ObservedObject var viewModel: MemoryEditorViewModel
     let excludedMemoryIDs: Set<UUID>
-    let onSelect: (MemoryModel) -> Void
+    let onSelect: (Memory) -> Void
 
     @State private var searchText = ""
 
-    private var memories: [MemoryModel] {
+    private var memories: [Memory] {
         let all = viewModel.environment.memoryService.memories
-        let filtered: [MemoryModel]
+        let filtered: [Memory]
 
-        if lobe.isAllLobes {
+        if lobe.isAllSpaces {
             filtered = all
         } else {
             filtered = all.filter { $0.lobe?.id == lobe.id }
@@ -207,7 +207,7 @@ private struct SequentialLobeDetailView: View {
 }
 
 private struct SequentialMemoryPickerRow: View {
-    let memory: MemoryModel
+    let memory: Memory
 
     var body: some View {
         HStack(spacing: 12) {

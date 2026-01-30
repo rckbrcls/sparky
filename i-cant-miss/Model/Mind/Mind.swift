@@ -1,24 +1,31 @@
 //
-//  MindModel.swift
+//  Mind.swift
 //  i-cant-miss
 //
 
 import Foundation
+import SwiftData
 
-struct MindModel: Identifiable, Hashable {
-    let id: UUID
+@Model
+final class Mind: Identifiable {
+    @Attribute(.unique) var id: UUID
     var name: String
     var colorHex: String?
     var iconName: String?
     var sortOrder: Int
     var isDefault: Bool
 
-    init(id: UUID,
-         name: String,
-         colorHex: String? = nil,
-         iconName: String? = nil,
-         sortOrder: Int = 0,
-         isDefault: Bool = false) {
+    @Relationship(deleteRule: .nullify, inverse: \Space.mind)
+    var spaces: [Space]?
+
+    init(
+        id: UUID = UUID(),
+        name: String = "",
+        colorHex: String? = nil,
+        iconName: String? = nil,
+        sortOrder: Int = 0,
+        isDefault: Bool = false
+    ) {
         self.id = id
         self.name = name
         self.colorHex = colorHex
@@ -30,12 +37,12 @@ struct MindModel: Identifiable, Hashable {
 
 // MARK: - Static Members
 
-extension MindModel {
+extension Mind {
     static let allMindsIdentifier = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
     static let inboxMindsIdentifier = UUID(uuidString: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")!
 
-    static var allMinds: MindModel {
-        MindModel(
+    static var allMinds: Mind {
+        Mind(
             id: allMindsIdentifier,
             name: "All",
             colorHex: nil,
@@ -45,8 +52,8 @@ extension MindModel {
         )
     }
 
-    static var inboxMinds: MindModel {
-        MindModel(
+    static var inboxMinds: Mind {
+        Mind(
             id: inboxMindsIdentifier,
             name: "Inbox",
             colorHex: nil,
@@ -57,10 +64,22 @@ extension MindModel {
     }
 
     var isAllMinds: Bool {
-        id == MindModel.allMindsIdentifier
+        id == Mind.allMindsIdentifier
     }
 
     var isInboxMinds: Bool {
-        id == MindModel.inboxMindsIdentifier
+        id == Mind.inboxMindsIdentifier
+    }
+}
+
+// MARK: - Hashable
+
+extension Mind: Hashable {
+    static func == (lhs: Mind, rhs: Mind) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }

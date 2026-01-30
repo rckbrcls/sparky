@@ -344,7 +344,7 @@ struct ExportedAttachment: Codable, Identifiable {
 
 // MARK: - Conversion Extensions
 
-extension MemoryModel {
+extension Memory {
     func toExported() -> ExportedMemory {
         ExportedMemory(
             id: id,
@@ -438,7 +438,7 @@ extension CheckItemModel {
     }
 }
 
-extension MemoryModel.Attachment {
+extension Memory.Attachment {
     func toExported(includeData: Bool = true) -> ExportedAttachment {
         ExportedAttachment(
             id: id,
@@ -451,7 +451,7 @@ extension MemoryModel.Attachment {
     }
 }
 
-extension MindModel {
+extension Mind {
     func toExported(lobes: [ExportedLobe] = []) -> ExportedMind {
         ExportedMind(
             id: id,
@@ -465,7 +465,7 @@ extension MindModel {
     }
 }
 
-extension LobeModel {
+extension Space {
     func toExported() -> ExportedLobe {
         ExportedLobe(
             id: id,

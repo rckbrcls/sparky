@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CalendarColorHelper {
-    static func color(for memory: MemoryModel) -> Color {
+    static func color(for memory: Memory) -> Color {
         // Check lobe color first
         if let lobe = memory.lobe,
            let colorHex = lobe.colorHex,
@@ -20,7 +20,7 @@ struct CalendarColorHelper {
         return .accent
     }
 
-    static func indicatorColor(for memories: [MemoryModel]) -> Color {
+    static func indicatorColor(for memories: [Memory]) -> Color {
         guard !memories.isEmpty else { return .clear }
 
         // If all have the same space color, use that color

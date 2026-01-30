@@ -9,25 +9,25 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct LobeDetailView: View {
-    let lobe: LobeModel
+    let lobe: Space
 
     @EnvironmentObject private var environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
 
-    let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-    let onEditLobe: ((LobeModel) -> Void)?
+    let onSelectMemory: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
+    let onEditLobe: ((Space) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
-    let onLobeContextChange: (LobeModel?) -> Void
+    let onLobeContextChange: (Space?) -> Void
     let onSearchActiveChange: (Bool) -> Void
 
     @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
     @State private var selectedSortStrategy: MemoryService.SortStrategy = .updatedAtDescending
 
     @State private var isMultiSelecting = false
-    @State private var selectedMemoryIDs: Set<MemoryModel.ID> = []
+    @State private var selectedMemoryIDs: Set<Memory.ID> = []
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
@@ -48,31 +48,31 @@ struct LobeDetailView: View {
         activeFilterCount > 0
     }
 
-    private var resolvedLobe: LobeModel {
+    private var resolvedLobe: Space {
         lobeService.lobe(id: lobe.id) ?? lobe
     }
 
     private var isAllLobe: Bool {
-        resolvedLobe.isAllLobes
+        resolvedLobe.isAllSpaces
     }
 
     private var isInboxLobe: Bool {
-        resolvedLobe.isInboxLobes
+        resolvedLobe.isInbox
     }
 
     private var isLimboLobe: Bool {
-        resolvedLobe.isLimboLobes
+        resolvedLobe.isLimbo
     }
 
     private var isAllLobeForMind: Bool {
         resolvedLobe.isAllLobeForMind
     }
 
-    private var nonPinnedMemories: [MemoryModel] {
+    private var nonPinnedMemories: [Memory] {
         filteredMemories.filter { !$0.isPinned && !$0.isCompleted }
     }
 
-    private var pinnedMemories: [MemoryModel] {
+    private var pinnedMemories: [Memory] {
         let referenceDate = Date()
         return filteredMemories
             .filter { $0.isPinned && !$0.isCompleted }
@@ -81,7 +81,7 @@ struct LobeDetailView: View {
             }
     }
 
-    private var completedMemories: [MemoryModel] {
+    private var completedMemories: [Memory] {
         filteredMemories.filter { $0.isCompleted }
     }
 
@@ -105,15 +105,15 @@ struct LobeDetailView: View {
         return resolvedLobe.name
     }
 
-    private var bulkActionLobes: [LobeModel] {
+    private var bulkActionLobes: [Space] {
         environment.lobeService.lobes.filter {
-            $0.id != LobeModel.allLobesIdentifier &&
-            $0.id != LobeModel.inboxLobesIdentifier &&
-            $0.id != LobeModel.limboLobesIdentifier
+            $0.id != Space.allSpacesIdentifier &&
+            $0.id != Space.inboxIdentifier &&
+            $0.id != Space.limboIdentifier
         }
     }
 
-    private var selectedMemories: [MemoryModel] {
+    private var selectedMemories: [Memory] {
         selectedMemoryIDs.compactMap { memoryService.memory(id: $0) }
     }
 
@@ -457,8 +457,8 @@ struct LobeDetailView: View {
 
     }
 
-    private var filteredMemories: [MemoryModel] {
-        let base: [MemoryModel]
+    private var filteredMemories: [Memory] {
+        let base: [Memory]
         if isAllLobe {
             base = memoryService.memories(
                 in: nil,
@@ -503,7 +503,7 @@ struct LobeDetailView: View {
         isSearching.toggle()
     }
 
-    private func matchesSelectedTrigger(_ memory: MemoryModel) -> Bool {
+    private func matchesSelectedTrigger(_ memory: Memory) -> Bool {
         // Check trigger types
         if selectedTriggerTypes.isEmpty {
             return true
@@ -513,11 +513,11 @@ struct LobeDetailView: View {
         }
     }
 
-    private func isMemorySelected(_ memory: MemoryModel) -> Bool {
+    private func isMemorySelected(_ memory: Memory) -> Bool {
         selectedMemoryIDs.contains(memory.id)
     }
 
-    private func toggleMemorySelection(_ memory: MemoryModel) {
+    private func toggleMemorySelection(_ memory: Memory) {
         let id = memory.id
         if selectedMemoryIDs.contains(id) {
             selectedMemoryIDs.remove(id)
@@ -541,7 +541,7 @@ struct LobeDetailView: View {
         showingDeleteConfirmation = false
     }
 
-    private func performMove(to lobe: LobeModel) {
+    private func performMove(to lobe: Space) {
         performBulkAction { processor, ids in
             await processor.moveMemories(ids, to: lobe)
         }
@@ -554,7 +554,7 @@ struct LobeDetailView: View {
     }
 
     private func performBulkAction(
-        _ action: @escaping (MemoryBulkActionProcessor, Set<MemoryModel.ID>) async -> MemoryBulkActionProcessor.MemoryBulkActionResult
+        _ action: @escaping (MemoryBulkActionProcessor, Set<Memory.ID>) async -> MemoryBulkActionProcessor.MemoryBulkActionResult
     ) {
         let ids = selectedMemoryIDs
         guard !ids.isEmpty, !isPerformingBulkAction else { return }
@@ -607,7 +607,7 @@ struct LobeDetailView: View {
         }
     }
 
-    private func deleteMemories(withIDs ids: Set<MemoryModel.ID>) async {
+    private func deleteMemories(withIDs ids: Set<Memory.ID>) async {
         for id in ids {
             do {
                 try await environment.memoryService.deleteMemory(id: id)
@@ -617,7 +617,7 @@ struct LobeDetailView: View {
         }
     }
 
-    private func sortPinned(_ lhs: MemoryModel, _ rhs: MemoryModel, referenceDate: Date = Date()) -> Bool {
+    private func sortPinned(_ lhs: Memory, _ rhs: Memory, referenceDate: Date = Date()) -> Bool {
         let lhsFire = lhs.nextFireDate(referenceDate: referenceDate)
         let rhsFire = rhs.nextFireDate(referenceDate: referenceDate)
 
@@ -650,7 +650,7 @@ struct LobeDetailView: View {
         return lhs.updatedAt > rhs.updatedAt
     }
 
-    private func handleDrop(providers: [NSItemProvider], targetMemoryID: UUID, memories: [MemoryModel]) {
+    private func handleDrop(providers: [NSItemProvider], targetMemoryID: UUID, memories: [Memory]) {
         guard selectedSortStrategy == .manual else {
             draggedMemoryID = nil
             return
@@ -694,7 +694,7 @@ struct LobeDetailView: View {
         }
     }
 
-    private func processDrop(draggedID: UUID, droppedOnID: UUID, in memories: [MemoryModel]) {
+    private func processDrop(draggedID: UUID, droppedOnID: UUID, in memories: [Memory]) {
         guard selectedSortStrategy == .manual,
               let draggedIndex = memories.firstIndex(where: { $0.id == draggedID }),
               let droppedIndex = memories.firstIndex(where: { $0.id == droppedOnID }),
@@ -761,9 +761,9 @@ private struct LobeDetailContextModifiers: ViewModifier {
     @ObservedObject var lobeService: LobeService
     let onMultiSelectionChange: (Bool) -> Void
     let onNotifyContext: () -> Void
-    let resolvedLobeProvider: () -> LobeModel
+    let resolvedLobeProvider: () -> Space
 
-    private var resolvedLobe: LobeModel {
+    private var resolvedLobe: Space {
         resolvedLobeProvider()
     }
 

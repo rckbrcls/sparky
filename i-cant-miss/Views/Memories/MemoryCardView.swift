@@ -52,7 +52,7 @@ struct MemoryCardView: View {
         self.onEdit = onEdit
     }
 
-    private var memory: MemoryModel? {
+    private var memory: Memory? {
         memoryService.memory(id: memoryID)
     }
 
@@ -173,7 +173,7 @@ struct MemoryCardView: View {
     }
 
     @ViewBuilder
-    private func memoryContent(memory: MemoryModel) -> some View {
+    private func memoryContent(memory: Memory) -> some View {
         VStack(spacing: 0) {
             // DateTime trigger (if has scheduled trigger)
             if let scheduledTrigger = scheduledTrigger {
@@ -348,7 +348,7 @@ struct MemoryCardView: View {
                         }
 
                         ForEach(environment.lobeService.lobes.filter { 
-                            $0.id != LobeModel.allLobesIdentifier && $0.id != LobeModel.inboxLobesIdentifier 
+                            $0.id != Space.allSpacesIdentifier && $0.id != Space.inboxIdentifier 
                         }, id: \.id) { lobe in
                             Button {
                                 onMoveToLobe(lobe.id)
@@ -388,7 +388,7 @@ struct MemoryCardView: View {
 
 }
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     let sampleMemoryID = UUID()
     return MemoryCardView(memoryID: sampleMemoryID, memoryService: environment.memoryService)

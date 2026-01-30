@@ -5,13 +5,13 @@ import Combine
 struct MemoriesMapView: View {
     struct MemoryAnnotation: Identifiable {
         let id: UUID
-        let memory: MemoryModel
+        let memory: Memory
         let coordinate: CLLocationCoordinate2D
         let radius: Double
         let locationName: String?
         let event: LocationEvent
 
-        init(memory: MemoryModel, trigger: MemoryTriggerModel, location: MemoryTriggerModel.TriggerLocation) {
+        init(memory: Memory, trigger: MemoryTriggerModel, location: MemoryTriggerModel.TriggerLocation) {
             self.id = trigger.id
             self.memory = memory
             self.coordinate = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
@@ -21,8 +21,8 @@ struct MemoriesMapView: View {
         }
     }
 
-    let memories: [MemoryModel]
-    let onSelectMemory: (MemoryModel) -> Void
+    let memories: [Memory]
+    let onSelectMemory: (Memory) -> Void
 
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var hasCenteredOnAnnotations = false

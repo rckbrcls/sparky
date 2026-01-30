@@ -18,7 +18,7 @@ final class CalendarDataManager: ObservableObject {
     private let calendar = Calendar.current
 
     /// Cache of memories grouped by day (start of day as key)
-    private var memoriesByDay: [Date: [MemoryModel]] = [:]
+    private var memoriesByDay: [Date: [Memory]] = [:]
 
     /// Cache of months that have memories
     private var monthsWithMemories: Set<Date> = []
@@ -45,13 +45,13 @@ final class CalendarDataManager: ObservableObject {
     // MARK: - Public Methods - Data Access
 
     /// Get memories for a specific date
-    func memoriesForDate(_ date: Date) -> [MemoryModel] {
+    func memoriesForDate(_ date: Date) -> [Memory] {
         let dayKey = calendar.startOfDay(for: date)
         return memoriesByDay[dayKey] ?? []
     }
 
     /// Get memories for a specific day number in a month
-    func memoriesForDay(monthKey: Date, day: Int) -> [MemoryModel] {
+    func memoriesForDay(monthKey: Date, day: Int) -> [Memory] {
         guard let dayDate = calendar.date(bySetting: .day, value: day, of: monthKey) else {
             return []
         }
@@ -79,11 +79,11 @@ final class CalendarDataManager: ObservableObject {
     }
 
     /// Get all memories for a specific month
-    func memoriesInMonth(_ month: Date) -> [Date: [MemoryModel]] {
+    func memoriesInMonth(_ month: Date) -> [Date: [Memory]] {
         let monthKey = normalizeToMonth(month)
         guard let range = calendar.range(of: .day, in: .month, for: month) else { return [:] }
 
-        var result: [Date: [MemoryModel]] = [:]
+        var result: [Date: [Memory]] = [:]
         for day in range {
             if let dayDate = calendar.date(bySetting: .day, value: day, of: monthKey) {
                 let dayKey = calendar.startOfDay(for: dayDate)

@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 
 struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    let memoryLookup: [UUID: MemoryModel]
+    let memoryLookup: [UUID: Memory]
     var isEditable: Bool = true
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
@@ -763,7 +763,7 @@ private struct LocationTriggerInlineForm: View {
 
 private struct SequentialTriggerInlineForm: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    let memoryLookup: [UUID: MemoryModel]
+    let memoryLookup: [UUID: Memory]
     var isEditable: Bool
     let onDelete: () -> Void
 
@@ -966,7 +966,7 @@ private struct SequentialTriggerInlineForm: View {
         }
     }
 
-    private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int, startDate: Date, currentStepIndex: Int) async {
+    private func updateMemoryTrigger(_ memory: Memory, sequenceID: UUID, index: Int, startDate: Date, currentStepIndex: Int) async {
         var triggers = memory.triggers
         let newSeq = MemoryTriggerModel.TriggerSequential(
             sequenceID: sequenceID,
@@ -994,7 +994,7 @@ private struct SequentialTriggerInlineForm: View {
         _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
     }
 
-    private func removeSequentialTrigger(from memory: MemoryModel) async {
+    private func removeSequentialTrigger(from memory: Memory) async {
         var triggers = memory.triggers
         triggers.removeAll { $0.type == .sequential }
         let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
@@ -1005,7 +1005,7 @@ private struct SequentialTriggerInlineForm: View {
 private struct SequentialItemRow: View {
     let item: SequentialItem
     let currentMemoryID: UUID?
-    let memoryLookup: [UUID: MemoryModel]
+    let memoryLookup: [UUID: Memory]
     let isEditable: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
@@ -1013,7 +1013,7 @@ private struct SequentialItemRow: View {
     let onMoveDown: () -> Void
     let onDelete: () -> Void
     
-    private var memory: MemoryModel? {
+    private var memory: Memory? {
         memoryLookup[item.id]
     }
     
@@ -1121,7 +1121,7 @@ fileprivate struct SequentialItem: Identifiable, Equatable {
 
 
 fileprivate extension MemoryDraft {
-    static func from(model: MemoryModel, withTriggers triggers: [MemoryTriggerModel]) -> MemoryDraft {
+    static func from(model: Memory, withTriggers triggers: [MemoryTriggerModel]) -> MemoryDraft {
         MemoryDraft(
             id: model.id,
             title: model.title,

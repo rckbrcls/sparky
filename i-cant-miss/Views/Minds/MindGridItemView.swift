@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct MindGridItemView: View {
-    let mind: MindModel
+    let mind: Mind
     let count: Int
     let activeCount: Int
     let mindService: MindService?
@@ -15,12 +15,12 @@ struct MindGridItemView: View {
     @State private var showingDeleteConfirmation = false
 
     init(
-        mind: MindModel,
+        mind: Mind,
         count: Int,
         activeCount: Int = 0,
         mindService: MindService? = nil,
         lobeService: LobeService? = nil,
-        onEdit: ((MindModel) -> Void)? = nil
+        onEdit: ((Mind) -> Void)? = nil
     ) {
         self.mind = mind
         self.count = count
@@ -99,7 +99,7 @@ struct MindGridItemView: View {
         }
     }
 
-    var onEdit: ((MindModel) -> Void)?
+    var onEdit: ((Mind) -> Void)?
 
     private var mindColor: Color {
         if let hex = mind.colorHex, let color = Color(hex: hex) {
@@ -154,12 +154,12 @@ struct MindGridItemView: View {
 #Preview {
     HStack {
         MindGridItemView(
-            mind: MindModel(id: UUID(), name: "Work"),
+            mind: Mind(id: UUID(), name: "Work"),
             count: 5,
             activeCount: 12
         )
         MindGridItemView(
-            mind: MindModel(id: UUID(), name: "Personal"),
+            mind: Mind(id: UUID(), name: "Personal"),
             count: 3,
             activeCount: 8
         )

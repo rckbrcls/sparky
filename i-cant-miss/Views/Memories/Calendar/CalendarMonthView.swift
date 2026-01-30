@@ -215,7 +215,7 @@ private struct MonthSection: View {
 
 private struct DayCell: View {
     let date: Date
-    let memories: [MemoryModel]
+    let memories: [Memory]
     let isSelected: Bool
     let cellHeight: CGFloat
     let onSelect: () -> Void
@@ -290,7 +290,7 @@ private struct DayCell: View {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     let month = Calendar.current.date(from: DateComponents(year: 2025, month: 11)) ?? Date()
     let dataManager = CalendarDataManager(memoryService: environment.memoryService)

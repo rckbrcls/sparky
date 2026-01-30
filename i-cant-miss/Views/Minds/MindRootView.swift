@@ -11,16 +11,16 @@ struct MindRootView: View {
     @ObservedObject var memoryService: MemoryService
     @Binding var navigationPath: NavigationPath
 
-    let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
+    let onSelectMemory: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
     let onCreateMind: () -> Void
-    let onEditMind: ((MindModel) -> Void)?
-    let onEditLobe: ((LobeModel) -> Void)?
-    let onAddLobe: ((MindModel) -> Void)?
+    let onEditMind: ((Mind) -> Void)?
+    let onEditLobe: ((Space) -> Void)?
+    let onAddLobe: ((Mind) -> Void)?
     let onAddLobeWithoutMind: (() -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
-    let onLobeContextChange: (LobeModel?) -> Void
-    let onMindContextChange: ((MindModel?) -> Void)?
+    let onLobeContextChange: (Space?) -> Void
+    let onMindContextChange: ((Mind?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
 
     enum Tab {
@@ -85,7 +85,7 @@ struct MindRootView: View {
                     .accessibilityLabel("Add")
                 }
             }
-            .navigationDestination(for: MindModel.self) { mind in
+            .navigationDestination(for: Mind.self) { mind in
                 MindDetailView(
                     mind: mind,
                     mindService: mindService,
@@ -101,7 +101,7 @@ struct MindRootView: View {
                     onSearchActiveChange: onSearchActiveChange
                 )
             }
-            .navigationDestination(for: LobeModel.self) { lobe in
+            .navigationDestination(for: Space.self) { lobe in
                 LobeDetailView(
                     lobe: lobe,
                     lobeService: lobeService,
@@ -141,7 +141,7 @@ struct MindRootView: View {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return MindRootView(
         mindService: environment.mindService,

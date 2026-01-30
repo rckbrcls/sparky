@@ -37,7 +37,7 @@ final class MemoryBulkActionProcessor {
         self.environment = environment
     }
 
-    func moveMemories(_ ids: Set<UUID>, to lobe: LobeModel) async -> MemoryBulkActionResult {
+    func moveMemories(_ ids: Set<UUID>, to lobe: Space) async -> MemoryBulkActionResult {
         await process(ids: ids) { memory in
             try await self.environment.memoryService.moveMemory(memory.id, to: lobe)
         }
@@ -53,7 +53,7 @@ final class MemoryBulkActionProcessor {
 
     private func process(
         ids: Set<UUID>,
-        handler: @escaping (MemoryModel) async throws -> Void
+        handler: @escaping (Memory) async throws -> Void
     ) async -> MemoryBulkActionResult {
         var succeeded: Set<UUID> = []
         var failed: [UUID: Error] = [:]

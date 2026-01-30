@@ -39,7 +39,7 @@ final class NotificationScheduler {
         await requestAuthorizationIfNeeded()
     }
 
-    func scheduleNotifications(for memory: MemoryModel) async {
+    func scheduleNotifications(for memory: Memory) async {
         await requestAuthorizationIfNeeded()
         guard memory.status == .active else {
             await removeNotifications(for: memory.id)
@@ -79,7 +79,7 @@ final class NotificationScheduler {
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
-    func refreshNotifications(memories: [MemoryModel]) async {
+    func refreshNotifications(memories: [Memory]) async {
         await requestAuthorizationIfNeeded()
         let identifiers = await pendingIdentifiers()
         center.removePendingNotificationRequests(withIdentifiers: identifiers)

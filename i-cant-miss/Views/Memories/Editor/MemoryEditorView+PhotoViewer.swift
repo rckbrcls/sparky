@@ -73,13 +73,13 @@ extension MemoryEditorView {
     }
 
     // Simplified for fixed model - using viewModel.photoAttachments directly
-    func getPhotoAttachmentsForViewer() -> [MemoryModel.Attachment] {
+    func getPhotoAttachmentsForViewer() -> [Memory.Attachment] {
         let rawAttachments = viewModel.photoAttachments
         guard !rawAttachments.isEmpty else { return [] }
         return flattenAttachments(rawAttachments)
     }
 
-    private func flattenAttachments(_ attachments: [MemoryModel.Attachment]) -> [MemoryModel.Attachment] {
+    private func flattenAttachments(_ attachments: [Memory.Attachment]) -> [Memory.Attachment] {
         attachments.filter { $0.kind == .photo && !$0.data.isEmpty }
     }
 }

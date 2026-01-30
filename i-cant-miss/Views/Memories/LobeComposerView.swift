@@ -75,10 +75,10 @@ struct LobeComposerView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var showIconPicker = false
-    private let lobeToEdit: LobeModel?
+    private let lobeToEdit: Space?
     private let mindID: UUID?
 
-    init(environment: AppEnvironment, lobeToEdit: LobeModel? = nil, mindID: UUID? = nil) {
+    init(environment: AppEnvironment, lobeToEdit: Space? = nil, mindID: UUID? = nil) {
         self.environment = environment
         self.lobeToEdit = lobeToEdit
         self.mindID = mindID
@@ -199,7 +199,7 @@ struct LobeComposerView: View {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return LobeComposerView(environment: environment)
 }

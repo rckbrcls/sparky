@@ -69,14 +69,14 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
         }
     }
 
-    func sync(memories: [MemoryModel]) async {
+    func sync(memories: [Memory]) async {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
         let locationTriggers = memories
             .filter { $0.status == .active }
             .flatMap { memory in
                 memory.triggers
                     .filter { $0.type == .location }
-                    .compactMap { trigger -> (MemoryModel, MemoryTriggerModel)? in
+                    .compactMap { trigger -> (Memory, MemoryTriggerModel)? in
                         guard let location = trigger.location else { return nil }
                         guard location.radius > 0 else { return nil }
                         return (memory, trigger)

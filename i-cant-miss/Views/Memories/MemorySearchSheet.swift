@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct MemorySearchSheet: View {
-    let lobe: LobeModel
+    let lobe: Space
     @ObservedObject var memoryService: MemoryService
 
-    let onSelectMemory: (MemoryModel) -> Void
+    let onSelectMemory: (Memory) -> Void
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var environment: AppEnvironment
 
@@ -19,10 +19,10 @@ struct MemorySearchSheet: View {
     @FocusState private var isSearchFieldFocused: Bool
 
     private var isAllLobe: Bool {
-        lobeService.lobe(id: lobe.id)?.isAllLobes ?? lobe.isAllLobes
+        lobeService.lobe(id: lobe.id)?.isAllSpaces ?? lobe.isAllSpaces
     }
 
-    private var resolvedLobe: LobeModel {
+    private var resolvedLobe: Space {
         lobeService.lobe(id: lobe.id) ?? lobe
     }
 
@@ -31,11 +31,11 @@ struct MemorySearchSheet: View {
     }
 
     private var isInboxLobe: Bool {
-        resolvedLobe.isInboxLobes
+        resolvedLobe.isInbox
     }
 
     private var isLimboLobe: Bool {
-        resolvedLobe.isLimboLobes
+        resolvedLobe.isLimbo
     }
 
     // We need lobeService to resolve the lobe correctly if it updates,
@@ -46,7 +46,7 @@ struct MemorySearchSheet: View {
 
     // MARK: - Context Menu Actions
 
-    private func togglePin(for memory: MemoryModel) async {
+    private func togglePin(for memory: Memory) async {
         do {
             try await environment.memoryService.togglePin(memoryID: memory.id)
         } catch {
@@ -54,7 +54,7 @@ struct MemorySearchSheet: View {
         }
     }
 
-    private func toggleCompletion(for memory: MemoryModel) async {
+    private func toggleCompletion(for memory: Memory) async {
         do {
             try await environment.memoryService.toggleCompletion(memoryID: memory.id)
         } catch {
@@ -62,7 +62,7 @@ struct MemorySearchSheet: View {
         }
     }
 
-    private func deleteMemory(_ memory: MemoryModel) async {
+    private func deleteMemory(_ memory: Memory) async {
         do {
             try await environment.memoryService.deleteMemory(id: memory.id)
         } catch {
@@ -70,7 +70,7 @@ struct MemorySearchSheet: View {
         }
     }
 
-    private func moveMemory(_ memory: MemoryModel, to lobeID: UUID?) async {
+    private func moveMemory(_ memory: Memory, to lobeID: UUID?) async {
         let currentID = memory.lobe?.id
         guard currentID != lobeID else { return }
 
@@ -82,7 +82,7 @@ struct MemorySearchSheet: View {
         }
     }
 
-    private func setStatus(for memory: MemoryModel, to status: MemoryStatus) async {
+    private func setStatus(for memory: Memory, to status: MemoryStatus) async {
         guard status != memory.status else { return }
         do {
             try await environment.memoryService.setStatus(memoryID: memory.id, status: status)
@@ -92,7 +92,7 @@ struct MemorySearchSheet: View {
     }
 
     @ViewBuilder
-    private func memoryCard(for memory: MemoryModel) -> some View {
+    private func memoryCard(for memory: Memory) -> some View {
         MemoryCardView(
             memoryID: memory.id,
             memoryService: memoryService,
@@ -108,8 +108,8 @@ struct MemorySearchSheet: View {
         }
     }
 
-    private var recentMemories: [MemoryModel] {
-        let allInLobe: [MemoryModel]
+    private var recentMemories: [Memory] {
+        let allInLobe: [Memory]
         
         if isAllLobe {
             allInLobe = memoryService.memories(
@@ -144,10 +144,10 @@ struct MemorySearchSheet: View {
         return Array(allInLobe.prefix(5))
     }
 
-    private var searchResults: [MemoryModel] {
+    private var searchResults: [Memory] {
         guard !searchText.isEmpty else { return [] }
         
-        let allInLobe: [MemoryModel]
+        let allInLobe: [Memory]
         
         if isAllLobe {
             allInLobe = memoryService.memories(

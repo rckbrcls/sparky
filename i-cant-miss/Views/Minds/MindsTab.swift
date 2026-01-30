@@ -12,7 +12,7 @@ struct MindsTab: View {
     @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
 
-    let onEditMind: ((MindModel) -> Void)?
+    let onEditMind: ((Mind) -> Void)?
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -52,7 +52,7 @@ struct MindsTab: View {
         .scrollIndicators(.hidden)
     }
 
-    private var displayMinds: [MindModel] {
+    private var displayMinds: [Mind] {
         let sortedMinds = mindService.minds
             .filter { !$0.isDefault && !$0.isAllMinds }
             .sorted { lhs, rhs in
@@ -61,10 +61,10 @@ struct MindsTab: View {
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [MindModel.allMinds] + sortedMinds
+        return [Mind.allMinds] + sortedMinds
     }
 
-    private func lobeCounts(for mind: MindModel) -> Int {
+    private func lobeCounts(for mind: Mind) -> Int {
         if mind.isAllMinds {
             return lobeService.lobes.count
         } else {
@@ -75,8 +75,8 @@ struct MindsTab: View {
         }
     }
 
-    private func activeMemoryCount(for mind: MindModel) -> Int {
-        let memories: [MemoryModel]
+    private func activeMemoryCount(for mind: Mind) -> Int {
+        let memories: [Memory]
         if mind.isAllMinds {
             memories = memoryService.memories
         } else {

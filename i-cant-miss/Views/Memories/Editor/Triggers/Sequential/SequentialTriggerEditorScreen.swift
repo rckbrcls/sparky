@@ -199,7 +199,7 @@ struct SequentialTriggerEditorScreen: View {
         }
     }
 
-    private func updateMemoryTrigger(_ memory: MemoryModel, sequenceID: UUID, index: Int, startDate: Date, currentStepIndex: Int) async {
+    private func updateMemoryTrigger(_ memory: Memory, sequenceID: UUID, index: Int, startDate: Date, currentStepIndex: Int) async {
         var triggers = memory.triggers
         let newSeq = MemoryTriggerModel.TriggerSequential(
             sequenceID: sequenceID,
@@ -227,7 +227,7 @@ struct SequentialTriggerEditorScreen: View {
         _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
     }
 
-    private func removeSequentialTrigger(from memory: MemoryModel) async {
+    private func removeSequentialTrigger(from memory: Memory) async {
         var triggers = memory.triggers
         triggers.removeAll { $0.type == .sequential }
         let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
@@ -313,7 +313,7 @@ fileprivate struct SequentialDropDelegate: DropDelegate {
 }
 
 fileprivate extension MemoryDraft {
-    static func from(model: MemoryModel, withTriggers triggers: [MemoryTriggerModel]) -> MemoryDraft {
+    static func from(model: Memory, withTriggers triggers: [MemoryTriggerModel]) -> MemoryDraft {
         MemoryDraft(
             id: model.id,
             title: model.title,

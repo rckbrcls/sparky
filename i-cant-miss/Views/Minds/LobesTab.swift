@@ -12,7 +12,7 @@ struct LobesTab: View {
     @ObservedObject var mindService: MindService
     @ObservedObject var memoryService: MemoryService
 
-    let onEditLobe: ((LobeModel) -> Void)?
+    let onEditLobe: ((Space) -> Void)?
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -29,9 +29,9 @@ struct LobesTab: View {
 
                 LazyVGrid(columns: columns, spacing: 12) {
                     // Lobe Limbo - shows memories without lobe
-                    NavigationLink(value: LobeModel.limboLobes) {
+                    NavigationLink(value: Space.limbo) {
                         LimboCardView(
-                            lobe: LobeModel.limboLobes,
+                            lobe: Space.limbo,
                             count: limboMemoryCounts().total,
                             completedCount: limboMemoryCounts().completed,
                             activeCount: limboActiveMemoryCount(),
@@ -44,12 +44,12 @@ struct LobesTab: View {
                     .accessibilityHint("Opens limbo details")
 
                     // All Lobes card - shows all memories
-                    NavigationLink(value: LobeModel.allLobes) {
+                    NavigationLink(value: Space.allSpaces) {
                         LobeGridItemView(
-                            lobe: LobeModel.allLobes,
-                            count: memoryCounts(for: LobeModel.allLobes).total,
-                            completedCount: memoryCounts(for: LobeModel.allLobes).completed,
-                            activeCount: activeMemoryCount(for: LobeModel.allLobes),
+                            lobe: Space.allSpaces,
+                            count: memoryCounts(for: Space.allSpaces).total,
+                            completedCount: memoryCounts(for: Space.allSpaces).completed,
+                            activeCount: activeMemoryCount(for: Space.allSpaces),
                             lobeService: lobeService,
                             memoryService: memoryService,
                             mindService: mindService,
@@ -87,10 +87,10 @@ struct LobesTab: View {
         .scrollIndicators(.hidden)
     }
 
-    private var displayLobesWithoutMind: [LobeModel] {
+    private var displayLobesWithoutMind: [Space] {
         lobeService.lobes
             .filter { lobe in
-                guard !lobe.isAllLobes else { return false }
+                guard !lobe.isAllSpaces else { return false }
                 guard !lobe.isAllLobeForMind else { return false }
                 return lobe.mind == nil
             }
@@ -115,9 +115,9 @@ struct LobesTab: View {
         return memories.filter { $0.status == .active }.count
     }
 
-    private func memoryCounts(for lobe: LobeModel) -> (completed: Int, total: Int) {
-        let memories: [MemoryModel]
-        if lobe.isAllLobes {
+    private func memoryCounts(for lobe: Space) -> (completed: Int, total: Int) {
+        let memories: [Memory]
+        if lobe.isAllSpaces {
             memories = memoryService.memories
         } else {
             memories = memoryService.memories.filter { memory in
@@ -130,9 +130,9 @@ struct LobesTab: View {
         return (completed, total)
     }
 
-    private func activeMemoryCount(for lobe: LobeModel) -> Int {
-        let memories: [MemoryModel]
-        if lobe.isAllLobes {
+    private func activeMemoryCount(for lobe: Space) -> Int {
+        let memories: [Memory]
+        if lobe.isAllSpaces {
             memories = memoryService.memories
         } else {
             memories = memoryService.memories.filter { memory in

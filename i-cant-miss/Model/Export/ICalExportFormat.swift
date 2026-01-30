@@ -11,7 +11,7 @@ import os.log
 /// iCalendar (RFC 5545) export format converter
 /// Only supports memories with scheduled triggers (no location, person, or sequential triggers)
 struct ICalExportFormat {
-    static func convert(memories: [MemoryModel]) -> String {
+    static func convert(memories: [Memory]) -> String {
         var lines: [String] = []
         
         // iCalendar header
@@ -42,7 +42,7 @@ struct ICalExportFormat {
         return lines.joined(separator: "\r\n")
     }
     
-    private static func convertMemoryToVTODO(memory: MemoryModel, trigger: MemoryTriggerModel) -> [String] {
+    private static func convertMemoryToVTODO(memory: Memory, trigger: MemoryTriggerModel) -> [String] {
         var lines: [String] = []
         
         lines.append("BEGIN:VTODO")

@@ -73,9 +73,9 @@ struct MindComposerView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var showIconPicker = false
-    private let mindToEdit: MindModel?
+    private let mindToEdit: Mind?
 
-    init(environment: AppEnvironment, mindToEdit: MindModel? = nil) {
+    init(environment: AppEnvironment, mindToEdit: Mind? = nil) {
         self.environment = environment
         self.mindToEdit = mindToEdit
     }
@@ -192,7 +192,7 @@ struct MindComposerView: View {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     return MindComposerView(environment: environment)
 }

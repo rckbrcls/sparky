@@ -135,7 +135,7 @@ final class DataExportService {
 
     // MARK: - Private Helpers
 
-    func collectMemories(includeCompleted: Bool) async -> [MemoryModel] {
+    func collectMemories(includeCompleted: Bool) async -> [Memory] {
         let allMemories = memoryService.memories
 
         if includeCompleted {
@@ -153,7 +153,7 @@ final class DataExportService {
         var lobesByMind: [UUID: [ExportedLobe]] = [:]
         for lobe in lobes {
             // Skip virtual lobes (All, Inbox, Limbo)
-            if lobe.isAllLobes || lobe.isInboxLobes || lobe.isLimboLobes {
+            if lobe.isAllSpaces || lobe.isInbox || lobe.isLimbo {
                 continue
             }
 
@@ -197,8 +197,8 @@ final class DataExportService {
 
             // Convert memories to ExportedMemory but ensure no attachments are included (implicitly handled by not fetching/attaching them if I use a lighter struct, OR I can just use ExportedMemory and set attachments field to nil/empty)
             // The user specifically asked for "memories without attachments".
-            // `MemoryModel.toExported()` checks `hasAttachments` etc? No, `toExported()` is on `MemoryModel`.
-            // Let's see `MemoryModel.toExported` implementation. I don't see it in the file view I did (it might be in an extension).
+            // `Memory.toExported()` checks `hasAttachments` etc? No, `toExported()` is on `Memory`.
+            // Let's see `Memory.toExported` implementation. I don't see it in the file view I did (it might be in an extension).
             // Assuming `toExported` exists.
 
             // Wait, I need to check if `toExported` exists or if I should create a simplified structure.
@@ -232,7 +232,7 @@ final class DataExportService {
         let memories: [ExportedMemory]
     }
 
-    private func collectAttachments(for memories: [MemoryModel]) async -> [UUID: [ExportedAttachment]] {
+    private func collectAttachments(for memories: [Memory]) async -> [UUID: [ExportedAttachment]] {
         var attachmentsMap: [UUID: [ExportedAttachment]] = [:]
 
         for memory in memories {

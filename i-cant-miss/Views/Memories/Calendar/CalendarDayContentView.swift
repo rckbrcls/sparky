@@ -11,11 +11,11 @@ struct CalendarDayContentView: View {
     let day: Date
     let dataManager: CalendarDataManager
     let isMultiSelecting: Bool
-    let selectedMemoryIDs: Set<MemoryModel.ID>
+    let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
-    let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-    let onToggleSelection: (MemoryModel) -> Void
+    let onSelectMemory: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
+    let onToggleSelection: (Memory) -> Void
     @Binding var expandedPeriods: Set<CalendarTimePeriod>
     let onEnsureMonthDataLoaded: (Date) -> Void
 
@@ -75,7 +75,7 @@ struct CalendarDayContentView: View {
     }
 
     @ViewBuilder
-    private func allDaySection(memories: [MemoryModel]) -> some View {
+    private func allDaySection(memories: [Memory]) -> some View {
         CalendarPeriodSection(
             period: .allDay,
             memories: memories,
@@ -100,7 +100,7 @@ struct CalendarDayContentView: View {
     }
 
     @ViewBuilder
-    private func periodSection(period: CalendarTimePeriod, memories: [MemoryModel]) -> some View {
+    private func periodSection(period: CalendarTimePeriod, memories: [Memory]) -> some View {
         let periodMemories = memoriesForPeriod(period, from: memories, date: day)
 
         CalendarPeriodSection(
@@ -151,7 +151,7 @@ struct CalendarDayContentView: View {
         return nil
     }
 
-    private func allDayMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
+    private func allDayMemories(from memories: [Memory], date: Date) -> [Memory] {
         memories.filter { memory in
             // Check for scheduled all-day triggers
             if let scheduledTrigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) {
@@ -182,7 +182,7 @@ struct CalendarDayContentView: View {
         }
     }
 
-    private func timedMemories(from memories: [MemoryModel], date: Date) -> [MemoryModel] {
+    private func timedMemories(from memories: [Memory], date: Date) -> [Memory] {
         memories.filter { memory in
             guard let trigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) else {
                 return false
@@ -191,7 +191,7 @@ struct CalendarDayContentView: View {
         }
     }
 
-    private func memoriesForPeriod(_ period: CalendarTimePeriod, from memories: [MemoryModel], date: Date) -> [MemoryModel] {
+    private func memoriesForPeriod(_ period: CalendarTimePeriod, from memories: [Memory], date: Date) -> [Memory] {
         timedMemories(from: memories, date: date).filter { memory in
             guard let fireDate = fireDateForDay(memory: memory, day: date) else {
                 return false
@@ -203,7 +203,7 @@ struct CalendarDayContentView: View {
 
     /// Returns the fire date for a memory on a specific day, regardless of whether the date is in the past.
     /// This is used for calendar display where we need to show the scheduled time even for past events.
-    private func fireDateForDay(memory: MemoryModel, day: Date) -> Date? {
+    private func fireDateForDay(memory: Memory, day: Date) -> Date? {
         let dayStart = calendar.startOfDay(for: day)
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
             return nil

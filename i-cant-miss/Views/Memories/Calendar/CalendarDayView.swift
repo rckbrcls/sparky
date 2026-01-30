@@ -12,11 +12,11 @@ struct CalendarDayView: View {
     @ObservedObject var dataManager: CalendarDataManager
     @Binding var currentDate: Date
     let isMultiSelecting: Bool
-    let selectedMemoryIDs: Set<MemoryModel.ID>
+    let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
-    let onSelectMemory: (MemoryModel) -> Void
-    let onEditMemory: ((MemoryModel) -> Void)?
-    let onToggleSelection: (MemoryModel) -> Void
+    let onSelectMemory: (Memory) -> Void
+    let onEditMemory: ((Memory) -> Void)?
+    let onToggleSelection: (Memory) -> Void
 
     @State private var displayedDate: Date
     @State private var dayAnchor: Date
@@ -32,11 +32,11 @@ struct CalendarDayView: View {
         dataManager: CalendarDataManager,
         currentDate: Binding<Date>,
         isMultiSelecting: Bool,
-        selectedMemoryIDs: Set<MemoryModel.ID>,
+        selectedMemoryIDs: Set<Memory.ID>,
         isPerformingBulkAction: Bool,
-        onSelectMemory: @escaping (MemoryModel) -> Void,
-        onEditMemory: ((MemoryModel) -> Void)? = nil,
-        onToggleSelection: @escaping (MemoryModel) -> Void
+        onSelectMemory: @escaping (Memory) -> Void,
+        onEditMemory: ((Memory) -> Void)? = nil,
+        onToggleSelection: @escaping (Memory) -> Void
     ) {
         self.dataManager = dataManager
         self._currentDate = currentDate
@@ -119,7 +119,7 @@ struct CalendarDayView: View {
 }
 
 #Preview {
-    let environment = AppEnvironment(persistence: PersistenceController.preview)
+    let environment = AppEnvironment(dataController: DataController.preview)
     environment.bootstrap()
     let date = Date()
     let dataManager = CalendarDataManager(memoryService: environment.memoryService)
