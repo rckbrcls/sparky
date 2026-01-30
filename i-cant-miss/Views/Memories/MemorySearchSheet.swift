@@ -18,7 +18,7 @@ struct MemorySearchSheet: View {
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
 
-    private var isAllLobe: Bool {
+    private var isAllSpaces: Bool {
         lobeService.lobe(id: lobe.id)?.isAllSpaces ?? lobe.isAllSpaces
     }
 
@@ -26,15 +26,15 @@ struct MemorySearchSheet: View {
         lobeService.lobe(id: lobe.id) ?? lobe
     }
 
-    private var isAllLobeForMind: Bool {
-        resolvedLobe.isAllLobeForMind
+    private var isAllSpaceForMind: Bool {
+        resolvedLobe.isAllSpaceForMind
     }
 
-    private var isInboxLobe: Bool {
+    private var isInboxSpace: Bool {
         resolvedLobe.isInbox
     }
 
-    private var isLimboLobe: Bool {
+    private var isLimboSpace: Bool {
         resolvedLobe.isLimbo
     }
 
@@ -110,20 +110,20 @@ struct MemorySearchSheet: View {
 
     private var recentMemories: [Memory] {
         let allInLobe: [Memory]
-        
-        if isAllLobe {
+
+        if isAllSpaces {
             allInLobe = memoryService.memories(
                 in: nil,
                 statuses: [.active],
                 includeCompleted: false,
                 sort: .createdAtDescending
             )
-        } else if isInboxLobe || isLimboLobe {
+        } else if isInboxSpace || isLimboSpace {
             let unsorted = memoryService.memories.filter { memory in
                 memory.lobe == nil && memory.status == .active
             }
             allInLobe = memoryService.sortedMemories(unsorted, using: .createdAtDescending)
-        } else if isAllLobeForMind {
+        } else if isAllSpaceForMind {
             guard let mindID = resolvedLobe.mind?.id else {
                 return []
             }
@@ -140,28 +140,28 @@ struct MemorySearchSheet: View {
                 sort: .createdAtDescending
             )
         }
-        
+
         return Array(allInLobe.prefix(5))
     }
 
     private var searchResults: [Memory] {
         guard !searchText.isEmpty else { return [] }
-        
+
         let allInLobe: [Memory]
-        
-        if isAllLobe {
+
+        if isAllSpaces {
             allInLobe = memoryService.memories(
                 in: nil,
                 statuses: [],
                 includeCompleted: true,
                 sort: .updatedAtDescending
             )
-        } else if isInboxLobe || isLimboLobe {
+        } else if isInboxSpace || isLimboSpace {
             let unsorted = memoryService.memories.filter { memory in
                 memory.lobe == nil
             }
             allInLobe = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
-        } else if isAllLobeForMind {
+        } else if isAllSpaceForMind {
             guard let mindID = resolvedLobe.mind?.id else {
                 return []
             }

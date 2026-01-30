@@ -91,7 +91,7 @@ struct LobesTab: View {
         lobeService.lobes
             .filter { lobe in
                 guard !lobe.isAllSpaces else { return false }
-                guard !lobe.isAllLobeForMind else { return false }
+                guard !lobe.isAllSpaceForMind else { return false }
                 return lobe.mind == nil
             }
             .sorted { lhs, rhs in

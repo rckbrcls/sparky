@@ -184,14 +184,14 @@ struct LobeGridItemView: View {
 
     private var canEditLobe: Bool {
         guard !lobe.isAllSpaces else { return false }
-        guard !lobe.isAllLobeForMind else { return false }
+        guard !lobe.isAllSpaceForMind else { return false }
         return true
     }
 
     private var canDeleteLobe: Bool {
         guard lobeService != nil else { return false }
         guard !lobe.isAllSpaces else { return false }
-        guard !lobe.isAllLobeForMind else { return false }
+        guard !lobe.isAllSpaceForMind else { return false }
         return !lobe.isDefault
     }
 
@@ -215,7 +215,7 @@ struct LobeGridItemView: View {
     private func deleteLobe(deleteMemories: Bool) {
         guard let service = lobeService else { return }
         guard !lobe.isAllSpaces,
-              !lobe.isAllLobeForMind,
+              !lobe.isAllSpaceForMind,
               !lobe.isDefault else { return }
 
         Task { @MainActor in
@@ -230,7 +230,7 @@ struct LobeGridItemView: View {
     private func moveToMind(_ mind: Mind?) {
         guard let service = lobeService else { return }
         guard !lobe.isAllSpaces else { return }
-        guard !lobe.isAllLobeForMind else { return }
+        guard !lobe.isAllSpaceForMind else { return }
 
         Task { @MainActor in
             do {

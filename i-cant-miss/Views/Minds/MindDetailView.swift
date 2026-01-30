@@ -77,7 +77,7 @@ struct MindDetailView: View {
                 guard let mindID = lobe.mind?.id else { return false }
                 return mindID == mind.id
             }
-            let allLobe = Space.allLobe(for: resolvedMind)
+            let allLobe = Space.allSpace(for: resolvedMind)
             return [allLobe] + filteredLobes
         }
     }
@@ -86,7 +86,7 @@ struct MindDetailView: View {
         baseView
             .fullScreenCover(isPresented: $isSearching) {
                 MemorySearchSheet(
-                    lobe: Space.allLobe(for: resolvedMind),
+                    lobe: Space.allSpace(for: resolvedMind),
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
                     lobeService: lobeService
@@ -158,7 +158,7 @@ struct MindDetailView: View {
                     Image(systemName: "chevron.left")
                 }
             }
-            
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     isSearching = true
@@ -169,7 +169,7 @@ struct MindDetailView: View {
 
             if !isAllMinds, let onAddLobe = onAddLobe {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                
+
                     Button {
                         onAddLobe(resolvedMind)
                     } label: {
@@ -207,7 +207,7 @@ struct MindDetailView: View {
         let memories: [Memory]
         if lobe.isAllSpaces {
             memories = memoryService.memories
-        } else if lobe.isAllLobeForMind {
+        } else if lobe.isAllSpaceForMind {
             guard let mindID = lobe.mind?.id else {
                 return (0, 0)
             }
@@ -231,7 +231,7 @@ struct MindDetailView: View {
         let memories: [Memory]
         if lobe.isAllSpaces {
             memories = memoryService.memories
-        } else if lobe.isAllLobeForMind {
+        } else if lobe.isAllSpaceForMind {
             guard let mindID = lobe.mind?.id else {
                 return 0
             }

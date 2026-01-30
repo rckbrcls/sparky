@@ -57,7 +57,7 @@ final class GeofenceManager: NSObject, ObservableObject {
                     }
             }
             .sorted { lhs, rhs in
-                lhs.0.updatedAt > rhs.0.updatedAt
+                (lhs.0.updatedAt ?? Date.distantPast) > (rhs.0.updatedAt ?? Date.distantPast)
             }
             .prefix(maxGeofences)
 
@@ -82,8 +82,8 @@ final class GeofenceManager: NSObject, ObservableObject {
                                                                          longitude: location.longitude),
                                           radius: min(location.radius, 1000),
                                           identifier: identifier)
-            region.notifyOnEntry = location.event == .onEntry
-            region.notifyOnExit = location.event == .onExit
+            region.notifyOnEntry = location.event == LocationEvent.onEntry
+            region.notifyOnExit = location.event == LocationEvent.onExit
 
             locationManager.startMonitoring(for: region)
             monitoredIdentifiers.insert(identifier)

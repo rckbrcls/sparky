@@ -457,8 +457,8 @@ struct MemoryEditorView: View {
 
             if !isEditingEnabled, let memory = viewModel.currentMemory {
                 MemoryEditorMetadataCard(
-                    createdAt: memory.createdAt,
-                    updatedAt: memory.updatedAt
+                    createdAt: memory.createdAt ?? Date(),
+                    updatedAt: memory.updatedAt ?? Date()
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }

@@ -52,20 +52,20 @@ struct LobeDetailView: View {
         lobeService.lobe(id: lobe.id) ?? lobe
     }
 
-    private var isAllLobe: Bool {
+    private var isAllSpaces: Bool {
         resolvedLobe.isAllSpaces
     }
 
-    private var isInboxLobe: Bool {
+    private var isInboxSpace: Bool {
         resolvedLobe.isInbox
     }
 
-    private var isLimboLobe: Bool {
+    private var isLimboSpace: Bool {
         resolvedLobe.isLimbo
     }
 
-    private var isAllLobeForMind: Bool {
-        resolvedLobe.isAllLobeForMind
+    private var isAllSpaceForMind: Bool {
+        resolvedLobe.isAllSpaceForMind
     }
 
     private var nonPinnedMemories: [Memory] {
@@ -459,19 +459,19 @@ struct LobeDetailView: View {
 
     private var filteredMemories: [Memory] {
         let base: [Memory]
-        if isAllLobe {
+        if isAllSpaces {
             base = memoryService.memories(
                 in: nil,
                 statuses: [],
                 includeCompleted: true,
                 sort: selectedSortStrategy
             )
-        } else if isInboxLobe || isLimboLobe {
+        } else if isInboxSpace || isLimboSpace {
             let unsorted = memoryService.memories.filter { memory in
                 memory.lobe == nil
             }
             base = memoryService.sortedMemories(unsorted, using: selectedSortStrategy)
-        } else if isAllLobeForMind {
+        } else if isAllSpaceForMind {
             if let mindID = resolvedLobe.mind?.id {
                 let unsorted = memoryService.memories.filter { memory in
                     guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
@@ -647,7 +647,7 @@ struct LobeDetailView: View {
             }
         }
 
-        return lhs.updatedAt > rhs.updatedAt
+        return (lhs.updatedAt ?? Date()) > (rhs.updatedAt ?? Date())
     }
 
     private func handleDrop(providers: [NSItemProvider], targetMemoryID: UUID, memories: [Memory]) {

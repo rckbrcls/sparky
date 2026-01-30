@@ -71,18 +71,18 @@ final class MeViewModel: ObservableObject {
             if memory.status == .completed && !memory.hasRecurringTriggers {
                 // Use updatedAt as a proxy for completion time for single items logic
                 //Ideally we would have completedAt, but updatedAt is close enough for single toggle
-                dates.insert(calendar.startOfDay(for: memory.updatedAt))
+                dates.insert(calendar.startOfDay(for: memory.updatedAt ?? Date()))
             }
         }
         return dates
     }
 
     private func calculateMemberSince(memories: [Memory]) {
-        if let firstMemory = memories.min(by: { $0.createdAt < $1.createdAt }) {
+        if let firstMemory = memories.min(by: { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) }) {
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
             formatter.timeStyle = .none
-            memberSince = formatter.string(from: firstMemory.createdAt)
+            memberSince = formatter.string(from: firstMemory.createdAt ?? Date())
         } else {
             // Fallback if no memories, maybe use current date or generic
             let formatter = DateFormatter()

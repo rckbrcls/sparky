@@ -221,13 +221,21 @@ final class MemoryService: ObservableObject {
                 lhs.userOrder < rhs.userOrder
             }
         case .createdAtAscending:
-            return memories.sorted { (lhs.createdAt ?? Date()) < (rhs.createdAt ?? Date()) }
+            return memories.sorted { lhs, rhs in
+                (lhs.createdAt ?? Date()) < (rhs.createdAt ?? Date())
+            }
         case .createdAtDescending:
-            return memories.sorted { (lhs.createdAt ?? Date()) > (rhs.createdAt ?? Date()) }
+            return memories.sorted { lhs, rhs in
+                (lhs.createdAt ?? Date()) > (rhs.createdAt ?? Date())
+            }
         case .updatedAtAscending:
-            return memories.sorted { (lhs.updatedAt ?? lhs.createdAt ?? Date()) < (rhs.updatedAt ?? rhs.createdAt ?? Date()) }
+            return memories.sorted { lhs, rhs in
+                (lhs.updatedAt ?? lhs.createdAt ?? Date()) < (rhs.updatedAt ?? rhs.createdAt ?? Date())
+            }
         case .updatedAtDescending:
-            return memories.sorted { (lhs.updatedAt ?? lhs.createdAt ?? Date()) > (rhs.updatedAt ?? rhs.createdAt ?? Date()) }
+            return memories.sorted { lhs, rhs in
+                (lhs.updatedAt ?? lhs.createdAt ?? Date()) > (rhs.updatedAt ?? rhs.createdAt ?? Date())
+            }
         }
     }
 
@@ -383,7 +391,7 @@ final class MemoryService: ObservableObject {
         }
     }
 
-    func moveMemory(_ id: UUID, to lobe: Space) async throws {
+    func moveMemory(_ id: UUID, to lobe: Space?) async throws {
         guard let memory = memory(id: id) else {
             throw MemoryServiceError.memoryNotFound
         }

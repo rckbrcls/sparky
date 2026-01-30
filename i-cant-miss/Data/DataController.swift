@@ -105,19 +105,20 @@ extension DataController {
         let defaultSpace = Space(
             id: UUID(),
             name: "Personal",
-            iconName: "person",
             colorHex: "#4F46E5",
+            iconName: "person",
+            sortOrder: 0,
             isDefault: true,
-            sortOrder: 0
+           
         )
 
         let workSpace = Space(
             id: UUID(),
             name: "Work",
-            iconName: "briefcase",
             colorHex: "#10B981",
+            iconName: "briefcase",
+            sortOrder: 1,
             isDefault: false,
-            sortOrder: 1
         )
 
         let swiftTag = Tag(
