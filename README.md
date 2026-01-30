@@ -222,9 +222,9 @@ graph TB
 ### Estrutura de Pastas
 
 ```
-i-cant-miss/
+sparky/
 ├── AppEnvironment.swift          # Singleton central, coordenação
-├── i_cant_missApp.swift          # Entry point
+├── sparkyApp.swift          # Entry point
 ├── ContentView.swift             # Root view com tabs
 ├── Persistence.swift             # Core Data stack
 │
@@ -468,7 +468,7 @@ graph LR
    open sparky.xcodeproj
    ```
 
-3. **Selecione o scheme** "i-cant-miss" no Xcode
+3. **Selecione o scheme** "sparky" no Xcode
 
 4. **Escolha um simulador** ou dispositivo físico iOS 17.0+
 
@@ -512,7 +512,7 @@ A pasta `docs/` contém documentação detalhada sobre aspectos específicos do 
 
 ### Pontos de Entrada Importantes
 
-- **Entry point**: `i_cant_missApp.swift` → `ContentView`
+- **Entry point**: `sparkyApp.swift` → `ContentView`
 - **Inicialização**: `AppEnvironment.bootstrap()` carrega dados e solicita permissões
 - **Criação de memória**: `ContentView` → `MemoryEditorRoute` → `MemoryEditorView`
 - **Timeline**: `MemoryTimelineView` → `MemoryService.timelineMemories()`
