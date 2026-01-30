@@ -276,13 +276,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = "sparky/sparky.entitlements";
+				CODE_SIGN_ENTITLEMENTS = sparky/sparky.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "sparky/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = sparky;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Precisamos acessar a câmera para que você adicione fotos às memórias.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to your contacts to allow you to select people for person-based reminders.";
@@ -319,13 +318,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = "sparky/sparky.entitlements";
+				CODE_SIGN_ENTITLEMENTS = sparky/sparky.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "sparky/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = sparky;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Precisamos acessar a câmera para que você adicione fotos às memórias.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to your contacts to allow you to select people for person-based reminders.";
@@ -488,7 +486,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "polterware.sparkyTests";
+				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparkyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -510,7 +508,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "polterware.sparkyTests";
+				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparkyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -530,7 +528,7 @@
 				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "polterware.sparkyUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparkyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -550,7 +548,7 @@
 				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "polterware.sparkyUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparkyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

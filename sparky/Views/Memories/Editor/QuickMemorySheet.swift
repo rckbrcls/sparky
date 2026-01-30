@@ -103,7 +103,7 @@ struct QuickMemorySheet: View {
     }
 
     private var titleFont: UIFont {
-        if let font = UIFont(name: "PlayfairDisplay-Regular", size: 20) {
+        if let font = UIFont(name: "Baskerville", size: 20) {
             return font
         }
         return .systemFont(ofSize: 20, weight: .regular)

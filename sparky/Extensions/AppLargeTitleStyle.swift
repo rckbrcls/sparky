@@ -5,7 +5,7 @@ private struct AppLargeTitleModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(.custom(
-                "PlayfairDisplay-Regular",
+                "Baskerville",
                 size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize,
                 relativeTo: .largeTitle
             ))

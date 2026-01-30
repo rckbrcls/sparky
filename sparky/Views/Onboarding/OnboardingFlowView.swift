@@ -113,7 +113,7 @@ struct OnboardingFlowView: View {
                     .font(.title3.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .foregroundStyle(Color.Theme.text)
+                    .foregroundStyle(Color.Theme.background)
             }
             .buttonStyle(.glassProminent)
         }

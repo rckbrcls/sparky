@@ -257,7 +257,7 @@ fileprivate struct SequentialItemView: View {
                                 .foregroundStyle(.blue)
                         }
                         Text(item.title)
-                            .font(.custom("PlayfairDisplay-Regular", size: 17))
+                            .font(.custom("Baskerville", size: 17))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                     }

@@ -55,7 +55,7 @@ struct MemoryEditorTitleCard: View {
 
             if isEditingEnabled {
                 TextField("Memory", text: $viewModel.title, axis: .vertical)
-                    .font(.custom("PlayfairDisplay-Regular", size: 20))
+                    .font(.custom("Baskerville", size: 20))
                     .multilineTextAlignment(.leading)
                     .submitLabel(.done)
                     .focused(isTitleFocused)
@@ -77,7 +77,7 @@ struct MemoryEditorTitleCard: View {
                     }
             } else {
                 Text(viewModel.title.isEmpty ? "Memory" : viewModel.title)
-                    .font(.custom("PlayfairDisplay-Regular", size: 20))
+                    .font(.custom("Baskerville", size: 20))
                     .multilineTextAlignment(.leading)
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
