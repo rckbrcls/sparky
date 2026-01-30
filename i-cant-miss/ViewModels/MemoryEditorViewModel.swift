@@ -439,7 +439,8 @@ final class MemoryEditorViewModel: ObservableObject {
             audioAttachmentIDs: audioAttachments.map(\.id),
             fileAttachmentIDs: fileAttachments.map(\.id),
             attachments: allAttachments,
-            autoCompleteOnChecklistCompletion: autoCompleteChecklist
+            autoCompleteOnChecklistCompletion: autoCompleteChecklist,
+            completedDates: existingMemory?.completedDates ?? []
         )
 
         isSaving = true
@@ -488,7 +489,8 @@ final class MemoryEditorViewModel: ObservableObject {
             audioAttachmentIDs: audioAttachments.map(\.id),
             fileAttachmentIDs: fileAttachments.map(\.id),
             attachments: allAttachments,
-            autoCompleteOnChecklistCompletion: autoCompleteChecklist
+            autoCompleteOnChecklistCompletion: autoCompleteChecklist,
+            completedDates: existingMemory.completedDates
         )
 
         isSaving = true
@@ -578,7 +580,26 @@ private extension MemoryEditorViewModel {
     }
 
     func draft(from model: MemoryTriggerModel) -> MemoryTriggerDraft {
-        MemoryTriggerDraft(
+        let location = model.location.map {
+            MemoryTriggerModel.TriggerLocation(
+                latitude: $0.latitude,
+                longitude: $0.longitude,
+                radius: $0.radius,
+                name: $0.name,
+                event: $0.event
+            )
+        }
+
+        let sequential = model.sequential.map {
+            MemoryTriggerModel.TriggerSequential(
+                sequenceID: $0.sequenceID,
+                stepIndex: $0.stepIndex,
+                startDate: $0.startDate,
+                currentStepIndex: $0.currentStepIndex
+            )
+        }
+
+        return MemoryTriggerDraft(
             id: model.id,
             type: model.type,
             fireDate: model.fireDate,
@@ -588,9 +609,8 @@ private extension MemoryEditorViewModel {
             weekdayMask: model.weekdayMask,
             isActive: model.isActive,
             isAllDay: model.isAllDay,
-            location: model.location,
-
-            sequential: model.sequential,
+            location: location,
+            sequential: sequential,
             spacedStage: model.spacedStage,
             lastReviewDate: model.lastReviewDate,
             ignoreCount: model.ignoreCount

@@ -26,7 +26,13 @@ final class DataController: Sendable {
             Mind.self,
             Space.self,
             Memory.self,
-            Tag.self
+            Tag.self,
+            CheckItemModel.self,
+            MemoryTriggerModel.self,
+            MemoryTriggerLocation.self,
+            MemoryTriggerSequential.self,
+            MemoryAttachmentReference.self,
+            MemoryCompletionDate.self
         ])
 
         let modelConfiguration: ModelConfiguration

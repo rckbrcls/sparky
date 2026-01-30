@@ -1131,13 +1131,14 @@ fileprivate extension MemoryDraft {
             lobeID: model.lobe?.id,
             triggers: triggers,
             note: model.note,
-            checkItems: model.checkItems.map { CheckItemDraft(id: $0.id, title: $0.title, detail: $0.detail ?? "", isCompleted: $0.isCompleted, sortOrder: $0.sortOrder, createdAt: $0.createdAt, completedAt: $0.completedAt) },
+            checkItems: model.checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { CheckItemDraft(id: $0.id, title: $0.title, detail: $0.detail ?? "", isCompleted: $0.isCompleted, sortOrder: $0.sortOrder, createdAt: $0.createdAt, completedAt: $0.completedAt) },
             photoAttachmentIDs: model.photoAttachmentIDs,
             linkAttachmentIDs: model.linkAttachmentIDs,
             audioAttachmentIDs: model.audioAttachmentIDs,
             fileAttachmentIDs: model.fileAttachmentIDs,
             attachments: model.attachments,
-            autoCompleteOnChecklistCompletion: model.autoCompleteOnChecklistCompletion
+            autoCompleteOnChecklistCompletion: model.autoCompleteOnChecklistCompletion,
+            completedDates: model.completedDates
         )
     }
 }

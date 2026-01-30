@@ -302,7 +302,7 @@ struct MemoryCardView: View {
             // Checklist collapsible section
             if memory.hasChecklist && !memory.checkItems.isEmpty {
                 MemoryCardChecklistView(
-                    checkItems: memory.checkItems,
+                    checkItems: memory.checkItems.sorted { $0.sortOrder < $1.sortOrder },
                     onToggleItem: { itemID in
                         Task {
                             try? await memoryService.toggleChecklistItemCompletion(memoryID: memory.id, itemID: itemID)

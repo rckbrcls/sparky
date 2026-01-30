@@ -145,7 +145,8 @@ final class SequentialTriggerExecutor: TriggerExecutorProtocol {
             audioAttachmentIDs: memory.audioAttachmentIDs,
             fileAttachmentIDs: memory.fileAttachmentIDs,
             attachments: memory.attachments,
-            autoCompleteOnChecklistCompletion: memory.autoCompleteOnChecklistCompletion
+            autoCompleteOnChecklistCompletion: memory.autoCompleteOnChecklistCompletion,
+            completedDates: memory.completedDates
         )
 
         do {

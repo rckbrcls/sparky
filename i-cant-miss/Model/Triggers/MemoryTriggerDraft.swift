@@ -54,6 +54,16 @@ struct MemoryTriggerDraft: Identifiable, Hashable {
     }
 }
 
+extension MemoryTriggerDraft {
+    static func == (lhs: MemoryTriggerDraft, rhs: MemoryTriggerDraft) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
 // MARK: - Conversions
 
 extension MemoryTriggerDraft {

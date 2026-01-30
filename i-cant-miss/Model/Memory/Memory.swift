@@ -68,25 +68,23 @@ final class Memory: Identifiable {
     var userOrder: Int
     var autoCompleteOnChecklistCompletion: Bool
 
-    /// JSON-encoded MemoryContentBundle
-    @Attribute(.externalStorage) var contentsData: Data?
+    @Relationship(deleteRule: .cascade, inverse: \CheckItemModel.memory)
+    var checkItems: [CheckItemModel] = []
 
-    /// JSON-encoded trigger array
-    @Attribute(.externalStorage) var triggersData: Data?
+    @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerModel.memory)
+    var triggers: [MemoryTriggerModel] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \MemoryAttachmentReference.memory)
+    var attachmentReferences: [MemoryAttachmentReference] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \MemoryCompletionDate.memory)
+    var completionDateEntries: [MemoryCompletionDate] = []
 
     var space: Space?
 
     // MARK: - Transient Properties (not persisted, populated by service)
 
-    @Transient var triggers: [MemoryTriggerModel] = []
-    @Transient var checkItems: [CheckItemModel] = []
-    @Transient var note: String?
-    @Transient var photoAttachmentIDs: [UUID] = []
-    @Transient var linkAttachmentIDs: [UUID] = []
-    @Transient var audioAttachmentIDs: [UUID] = []
-    @Transient var fileAttachmentIDs: [UUID] = []
     @Transient var attachments: [Attachment] = []
-    @Transient var completedDates: [Date] = []
 
     // MARK: - Initialization
 
@@ -102,8 +100,10 @@ final class Memory: Identifiable {
         updatedAt: Date? = nil,
         userOrder: Int = 0,
         autoCompleteOnChecklistCompletion: Bool = false,
-        contentsData: Data? = nil,
-        triggersData: Data? = nil,
+        checkItems: [CheckItemModel] = [],
+        triggers: [MemoryTriggerModel] = [],
+        attachmentReferences: [MemoryAttachmentReference] = [],
+        completionDateEntries: [MemoryCompletionDate] = [],
         space: Space? = nil
     ) {
         self.id = id
@@ -117,8 +117,10 @@ final class Memory: Identifiable {
         self.updatedAt = updatedAt
         self.userOrder = userOrder
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
-        self.contentsData = contentsData
-        self.triggersData = triggersData
+        self.checkItems = checkItems
+        self.triggers = triggers
+        self.attachmentReferences = attachmentReferences
+        self.completionDateEntries = completionDateEntries
         self.space = space
     }
 
@@ -133,6 +135,31 @@ final class Memory: Identifiable {
     var status: MemoryStatus {
         get { MemoryStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }
+    }
+
+    var note: String? {
+        get { body }
+        set { body = newValue }
+    }
+
+    var photoAttachmentIDs: [UUID] {
+        attachmentIDs(for: AttachmentKind.photo.rawValue)
+    }
+
+    var linkAttachmentIDs: [UUID] {
+        attachmentIDs(for: AttachmentKind.link.rawValue)
+    }
+
+    var audioAttachmentIDs: [UUID] {
+        attachmentIDs(for: AttachmentKind.audio.rawValue)
+    }
+
+    var fileAttachmentIDs: [UUID] {
+        attachmentIDs(for: AttachmentKind.file.rawValue)
+    }
+
+    var completedDates: [Date] {
+        completionDateEntries.map(\.date).sorted()
     }
 
     var hasChecklist: Bool {
@@ -236,6 +263,18 @@ final class Memory: Identifiable {
 
     func shouldAutoCompleteChecklist(autoCompleteEnabled: Bool) -> Bool {
         autoCompleteOnChecklistCompletion || autoCompleteEnabled
+    }
+
+    private func attachmentIDs(for kindRaw: String) -> [UUID] {
+        attachmentReferences
+            .filter { $0.kindRaw == kindRaw }
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder {
+                    return lhs.sortOrder < rhs.sortOrder
+                }
+                return lhs.createdAt < rhs.createdAt
+            }
+            .map(\.id)
     }
 }
 

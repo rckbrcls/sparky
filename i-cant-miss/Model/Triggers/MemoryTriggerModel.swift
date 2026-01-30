@@ -4,51 +4,39 @@
 //
 
 import Foundation
+import SwiftData
 
-struct MemoryTriggerModel: Identifiable, Hashable, Codable {
-    let id: UUID
-    let type: MemoryTriggerType
+@Model
+final class MemoryTriggerModel: Identifiable {
+    typealias TriggerLocation = MemoryTriggerLocation
+    typealias TriggerSequential = MemoryTriggerSequential
+
+    @Attribute(.unique) var id: UUID = UUID()
+    var typeRaw: String = MemoryTriggerType.scheduled.rawValue
     var fireDate: Date?
     var startDate: Date?
-    var recurrenceRule: RecurrenceRule?
+    var recurrenceFrequencyRaw: String?
+    var recurrenceInterval: Int = 1
+    var recurrenceEndDate: Date?
     var timeZoneIdentifier: String?
-    var weekdayMask: Int16
-    var isActive: Bool
-    var isAllDay: Bool
-    var location: TriggerLocation?
-    var sequential: TriggerSequential?
-    var spacedStage: Int
+    var weekdayMask: Int16 = 0
+    var isActive: Bool = true
+    var isAllDay: Bool = false
+
+    @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerLocation.trigger)
+    var location: MemoryTriggerLocation?
+
+    @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerSequential.trigger)
+    var sequential: MemoryTriggerSequential?
+
+    var spacedStage: Int = 0
     var lastReviewDate: Date?
-    var ignoreCount: Int
+    var ignoreCount: Int = 0
 
-    // Custom decoder for backwards compatibility
-    enum CodingKeys: String, CodingKey {
-        case id, type, fireDate, startDate, recurrenceRule, timeZoneIdentifier
-        case weekdayMask, isActive, isAllDay, location, sequential
-        case spacedStage, lastReviewDate, ignoreCount
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        type = try container.decode(MemoryTriggerType.self, forKey: .type)
-        fireDate = try container.decodeIfPresent(Date.self, forKey: .fireDate)
-        startDate = try container.decodeIfPresent(Date.self, forKey: .startDate)
-        recurrenceRule = try container.decodeIfPresent(RecurrenceRule.self, forKey: .recurrenceRule)
-        timeZoneIdentifier = try container.decodeIfPresent(String.self, forKey: .timeZoneIdentifier)
-        weekdayMask = try container.decode(Int16.self, forKey: .weekdayMask)
-        isActive = try container.decode(Bool.self, forKey: .isActive)
-        isAllDay = try container.decodeIfPresent(Bool.self, forKey: .isAllDay) ?? false
-        location = try container.decodeIfPresent(TriggerLocation.self, forKey: .location)
-
-        sequential = try container.decodeIfPresent(TriggerSequential.self, forKey: .sequential)
-        spacedStage = try container.decode(Int.self, forKey: .spacedStage)
-        lastReviewDate = try container.decodeIfPresent(Date.self, forKey: .lastReviewDate)
-        ignoreCount = try container.decode(Int.self, forKey: .ignoreCount)
-    }
+    var memory: Memory?
 
     init(
-        id: UUID,
+        id: UUID = UUID(),
         type: MemoryTriggerType,
         fireDate: Date? = nil,
         startDate: Date? = nil,
@@ -57,17 +45,20 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         weekdayMask: Int16 = 0,
         isActive: Bool = true,
         isAllDay: Bool = false,
-        location: TriggerLocation? = nil,
-        sequential: TriggerSequential? = nil,
+        location: MemoryTriggerLocation? = nil,
+        sequential: MemoryTriggerSequential? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
-        ignoreCount: Int = 0
+        ignoreCount: Int = 0,
+        memory: Memory? = nil
     ) {
         self.id = id
-        self.type = type
+        self.typeRaw = type.rawValue
         self.fireDate = fireDate
         self.startDate = startDate
-        self.recurrenceRule = recurrenceRule
+        self.recurrenceFrequencyRaw = recurrenceRule?.frequency.rawValue
+        self.recurrenceInterval = recurrenceRule?.interval ?? 1
+        self.recurrenceEndDate = recurrenceRule?.endDate
         self.timeZoneIdentifier = timeZoneIdentifier
         self.weekdayMask = weekdayMask
         self.isActive = isActive
@@ -77,35 +68,37 @@ struct MemoryTriggerModel: Identifiable, Hashable, Codable {
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
         self.ignoreCount = ignoreCount
+        self.memory = memory
+
+        self.location?.trigger = self
+        self.sequential?.trigger = self
+    }
+}
+
+extension MemoryTriggerModel {
+    var type: MemoryTriggerType {
+        get { MemoryTriggerType(rawValue: typeRaw) ?? .scheduled }
+        set { typeRaw = newValue.rawValue }
     }
 
-    struct TriggerLocation: Hashable, Codable {
-        var latitude: Double
-        var longitude: Double
-        var radius: Double
-        var name: String?
-        var event: LocationEvent
-    }
-
-
-
-    struct TriggerSequential: Hashable, Codable {
-        var sequenceID: UUID
-        var stepIndex: Int
-        /// When the sequence begins. Before this date, no memory is "current".
-        var startDate: Date?
-        /// The currently active step index in the sequence (shared across all memories in the sequence).
-        var currentStepIndex: Int
-
-        init(sequenceID: UUID = UUID(), stepIndex: Int = 0, startDate: Date? = nil, currentStepIndex: Int = 0) {
-            self.sequenceID = sequenceID
-            self.stepIndex = stepIndex
-            self.startDate = startDate
-            self.currentStepIndex = currentStepIndex
+    var recurrenceRule: RecurrenceRule? {
+        get {
+            guard let raw = recurrenceFrequencyRaw,
+                  let frequency = RecurrenceFrequency(rawValue: raw) else {
+                return nil
+            }
+            return RecurrenceRule(
+                frequency: frequency,
+                interval: recurrenceInterval,
+                endDate: recurrenceEndDate
+            )
+        }
+        set {
+            recurrenceFrequencyRaw = newValue?.frequency.rawValue
+            recurrenceInterval = newValue?.interval ?? 1
+            recurrenceEndDate = newValue?.endDate
         }
     }
-
-
 }
 
 // MARK: - TriggerProtocol Conversion

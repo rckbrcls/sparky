@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct i_cant_missApp: App {
     @StateObject private var appEnvironment = AppEnvironment(dataController: DataController.shared)
+    @StateObject private var themeManager = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -18,6 +19,8 @@ struct i_cant_missApp: App {
             ContentView(environment: appEnvironment)
                 .modelContainer(appEnvironment.dataController.container)
                 .environmentObject(appEnvironment)
+                .environmentObject(themeManager)
+                .preferredColorScheme(themeManager.preferredColorScheme)
                 .task {
                     appEnvironment.bootstrap()
                 }

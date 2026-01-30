@@ -44,8 +44,6 @@ final class MemoryService: ObservableObject {
     private var refreshTimer: AnyCancellable?
     private var memoryIndex: [UUID: Memory] = [:]
     private let logger = Logger(subsystem: "i-cant-miss", category: "MemoryService")
-    private let jsonEncoder = JSONEncoder()
-    private let jsonDecoder = JSONDecoder()
 
     init(
         dataController: DataController,
@@ -57,9 +55,6 @@ final class MemoryService: ObservableObject {
         self.lobeService = lobeService
         self.attachmentStore = attachmentStore
         self.cacheTTL = cacheTTL
-
-        jsonEncoder.dateEncodingStrategy = .iso8601
-        jsonDecoder.dateDecodingStrategy = .iso8601
 
         loadInitialData()
         configureAutoRefresh()
@@ -77,8 +72,7 @@ final class MemoryService: ObservableObject {
             descriptor.includePendingChanges = true
 
             let results = try context.fetch(descriptor)
-            let populated = results.map { populateTransients($0) }
-            let sorted = populated.sorted { lhs, rhs in
+            let sorted = results.sorted { lhs, rhs in
                 (lhs.updatedAt ?? lhs.createdAt ?? Date()) > (rhs.updatedAt ?? rhs.createdAt ?? Date())
             }
 
@@ -116,7 +110,7 @@ final class MemoryService: ObservableObject {
             descriptor.includePendingChanges = true
 
             let results = try context.fetch(descriptor)
-            var populated = results.map { populateTransients($0) }
+            var populated = results
 
             for memory in populated {
                 memory.attachments = await attachmentStore.attachments(for: memory.id)
@@ -146,31 +140,6 @@ final class MemoryService: ObservableObject {
         for memory in memories {
             memoryIndex[memory.id] = memory
         }
-    }
-
-    private func populateTransients(_ memory: Memory) -> Memory {
-        if let triggersData = memory.triggersData,
-           !triggersData.isEmpty,
-           let decoded = try? jsonDecoder.decode([MemoryTriggerModel].self, from: triggersData) {
-            memory.triggers = decoded
-        } else {
-            memory.triggers = []
-        }
-
-        if let contentsData = memory.contentsData,
-           !contentsData.isEmpty {
-            if let bundle = try? jsonDecoder.decode(MemoryDomain.MemoryContentBundle.self, from: contentsData) {
-                memory.note = bundle.note
-                memory.checkItems = bundle.checkItems ?? []
-                memory.photoAttachmentIDs = bundle.photoAttachmentIDs ?? []
-                memory.linkAttachmentIDs = bundle.linkAttachmentIDs ?? []
-                memory.audioAttachmentIDs = bundle.audioAttachmentIDs ?? []
-                memory.fileAttachmentIDs = bundle.fileAttachmentIDs ?? []
-                memory.completedDates = bundle.completedDates ?? []
-            }
-        }
-
-        return memory
     }
 
     func memory(id: UUID) -> Memory? {
@@ -258,29 +227,6 @@ final class MemoryService: ObservableObject {
 
         let space = draft.lobeID.flatMap { lobeService.lobe(id: $0) }
 
-        let triggersData = try? jsonEncoder.encode(draft.triggers)
-        let contentsBundle = MemoryDomain.MemoryContentBundle(
-            note: draft.note,
-            checkItems: draft.checkItems.map { item in
-                CheckItemModel(
-                    id: item.id,
-                    title: item.title,
-                    detail: item.detail.isEmpty ? nil : item.detail,
-                    isCompleted: item.isCompleted,
-                    sortOrder: item.sortOrder,
-                    createdAt: item.createdAt,
-                    updatedAt: item.completedAt ?? item.createdAt,
-                    completedAt: item.completedAt
-                )
-            },
-            photoAttachmentIDs: draft.photoAttachmentIDs,
-            linkAttachmentIDs: draft.linkAttachmentIDs,
-            audioAttachmentIDs: draft.audioAttachmentIDs,
-            fileAttachmentIDs: draft.fileAttachmentIDs,
-            completedDates: draft.completedDates
-        )
-        let contentsData = try? jsonEncoder.encode(contentsBundle)
-
         let userOrder = (memories.map(\.userOrder).max() ?? -1) + 1
 
         let memory = Memory(
@@ -295,10 +241,31 @@ final class MemoryService: ObservableObject {
             updatedAt: now,
             userOrder: userOrder,
             autoCompleteOnChecklistCompletion: draft.autoCompleteOnChecklistCompletion,
-            contentsData: contentsData,
-            triggersData: triggersData,
             space: space
         )
+
+        let checkItems = draft.checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { item in
+            CheckItemModel(
+                id: item.id,
+                title: item.title,
+                detail: item.detail.isEmpty ? nil : item.detail,
+                isCompleted: item.isCompleted,
+                sortOrder: item.sortOrder,
+                createdAt: item.createdAt,
+                updatedAt: item.completedAt ?? item.createdAt,
+                completedAt: item.completedAt,
+                memory: memory
+            )
+        }
+
+        let triggers = draft.triggers.map { trigger in
+            cloneTrigger(trigger, for: memory)
+        }
+
+        memory.checkItems = checkItems
+        memory.triggers = triggers
+        memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
+        memory.completionDateEntries = buildCompletionEntries(from: draft, memory: memory)
 
         context.insert(memory)
         dataController.save()
@@ -324,29 +291,6 @@ final class MemoryService: ObservableObject {
 
         let space = draft.lobeID.flatMap { lobeService.lobe(id: $0) }
 
-        let triggersData = try? jsonEncoder.encode(draft.triggers)
-        let contentsBundle = MemoryDomain.MemoryContentBundle(
-            note: draft.note,
-            checkItems: draft.checkItems.map { item in
-                CheckItemModel(
-                    id: item.id,
-                    title: item.title,
-                    detail: item.detail.isEmpty ? nil : item.detail,
-                    isCompleted: item.isCompleted,
-                    sortOrder: item.sortOrder,
-                    createdAt: item.createdAt,
-                    updatedAt: item.completedAt ?? item.createdAt,
-                    completedAt: item.completedAt
-                )
-            },
-            photoAttachmentIDs: draft.photoAttachmentIDs,
-            linkAttachmentIDs: draft.linkAttachmentIDs,
-            audioAttachmentIDs: draft.audioAttachmentIDs,
-            fileAttachmentIDs: draft.fileAttachmentIDs,
-            completedDates: draft.completedDates
-        )
-        let contentsData = try? jsonEncoder.encode(contentsBundle)
-
         memory.title = trimmedTitle
         memory.body = draft.note
         memory.statusRaw = draft.status.rawValue
@@ -354,11 +298,53 @@ final class MemoryService: ObservableObject {
         memory.dueDate = draft.dueDate
         memory.updatedAt = now
         memory.autoCompleteOnChecklistCompletion = draft.autoCompleteOnChecklistCompletion
-        memory.contentsData = contentsData
-        memory.triggersData = triggersData
         memory.space = space
 
-        populateTransients(memory)
+        let previousCheckItems = memory.checkItems
+        let previousTriggers = memory.triggers
+        let previousAttachments = memory.attachmentReferences
+        let previousCompletionDates = memory.completionDateEntries
+
+        memory.checkItems = []
+        memory.triggers = []
+        memory.attachmentReferences = []
+        memory.completionDateEntries = []
+
+        for item in previousCheckItems {
+            context.delete(item)
+        }
+
+        for trigger in previousTriggers {
+            context.delete(trigger)
+        }
+
+        for attachment in previousAttachments {
+            context.delete(attachment)
+        }
+
+        for completion in previousCompletionDates {
+            context.delete(completion)
+        }
+
+        memory.checkItems = draft.checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { item in
+            CheckItemModel(
+                id: item.id,
+                title: item.title,
+                detail: item.detail.isEmpty ? nil : item.detail,
+                isCompleted: item.isCompleted,
+                sortOrder: item.sortOrder,
+                createdAt: item.createdAt,
+                updatedAt: item.completedAt ?? item.createdAt,
+                completedAt: item.completedAt,
+                memory: memory
+            )
+        }
+
+        memory.triggers = draft.triggers.map { trigger in
+            cloneTrigger(trigger, for: memory)
+        }
+        memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
+        memory.completionDateEntries = buildCompletionEntries(from: draft, memory: memory)
 
         dataController.save()
 
@@ -433,22 +419,13 @@ final class MemoryService: ObservableObject {
         }
 
         let calendar = Calendar.current
-        if memory.completedDates.contains(where: { calendar.isDate($0, inSameDayAs: date) }) {
-            memory.completedDates.removeAll { calendar.isDate($0, inSameDayAs: date) }
+        if let existing = memory.completionDateEntries.first(where: { calendar.isDate($0.date, inSameDayAs: date) }) {
+            dataController.modelContext.delete(existing)
         } else {
-            memory.completedDates.append(date)
+            let entry = MemoryCompletionDate(date: date, memory: memory)
+            memory.completionDateEntries.append(entry)
         }
 
-        let contentsBundle = MemoryDomain.MemoryContentBundle(
-            note: memory.note,
-            checkItems: memory.checkItems,
-            photoAttachmentIDs: memory.photoAttachmentIDs,
-            linkAttachmentIDs: memory.linkAttachmentIDs,
-            audioAttachmentIDs: memory.audioAttachmentIDs,
-            fileAttachmentIDs: memory.fileAttachmentIDs,
-            completedDates: memory.completedDates
-        )
-        memory.contentsData = try? jsonEncoder.encode(contentsBundle)
         memory.updatedAt = Date()
         dataController.save()
 
@@ -476,19 +453,10 @@ final class MemoryService: ObservableObject {
             return
         }
 
-        memory.checkItems[index].isCompleted.toggle()
-        memory.checkItems[index].completedAt = memory.checkItems[index].isCompleted ? Date() : nil
-
-        let contentsBundle = MemoryDomain.MemoryContentBundle(
-            note: memory.note,
-            checkItems: memory.checkItems,
-            photoAttachmentIDs: memory.photoAttachmentIDs,
-            linkAttachmentIDs: memory.linkAttachmentIDs,
-            audioAttachmentIDs: memory.audioAttachmentIDs,
-            fileAttachmentIDs: memory.fileAttachmentIDs,
-            completedDates: memory.completedDates
-        )
-        memory.contentsData = try? jsonEncoder.encode(contentsBundle)
+        let item = memory.checkItems[index]
+        item.isCompleted.toggle()
+        item.completedAt = item.isCompleted ? Date() : nil
+        item.updatedAt = Date()
         memory.updatedAt = Date()
         dataController.save()
 
@@ -508,29 +476,7 @@ final class MemoryService: ObservableObject {
             dueDate: source.dueDate,
             lobeID: source.space?.id,
             triggers: source.triggers.map { trigger in
-                MemoryTriggerModel(
-                    id: UUID(),
-                    type: trigger.type,
-                    fireDate: trigger.fireDate,
-                    startDate: trigger.startDate,
-                    recurrenceRule: trigger.recurrenceRule,
-                    timeZoneIdentifier: trigger.timeZoneIdentifier,
-                    weekdayMask: trigger.weekdayMask,
-                    isActive: trigger.isActive,
-                    isAllDay: trigger.isAllDay,
-                    location: trigger.location,
-                    sequential: trigger.sequential.map { seq in
-                        MemoryTriggerModel.TriggerSequential(
-                            sequenceID: seq.sequenceID,
-                            stepIndex: seq.stepIndex,
-                            startDate: seq.startDate,
-                            currentStepIndex: seq.currentStepIndex
-                        )
-                    },
-                    spacedStage: trigger.spacedStage,
-                    lastReviewDate: trigger.lastReviewDate,
-                    ignoreCount: trigger.ignoreCount
-                )
+                cloneTrigger(trigger, for: nil, id: UUID())
             },
             note: source.note,
             checkItems: source.checkItems.map { item in
@@ -566,5 +512,81 @@ final class MemoryService: ObservableObject {
 
         dataController.save()
         _ = await refresh(force: true)
+    }
+}
+
+// MARK: - Model cloning
+
+private extension MemoryService {
+    func buildAttachmentReferences(from draft: MemoryDraft, memory: Memory) -> [MemoryAttachmentReference] {
+        let createdAtLookup = Dictionary(uniqueKeysWithValues: draft.attachments.map { ($0.id, $0.createdAt) })
+
+        func makeRefs(ids: [UUID], kind: Memory.AttachmentKind) -> [MemoryAttachmentReference] {
+            ids.enumerated().map { index, id in
+                MemoryAttachmentReference(
+                    id: id,
+                    kindRaw: kind.rawValue,
+                    sortOrder: index,
+                    createdAt: createdAtLookup[id] ?? Date(),
+                    memory: memory
+                )
+            }
+        }
+
+        return makeRefs(ids: draft.photoAttachmentIDs, kind: .photo)
+            + makeRefs(ids: draft.linkAttachmentIDs, kind: .link)
+            + makeRefs(ids: draft.audioAttachmentIDs, kind: .audio)
+            + makeRefs(ids: draft.fileAttachmentIDs, kind: .file)
+    }
+
+    func buildCompletionEntries(from draft: MemoryDraft, memory: Memory) -> [MemoryCompletionDate] {
+        draft.completedDates.map { date in
+            MemoryCompletionDate(date: date, memory: memory)
+        }
+    }
+
+    func cloneTrigger(_ source: MemoryTriggerModel, for memory: Memory?, id: UUID? = nil) -> MemoryTriggerModel {
+        let location = source.location.map { location in
+            MemoryTriggerLocation(
+                id: UUID(),
+                latitude: location.latitude,
+                longitude: location.longitude,
+                radius: location.radius,
+                name: location.name,
+                event: location.event
+            )
+        }
+
+        let sequential = source.sequential.map { sequential in
+            MemoryTriggerSequential(
+                id: UUID(),
+                sequenceID: sequential.sequenceID,
+                stepIndex: sequential.stepIndex,
+                startDate: sequential.startDate,
+                currentStepIndex: sequential.currentStepIndex
+            )
+        }
+
+        let trigger = MemoryTriggerModel(
+            id: id ?? source.id,
+            type: source.type,
+            fireDate: source.fireDate,
+            startDate: source.startDate,
+            recurrenceRule: source.recurrenceRule,
+            timeZoneIdentifier: source.timeZoneIdentifier,
+            weekdayMask: source.weekdayMask,
+            isActive: source.isActive,
+            isAllDay: source.isAllDay,
+            location: location,
+            sequential: sequential,
+            spacedStage: source.spacedStage,
+            lastReviewDate: source.lastReviewDate,
+            ignoreCount: source.ignoreCount,
+            memory: memory
+        )
+
+        location?.trigger = trigger
+        sequential?.trigger = trigger
+        return trigger
     }
 }

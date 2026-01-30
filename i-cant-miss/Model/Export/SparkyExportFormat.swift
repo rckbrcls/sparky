@@ -359,7 +359,7 @@ extension Memory {
             autoCompleteOnChecklistCompletion: autoCompleteOnChecklistCompletion,
             lobeID: lobe?.id,
             triggers: triggers.map { $0.toExported() },
-            checkItems: checkItems.map { $0.toExported() },
+            checkItems: checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { $0.toExported() },
             photoAttachmentIDs: photoAttachmentIDs,
             linkAttachmentIDs: linkAttachmentIDs,
             audioAttachmentIDs: audioAttachmentIDs,
@@ -400,7 +400,7 @@ extension RecurrenceRule {
     }
 }
 
-extension MemoryTriggerModel.TriggerLocation {
+extension MemoryTriggerLocation {
     func toExported() -> ExportedLocationTrigger {
         ExportedLocationTrigger(
             latitude: latitude,
@@ -412,7 +412,7 @@ extension MemoryTriggerModel.TriggerLocation {
     }
 }
 
-extension MemoryTriggerModel.TriggerSequential {
+extension MemoryTriggerSequential {
     func toExported() -> ExportedSequentialTrigger {
         ExportedSequentialTrigger(
             sequenceID: sequenceID,

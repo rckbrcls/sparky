@@ -12,6 +12,7 @@ struct SettingsView: View {
     private let embedsInNavigationStack: Bool
 
     private enum Route: Hashable {
+        case appearance
         case appIcon
         case dataManagement
     }
@@ -53,6 +54,21 @@ private extension SettingsView {
 
             Section {
                 ZStack {
+                    NavigationLink(value: Route.appearance) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+
+                    SettingsRow(
+                        iconName: "circle.lefthalf.filled",
+                        title: "Appearance"
+                    )
+                }
+                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                ZStack {
                     NavigationLink(value: Route.appIcon) {
                         EmptyView()
                     }
@@ -66,7 +82,7 @@ private extension SettingsView {
                 .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                
+
                 ZStack {
                     NavigationLink(value: Route.dataManagement) {
                         EmptyView()
@@ -94,6 +110,8 @@ private extension SettingsView {
     @ViewBuilder
     private func destinationView(for destination: Route) -> some View {
         switch destination {
+        case .appearance:
+            ThemeSettingsView()
         case .appIcon:
             AppIconSettingsView(appIconManager: appIconManager)
         case .dataManagement:
