@@ -141,7 +141,7 @@ final class DataExportService {
         if includeCompleted {
             return allMemories
         } else {
-            return allMemories.filter { $0.status == .active }
+            return allMemories.filter { $0.status == MemoryStatus.active }
         }
     }
 

@@ -150,15 +150,3 @@ extension Space {
         ))
     }
 }
-
-// MARK: - Hashable
-
-extension Space: Hashable {
-    static func == (lhs: Space, rhs: Space) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-}

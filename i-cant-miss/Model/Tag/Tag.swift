@@ -22,15 +22,3 @@ final class Tag: Identifiable {
         self.colorHex = colorHex
     }
 }
-
-// MARK: - Hashable
-
-extension Tag: Hashable {
-    static func == (lhs: Tag, rhs: Tag) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-}

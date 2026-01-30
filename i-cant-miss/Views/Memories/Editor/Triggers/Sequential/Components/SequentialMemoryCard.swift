@@ -62,23 +62,14 @@ struct SequentialMemoryCard: View {
         id: UUID(),
         title: "Sample Memory",
         body: "This is a sample memory body.",
-        createdAt: Date(),
-        updatedAt: Date(),
-        status: .active,
+        statusRaw: MemoryStatus.active.rawValue,
         isPinned: false,
         dueDate: nil,
-        lobe: nil,
-        triggers: [],
-        checkItems: [],
+        createdAt: Date(),
+        updatedAt: Date(),
+        userOrder: 0,
         autoCompleteOnChecklistCompletion: false,
-        note: nil,
-        photoAttachmentIDs: [],
-        linkAttachmentIDs: [],
-        audioAttachmentIDs: [],
-        fileAttachmentIDs: [],
-        attachments: [],
-        completedDates: [],
-        userOrder: 0
+        space: nil
     )
 
     SequentialMemoryCard(memory: memory) {}

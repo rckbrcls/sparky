@@ -254,8 +254,8 @@ final class MindService: ObservableObject {
                 id: UUID(),
                 name: "All Minds",
                 iconName: "brain.head.profile",
-                isDefault: true,
-                sortOrder: 0
+                sortOrder: 0,
+                isDefault: true
             )
 
             let spaceDescriptor = FetchDescriptor<Space>()

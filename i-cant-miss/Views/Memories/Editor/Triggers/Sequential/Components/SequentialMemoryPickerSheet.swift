@@ -178,7 +178,7 @@ private struct SequentialLobeDetailView: View {
                 return memory.title.localizedCaseInsensitiveContains(searchText)
             }
             return true
-        }.sorted { $0.updatedAt > $1.updatedAt }
+        }.sorted { ($0.updatedAt ?? $0.createdAt ?? Date()) > ($1.updatedAt ?? $1.createdAt ?? Date()) }
     }
 
     var body: some View {

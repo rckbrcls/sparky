@@ -253,8 +253,8 @@ final class LobeService: ObservableObject {
         }
 
         if deleteMemories, let memoryService = memoryService {
-            let memoryIDs = memoryIDs(in: lobe)
-            try await memoryService.deleteMemories(ids: memoryIDs)
+            let ids = memoryIDs(in: lobe)
+            try await memoryService.deleteMemories(ids: Set(ids))
         }
 
         let context = dataController.modelContext

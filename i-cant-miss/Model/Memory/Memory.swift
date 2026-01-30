@@ -124,6 +124,12 @@ final class Memory: Identifiable {
 
     // MARK: - Computed Properties
 
+    /// Alias for `space` - domain term "lobe" used across the app
+    var lobe: Space? {
+        get { space }
+        set { space = newValue }
+    }
+
     var status: MemoryStatus {
         get { MemoryStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }
@@ -230,18 +236,6 @@ final class Memory: Identifiable {
 
     func shouldAutoCompleteChecklist(autoCompleteEnabled: Bool) -> Bool {
         autoCompleteOnChecklistCompletion || autoCompleteEnabled
-    }
-}
-
-// MARK: - Hashable
-
-extension Memory: Hashable {
-    static func == (lhs: Memory, rhs: Memory) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
     }
 }
 

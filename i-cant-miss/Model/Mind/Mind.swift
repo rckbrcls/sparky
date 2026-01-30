@@ -71,15 +71,3 @@ extension Mind {
         id == Mind.inboxMindsIdentifier
     }
 }
-
-// MARK: - Hashable
-
-extension Mind: Hashable {
-    static func == (lhs: Mind, rhs: Mind) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-}
