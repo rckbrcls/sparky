@@ -9,7 +9,6 @@ import SwiftUI
 
 struct MindsTab: View {
     @ObservedObject var mindService: MindService
-    @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
 
     let onEditMind: ((Mind) -> Void)?
@@ -32,10 +31,9 @@ struct MindsTab: View {
                         NavigationLink(value: mind) {
                             MindGridItemView(
                                 mind: mind,
-                                count: lobeCounts(for: mind),
+                                count: childMindCount(for: mind),
                                 activeCount: activeMemoryCount(for: mind),
                                 mindService: mindService,
-                                lobeService: lobeService,
                                 onEdit: onEditMind
                             )
                         }
@@ -53,26 +51,18 @@ struct MindsTab: View {
     }
 
     private var displayMinds: [Mind] {
-        let sortedMinds = mindService.minds
-            .filter { !$0.isDefault && !$0.isAllMinds }
+        return mindService.minds
+            .filter { $0.parent == nil }
             .sorted { lhs, rhs in
                 if lhs.sortOrder != rhs.sortOrder {
                     return lhs.sortOrder < rhs.sortOrder
                 }
                 return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             }
-        return [Mind.allMinds] + sortedMinds
     }
 
-    private func lobeCounts(for mind: Mind) -> Int {
-        if mind.isAllMinds {
-            return lobeService.lobes.count
-        } else {
-            return lobeService.lobes.filter { lobe in
-                guard let mindID = lobe.mind?.id else { return false }
-                return mindID == mind.id
-            }.count
-        }
+    private func childMindCount(for mind: Mind) -> Int {
+        return mind.children?.count ?? 0
     }
 
     private func activeMemoryCount(for mind: Mind) -> Int {
@@ -80,11 +70,7 @@ struct MindsTab: View {
         if mind.isAllMinds {
             memories = memoryService.memories
         } else {
-            let mindID = mind.id
-            memories = memoryService.memories.filter { memory in
-                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
-                return memoryLobeMindID == mindID
-            }
+            memories = memoryService.memories.filter { $0.mind?.id == mind.id }
         }
 
         return memories.filter { $0.status == .active }.count

@@ -22,12 +22,12 @@ struct MemoryCardView: View {
     var onTogglePin: (() -> Void)?
     var onToggleCompletion: (() -> Void)?
     var onDelete: (() -> Void)?
-    var onMoveToLobe: ((UUID?) -> Void)?
+    var onMoveToMind: ((UUID?) -> Void)?
     var onUpdateStatus: ((MemoryStatus) -> Void)?
     var onEdit: (() -> Void)?
 
     private var isContextMenuEnabled: Bool {
-        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToLobe != nil || onEdit != nil
+        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToMind != nil || onEdit != nil
     }
 
     init(
@@ -37,7 +37,7 @@ struct MemoryCardView: View {
         onTogglePin: (() -> Void)? = nil,
         onToggleCompletion: (() -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
-        onMoveToLobe: ((UUID?) -> Void)? = nil,
+        onMoveToMind: ((UUID?) -> Void)? = nil,
         onUpdateStatus: ((MemoryStatus) -> Void)? = nil,
         onEdit: (() -> Void)? = nil
     ) {
@@ -47,7 +47,7 @@ struct MemoryCardView: View {
         self.onTogglePin = onTogglePin
         self.onToggleCompletion = onToggleCompletion
         self.onDelete = onDelete
-        self.onMoveToLobe = onMoveToLobe
+        self.onMoveToMind = onMoveToMind
         self.onUpdateStatus = onUpdateStatus
         self.onEdit = onEdit
     }
@@ -138,15 +138,6 @@ struct MemoryCardView: View {
             return ("Completed", "checkmark.circle.fill", .green)
         }
     }
-
-    private var spaceAccent: Color {
-        guard let memory = memory,
-              let hex = memory.lobe?.colorHex,
-              let color = Color(hex: hex) else {
-            return .accentColor
-        }
-        return color
-    }
     
     private var locationTrigger: MemoryTriggerModel? {
         guard let memory = memory else { return nil }
@@ -185,18 +176,6 @@ struct MemoryCardView: View {
             
             // Card content
             HStack(alignment: .center, spacing: 12) {
-                let lobeIcon = memory.lobe?.iconName ?? "brain.fill"
-                let lobeColor = memory.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
-
-//                Image(systemName: lobeIcon)
-//                    .foregroundStyle(lobeColor)
-//                    .frame(width: 32, height: 32)
-//                    .background(
-//                        RoundedRectangle(cornerRadius: 12)
-//                        .fill(lobeColor.opacity(0.15))
-//                        .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-//                    )
-
                 VStack(alignment: .leading, spacing: 6) {
                     VStack (alignment: .leading, spacing: 6){
                         Text(title)
@@ -260,25 +239,23 @@ struct MemoryCardView: View {
                 }
 
 
-                if let onMoveToLobe = onMoveToLobe {
+                if let onMoveToMind = onMoveToMind {
                     Menu {
                         Button {
-                            onMoveToLobe(nil)
+                            onMoveToMind(nil)
                         } label: {
-                            Label("No Lobe", systemImage: "tray")
+                            Label("No Mind", systemImage: "tray")
                         }
 
-                        ForEach(environment.lobeService.lobes.filter { 
-                            $0.id != Space.allSpacesIdentifier && $0.id != Space.inboxIdentifier 
-                        }, id: \.id) { lobe in
+                        ForEach(environment.mindService.minds, id: \.id) { mind in
                             Button {
-                                onMoveToLobe(lobe.id)
+                                onMoveToMind(mind.id)
                             } label: {
-                                Label(lobe.name, systemImage: lobe.iconName ?? "folder")
+                                Label(mind.name, systemImage: mind.iconName ?? "brain.head.profile")
                             }
                         }
                     } label: {
-                        Label("Move to Lobe", systemImage: "folder")
+                        Label("Move to Mind", systemImage: "folder")
                     }
                 }
 

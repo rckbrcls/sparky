@@ -28,7 +28,9 @@ enum MindServiceError: LocalizedError {
 @MainActor
 final class MindService: ObservableObject {
     @Published private(set) var minds: [Mind] = []
+    @Published private(set) var tags: [Tag] = []
     @Published private(set) var lastRefreshed: Date?
+    @Published private(set) var lastTagsRefresh: Date?
 
     private let dataController: DataController
     private let cacheTTL: TimeInterval
@@ -113,6 +115,25 @@ final class MindService: ObservableObject {
             return minds
         }
     }
+    
+    @discardableResult
+    func refreshTags(force: Bool) async -> [Tag] {
+        if !force,
+           let last = lastTagsRefresh,
+           Date().timeIntervalSince(last) < cacheTTL {
+            return tags
+        }
+
+        do {
+            let fetched = try fetchTags(in: dataController.modelContext)
+            self.tags = fetched
+            self.lastTagsRefresh = Date()
+            return fetched
+        } catch {
+            logger.error("Failed to refresh tags: \(error.localizedDescription)")
+            return tags
+        }
+    }
 
     private func rebuildIndex() {
         mindIndex.removeAll(keepingCapacity: true)
@@ -129,18 +150,14 @@ final class MindService: ObservableObject {
         minds.first(where: { $0.isDefault })
     }
 
-    func spaceIDs(in mind: Mind) -> [UUID] {
-        let spaces = mind.spaces ?? []
-        return spaces.map { $0.id }
-    }
-
     // MARK: - CRUD Operations
 
     func createMind(
         name: String,
         colorHex: String?,
         iconName: String?,
-        isDefault: Bool
+        isDefault: Bool,
+        parent: Mind? = nil
     ) async throws -> Mind {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw MindServiceError.validationFailed("Mind name is required")
@@ -158,7 +175,8 @@ final class MindService: ObservableObject {
             colorHex: colorHex,
             iconName: iconName,
             sortOrder: countMinds(in: context),
-            isDefault: isDefault
+            isDefault: isDefault,
+            parent: parent
         )
 
         context.insert(mind)
@@ -204,10 +222,56 @@ final class MindService: ObservableObject {
         }
 
         let context = dataController.modelContext
-        context.delete(mind)
+        
+        func recursivelyDelete(mind: Mind) {
+            if let children = mind.children {
+                for child in children {
+                    recursivelyDelete(mind: child)
+                }
+            }
+            context.delete(mind)
+        }
+        
+        recursivelyDelete(mind: mind)
+        
         dataController.save()
 
         _ = await refresh(force: true)
+    }
+    
+    // MARK: - Tag Operations
+
+    func createTag(name: String, colorHex: String?) async throws -> Tag {
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw MindServiceError.validationFailed("Tag name is required")
+        }
+
+        let context = dataController.modelContext
+
+        let tag = Tag(
+            id: UUID(),
+            name: name,
+            colorHex: colorHex
+        )
+
+        context.insert(tag)
+        dataController.save()
+
+        await refreshTags(force: true)
+        return tag
+    }
+
+    func deleteTag(id: UUID) async throws {
+        let context = dataController.modelContext
+
+        guard let tag = try fetchTag(by: id, context: context) else {
+            throw MindServiceError.validationFailed("Tag not found")
+        }
+
+        context.delete(tag)
+        dataController.save()
+
+        await refreshTags(force: true)
     }
 
     // MARK: - Internal fetch helpers
@@ -218,6 +282,21 @@ final class MindService: ObservableObject {
         )
         descriptor.fetchLimit = 1
         return try context.fetch(descriptor).first
+    }
+    
+    func fetchTag(by id: UUID, context: ModelContext) throws -> Tag? {
+        var descriptor = FetchDescriptor<Tag>(
+            predicate: #Predicate { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    private func fetchTags(in context: ModelContext) throws -> [Tag] {
+        let descriptor = FetchDescriptor<Tag>()
+        let results = try context.fetch(descriptor)
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        return results
     }
 
     private func clearDefaultMind(context: ModelContext, excluding mind: Mind? = nil) throws {
@@ -236,38 +315,6 @@ final class MindService: ObservableObject {
             return try context.fetchCount(descriptor)
         } catch {
             return 0
-        }
-    }
-
-    // MARK: - Migration
-
-    func ensureDefaultMindExists() async throws {
-        let context = dataController.modelContext
-
-        let descriptor = FetchDescriptor<Mind>(
-            predicate: #Predicate { $0.isDefault == true }
-        )
-        let count = try context.fetchCount(descriptor)
-
-        if count == 0 {
-            let defaultMind = Mind(
-                id: UUID(),
-                name: "All Minds",
-                iconName: "brain.head.profile",
-                sortOrder: 0,
-                isDefault: true
-            )
-
-            let spaceDescriptor = FetchDescriptor<Space>()
-            let spaces = try context.fetch(spaceDescriptor)
-            for space in spaces {
-                space.mind = defaultMind
-            }
-
-            context.insert(defaultMind)
-            dataController.save()
-
-            _ = await refresh(force: true)
         }
     }
 }

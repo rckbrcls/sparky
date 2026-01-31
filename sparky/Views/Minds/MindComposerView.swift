@@ -74,10 +74,12 @@ struct MindComposerView: View {
     @State private var errorMessage: String?
     @State private var showIconPicker = false
     private let mindToEdit: Mind?
+    private let parentMind: Mind?
 
-    init(environment: AppEnvironment, mindToEdit: Mind? = nil) {
+    init(environment: AppEnvironment, mindToEdit: Mind? = nil, parentMind: Mind? = nil) {
         self.environment = environment
         self.mindToEdit = mindToEdit
+        self.parentMind = parentMind
     }
 
     private var selectedMindColor: Color {
@@ -171,7 +173,8 @@ struct MindComposerView: View {
                         name: trimmedName,
                         colorHex: selectedColorHex,
                         iconName: selectedIcon,
-                        isDefault: false
+                        isDefault: false,
+                        parent: parentMind
                     )
                 }
 

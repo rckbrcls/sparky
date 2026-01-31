@@ -66,36 +66,36 @@ private struct AutoFocusTextField: UIViewRepresentable {
 
 struct QuickMemorySheet: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var lobeService: LobeService
+    @ObservedObject private var mindService: MindService
 
     let environment: AppEnvironment
-    let lobe: Space?
-    let onExpandToEditor: (Space?, String) -> Void
-    let onQuickCreate: (Space?, String, Int?) -> Void // Added Int? for reminder minutes
+    let mind: Mind?
+    let onExpandToEditor: (Mind?, String) -> Void
+    let onQuickCreate: (Mind?, String, Int?) -> Void // Added Int? for reminder minutes
 
     @State private var title: String = ""
-    @State private var selectedLobeID: UUID?
+    @State private var selectedMindID: UUID?
     @State private var selectedReminderMinutes: Int? = nil // nil means no reminder selected
 
-    init(environment: AppEnvironment, lobe: Space?, onExpandToEditor: @escaping (Space?, String) -> Void, onQuickCreate: @escaping (Space?, String, Int?) -> Void) {
+    init(environment: AppEnvironment, mind: Mind?, onExpandToEditor: @escaping (Mind?, String) -> Void, onQuickCreate: @escaping (Mind?, String, Int?) -> Void) {
         self.environment = environment
-        self.lobeService = environment.lobeService
-        self.lobe = lobe
+        self.mindService = environment.mindService
+        self.mind = mind
         self.onExpandToEditor = onExpandToEditor
         self.onQuickCreate = onQuickCreate
     }
 
-    private var availableLobes: [Space] {
-        lobeService.lobes
+    private var availableMinds: [Mind] {
+        mindService.minds
     }
 
-    private var selectedLobe: Space? {
-        guard let id = selectedLobeID else { return nil }
-        return availableLobes.first { $0.id == id }
+    private var selectedMind: Mind? {
+        guard let id = selectedMindID else { return nil }
+        return availableMinds.first { $0.id == id }
     }
 
-    private var lobeColor: Color {
-        if let hex = selectedLobe?.colorHex,
+    private var mindColor: Color {
+        if let hex = selectedMind?.colorHex,
            let color = Color(hex: hex) {
             return color
         }
@@ -112,7 +112,7 @@ struct QuickMemorySheet: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
-                lobeIconMenu
+                mindIconMenu
 
                 AutoFocusTextField(
                     text: $title,
@@ -121,14 +121,14 @@ struct QuickMemorySheet: View {
                     onSubmit: {
                         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         dismiss()
-                        onQuickCreate(selectedLobe, title, selectedReminderMinutes)
+                        onQuickCreate(selectedMind, title, selectedReminderMinutes)
                     }
                 )
                 .frame(height: 30)
 
                 Button {
                     dismiss()
-                    onExpandToEditor(selectedLobe, title)
+                    onExpandToEditor(selectedMind, title)
                 } label: {
                     Image(systemName: "ellipsis")
                         .rotationEffect(.degrees(90))
@@ -155,31 +155,30 @@ struct QuickMemorySheet: View {
         .presentationDetents([.height(110)])
         .presentationBackground(.clear)
         .onAppear {
-            if lobe?.isAllSpaces == true {
-                selectedLobeID = nil
+            if mind?.isAllMinds == true {
+                selectedMindID = nil
             } else {
-                selectedLobeID = lobe?.id
+                selectedMindID = mind?.id
             }
         }
     }
 
-    private var lobeIconMenu: some View {
+    private var mindIconMenu: some View {
         Menu {
-            Picker("Lobe", selection: $selectedLobeID) {
-                Label("No Lobe", systemImage: "brain.fill")
+            Picker("Mind", selection: $selectedMindID) {
+                Label("No Mind", systemImage: "brain.head.profile")
                     .tag(nil as UUID?)
 
-                ForEach(availableLobes) { lobe in
-                    // Use the lobe's icon
-                    Label(lobe.name, systemImage: lobe.iconName ?? "brain.fill")
-                        .tag(Optional(lobe.id))
+                ForEach(availableMinds) { mind in
+                    Label(mind.name, systemImage: mind.iconName ?? "brain.head.profile")
+                        .tag(Optional(mind.id))
                 }
             }
         } label: {
-            Image(systemName: selectedLobe?.iconName ?? "brain.fill")
-                .foregroundStyle(lobeColor)
+            Image(systemName: selectedMind?.iconName ?? "brain.head.profile")
+                .foregroundStyle(mindColor)
                     .frame(width: 36, height: 36)
-                    .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
+                    .glassEffect(.regular.tint(mindColor.opacity(0.15)))
         }
     }
 
@@ -235,7 +234,7 @@ struct QuickMemorySheet: View {
             env.bootstrap()
             return env
         }(),
-        lobe: nil,
+        mind: nil,
         onExpandToEditor: { _, _ in },
         onQuickCreate: { _, _, _ in }
     )

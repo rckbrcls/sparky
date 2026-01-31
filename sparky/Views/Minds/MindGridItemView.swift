@@ -10,7 +10,6 @@ struct MindGridItemView: View {
     let count: Int
     let activeCount: Int
     let mindService: MindService?
-    let lobeService: LobeService?
 
     @State private var showingDeleteConfirmation = false
 
@@ -19,14 +18,12 @@ struct MindGridItemView: View {
         count: Int,
         activeCount: Int = 0,
         mindService: MindService? = nil,
-        lobeService: LobeService? = nil,
         onEdit: ((Mind) -> Void)? = nil
     ) {
         self.mind = mind
         self.count = count
         self.activeCount = activeCount
         self.mindService = mindService
-        self.lobeService = lobeService
         self.onEdit = onEdit
     }
 
@@ -92,7 +89,7 @@ struct MindGridItemView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             if count > 0 {
-                Text("This mind contains \(count) lobe\(count == 1 ? "" : "s"). Lobes will be moved to \"No Mind\".")
+                Text("This mind contains \(count) mind\(count == 1 ? "" : "s"). Child minds will also be deleted.")
             } else {
                 Text("Are you sure you want to delete this mind?")
             }

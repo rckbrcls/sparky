@@ -27,7 +27,6 @@ final class DataController: Sendable {
     init(inMemory: Bool = false) {
         let schema = Schema([
             Mind.self,
-            Space.self,
             Memory.self,
             Tag.self,
             CheckItemModel.self,
@@ -185,23 +184,22 @@ extension DataController {
         let calendar = Calendar.current
         let now = Date()
 
-        let defaultSpace = Space(
+        let personalMind = Mind(
             id: UUID(),
             name: "Personal",
             colorHex: "#4F46E5",
             iconName: "person",
             sortOrder: 0,
-            isDefault: true,
-           
+            isDefault: true
         )
 
-        let workSpace = Space(
+        let workMind = Mind(
             id: UUID(),
             name: "Work",
             colorHex: "#10B981",
             iconName: "briefcase",
             sortOrder: 1,
-            isDefault: false,
+            isDefault: false
         )
 
         let swiftTag = Tag(
@@ -229,7 +227,7 @@ extension DataController {
             createdAt: now,
             updatedAt: now,
             autoCompleteOnChecklistCompletion: false,
-            space: workSpace
+            mind: workMind
         )
 
         let reminderMemory = Memory(
@@ -254,7 +252,7 @@ extension DataController {
             createdAt: now,
             updatedAt: now,
             autoCompleteOnChecklistCompletion: true,
-            space: defaultSpace
+            mind: personalMind
         )
 
         let birthdayMemory = Memory(
@@ -269,8 +267,8 @@ extension DataController {
             autoCompleteOnChecklistCompletion: false
         )
 
-        modelContext.insert(defaultSpace)
-        modelContext.insert(workSpace)
+        modelContext.insert(personalMind)
+        modelContext.insert(workMind)
         modelContext.insert(swiftTag)
         modelContext.insert(designTag)
         modelContext.insert(noteMemory)

@@ -39,23 +39,21 @@ final class DataExportService {
         case withoutAttachments
         case activeOnly
         case activeOnlyWithoutAttachments
-        case memoriesByLobe
-        case activeMemoriesByLobe
 
         var includeAttachmentsValue: Bool {
             switch self {
             case .full, .activeOnly:
                 return true
-            case .withoutAttachments, .activeOnlyWithoutAttachments, .memoriesByLobe, .activeMemoriesByLobe:
+            case .withoutAttachments, .activeOnlyWithoutAttachments:
                 return false
             }
         }
 
         var includeCompletedValue: Bool {
             switch self {
-            case .full, .withoutAttachments, .memoriesByLobe:
+            case .full, .withoutAttachments:
                 return true
-            case .activeOnly, .activeOnlyWithoutAttachments, .activeMemoriesByLobe:
+            case .activeOnly, .activeOnlyWithoutAttachments:
                 return false
             }
         }
@@ -63,7 +61,6 @@ final class DataExportService {
 
     private let memoryService: MemoryService
     private let mindService: MindService
-    private let lobeService: LobeService
     private let attachmentStore: MemoryAttachmentStore
     let logger = Logger(subsystem: "sparky", category: "DataExportService")
     private let jsonEncoder: JSONEncoder
@@ -71,12 +68,10 @@ final class DataExportService {
     init(
         memoryService: MemoryService,
         mindService: MindService,
-        lobeService: LobeService,
         attachmentStore: MemoryAttachmentStore
     ) {
         self.memoryService = memoryService
         self.mindService = mindService
-        self.lobeService = lobeService
         self.attachmentStore = attachmentStore
 
         self.jsonEncoder = JSONEncoder()
@@ -147,89 +142,30 @@ final class DataExportService {
 
     private func collectMinds() async -> [ExportedMind] {
         let minds = mindService.minds
-        let lobes = lobeService.lobes
+        let mindsByID = Dictionary(uniqueKeysWithValues: minds.map { ($0.id, $0) })
+        var exportedMinds = [ExportedMind]()
+        var processedMinds = Set<UUID>()
 
-        // Group lobes by mind
-        var lobesByMind: [UUID: [ExportedLobe]] = [:]
-        for lobe in lobes {
-            // Skip virtual lobes (All, Inbox, Limbo)
-            if lobe.isAllSpaces || lobe.isInbox || lobe.isLimbo {
-                continue
-            }
+        for mind in minds where mind.parent == nil {
+            exportedMinds.append(collectMindHierarchy(from: mind, mindsByID: mindsByID, processedMinds: &processedMinds))
+        }
+        
+        return exportedMinds
+    }
 
-            if let mindID = lobe.mind?.id {
-                if lobesByMind[mindID] == nil {
-                    lobesByMind[mindID] = []
+    private func collectMindHierarchy(from mind: Mind, mindsByID: [UUID: Mind], processedMinds: inout Set<UUID>) -> ExportedMind {
+        processedMinds.insert(mind.id)
+        
+        var children = [ExportedMind]()
+        if let childMinds = mind.children {
+            for child in childMinds {
+                if !processedMinds.contains(child.id) {
+                    children.append(collectMindHierarchy(from: child, mindsByID: mindsByID, processedMinds: &processedMinds))
                 }
-                lobesByMind[mindID]?.append(lobe.toExported())
             }
         }
-
-        // Build exported minds with their lobes
-        return minds.map { mind in
-            let mindLobes = lobesByMind[mind.id] ?? []
-            return mind.toExported(lobes: mindLobes)
-        }
-    }
-
-    func exportGroupedByLobe(activeOnly: Bool = false) async throws -> Data {
-        let memories = await collectMemories(includeCompleted: !activeOnly)
-        // Actually, let's keep it consistent with "Active Only" if needed, but for a specific "Group by Lobe" export, usually a dump of everything is expected.
-        // Let's filter out 'Inbox', 'Limbo', 'All' if they don't have real user content, but `collectMemories` gives me everything.
-
-        let lobes = lobeService.lobes
-        var exportGroups: [LobeGroupExport] = []
-
-        // Helper to find lobe name
-        func getLobeName(id: UUID?) -> String {
-            guard let id = id else { return "Unassigned" }
-            if let lobe = lobes.first(where: { $0.id == id }) {
-                return lobe.name
-            }
-            return "Unknown Lobe"
-        }
-
-        // Group memories by Lobe ID
-        let grouped = Dictionary(grouping: memories) { $0.lobe?.id }
-
-        for (lobeID, lobeMemories) in grouped {
-            let lobeName = getLobeName(id: lobeID)
-
-            // Convert memories to ExportedMemory but ensure no attachments are included (implicitly handled by not fetching/attaching them if I use a lighter struct, OR I can just use ExportedMemory and set attachments field to nil/empty)
-            // The user specifically asked for "memories without attachments".
-            // `Memory.toExported()` checks `hasAttachments` etc? No, `toExported()` is on `Memory`.
-            // Let's see `Memory.toExported` implementation. I don't see it in the file view I did (it might be in an extension).
-            // Assuming `toExported` exists.
-
-            // Wait, I need to check if `toExported` exists or if I should create a simplified structure.
-            // The user asked "create a json, that groups the memories without attachments by lobe, put the name of the lobe and the memories of the lobe".
-            // If I use `ExportedMemory`, it might have fields for attachments.
-            // Let's create a tailored struct `LobeGroupExport` and maybe a `SimpleExportedMemory` or just use the existing one but strip attachments.
-
-            let exportedMemories = lobeMemories.map { memory in
-                memory.toExported()
-            }
-
-            // Check if this Lobe is special? (Inbox/Limbo). They are just Lobes in the system.
-
-            exportGroups.append(LobeGroupExport(lobeName: lobeName, memories: exportedMemories))
-        }
-
-        // Sort by Lobe Name for tidiness
-        exportGroups.sort { $0.lobeName < $1.lobeName }
-
-        do {
-            let data = try jsonEncoder.encode(exportGroups)
-            return data
-        } catch {
-            logger.error("Failed to encode grouped export: \(error.localizedDescription)")
-            throw ExportError.encodingFailed
-        }
-    }
-
-    struct LobeGroupExport: Codable {
-        let lobeName: String
-        let memories: [ExportedMemory]
+        
+        return mind.toExported(children: children)
     }
 
     private func collectAttachments(for memories: [Memory]) async -> [UUID: [ExportedAttachment]] {

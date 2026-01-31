@@ -11,7 +11,7 @@ struct MemoryDraft: Identifiable, Hashable {
     var status: MemoryStatus
     var isPinned: Bool
     var dueDate: Date?
-    var lobeID: UUID?
+    var mindID: UUID?
     var triggers: [MemoryTriggerModel]
     // Fixed content attributes (replacing dynamic contents array)
     var note: String?
@@ -30,7 +30,7 @@ struct MemoryDraft: Identifiable, Hashable {
          status: MemoryStatus = .active,
          isPinned: Bool = false,
          dueDate: Date? = nil,
-         lobeID: UUID? = nil,
+         mindID: UUID? = nil,
          triggers: [MemoryTriggerModel] = [],
          note: String? = nil,
          checkItems: [CheckItemDraft] = [],
@@ -46,7 +46,7 @@ struct MemoryDraft: Identifiable, Hashable {
         self.status = status
         self.isPinned = isPinned
         self.dueDate = dueDate
-        self.lobeID = lobeID
+        self.mindID = mindID
         self.triggers = triggers
         self.note = note
         self.checkItems = checkItems

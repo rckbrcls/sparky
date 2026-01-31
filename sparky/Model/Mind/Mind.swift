@@ -15,8 +15,12 @@ final class Mind: Identifiable {
     var sortOrder: Int
     var isDefault: Bool
 
-    @Relationship(deleteRule: .nullify, inverse: \Space.mind)
-    var spaces: [Space]?
+    @Relationship(deleteRule: .nullify, inverse: \Mind.parent)
+    var children: [Mind]?
+    var parent: Mind?
+
+    @Relationship(deleteRule: .nullify, inverse: \Memory.mind)
+    var memories: [Memory]?
 
     init(
         id: UUID = UUID(),
@@ -24,7 +28,8 @@ final class Mind: Identifiable {
         colorHex: String? = nil,
         iconName: String? = nil,
         sortOrder: Int = 0,
-        isDefault: Bool = false
+        isDefault: Bool = false,
+        parent: Mind? = nil
     ) {
         self.id = id
         self.name = name
@@ -32,6 +37,7 @@ final class Mind: Identifiable {
         self.iconName = iconName
         self.sortOrder = sortOrder
         self.isDefault = isDefault
+        self.parent = parent
     }
 }
 
@@ -39,7 +45,7 @@ final class Mind: Identifiable {
 
 extension Mind {
     static let allMindsIdentifier = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
-    static let inboxMindsIdentifier = UUID(uuidString: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")!
+    static let inboxIdentifier = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
 
     static var allMinds: Mind {
         Mind(
@@ -52,9 +58,9 @@ extension Mind {
         )
     }
 
-    static var inboxMinds: Mind {
+    static var inbox: Mind {
         Mind(
-            id: inboxMindsIdentifier,
+            id: inboxIdentifier,
             name: "Inbox",
             colorHex: nil,
             iconName: "tray.fill",
@@ -67,7 +73,7 @@ extension Mind {
         id == Mind.allMindsIdentifier
     }
 
-    var isInboxMinds: Bool {
-        id == Mind.inboxMindsIdentifier
+    var isInbox: Bool {
+        id == Mind.inboxIdentifier
     }
 }

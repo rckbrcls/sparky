@@ -55,7 +55,7 @@ struct ExportedMind: Codable, Identifiable {
     let iconName: String?
     let sortOrder: Int
     let isDefault: Bool
-    let lobes: [ExportedLobe]
+    let children: [ExportedMind]
     
     init(
         id: UUID,
@@ -64,7 +64,7 @@ struct ExportedMind: Codable, Identifiable {
         iconName: String? = nil,
         sortOrder: Int = 0,
         isDefault: Bool = false,
-        lobes: [ExportedLobe] = []
+        children: [ExportedMind] = []
     ) {
         self.id = id
         self.name = name
@@ -72,37 +72,7 @@ struct ExportedMind: Codable, Identifiable {
         self.iconName = iconName
         self.sortOrder = sortOrder
         self.isDefault = isDefault
-        self.lobes = lobes
-    }
-}
-
-// MARK: - Exported Lobe
-
-struct ExportedLobe: Codable, Identifiable {
-    let id: UUID
-    let name: String
-    let colorHex: String?
-    let iconName: String?
-    let sortOrder: Int
-    let isDefault: Bool
-    let mindID: UUID?
-    
-    init(
-        id: UUID,
-        name: String,
-        colorHex: String? = nil,
-        iconName: String? = nil,
-        sortOrder: Int = 0,
-        isDefault: Bool = false,
-        mindID: UUID? = nil
-    ) {
-        self.id = id
-        self.name = name
-        self.colorHex = colorHex
-        self.iconName = iconName
-        self.sortOrder = sortOrder
-        self.isDefault = isDefault
-        self.mindID = mindID
+        self.children = children
     }
 }
 
@@ -119,7 +89,7 @@ struct ExportedMemory: Codable, Identifiable {
     let updatedAt: Date
     let userOrder: Int
     let autoCompleteOnChecklistCompletion: Bool
-    let lobeID: UUID?
+    let mindID: UUID?
     let triggers: [ExportedTrigger]
     let checkItems: [ExportedCheckItem]
     let photoAttachmentIDs: [UUID]
@@ -139,7 +109,7 @@ struct ExportedMemory: Codable, Identifiable {
         updatedAt: Date,
         userOrder: Int = 0,
         autoCompleteOnChecklistCompletion: Bool = false,
-        lobeID: UUID? = nil,
+        mindID: UUID? = nil,
         triggers: [ExportedTrigger] = [],
         checkItems: [ExportedCheckItem] = [],
         photoAttachmentIDs: [UUID] = [],
@@ -158,7 +128,7 @@ struct ExportedMemory: Codable, Identifiable {
         self.updatedAt = updatedAt
         self.userOrder = userOrder
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
-        self.lobeID = lobeID
+        self.mindID = mindID
         self.triggers = triggers
         self.checkItems = checkItems
         self.photoAttachmentIDs = photoAttachmentIDs
@@ -369,7 +339,7 @@ extension Memory {
             updatedAt: updatedAt ?? createdAt ?? Date(),
             userOrder: userOrder,
             autoCompleteOnChecklistCompletion: autoCompleteOnChecklistCompletion,
-            lobeID: lobe?.id,
+            mindID: mind?.id,
             triggers: triggers,
             checkItems: checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { $0.toExported() },
             photoAttachmentIDs: photoAttachmentIDs,
@@ -468,7 +438,7 @@ extension Memory.Attachment {
 }
 
 extension Mind {
-    func toExported(lobes: [ExportedLobe] = []) -> ExportedMind {
+    func toExported(children: [ExportedMind] = []) -> ExportedMind {
         ExportedMind(
             id: id,
             name: name,
@@ -476,21 +446,8 @@ extension Mind {
             iconName: iconName,
             sortOrder: sortOrder,
             isDefault: isDefault,
-            lobes: lobes
+            children: children
         )
     }
 }
 
-extension Space {
-    func toExported() -> ExportedLobe {
-        ExportedLobe(
-            id: id,
-            name: name,
-            colorHex: colorHex,
-            iconName: iconName,
-            sortOrder: sortOrder,
-            isDefault: isDefault,
-            mindID: mind?.id
-        )
-    }
-}

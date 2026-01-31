@@ -79,7 +79,7 @@ struct DataManagementView: View {
             Text("Export Data")
                 .font(.headline)
 
-            Text("Export all your memories, minds, and lobes to a JSON file for backup or migration.")
+            Text("Export all your memories and minds to a JSON file for backup or migration.")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -88,8 +88,6 @@ struct DataManagementView: View {
                 Text("Without Attachments").tag(DataExportService.ExportOptions.withoutAttachments)
                 Text("Active Only").tag(DataExportService.ExportOptions.activeOnly)
                 Text("Active Only (No Attachments)").tag(DataExportService.ExportOptions.activeOnlyWithoutAttachments)
-                Text("Memories grouped by Lobe (No Attachments)").tag(DataExportService.ExportOptions.memoriesByLobe)
-                Text("Active Memories grouped by Lobe (No Attachments)").tag(DataExportService.ExportOptions.activeMemoriesByLobe)
             }
             .pickerStyle(.menu)
 
@@ -120,7 +118,7 @@ struct DataManagementView: View {
             Text("Import Data")
                 .font(.headline)
 
-            Text("Import memories, minds, and lobes from a previously exported JSON file.")
+            Text("Import memories and minds from a previously exported JSON file.")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -175,13 +173,11 @@ final class DataManagementViewModel: ObservableObject {
             self.exportService = DataExportService(
                 memoryService: env.memoryService,
                 mindService: env.mindService,
-                lobeService: env.lobeService,
                 attachmentStore: env.attachmentStore
             )
             self.importService = DataImportService(
                 memoryService: env.memoryService,
                 mindService: env.mindService,
-                lobeService: env.lobeService,
                 attachmentStore: env.attachmentStore
             )
         }
@@ -192,13 +188,11 @@ final class DataManagementViewModel: ObservableObject {
         self.exportService = DataExportService(
             memoryService: environment.memoryService,
             mindService: environment.mindService,
-            lobeService: environment.lobeService,
             attachmentStore: environment.attachmentStore
         )
         self.importService = DataImportService(
             memoryService: environment.memoryService,
             mindService: environment.mindService,
-            lobeService: environment.lobeService,
             attachmentStore: environment.attachmentStore
         )
     }
@@ -209,17 +203,8 @@ final class DataManagementViewModel: ObservableObject {
         defer { isExportingData = false }
 
         do {
-            let data: Data
-            switch exportOptions {
-            case .memoriesByLobe:
-                data = try await exportService.exportGroupedByLobe(activeOnly: false)
-            case .activeMemoriesByLobe:
-                data = try await exportService.exportGroupedByLobe(activeOnly: true)
-            default:
-                data = try await exportService.export(options: exportOptions)
-            }
+            let data = try await exportService.export(options: exportOptions)
             exportDocument = ExportDocument(data: data)
-            // exportMessage = "Export completed successfully. Choose where to save the file."
             showFileExporter = true
         } catch {
             errorMessage = error.localizedDescription
@@ -269,7 +254,6 @@ final class DataManagementViewModel: ObservableObject {
 
                 var message = "Import completed!\n\n"
                 message += "• Minds: \(importResult.importedMinds)\n"
-                message += "• Lobes: \(importResult.importedLobes)\n"
                 message += "• Memories: \(importResult.importedMemories)\n"
                 message += "• Attachments: \(importResult.importedAttachments)"
 

@@ -69,7 +69,7 @@ struct sparkyTests {
             environment: environment,
             attachmentStore: environment.attachmentStore,
             memory: nil,
-            defaultSpace: nil,
+            defaultMind: nil,
             template: .blank
         )
 

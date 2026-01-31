@@ -90,7 +90,7 @@ final class Memory: Identifiable {
     @Relationship(deleteRule: .cascade, inverse: \MemoryCompletionDate.memory)
     var completionDateEntries: [MemoryCompletionDate] = []
 
-    var space: Space?
+    var mind: Mind?
 
     // MARK: - Transient Properties (not persisted, populated by service)
 
@@ -116,7 +116,7 @@ final class Memory: Identifiable {
         triggers: [MemoryTriggerModel] = [],
         attachmentReferences: [MemoryAttachmentReference] = [],
         completionDateEntries: [MemoryCompletionDate] = [],
-        space: Space? = nil
+        mind: Mind? = nil
     ) {
         self.id = id
         self.title = title
@@ -135,16 +135,10 @@ final class Memory: Identifiable {
         self.triggers = triggers
         self.attachmentReferences = attachmentReferences
         self.completionDateEntries = completionDateEntries
-        self.space = space
+        self.mind = mind
     }
 
     // MARK: - Computed Properties
-
-    /// Alias for `space` - domain term "lobe" used across the app
-    var lobe: Space? {
-        get { space }
-        set { space = newValue }
-    }
 
     var status: MemoryStatus {
         get { MemoryStatus(rawValue: statusRaw) ?? .active }

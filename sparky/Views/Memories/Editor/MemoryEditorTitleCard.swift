@@ -9,48 +9,47 @@ import SwiftUI
 
 struct MemoryEditorTitleCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    @ObservedObject var lobeService: LobeService
     let environment: AppEnvironment
     var isTitleFocused: FocusState<Bool>.Binding
     let isEditingEnabled: Bool
 
-    @State private var showSpaceComposer = false
+    @State private var showMindComposer = false
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             if isEditingEnabled {
                 Menu {
-                    Picker("Lobe", selection: $viewModel.selectedLobeID) {
-                        Label("No Lobe", systemImage: "brain.fill")
+                    Picker("Mind", selection: $viewModel.selectedMindID) {
+                        Label("No Mind", systemImage: "brain.head.profile")
                             .tag(nil as UUID?)
 
-                        ForEach(lobeService.lobes) { lobe in
-                            Label(lobe.name, systemImage: lobe.iconName ?? "brain.fill")
-                                .tag(Optional(lobe.id))
+                        ForEach(viewModel.availableMinds) { mind in
+                            Label(mind.name, systemImage: mind.iconName ?? "brain.head.profile")
+                                .tag(Optional(mind.id))
                         }
                     }
 
                     Divider()
 
                     Button {
-                        showSpaceComposer = true
+                        showMindComposer = true
                     } label: {
-                        Label("Create New Lobe", systemImage: "plus.circle")
+                        Label("Create New Mind", systemImage: "plus.circle")
                     }
                 } label: {
-                    Image(systemName: viewModel.selectedLobe?.iconName ?? "brain.fill")
-                        .foregroundStyle(selectedLobeColor)
+                    Image(systemName: viewModel.selectedMind?.iconName ?? "brain.head.profile")
+                        .foregroundStyle(selectedMindColor)
                         .frame(width: 36, height: 36)
-                        .glassEffect(.regular.tint(selectedLobeColor.opacity(0.15)))
+                        .glassEffect(.regular.tint(selectedMindColor.opacity(0.15)))
                 }
-                .sheet(isPresented: $showSpaceComposer) {
-                    LobeComposerView(environment: environment)
+                .sheet(isPresented: $showMindComposer) {
+                    MindComposerView(environment: environment)
                 }
             } else {
-                Image(systemName: viewModel.selectedLobe?.iconName ?? "brain.fill")
-                    .foregroundStyle(selectedLobeColor)
+                Image(systemName: viewModel.selectedMind?.iconName ?? "brain.head.profile")
+                    .foregroundStyle(selectedMindColor)
                     .frame(width: 36, height: 36)
-                    .glassEffect(.regular.tint(selectedLobeColor.opacity(0.15)))
+                    .glassEffect(.regular.tint(selectedMindColor.opacity(0.15)))
             }
 
             if isEditingEnabled {
@@ -82,14 +81,22 @@ struct MemoryEditorTitleCard: View {
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            
+            if isEditingEnabled || !viewModel.note.isEmpty {
+                MemoryEditorNotesCard(
+                    viewModel: viewModel,
+                    isEditingEnabled: isEditingEnabled
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .padding(.horizontal)
         .padding(.vertical, 12)
         .cardStyle(cornerRadius: 24)
     }
 
-    private var selectedLobeColor: Color {
-        if let hex = viewModel.selectedLobe?.colorHex,
+    private var selectedMindColor: Color {
+        if let hex = viewModel.selectedMind?.colorHex,
            let color = Color(hex: hex) {
             return color
         }

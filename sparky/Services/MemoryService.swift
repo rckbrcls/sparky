@@ -38,7 +38,7 @@ final class MemoryService: ObservableObject {
     var triggerExecutorCoordinator: TriggerExecutorCoordinator?
 
     private let dataController: DataController
-    private let lobeService: LobeService
+    private let mindService: MindService
     private let attachmentStore: MemoryAttachmentStore
     private let cacheTTL: TimeInterval
     private var refreshTimer: AnyCancellable?
@@ -47,12 +47,12 @@ final class MemoryService: ObservableObject {
 
     init(
         dataController: DataController,
-        lobeService: LobeService,
+        mindService: MindService,
         attachmentStore: MemoryAttachmentStore,
         cacheTTL: TimeInterval = 30
     ) {
         self.dataController = dataController
-        self.lobeService = lobeService
+        self.mindService = mindService
         self.attachmentStore = attachmentStore
         self.cacheTTL = cacheTTL
 
@@ -147,26 +147,21 @@ final class MemoryService: ObservableObject {
     }
 
     func memories(
-        in lobe: Space?,
+        in mind: Mind?,
         statuses: [MemoryStatus] = [],
         includeCompleted: Bool = true,
         sort: SortStrategy = .updatedAtDescending
     ) -> [Memory] {
         var filtered: [Memory]
 
-        if let lobe = lobe {
-            if lobe.isAllSpaces {
+        if let mind = mind {
+            if mind.isAllMinds {
                 filtered = memories
-            } else if lobe.isInbox || lobe.isLimbo {
-                filtered = memories.filter { $0.space == nil }
-            } else if let mindID = lobe.mind?.id {
-                filtered = memories.filter { memory in
-                    guard let memoryLobeMindID = memory.space?.mind?.id else { return false }
-                    return memoryLobeMindID == mindID
-                }
+            } else if mind.isInbox {
+                filtered = memories.filter { $0.mind == nil }
             } else {
-                let lobeID = lobe.id
-                filtered = memories.filter { $0.space?.id == lobeID }
+                let mindID = mind.id
+                filtered = memories.filter { $0.mind?.id == mindID }
             }
         } else {
             filtered = memories
@@ -225,7 +220,7 @@ final class MemoryService: ObservableObject {
         let context = dataController.modelContext
         let now = Date()
 
-        let space = draft.lobeID.flatMap { lobeService.lobe(id: $0) }
+        let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
         let userOrder = (memories.map(\.userOrder).max() ?? -1) + 1
 
@@ -241,7 +236,7 @@ final class MemoryService: ObservableObject {
             updatedAt: now,
             userOrder: userOrder,
             autoCompleteOnChecklistCompletion: draft.autoCompleteOnChecklistCompletion,
-            space: space
+            mind: mind
         )
 
         let checkItems = draft.checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { item in
@@ -289,7 +284,7 @@ final class MemoryService: ObservableObject {
         let context = dataController.modelContext
         let now = Date()
 
-        let space = draft.lobeID.flatMap { lobeService.lobe(id: $0) }
+        let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
         memory.title = trimmedTitle
         memory.body = draft.note
@@ -298,7 +293,7 @@ final class MemoryService: ObservableObject {
         memory.dueDate = draft.dueDate
         memory.updatedAt = now
         memory.autoCompleteOnChecklistCompletion = draft.autoCompleteOnChecklistCompletion
-        memory.space = space
+        memory.mind = mind
 
         let previousCheckItems = memory.checkItems
         let previousTriggers = memory.triggers
@@ -377,12 +372,12 @@ final class MemoryService: ObservableObject {
         }
     }
 
-    func moveMemory(_ id: UUID, to lobe: Space?) async throws {
+    func moveMemory(_ id: UUID, to mind: Mind?) async throws {
         guard let memory = memory(id: id) else {
             throw MemoryServiceError.memoryNotFound
         }
 
-        memory.space = lobe
+        memory.mind = mind
         dataController.save()
 
         _ = await refresh(force: true)
@@ -474,7 +469,7 @@ final class MemoryService: ObservableObject {
             status: source.status,
             isPinned: false,
             dueDate: source.dueDate,
-            lobeID: source.space?.id,
+            mindID: source.mind?.id,
             triggers: source.triggers.map { trigger in
                 cloneTrigger(trigger, for: nil, id: UUID())
             },

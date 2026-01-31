@@ -66,7 +66,7 @@ struct MemoryListItemButton: View {
                     onTogglePin: { Task { await toggleMemoryPin() } },
                     onToggleCompletion: { Task { await toggleMemoryCompletion() } },
                     onDelete: { Task { await deleteMemory() } },
-                    onMoveToLobe: { lobeID in Task { await moveMemory(to: lobeID) } },
+                    onMoveToMind: { mindID in Task { await moveMemory(to: mindID) } },
                     onUpdateStatus: { status in Task { await setMemoryStatus(status) } },
                     onEdit: onEditMemory != nil ? { onEditMemory?(memory) } : nil
                 )
@@ -109,13 +109,13 @@ struct MemoryListItemButton: View {
         }
     }
 
-    private func moveMemory(to lobeID: UUID?) async {
-        let currentID = memory.lobe?.id
-        guard currentID != lobeID else { return }
+    private func moveMemory(to mindID: UUID?) async {
+        let currentID = memory.mind?.id
+        guard currentID != mindID else { return }
 
         do {
-            let targetLobe = lobeID.flatMap { environment.lobeService.lobe(id: $0) }
-            try await environment.memoryService.moveMemory(memory.id, to: targetLobe)
+            let targetMind = mindID.flatMap { environment.mindService.mind(id: $0) }
+            try await environment.memoryService.moveMemory(memory.id, to: targetMind)
         } catch {
             // Handle error silently for now
         }

@@ -28,8 +28,8 @@ struct sparkyApp: App {
                     if newPhase == .active {
                         // Refresh data when app becomes active
                         Task {
-                            await appEnvironment.lobeService.refresh(force: false)
-                            await appEnvironment.lobeService.refreshTags(force: false)
+                            await appEnvironment.mindService.refresh(force: false)
+                            await appEnvironment.mindService.refreshTags(force: false)
                             await appEnvironment.memoryService.refresh(force: false)
                         }
                     }

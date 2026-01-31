@@ -31,7 +31,5 @@ struct MemoryEditorNotesCard: View {
                     .allowsHitTesting(false)
             }
         }
-        .cardStyle(cornerRadius: 24)
-
     }
 }

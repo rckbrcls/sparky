@@ -13,60 +13,20 @@ struct TriggersCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(spacing: 8) {
-                // Schedule Trigger - Inline Form
-                if hasScheduleTrigger {
-                    ScheduledTriggerInlineForm(
-                        viewModel: viewModel,
-                        isEditable: isEditable,
-                        onDelete: { removeScheduleTrigger() }
-                    )
-                }
-
-                // Location Trigger - Inline Form
-                if hasLocationTrigger {
-                    LocationTriggerInlineForm(
-                        viewModel: viewModel,
-                        isEditable: isEditable,
-                        onDelete: { removeLocationTrigger() }
-                    )
-                }
-
-                // Add trigger button (dashed border)
-                if isEditable && !hasAnyTrigger {
-                    addTriggerButton
-                }
+                ScheduledTriggerInlineForm(
+                    viewModel: viewModel,
+                    isEditable: isEditable,
+                    onDelete: { removeScheduleTrigger() }
+                )
+         
+          
+                LocationTriggerInlineForm(
+                    viewModel: viewModel,
+                    isEditable: isEditable,
+                    onDelete: { removeLocationTrigger() }
+                )
             }
         }
-    }
-
-    private var addTriggerButton: some View {
-        Menu {
-            if !hasScheduleTrigger {
-                Button {
-                    createDefaultScheduleTrigger()
-                } label: {
-                    Label("Date & Time", systemImage: "clock.badge")
-                }
-            }
-
-            if !hasLocationTrigger {
-                Button {
-                    createDefaultLocationTrigger()
-                } label: {
-                    Label("Location", systemImage: "mappin.circle.fill")
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                .font(.caption.bold())
-                Text("Add Trigger")
-                .font(.caption.bold())
-            }
-            .neutralButtonStyle()
-        }
-        .foregroundStyle(.primary)
-        .accessibilityLabel("Add trigger")
     }
 
     // MARK: - Trigger State Helpers

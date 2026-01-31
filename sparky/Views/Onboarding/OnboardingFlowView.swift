@@ -152,7 +152,7 @@ private extension OnboardingStep {
         case .welcome:
             return "Manage tasks and reminders with intelligence"
         case .organization:
-            return "Minds → Lobes → Memories"
+            return "Minds → Minds → Memories"
         case .triggers:
             return "Time, location, person, or sequence"
         case .features:
@@ -201,8 +201,8 @@ private struct OrganizationVisual: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
             HStack(spacing: 16) {
-                HierarchyItem(icon: "folder.fill", text: "Lobe", color: .orange)
-                HierarchyItem(icon: "folder.fill", text: "Lobe", color: .pink)
+                HierarchyItem(icon: "brain.head.profile", text: "Mind", color: .orange)
+                HierarchyItem(icon: "brain.head.profile", text: "Mind", color: .pink)
             }
             Image(systemName: "arrow.down")
                 .font(.callout)

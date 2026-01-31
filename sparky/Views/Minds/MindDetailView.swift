@@ -11,52 +11,48 @@ struct MindDetailView: View {
     @EnvironmentObject private var environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var mindService: MindService
-    @ObservedObject var lobeService: LobeService
     @ObservedObject var memoryService: MemoryService
 
     let onSelectMemory: (Memory) -> Void
     let onEditMemory: ((Memory) -> Void)?
     let onEditMind: ((Mind) -> Void)?
-    let onAddLobe: ((Mind) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
-    let onLobeContextChange: (Space?) -> Void
     let onMindContextChange: ((Mind?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
 
     @State private var isSearching = false
+    @State private var isMultiSelecting = false
+    @State private var selectedMemoryIDs: Set<Memory.ID> = []
+    @State private var isPerformingBulkAction = false
+    @State private var showingDeleteConfirmation = false
+    @State private var bulkActionErrorMessage: String?
+    @State private var expandedSections: Set<MindSectionType> = Set(MindSectionType.allCases)
+    @State private var selectedTriggerTypes: Set<MemoryTriggerType> = []
+    @State private var sortStrategy: MemoryService.SortStrategy = .createdAtDescending
+    @State private var showMindComposer = false
+    @State private var mindToEdit: Mind?
 
     init(
         mind: Mind,
         mindService: MindService,
-        lobeService: LobeService,
         memoryService: MemoryService,
         onSelectMemory: @escaping (Memory) -> Void,
         onEditMemory: ((Memory) -> Void)? = nil,
-        onEditMind: ((Mind) -> Void)?,
-        onAddLobe: ((Mind) -> Void)?,
+        onEditMind: ((Mind) -> Void)? = nil,
         onMultiSelectionChange: @escaping (Bool) -> Void,
-        onLobeContextChange: @escaping (Space?) -> Void,
         onMindContextChange: ((Mind?) -> Void)?,
         onSearchActiveChange: @escaping (Bool) -> Void
     ) {
         self.mind = mind
         self.mindService = mindService
-        self.lobeService = lobeService
         self.memoryService = memoryService
         self.onSelectMemory = onSelectMemory
         self.onEditMemory = onEditMemory
         self.onEditMind = onEditMind
-        self.onAddLobe = onAddLobe
         self.onMultiSelectionChange = onMultiSelectionChange
-        self.onLobeContextChange = onLobeContextChange
         self.onMindContextChange = onMindContextChange
         self.onSearchActiveChange = onSearchActiveChange
     }
-
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
 
     private var resolvedMind: Mind {
         mindService.mind(id: mind.id) ?? mind
@@ -66,38 +62,56 @@ struct MindDetailView: View {
         resolvedMind.isAllMinds
     }
 
-    private var lobesInMind: [Space] {
-        let filteredLobes: [Space]
-        if isAllMinds {
-            let defaultLobes = [Space.allSpaces]
-            filteredLobes = lobeService.lobes
-            return defaultLobes + filteredLobes
-        } else {
-            filteredLobes = lobeService.lobes.filter { lobe in
-                guard let mindID = lobe.mind?.id else { return false }
-                return mindID == mind.id
-            }
-            let allLobe = Space.allSpace(for: resolvedMind)
-            return [allLobe] + filteredLobes
+    private var childMinds: [Mind] {
+        return resolvedMind.children ?? []
+    }
+
+    private var memories: [Memory] {
+        memoryService.memories(in: resolvedMind, includeCompleted: true)
+    }
+
+    private var filteredMemories: [Memory] {
+        memoryService.memories(
+            in: resolvedMind,
+            statuses: [.active, .completed],
+            includeCompleted: true,
+            sort: sortStrategy
+        ).filter { memory in
+            guard !selectedTriggerTypes.isEmpty else { return true }
+            return memory.triggers.contains { selectedTriggerTypes.contains($0.type) }
         }
+    }
+
+    private var pinnedMemories: [Memory] {
+        filteredMemories.filter { $0.isPinned && $0.status == .active }
+    }
+
+    private var activeMemories: [Memory] {
+        filteredMemories.filter { !$0.isPinned && $0.status == .active }
+    }
+
+    private var completedMemories: [Memory] {
+        filteredMemories.filter { $0.status == .completed }
     }
 
     var body: some View {
         baseView
             .fullScreenCover(isPresented: $isSearching) {
                 MemorySearchSheet(
-                    lobe: Space.allSpace(for: resolvedMind),
+                    mind: resolvedMind,
                     memoryService: memoryService,
-                    onSelectMemory: onSelectMemory,
-                    lobeService: lobeService
+                    mindService: mindService,
+                    onSelectMemory: onSelectMemory
                 )
+            }
+            .sheet(isPresented: $showMindComposer) {
+                MindComposerView(environment: environment, mindToEdit: mindToEdit, parentMind: resolvedMind)
             }
             .onAppear {
                 onMultiSelectionChange(false)
                 onMindContextChange?(resolvedMind)
             }
             .onDisappear {
-                // Limpar mind context quando sair do MindDetailView
                 onMindContextChange?(nil)
             }
             .onChange(of: isSearching) { _, newValue in
@@ -107,45 +121,112 @@ struct MindDetailView: View {
 
     private var baseView: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(spacing: 0) {
                 Text(resolvedMind.name)
                     .appLargeTitleStyle()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
 
-                if lobesInMind.isEmpty {
+                FilterBadgesBar(selectedTriggerTypes: $selectedTriggerTypes, sortStrategy: $sortStrategy)
+
+                if childMinds.isEmpty && memories.isEmpty {
                     EmptyStateView(
                         systemImage: "brain.fill",
-                        title: "No Lobes",
-                        message: "This mind doesn't have any lobes yet."
+                        title: "No Content",
+                        message: "This mind doesn't have any content yet."
                     )
-                    .padding(.horizontal, 20)
                 } else {
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(lobesInMind) { lobe in
-                            NavigationLink(value: lobe) {
-                                LobeGridItemView(
-                                    lobe: lobe,
-                                    count: memoryCounts(for: lobe).total,
-                                    completedCount: memoryCounts(for: lobe).completed,
-                                    activeCount: activeMemoryCount(for: lobe),
-                                    lobeService: lobeService,
-                                    memoryService: memoryService,
-                                    mindService: mindService,
-                                    onEdit: nil,
-                                    showOnlyRemaining: true
-                                )
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .accessibilityHint("Opens details for \(lobe.name)")
+                    VStack(spacing: 0) {
+                        if !childMinds.isEmpty {
+                            MindMindsSection(
+                                childMinds: childMinds,
+                                isExpanded: expandedSections.contains(.minds),
+                                mindService: mindService,
+                                activeMemoryCountProvider: activeMemoryCount,
+                                onToggleExpanded: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        if expandedSections.contains(.minds) {
+                                            expandedSections.remove(.minds)
+                                        } else {
+                                            expandedSections.insert(.minds)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        if !pinnedMemories.isEmpty {
+                            MindMemorySection(
+                                sectionType: .pinned,
+                                memories: pinnedMemories,
+                                isExpanded: expandedSections.contains(.pinned),
+                                isMultiSelecting: isMultiSelecting,
+                                selectedMemoryIDs: selectedMemoryIDs,
+                                isPerformingBulkAction: isPerformingBulkAction,
+                                onSelectMemory: onSelectMemory,
+                                onEditMemory: onEditMemory,
+                                onToggleSelection: toggleMemorySelection,
+                                onToggleExpanded: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        if expandedSections.contains(.pinned) {
+                                            expandedSections.remove(.pinned)
+                                        } else {
+                                            expandedSections.insert(.pinned)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        if !activeMemories.isEmpty {
+                            MindMemorySection(
+                                sectionType: .active,
+                                memories: activeMemories,
+                                isExpanded: expandedSections.contains(.active),
+                                isMultiSelecting: isMultiSelecting,
+                                selectedMemoryIDs: selectedMemoryIDs,
+                                isPerformingBulkAction: isPerformingBulkAction,
+                                onSelectMemory: onSelectMemory,
+                                onEditMemory: onEditMemory,
+                                onToggleSelection: toggleMemorySelection,
+                                onToggleExpanded: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        if expandedSections.contains(.active) {
+                                            expandedSections.remove(.active)
+                                        } else {
+                                            expandedSections.insert(.active)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        if !completedMemories.isEmpty {
+                            MindMemorySection(
+                                sectionType: .complete,
+                                memories: completedMemories,
+                                isExpanded: expandedSections.contains(.complete),
+                                isMultiSelecting: isMultiSelecting,
+                                selectedMemoryIDs: selectedMemoryIDs,
+                                isPerformingBulkAction: isPerformingBulkAction,
+                                onSelectMemory: onSelectMemory,
+                                onEditMemory: onEditMemory,
+                                onToggleSelection: toggleMemorySelection,
+                                onToggleExpanded: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        if expandedSections.contains(.complete) {
+                                            expandedSections.remove(.complete)
+                                        } else {
+                                            expandedSections.insert(.complete)
+                                        }
+                                    }
+                                }
+                            )
                         }
                     }
-                    .padding(.horizontal, 20)
                 }
             }
         }
-
-        .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 70)
@@ -161,91 +242,40 @@ struct MindDetailView: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
+                    showMindComposer = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
                     isSearching = true
                 } label: {
                     Image(systemName: "magnifyingglass")
                 }
             }
-
-            if !isAllMinds, let onAddLobe = onAddLobe {
-                ToolbarItem(placement: .navigationBarTrailing) {
-
-                    Button {
-                        onAddLobe(resolvedMind)
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Add Lobe")
-                }
-            }
-        }
-        .navigationDestination(for: Space.self) { lobe in
-            LobeDetailView(
-                lobe: lobe,
-                lobeService: lobeService,
-                memoryService: memoryService,
-                onSelectMemory: onSelectMemory,
-                onEditMemory: onEditMemory,
-                onEditLobe: nil,
-                onMultiSelectionChange: onMultiSelectionChange,
-                onLobeContextChange: { newLobe in
-                    onLobeContextChange(newLobe)
-                },
-                onSearchActiveChange: onSearchActiveChange
-            )
-            .onAppear {
-                onLobeContextChange(lobe)
-            }
-            .onDisappear {
-                // Quando sair do LobeDetailView, manter o mind context
-            }
         }
         .navigationBarBackButtonHidden(true)
     }
 
-    private func memoryCounts(for lobe: Space) -> (completed: Int, total: Int) {
+    private func activeMemoryCount(_ mind: Mind) -> Int {
         let memories: [Memory]
-        if lobe.isAllSpaces {
+        if mind.isAllMinds {
             memories = memoryService.memories
-        } else if lobe.isAllSpaceForMind {
-            guard let mindID = lobe.mind?.id else {
-                return (0, 0)
-            }
-            memories = memoryService.memories.filter { memory in
-                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
-                return memoryLobeMindID == mindID
-            }
         } else {
-            memories = memoryService.memories.filter { memory in
-                guard let lobeID = memory.lobe?.id else { return false }
-                return lobeID == lobe.id
-            }
-        }
-
-        let total = memories.count
-        let completed = memories.filter { $0.isCompleted }.count
-        return (completed, total)
-    }
-
-    private func activeMemoryCount(for lobe: Space) -> Int {
-        let memories: [Memory]
-        if lobe.isAllSpaces {
-            memories = memoryService.memories
-        } else if lobe.isAllSpaceForMind {
-            guard let mindID = lobe.mind?.id else {
-                return 0
-            }
-            memories = memoryService.memories.filter { memory in
-                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
-                return memoryLobeMindID == mindID
-            }
-        } else {
-            memories = memoryService.memories.filter { memory in
-                guard let lobeID = memory.lobe?.id else { return false }
-                return lobeID == lobe.id
-            }
+            memories = memoryService.memories.filter { $0.mind?.id == mind.id }
         }
 
         return memories.filter { $0.status == .active }.count
+    }
+
+    private func toggleMemorySelection(_ memory: Memory) {
+        let id = memory.id
+        if selectedMemoryIDs.contains(id) {
+            selectedMemoryIDs.remove(id)
+        } else {
+            selectedMemoryIDs.insert(id)
+        }
     }
 }

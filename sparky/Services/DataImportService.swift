@@ -38,7 +38,6 @@ final class DataImportService {
 
     struct ImportResult {
         let importedMinds: Int
-        let importedLobes: Int
         let importedMemories: Int
         let importedAttachments: Int
         let errors: [Error]
@@ -50,7 +49,6 @@ final class DataImportService {
 
     private let memoryService: MemoryService
     private let mindService: MindService
-    private let lobeService: LobeService
     private let attachmentStore: MemoryAttachmentStore
     private let logger = Logger(subsystem: "sparky", category: "DataImportService")
     private let jsonDecoder: JSONDecoder
@@ -58,12 +56,10 @@ final class DataImportService {
     init(
         memoryService: MemoryService,
         mindService: MindService,
-        lobeService: LobeService,
         attachmentStore: MemoryAttachmentStore
     ) {
         self.memoryService = memoryService
         self.mindService = mindService
-        self.lobeService = lobeService
         self.attachmentStore = attachmentStore
 
         self.jsonDecoder = JSONDecoder()
@@ -106,76 +102,26 @@ final class DataImportService {
     private func performImport(exportFormat: SparkyExportFormat) async throws -> ImportResult {
         var errors: [Error] = []
         var importedMinds = 0
-        var importedLobes = 0
         var importedMemories = 0
         var importedAttachments = 0
 
         // ID mapping: old ID -> new ID
         var mindIDMap: [UUID: UUID] = [:]
-        var lobeIDMap: [UUID: UUID] = [:]
         var memoryIDMap: [UUID: UUID] = [:]
         var attachmentIDMap: [UUID: UUID] = [:]
+        
+        let mindsByID = Dictionary(uniqueKeysWithValues: mindService.minds.map { ($0.id, $0) })
 
         // Step 1: Import Minds
         for exportedMind in exportFormat.minds {
-            do {
-                // Check if mind with same name already exists
-                let existingMind = mindService.minds.first { $0.name == exportedMind.name }
-                if let existing = existingMind {
-                    mindIDMap[exportedMind.id] = existing.id
-                    continue
-                }
-
-                let newMind = try await mindService.createMind(
-                    name: exportedMind.name,
-                    colorHex: exportedMind.colorHex,
-                    iconName: exportedMind.iconName,
-                    isDefault: exportedMind.isDefault
-                )
-                mindIDMap[exportedMind.id] = newMind.id
-                importedMinds += 1
-            } catch {
-                logger.error("Failed to import mind \(exportedMind.name): \(error.localizedDescription)")
-                errors.append(error)
-            }
+            importedMinds += await importMindHierarchy(exportedMind: exportedMind, mindsByID: mindsByID, parentID: nil, mindIDMap: &mindIDMap, errors: &errors)
         }
 
-        // Step 2: Import Lobes (Spaces)
-        for exportedMind in exportFormat.minds {
-            guard let newMindID = mindIDMap[exportedMind.id] else { continue }
-
-            for exportedLobe in exportedMind.lobes {
-                do {
-                    // Check if lobe with same name already exists in this mind
-                    let existingLobe = lobeService.lobes.first {
-                        $0.name == exportedLobe.name && $0.mind?.id == newMindID
-                    }
-                    if let existing = existingLobe {
-                        lobeIDMap[exportedLobe.id] = existing.id
-                        continue
-                    }
-
-                    let newLobe = try await lobeService.createLobe(
-                        name: exportedLobe.name,
-                        colorHex: exportedLobe.colorHex,
-                        iconName: exportedLobe.iconName,
-                        isDefault: exportedLobe.isDefault,
-                        mindID: newMindID
-                    )
-                    lobeIDMap[exportedLobe.id] = newLobe.id
-                    importedLobes += 1
-                } catch {
-                    logger.error("Failed to import lobe \(exportedLobe.name): \(error.localizedDescription)")
-                    errors.append(error)
-                }
-            }
-        }
-
-        // Step 3: Import Memories
+        // Step 2: Import Memories
         for exportedMemory in exportFormat.memories {
             do {
-                // Map lobe ID
-                let newLobeID = exportedMemory.lobeID.flatMap { lobeIDMap[$0] }
+                // Map mind ID
+                let newMindID = exportedMemory.mindID.flatMap { mindIDMap[$0] }
 
                 // Convert triggers to MemoryTriggerModel array
                 let triggers = exportedMemory.triggers.compactMap { exported -> MemoryTriggerModel? in
@@ -202,7 +148,7 @@ final class DataImportService {
                     status: MemoryStatus(rawValue: exportedMemory.status) ?? .active,
                     isPinned: exportedMemory.isPinned,
                     dueDate: exportedMemory.dueDate,
-                    lobeID: newLobeID,
+                    mindID: newMindID,
                     triggers: triggers,
                     note: exportedMemory.note,
                     checkItems: checkItems,
@@ -220,7 +166,7 @@ final class DataImportService {
                 memoryIDMap[exportedMemory.id] = newMemory.id
                 importedMemories += 1
 
-                // Step 4: Import attachments for this memory
+                // Step 3: Import attachments for this memory
                 if let attachments = exportFormat.attachments?[exportedMemory.id] {
                     let imported = try await importAttachments(
                         attachments: attachments,
@@ -237,16 +183,42 @@ final class DataImportService {
 
         // Refresh all services
         await mindService.refresh(force: true)
-        await lobeService.refresh(force: true)
         await memoryService.refresh(force: true)
 
         return ImportResult(
             importedMinds: importedMinds,
-            importedLobes: importedLobes,
             importedMemories: importedMemories,
             importedAttachments: importedAttachments,
             errors: errors
         )
+    }
+    
+    private func importMindHierarchy(exportedMind: ExportedMind, mindsByID: [UUID: Mind], parentID: UUID?, mindIDMap: inout [UUID: UUID], errors: inout [Error]) async -> Int {
+        var importedCount = 0
+        do {
+            let newMind: Mind
+            if let existingMind = mindsByID.values.first(where: { $0.name == exportedMind.name && $0.parent?.id == parentID }) {
+                newMind = existingMind
+            } else {
+                newMind = try await mindService.createMind(
+                    name: exportedMind.name,
+                    colorHex: exportedMind.colorHex,
+                    iconName: exportedMind.iconName,
+                    isDefault: exportedMind.isDefault,
+                    parent: parentID.flatMap { mindsByID[$0] }
+                )
+                importedCount += 1
+            }
+            mindIDMap[exportedMind.id] = newMind.id
+            
+            for child in exportedMind.children {
+                importedCount += await importMindHierarchy(exportedMind: child, mindsByID: mindsByID, parentID: newMind.id, mindIDMap: &mindIDMap, errors: &errors)
+            }
+        } catch {
+            logger.error("Failed to import mind \(exportedMind.name): \(error.localizedDescription)")
+            errors.append(error)
+        }
+        return importedCount
     }
 
     private func convertTrigger(

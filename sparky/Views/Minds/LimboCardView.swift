@@ -6,28 +6,25 @@
 import SwiftUI
 
 struct LimboCardView: View {
-    let lobe: Space
+    let mind: Mind
     let count: Int
     let completedCount: Int
     let activeCount: Int
-    let lobeService: LobeService?
     let memoryService: MemoryService?
     let mindService: MindService?
 
     init(
-        lobe: Space,
+        mind: Mind,
         count: Int,
         completedCount: Int = 0,
         activeCount: Int = 0,
-        lobeService: LobeService? = nil,
         memoryService: MemoryService? = nil,
         mindService: MindService? = nil
     ) {
-        self.lobe = lobe
+        self.mind = mind
         self.count = count
         self.completedCount = completedCount
         self.activeCount = activeCount
-        self.lobeService = lobeService
         self.memoryService = memoryService
         self.mindService = mindService
     }
@@ -35,12 +32,12 @@ struct LimboCardView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: lobe.iconName ?? "tray")
-                    .foregroundStyle(lobeColor)
+                Image(systemName: mind.iconName ?? "tray")
+                    .foregroundStyle(mindColor)
                     .frame(width: 32, height: 32)
-                    .glassEffect(.regular.tint(lobeColor.opacity(0.15)))
+                    .glassEffect(.regular.tint(mindColor.opacity(0.15)))
 
-                Text(lobe.name)
+                Text(mind.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
@@ -57,10 +54,10 @@ struct LimboCardView: View {
                     .frame(height: 20)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(lobeColor)
+                            .fill(mindColor)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .stroke(darkerBorderColor(for: lobeColor), lineWidth: 1)
+                                    .stroke(darkerBorderColor(for: mindColor), lineWidth: 1)
                             )
                     )
             }
@@ -71,7 +68,7 @@ struct LimboCardView: View {
         .cardStyle()
     }
 
-    private var lobeColor: Color {
+    private var mindColor: Color {
         .accentColor
     }
 

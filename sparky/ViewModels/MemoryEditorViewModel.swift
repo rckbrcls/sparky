@@ -18,7 +18,7 @@ enum MemoryEditorTemplate {
 @MainActor
 final class MemoryEditorViewModel: ObservableObject {
     @Published var title: String = ""
-    @Published var selectedLobeID: UUID?
+    @Published var selectedMindID: UUID?
     @Published var status: MemoryStatus = .active
     @Published var isPinned: Bool = false
     @Published var autoCompleteChecklist: Bool
@@ -38,43 +38,37 @@ final class MemoryEditorViewModel: ObservableObject {
     private var existingMemory: Memory?
     private var persistedMemoryID: UUID?
     private let template: MemoryEditorTemplate
-    private let defaultLobe: Space?
+    private let defaultMind: Mind?
 
     init(environment: AppEnvironment,
          attachmentStore: MemoryAttachmentStore,
          memory: Memory?,
-         defaultLobe: Space?,
+         defaultMind: Mind?,
          template: MemoryEditorTemplate,
          initialTitle: String = "") {
         self.environment = environment
         self.attachmentStore = attachmentStore
         self.existingMemory = memory
         self.template = template
-        self.defaultLobe = defaultLobe
+        self.defaultMind = defaultMind
         self.autoCompleteChecklist = memory?.autoCompleteOnChecklistCompletion ?? false
         self.persistedMemoryID = memory?.id
         self.title = initialTitle
         configureInitialState()
     }
 
-    var availableLobes: [Space] {
-        environment.lobeService.lobes
+    var availableMinds: [Mind] {
+        environment.mindService.minds
     }
 
     var editingMemoryID: UUID? {
         persistedMemoryID ?? existingMemory?.id
     }
 
-    var selectedLobe: Space? {
-        guard let id = selectedLobeID else { return nil }
-        if let lobe = environment.lobeService.lobe(id: id) {
-            return lobe
-        }
-        if id == Space.allSpacesIdentifier {
-            return Space.allSpaces
-        }
-        if id == Space.inboxIdentifier {
-            return Space.inbox
+    var selectedMind: Mind? {
+        guard let id = selectedMindID else { return nil }
+        if let mind = environment.mindService.mind(id: id) {
+            return mind
         }
         return nil
     }
@@ -151,7 +145,7 @@ final class MemoryEditorViewModel: ObservableObject {
         if title != original.title { return true }
         if status != original.status { return true }
         if isPinned != original.isPinned { return true }
-        if selectedLobeID != original.lobe?.id { return true }
+        if selectedMindID != original.mind?.id { return true }
         if autoCompleteChecklist != original.autoCompleteOnChecklistCompletion { return true }
 
         // Compare note
@@ -474,7 +468,7 @@ final class MemoryEditorViewModel: ObservableObject {
             status: status,
             isPinned: isPinned,
             dueDate: nil,
-            lobeID: selectedLobeID,
+            mindID: selectedMindID,
             triggers: triggerModels,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
@@ -524,7 +518,7 @@ final class MemoryEditorViewModel: ObservableObject {
             status: status,
             isPinned: isPinned,
             dueDate: nil,
-            lobeID: selectedLobeID,
+            mindID: selectedMindID,
             triggers: triggerModels,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
@@ -559,13 +553,10 @@ private extension MemoryEditorViewModel {
         if let memory = existingMemory {
             apply(memory: memory)
         } else {
-            // When creating a new memory, prefer the provided defaultLobe (if any)
-            // so that creations from a specific lobe/sublobe are scoped correctly.
-            // If it's the "All" lobe, default to no lobe (nil)
-            if defaultLobe?.isAllSpaces == true {
-                selectedLobeID = nil
+            if defaultMind?.isAllMinds == true {
+                selectedMindID = nil
             } else {
-                selectedLobeID = defaultLobe?.id
+                selectedMindID = defaultMind?.id
             }
             applyTemplate(template)
         }
@@ -574,7 +565,7 @@ private extension MemoryEditorViewModel {
     func apply(memory: Memory) {
         persistedMemoryID = memory.id
         title = memory.title
-        selectedLobeID = memory.lobe?.id
+        selectedMindID = memory.mind?.id
         status = memory.status
         isPinned = memory.isPinned
         triggers = memory.triggers.map { draft(from: $0) }

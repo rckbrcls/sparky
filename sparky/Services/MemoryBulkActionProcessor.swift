@@ -37,9 +37,9 @@ final class MemoryBulkActionProcessor {
         self.environment = environment
     }
 
-    func moveMemories(_ ids: Set<UUID>, to lobe: Space) async -> MemoryBulkActionResult {
+    func moveMemories(_ ids: Set<UUID>, to mind: Mind) async -> MemoryBulkActionResult {
         await process(ids: ids) { memory in
-            try await self.environment.memoryService.moveMemory(memory.id, to: lobe)
+            try await self.environment.memoryService.moveMemory(memory.id, to: mind)
         }
     }
 

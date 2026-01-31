@@ -8,8 +8,9 @@
 import SwiftUI
 
 struct MemorySearchSheet: View {
-    let lobe: Space
+    let mind: Mind
     @ObservedObject var memoryService: MemoryService
+    @ObservedObject var mindService: MindService
 
     let onSelectMemory: (Memory) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -18,31 +19,13 @@ struct MemorySearchSheet: View {
     @State private var searchText = ""
     @FocusState private var isSearchFieldFocused: Bool
 
-    private var isAllSpaces: Bool {
-        lobeService.lobe(id: lobe.id)?.isAllSpaces ?? lobe.isAllSpaces
+    private var isAllMinds: Bool {
+        mind.isAllMinds
     }
 
-    private var resolvedLobe: Space {
-        lobeService.lobe(id: lobe.id) ?? lobe
+    private var isInbox: Bool {
+        mind.isInbox
     }
-
-    private var isAllSpaceForMind: Bool {
-        resolvedLobe.isAllSpaceForMind
-    }
-
-    private var isInboxSpace: Bool {
-        resolvedLobe.isInbox
-    }
-
-    private var isLimboSpace: Bool {
-        resolvedLobe.isLimbo
-    }
-
-    // We need lobeService to resolve the lobe correctly if it updates,
-    // although for search strictly we might just trust the passed lobe or resolvedLobe.
-    // Let's grab it from init.
-    // LobeDetailView has it, let's pass it.
-    @ObservedObject var lobeService: LobeService
 
     // MARK: - Context Menu Actions
 
@@ -70,13 +53,13 @@ struct MemorySearchSheet: View {
         }
     }
 
-    private func moveMemory(_ memory: Memory, to lobeID: UUID?) async {
-        let currentID = memory.lobe?.id
-        guard currentID != lobeID else { return }
+    private func moveMemory(_ memory: Memory, to mindID: UUID?) async {
+        let currentID = memory.mind?.id
+        guard currentID != mindID else { return }
 
         do {
-            let targetLobe = lobeID.flatMap { environment.lobeService.lobe(id: $0) }
-            try await environment.memoryService.moveMemory(memory.id, to: targetLobe)
+            let targetMind = mindID.flatMap { environment.mindService.mind(id: $0) }
+            try await environment.memoryService.moveMemory(memory.id, to: targetMind)
         } catch {
             // Handle error silently
         }
@@ -99,7 +82,7 @@ struct MemorySearchSheet: View {
             onTogglePin: { Task { await togglePin(for: memory) } },
             onToggleCompletion: { Task { await toggleCompletion(for: memory) } },
             onDelete: { Task { await deleteMemory(memory) } },
-            onMoveToLobe: { lobeID in Task { await moveMemory(memory, to: lobeID) } },
+            onMoveToMind: { mindID in Task { await moveMemory(memory, to: mindID) } },
             onUpdateStatus: { status in Task { await setStatus(for: memory, to: status) } }
         )
         .onTapGesture {
@@ -109,70 +92,52 @@ struct MemorySearchSheet: View {
     }
 
     private var recentMemories: [Memory] {
-        let allInLobe: [Memory]
+        let allInMind: [Memory]
 
-        if isAllSpaces {
-            allInLobe = memoryService.memories(
+        if isAllMinds {
+            allInMind = memoryService.memories(
                 in: nil,
                 statuses: [.active],
                 includeCompleted: false,
                 sort: .createdAtDescending
             )
-        } else if isInboxSpace || isLimboSpace {
+        } else if isInbox {
             let unsorted = memoryService.memories.filter { memory in
-                memory.lobe == nil && memory.status == .active
+                memory.mind == nil && memory.status == .active
             }
-            allInLobe = memoryService.sortedMemories(unsorted, using: .createdAtDescending)
-        } else if isAllSpaceForMind {
-            guard let mindID = resolvedLobe.mind?.id else {
-                return []
-            }
-            let unsorted = memoryService.memories.filter { memory in
-                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
-                return memoryLobeMindID == mindID && memory.status == .active
-            }
-            allInLobe = memoryService.sortedMemories(unsorted, using: .createdAtDescending)
+            allInMind = memoryService.sortedMemories(unsorted, using: .createdAtDescending)
         } else {
-            allInLobe = memoryService.memories(
-                in: resolvedLobe,
+            allInMind = memoryService.memories(
+                in: mind,
                 statuses: [.active],
                 includeCompleted: false,
                 sort: .createdAtDescending
             )
         }
 
-        return Array(allInLobe.prefix(5))
+        return Array(allInMind.prefix(5))
     }
 
     private var searchResults: [Memory] {
         guard !searchText.isEmpty else { return [] }
 
-        let allInLobe: [Memory]
+        let allInMind: [Memory]
 
-        if isAllSpaces {
-            allInLobe = memoryService.memories(
+        if isAllMinds {
+            allInMind = memoryService.memories(
                 in: nil,
                 statuses: [],
                 includeCompleted: true,
                 sort: .updatedAtDescending
             )
-        } else if isInboxSpace || isLimboSpace {
+        } else if isInbox {
             let unsorted = memoryService.memories.filter { memory in
-                memory.lobe == nil
+                memory.mind == nil
             }
-            allInLobe = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
-        } else if isAllSpaceForMind {
-            guard let mindID = resolvedLobe.mind?.id else {
-                return []
-            }
-            let unsorted = memoryService.memories.filter { memory in
-                guard let memoryLobeMindID = memory.lobe?.mind?.id else { return false }
-                return memoryLobeMindID == mindID
-            }
-            allInLobe = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
+            allInMind = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
         } else {
-            allInLobe = memoryService.memories(
-                in: resolvedLobe,
+            allInMind = memoryService.memories(
+                in: mind,
                 statuses: [],
                 includeCompleted: true,
                 sort: .updatedAtDescending
@@ -180,7 +145,7 @@ struct MemorySearchSheet: View {
         }
 
         let lowercasedSearch = searchText.lowercased()
-        return allInLobe.filter { memory in
+        return allInMind.filter { memory in
             if memory.title.lowercased().contains(lowercasedSearch) {
                 return true
             }
@@ -190,7 +155,7 @@ struct MemorySearchSheet: View {
             return false
         }
     }
-
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
