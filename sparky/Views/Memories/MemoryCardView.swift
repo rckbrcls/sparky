@@ -166,7 +166,18 @@ struct MemoryCardView: View {
                     trigger: scheduledTrigger,
                     isCompletedForDisplay: isCompletedForDisplay
                 )
-                .padding(6)
+                .background(
+                    Color.Theme.secondaryBackground
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: 24,
+                                bottomLeadingRadius: 0,
+                                bottomTrailingRadius: 0,
+                                topTrailingRadius: 24
+                            )
+                        )
+                )
+
             }
 
             // Map (if has location trigger)
@@ -179,7 +190,7 @@ struct MemoryCardView: View {
             // Card content
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    VStack (alignment: .leading, spacing: 6){
+
                         Text(title)
                             .font(.subheadline)
                             .fontWeight(.medium)
@@ -196,7 +207,7 @@ struct MemoryCardView: View {
                                 .lineLimit(2)
                         }
 
-                    }
+
                 }
 
                 Spacer()
@@ -224,7 +235,6 @@ struct MemoryCardView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 12)
-            .padding(.top, 6)
 
             // Checklist collapsible section
             if memory.hasChecklist && !memory.checkItems.isEmpty {
@@ -237,6 +247,7 @@ struct MemoryCardView: View {
                     },
                     isCompletedForDisplay: isCompletedForDisplay
                 )
+                 .padding(4)
                 .background(
                     Color.Theme.secondaryBackground
                         .clipShape(
@@ -248,6 +259,7 @@ struct MemoryCardView: View {
                             )
                         )
                 )
+
             }
         }
         .cardStyle()
