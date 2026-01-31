@@ -238,12 +238,12 @@ struct MemoryCardView: View {
                     isCompletedForDisplay: isCompletedForDisplay
                 )
                 .background(
-                    Color.Theme.secondaryBackgroundag
+                    Color.Theme.secondaryBackground
                         .clipShape(
                             UnevenRoundedRectangle(
                                 topLeadingRadius: 0,
-                                bottomLeadingRadius: 10,
-                                bottomTrailingRadius: 10,
+                                bottomLeadingRadius: 24,
+                                bottomTrailingRadius: 24,
                                 topTrailingRadius: 0
                             )
                         )
