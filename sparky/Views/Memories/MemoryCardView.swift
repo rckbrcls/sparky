@@ -108,12 +108,11 @@ struct MemoryCardView: View {
 
     private var scheduledDateText: String? {
         guard let memory = memory,
-              let config = memory.scheduleConfig,
-              config.isActive,
-              let fireDate = config.fireDate else { return nil }
+              let trigger = memory.triggers.first(where: { $0.type == .scheduled }),
+              let fireDate = trigger.fireDate else { return nil }
 
         // Don't show time for all-day memories
-        if config.isAllDay {
+        if trigger.isAllDay {
             return nil
         }
 
@@ -149,14 +148,19 @@ struct MemoryCardView: View {
         return color
     }
     
-    private var locationConfig: LocationConfig? {
+    private var locationTrigger: MemoryTriggerModel? {
         guard let memory = memory else { return nil }
-        return memory.locationConfig?.isActive == true ? memory.locationConfig : nil
+        return memory.triggers.first(where: { $0.type == .location && $0.isActive })
     }
-
-    private var scheduleConfig: ScheduleConfig? {
+    
+    private var scheduledTrigger: MemoryTriggerModel? {
         guard let memory = memory else { return nil }
-        return memory.scheduleConfig?.isActive == true ? memory.scheduleConfig : nil
+        return memory.triggers.first(where: { $0.type == .scheduled && $0.isActive })
+    }
+    
+    private var sequentialTrigger: MemoryTriggerModel? {
+        guard let memory = memory else { return nil }
+        return memory.triggers.first(where: { $0.type == .sequential && $0.isActive })
     }
     
 
@@ -172,16 +176,16 @@ struct MemoryCardView: View {
     private func memoryContent(memory: Memory) -> some View {
         VStack(spacing: 0) {
             // DateTime trigger (if has scheduled trigger)
-            if let config = scheduleConfig {
+            if let scheduledTrigger = scheduledTrigger {
                 MemoryCardDateTimeView(
-                    config: config,
+                    trigger: scheduledTrigger,
                     isCompletedForDisplay: isCompletedForDisplay
                 )
             }
-
+            
             // Map (if has location trigger)
-            if let config = locationConfig {
-                MemoryCardLocationMapView(config: config)
+            if let locationTrigger = locationTrigger, let location = locationTrigger.location {
+                MemoryCardLocationMapView(location: location)
                     .frame(height: 120)
             }
             
@@ -223,7 +227,11 @@ struct MemoryCardView: View {
                 Spacer()
 
                 // Completion check circle button
-                if let onToggleCompletion = onToggleCompletion {
+                // Only show checkbox if:
+                // 1. Memory has no sequence trigger, OR
+                // 2. Memory is the current step in its sequence
+                let shouldShowCheckbox = !memory.hasSequenceTrigger || memory.isCurrentInSequence
+                if let onToggleCompletion = onToggleCompletion, shouldShowCheckbox {
                     Button {
                         feedbackGenerator.impactOccurred()
                         onToggleCompletion()

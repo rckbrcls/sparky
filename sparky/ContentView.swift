@@ -174,17 +174,18 @@ struct ContentView: View {
                 },
                 onQuickCreate: { lobe, title, reminderMinutes in
                     Task {
-                        // Create schedule config if reminder selected
-                        var scheduleConfigDraft: ScheduleConfigDraft?
+                        // Create triggers array with single alarm if selected
+                        var triggers: [MemoryTriggerModel] = []
                         if let minutes = reminderMinutes {
                             let fireDate = Date().addingTimeInterval(TimeInterval(minutes * 60))
-                            scheduleConfigDraft = ScheduleConfigDraft(
+                            let alarmTrigger = MemoryTriggerModel(
+                                type: .scheduled,
                                 fireDate: fireDate,
-                                recurrenceRule: nil,
-                                weekdayMask: 0,
-                                isActive: true,
-                                isAllDay: false
+                                startDate: fireDate,
+                                timeZoneIdentifier: TimeZone.current.identifier,
+                                isActive: true
                             )
+                            triggers.append(alarmTrigger)
                         }
 
                         let draft = MemoryDraft(
@@ -194,7 +195,7 @@ struct ContentView: View {
                             isPinned: false,
                             dueDate: nil,
                             lobeID: lobe?.id,
-                            scheduleConfigDraft: scheduleConfigDraft,
+                            triggers: triggers,
                             note: nil,
                             checkItems: [],
                             photoAttachmentIDs: [],
@@ -393,7 +394,7 @@ struct ContentView: View {
                         longPressTimer?.invalidate()
                         longPressTimer = nil
                         hasTriggeredLongPress = false
-                        
+
                         // Se não foi long press, executa ação normal
                         if !wasLongPress {
                             prepareMemoryCreation(for: targetLobeForCreation())

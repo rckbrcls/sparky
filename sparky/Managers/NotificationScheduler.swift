@@ -57,8 +57,13 @@ final class NotificationScheduler {
 
         var requests: [UNNotificationRequest] = []
 
-        if let config = memory.scheduleConfig, config.isActive {
-            scheduleFromConfig(config: config, memoryID: memory.id, content: content, requests: &requests)
+        for trigger in memory.triggers {
+            switch trigger.type {
+            case .scheduled:
+                scheduleScheduledTrigger(trigger: trigger, memoryID: memory.id, content: content, requests: &requests)
+            case .location, .sequential:
+                continue
+            }
         }
 
         do {
@@ -91,24 +96,24 @@ final class NotificationScheduler {
         }
     }
 
-    private func notificationIdentifier(memoryID: UUID, configID: UUID) -> String {
-        "memory-\(memoryID.uuidString)-schedule-\(configID.uuidString)"
+    private func notificationIdentifier(memoryID: UUID, triggerID: UUID) -> String {
+        "memory-\(memoryID.uuidString)-\(triggerID.uuidString)"
     }
 
-    private func scheduleFromConfig(
-        config: ScheduleConfig,
+    private func scheduleScheduledTrigger(
+        trigger: MemoryTriggerModel,
         memoryID: UUID,
         content: UNMutableNotificationContent,
         requests: inout [UNNotificationRequest]
     ) {
-        guard let fireDate = config.fireDate else { return }
+        guard let fireDate = trigger.fireDate else { return }
 
         // If there's a weekdayMask, create notifications for each selected day
-        if config.weekdayMask != 0 {
+        if trigger.weekdayMask != 0 {
             for day in 1...7 {
                 let bit = Int16(1 << day)
-                guard config.weekdayMask & bit != 0 else { continue }
-                let identifier = notificationIdentifier(memoryID: memoryID, configID: config.id) + "-\(day)"
+                guard trigger.weekdayMask & bit != 0 else { continue }
+                let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id) + "-\(day)"
                 var components = DateComponents()
                 components.weekday = day
                 let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: fireDate)
@@ -121,9 +126,9 @@ final class NotificationScheduler {
                 )
                 requests.append(request)
             }
-        } else if config.recurrenceRule != nil {
+        } else if trigger.recurrenceRule != nil {
             // If there's recurrence without weekdayMask, create recurring notification
-            let identifier = notificationIdentifier(memoryID: memoryID, configID: config.id)
+            let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id)
             let dateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
             let request = UNNotificationRequest(
                 identifier: identifier,
@@ -133,7 +138,7 @@ final class NotificationScheduler {
             requests.append(request)
         } else {
             // Simple case: just a date/time
-            let identifier = notificationIdentifier(memoryID: memoryID, configID: config.id)
+            let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id)
             let dateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
             let request = UNNotificationRequest(
                 identifier: identifier,

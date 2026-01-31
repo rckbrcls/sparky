@@ -154,19 +154,22 @@ struct CalendarDayContentView: View {
     private func allDayMemories(from memories: [Memory], date: Date) -> [Memory] {
         memories.filter { memory in
             // Check for scheduled all-day triggers
-            guard let config = memory.scheduleConfig, config.isActive else {
-                return false
+            if let scheduledTrigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) {
+                if scheduledTrigger.isAllDay {
+                    return true
+                }
             }
-            return config.isAllDay
+
+            return false
         }
     }
 
     private func timedMemories(from memories: [Memory], date: Date) -> [Memory] {
         memories.filter { memory in
-            guard let config = memory.scheduleConfig, config.isActive else {
+            guard let trigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) else {
                 return false
             }
-            return !config.isAllDay
+            return !trigger.isAllDay
         }
     }
 
@@ -194,10 +197,11 @@ struct CalendarDayContentView: View {
             return matchingDate
         }
 
-        // Fallback: check if the memory has a schedule config with a fireDate on this day
-        if let config = memory.scheduleConfig, config.isActive,
-           let fireDate = config.fireDate, calendar.isDate(fireDate, inSameDayAs: day) {
-            return fireDate
+        // Fallback: check if the memory has a scheduled trigger with a fireDate on this day
+        for trigger in memory.triggers where trigger.type == .scheduled && trigger.isActive {
+            if let fireDate = trigger.fireDate, calendar.isDate(fireDate, inSameDayAs: day) {
+                return fireDate
+            }
         }
 
         return nil

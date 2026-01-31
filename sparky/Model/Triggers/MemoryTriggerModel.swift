@@ -9,8 +9,7 @@ import SwiftData
 @Model
 final class MemoryTriggerModel: Identifiable {
     typealias TriggerLocation = MemoryTriggerLocation
-    typealias TriggerSequential = MemoryTriggerSequential
-
+    
     @Attribute(.unique) var id: UUID = UUID()
     var typeRaw: String = MemoryTriggerType.scheduled.rawValue
     var fireDate: Date?
@@ -25,9 +24,6 @@ final class MemoryTriggerModel: Identifiable {
 
     @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerLocation.trigger)
     var location: MemoryTriggerLocation?
-
-    @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerSequential.trigger)
-    var sequential: MemoryTriggerSequential?
 
     var spacedStage: Int = 0
     var lastReviewDate: Date?
@@ -46,7 +42,6 @@ final class MemoryTriggerModel: Identifiable {
         isActive: Bool = true,
         isAllDay: Bool = false,
         location: MemoryTriggerLocation? = nil,
-        sequential: MemoryTriggerSequential? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
         ignoreCount: Int = 0,
@@ -64,14 +59,12 @@ final class MemoryTriggerModel: Identifiable {
         self.isActive = isActive
         self.isAllDay = isAllDay
         self.location = location
-        self.sequential = sequential
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
         self.ignoreCount = ignoreCount
         self.memory = memory
 
         self.location?.trigger = self
-        self.sequential?.trigger = self
     }
 }
 
@@ -117,7 +110,7 @@ extension MemoryTriggerModel {
         switch type {
         case .scheduled:
             return nextScheduledOccurrence(from: reference)
-        case .location, .sequential:
+        case .location:
             return startDate ?? fireDate
         }
     }

@@ -37,7 +37,6 @@ final class DataController: Sendable {
             // Legacy trigger models (kept for migration)
             MemoryTriggerModel.self,
             MemoryTriggerLocation.self,
-            MemoryTriggerSequential.self,
             MemoryAttachmentReference.self,
             MemoryCompletionDate.self
         ])

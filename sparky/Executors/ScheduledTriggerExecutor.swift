@@ -9,7 +9,7 @@ import Foundation
 import UserNotifications
 
 @MainActor
-final class ScheduledTriggerExecutor {
+final class ScheduledTriggerExecutor: TriggerExecutorProtocol {
     private let center = UNUserNotificationCenter.current()
     private var hasRequestedAuthorization = false
     private let settings: SettingsStore
@@ -39,6 +39,61 @@ final class ScheduledTriggerExecutor {
         await requestAuthorizationIfNeeded()
     }
 
+    func register(trigger: any TriggerProtocol, for memoryID: UUID) async {
+        await requestAuthorizationIfNeeded()
+        guard let scheduled = trigger as? ScheduledTrigger else { return }
+        guard scheduled.isActive else {
+            await unregister(triggerID: trigger.id, for: memoryID)
+            return
+        }
+
+        // Remove notificações antigas para este trigger
+        await unregister(triggerID: trigger.id, for: memoryID)
+
+        // Busca a memória para obter título e corpo
+        // Nota: Isso requer acesso ao MemoryService, mas por enquanto vamos usar um placeholder
+        // O coordenador deve passar as informações necessárias
+    }
+
+    func register(trigger: any TriggerProtocol, for memory: Memory) async {
+        await requestAuthorizationIfNeeded()
+        guard let scheduled = trigger as? ScheduledTrigger else { return }
+        guard scheduled.isActive, memory.status == .active else {
+            await unregister(triggerID: trigger.id, for: memory.id)
+            return
+        }
+
+        await unregister(triggerID: trigger.id, for: memory.id)
+
+        let content = UNMutableNotificationContent()
+        content.title = memory.title
+        if let body = memory.body {
+            content.body = body
+        }
+        content.sound = settings.notificationSoundEnabled ? .default : nil
+        content.categoryIdentifier = "REMINDER_ACTIONS"
+
+        var requests: [UNNotificationRequest] = []
+        scheduleScheduledTrigger(
+            trigger: scheduled,
+            memoryID: memory.id,
+            content: content,
+            requests: &requests
+        )
+
+        do {
+            try await center.add(requests: requests)
+        } catch {
+            print("Failed to schedule notifications: \(error.localizedDescription)")
+        }
+    }
+
+    func unregister(triggerID: UUID, for memoryID: UUID) async {
+        let identifiers = await pendingIdentifiers()
+            .filter { $0.contains(memoryID.uuidString) && $0.contains(triggerID.uuidString) }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
     func unregisterAll(for memoryID: UUID) async {
         let identifiers = await pendingIdentifiers()
             .filter { $0.contains(memoryID.uuidString) }
@@ -56,33 +111,11 @@ final class ScheduledTriggerExecutor {
                 continue
             }
 
-            // Use the new scheduleConfig
-            guard let config = memory.scheduleConfig, config.isActive else { continue }
-            await registerScheduleConfig(config, for: memory)
-        }
-    }
-
-    private func registerScheduleConfig(_ config: ScheduleConfig, for memory: Memory) async {
-        let content = UNMutableNotificationContent()
-        content.title = memory.title
-        if let body = memory.body {
-            content.body = body
-        }
-        content.sound = settings.notificationSoundEnabled ? .default : nil
-        content.categoryIdentifier = "REMINDER_ACTIONS"
-
-        var requests: [UNNotificationRequest] = []
-        scheduleFromConfig(
-            config: config,
-            memoryID: memory.id,
-            content: content,
-            requests: &requests
-        )
-
-        do {
-            try await center.add(requests: requests)
-        } catch {
-            print("Failed to schedule notifications: \(error.localizedDescription)")
+            for trigger in memory.triggers {
+                guard trigger.type == .scheduled, trigger.isActive else { continue }
+                let protocolTrigger = TriggerFactory.createTrigger(from: trigger)
+                await register(trigger: protocolTrigger, for: memory)
+            }
         }
     }
 
@@ -94,24 +127,24 @@ final class ScheduledTriggerExecutor {
         }
     }
 
-    private func notificationIdentifier(memoryID: UUID, configID: UUID) -> String {
-        "memory-\(memoryID.uuidString)-schedule-\(configID.uuidString)"
+    private func notificationIdentifier(memoryID: UUID, triggerID: UUID) -> String {
+        "memory-\(memoryID.uuidString)-\(triggerID.uuidString)"
     }
 
-    private func scheduleFromConfig(
-        config: ScheduleConfig,
+    private func scheduleScheduledTrigger(
+        trigger: ScheduledTrigger,
         memoryID: UUID,
         content: UNMutableNotificationContent,
         requests: inout [UNNotificationRequest]
     ) {
-        guard let fireDate = config.fireDate else { return }
+        guard let fireDate = trigger.fireDate else { return }
 
         // If there's a weekdayMask, create notifications for each selected day
-        if config.weekdayMask != 0 {
+        if trigger.weekdayMask != 0 {
             for day in 1...7 {
                 let bit = Int16(1 << day)
-                guard config.weekdayMask & bit != 0 else { continue }
-                let identifier = notificationIdentifier(memoryID: memoryID, configID: config.id) + "-\(day)"
+                guard trigger.weekdayMask & bit != 0 else { continue }
+                let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id) + "-\(day)"
                 var components = DateComponents()
                 components.weekday = day
                 let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: fireDate)
@@ -124,9 +157,9 @@ final class ScheduledTriggerExecutor {
                 )
                 requests.append(request)
             }
-        } else if config.recurrenceRule != nil {
+        } else if trigger.recurrenceRule != nil {
             // If there's recurrence without weekdayMask, create recurring notification
-            let identifier = notificationIdentifier(memoryID: memoryID, configID: config.id)
+            let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id)
             let dateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
             let request = UNNotificationRequest(
                 identifier: identifier,
@@ -136,7 +169,7 @@ final class ScheduledTriggerExecutor {
             requests.append(request)
         } else {
             // Simple case: just a date/time
-            let identifier = notificationIdentifier(memoryID: memoryID, configID: config.id)
+            let identifier = notificationIdentifier(memoryID: memoryID, triggerID: trigger.id)
             let dateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
             let request = UNNotificationRequest(
                 identifier: identifier,
