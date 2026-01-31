@@ -8,34 +8,34 @@
 import SwiftUI
 
 struct MemoryCardDateTimeView: View {
-    let trigger: MemoryTriggerModel
+    let config: ScheduleConfig
     let isCompletedForDisplay: Bool
-    
+
     private var fireDate: Date? {
-        trigger.fireDate
+        config.fireDate
     }
-    
+
     private var dateString: String {
         guard let fireDate = fireDate else { return "" }
         return fireDate.formatted(date: .abbreviated, time: .omitted)
     }
-    
+
     private var timeString: String? {
-        guard let fireDate = fireDate, !trigger.isAllDay else { return nil }
+        guard let fireDate = fireDate, !config.isAllDay else { return nil }
         return fireDate.formatted(date: .omitted, time: .shortened)
     }
-    
+
     private var recurrenceString: String? {
         // Priorize weekdayMask se existir
-        if trigger.weekdayMask != 0 {
-            return weekdayMaskSummary(mask: trigger.weekdayMask)
+        if config.weekdayMask != 0 {
+            return weekdayMaskSummary(mask: config.weekdayMask)
         }
-        
+
         // Caso contrário, use recurrenceRule
-        guard let recurrence = trigger.recurrenceRule else {
+        guard let recurrence = config.recurrenceRule else {
             return nil
         }
-        
+
         let frequencyText: String
         switch recurrence.frequency {
         case .daily:
@@ -51,7 +51,7 @@ struct MemoryCardDateTimeView: View {
         case .minutely:
             frequencyText = recurrence.interval > 1 ? "Every \(recurrence.interval) minutes" : "Minutely"
         }
-        
+
         return frequencyText
     }
     

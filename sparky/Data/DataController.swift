@@ -21,6 +21,9 @@ final class DataController: Sendable {
     let container: ModelContainer
     let modelContext: ModelContext
 
+    private static let migrationVersionKey = "sparky.triggerMigrationVersion"
+    private static let currentMigrationVersion = 1
+
     init(inMemory: Bool = false) {
         let schema = Schema([
             Mind.self,
@@ -28,6 +31,10 @@ final class DataController: Sendable {
             Memory.self,
             Tag.self,
             CheckItemModel.self,
+            // New trigger config models
+            ScheduleConfig.self,
+            LocationConfig.self,
+            // Legacy trigger models (kept for migration)
             MemoryTriggerModel.self,
             MemoryTriggerLocation.self,
             MemoryTriggerSequential.self,
@@ -53,9 +60,80 @@ final class DataController: Sendable {
             container = try ModelContainer(for: schema, configurations: [modelConfiguration])
             modelContext = container.mainContext
             modelContext.autosaveEnabled = true
+
+            // Run migration if needed
+            if !inMemory {
+                migrateTriggersIfNeeded()
+            }
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
         }
+    }
+
+    // MARK: - Migration
+
+    private func migrateTriggersIfNeeded() {
+        let currentVersion = UserDefaults.standard.integer(forKey: Self.migrationVersionKey)
+        guard currentVersion < Self.currentMigrationVersion else { return }
+
+        do {
+            var descriptor = FetchDescriptor<Memory>()
+            descriptor.includePendingChanges = true
+            let memories = try modelContext.fetch(descriptor)
+
+            for memory in memories {
+                migrateMemoryTriggers(memory)
+            }
+
+            if modelContext.hasChanges {
+                try modelContext.save()
+            }
+
+            UserDefaults.standard.set(Self.currentMigrationVersion, forKey: Self.migrationVersionKey)
+        } catch {
+            assertionFailure("Migration failed: \(error)")
+        }
+    }
+
+    private func migrateMemoryTriggers(_ memory: Memory) {
+        // Skip if already migrated (has new config models)
+        if memory.scheduleConfig != nil || memory.locationConfig != nil {
+            return
+        }
+
+        // Migrate scheduled triggers
+        if let scheduledTrigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) {
+            let scheduleConfig = ScheduleConfig(
+                id: scheduledTrigger.id,
+                fireDate: scheduledTrigger.fireDate,
+                startDate: scheduledTrigger.startDate,
+                recurrenceRule: scheduledTrigger.recurrenceRule,
+                timeZoneIdentifier: scheduledTrigger.timeZoneIdentifier,
+                weekdayMask: scheduledTrigger.weekdayMask,
+                isActive: scheduledTrigger.isActive,
+                isAllDay: scheduledTrigger.isAllDay,
+                memory: memory
+            )
+            memory.scheduleConfig = scheduleConfig
+        }
+
+        // Migrate location triggers
+        if let locationTrigger = memory.triggers.first(where: { $0.type == .location && $0.isActive }),
+           let location = locationTrigger.location {
+            let locationConfig = LocationConfig(
+                id: locationTrigger.id,
+                latitude: location.latitude,
+                longitude: location.longitude,
+                radius: location.radius,
+                name: location.name,
+                event: location.event,
+                isActive: locationTrigger.isActive,
+                memory: memory
+            )
+            memory.locationConfig = locationConfig
+        }
+
+        // Note: Sequential triggers are intentionally not migrated (being removed)
     }
 
     func save() {

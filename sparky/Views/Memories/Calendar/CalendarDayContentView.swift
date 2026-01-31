@@ -154,40 +154,19 @@ struct CalendarDayContentView: View {
     private func allDayMemories(from memories: [Memory], date: Date) -> [Memory] {
         memories.filter { memory in
             // Check for scheduled all-day triggers
-            if let scheduledTrigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) {
-                if scheduledTrigger.isAllDay {
-                    return true
-                }
+            guard let config = memory.scheduleConfig, config.isActive else {
+                return false
             }
-
-            // Check for sequential triggers - show only if this memory is the current step in the sequence
-            if let seqTrigger = memory.triggers.first(where: { $0.type == .sequential && $0.isActive }),
-               let seqInfo = seqTrigger.sequential {
-                // Only show if startDate has passed (or no startDate set)
-                // Compare using start of day to ensure proper date comparison
-                let dayStart = calendar.startOfDay(for: date)
-                let isStarted: Bool
-                if let startDate = seqInfo.startDate {
-                    let sequenceStartDay = calendar.startOfDay(for: startDate)
-                    isStarted = dayStart >= sequenceStartDay
-                } else {
-                    isStarted = true
-                }
-                // This memory is current if its stepIndex matches the currentStepIndex
-                let isCurrent = seqInfo.stepIndex == seqInfo.currentStepIndex
-                return isStarted && isCurrent
-            }
-
-            return false
+            return config.isAllDay
         }
     }
 
     private func timedMemories(from memories: [Memory], date: Date) -> [Memory] {
         memories.filter { memory in
-            guard let trigger = memory.triggers.first(where: { $0.type == .scheduled && $0.isActive }) else {
+            guard let config = memory.scheduleConfig, config.isActive else {
                 return false
             }
-            return !trigger.isAllDay
+            return !config.isAllDay
         }
     }
 
@@ -215,11 +194,10 @@ struct CalendarDayContentView: View {
             return matchingDate
         }
 
-        // Fallback: check if the memory has a scheduled trigger with a fireDate on this day
-        for trigger in memory.triggers where trigger.type == .scheduled && trigger.isActive {
-            if let fireDate = trigger.fireDate, calendar.isDate(fireDate, inSameDayAs: day) {
-                return fireDate
-            }
+        // Fallback: check if the memory has a schedule config with a fireDate on this day
+        if let config = memory.scheduleConfig, config.isActive,
+           let fireDate = config.fireDate, calendar.isDate(fireDate, inSameDayAs: day) {
+            return fireDate
         }
 
         return nil

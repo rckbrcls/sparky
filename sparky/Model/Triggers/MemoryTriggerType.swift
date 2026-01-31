@@ -8,7 +8,6 @@ import Foundation
 enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
     case scheduled
     case location
-    case sequential
 
     var id: String { rawValue }
 
@@ -16,7 +15,6 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .scheduled: return "clock.badge"
         case .location: return "mappin.and.ellipse"
-        case .sequential: return "arrowshape.turn.up.right.circle"
         }
     }
 
@@ -24,7 +22,6 @@ enum MemoryTriggerType: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .scheduled: return "Date & Time"
         case .location: return "Location"
-        case .sequential: return "Sequential"
         }
     }
 }

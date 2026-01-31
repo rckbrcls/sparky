@@ -22,7 +22,9 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var status: MemoryStatus = .active
     @Published var isPinned: Bool = false
     @Published var autoCompleteChecklist: Bool
-    @Published var triggers: [MemoryTriggerDraft] = []
+    // New config-based trigger properties
+    @Published var scheduleConfig: ScheduleConfigDraft?
+    @Published var locationConfig: LocationConfigDraft?
     // Fixed content properties (replacing dynamic contentQueue)
     @Published var note: String = ""
     @Published var checkItems: [CheckItemDraft] = []
@@ -83,19 +85,20 @@ final class MemoryEditorViewModel: ObservableObject {
         !checkItems.isEmpty
     }
 
-    var sequentialTrigger: MemoryTriggerDraft? {
-        triggers.first(where: { $0.type == .sequential })
-    }
-
     var hasAnyAttachment: Bool {
         !photoAttachments.isEmpty || !linkAttachments.isEmpty || !audioAttachments.isEmpty || !fileAttachments.isEmpty
     }
 
+    var hasScheduleTrigger: Bool {
+        scheduleConfig?.isActive ?? false
+    }
+
+    var hasLocationTrigger: Bool {
+        locationConfig?.isActive ?? false
+    }
+
     var hasAnyTrigger: Bool {
-        triggers.contains { $0.type == .scheduled } ||
-        triggers.contains { $0.type == .location } ||
-        triggers.contains { $0.type == .location } ||
-        sequentialTrigger?.sequential != nil
+        hasScheduleTrigger || hasLocationTrigger
     }
 
     var currentMemory: Memory? {
@@ -139,17 +142,32 @@ final class MemoryEditorViewModel: ObservableObject {
             }
         }
 
-        // Compare triggers
-        let originalTriggers = original.triggers
-        if triggers.count != originalTriggers.count { return true }
-        for (currentTrigger, originalTrigger) in zip(triggers, originalTriggers) {
-            if currentTrigger.id != originalTrigger.id ||
-               currentTrigger.type != originalTrigger.type ||
-               currentTrigger.fireDate != originalTrigger.fireDate ||
-               currentTrigger.recurrenceRule != originalTrigger.recurrenceRule ||
-               currentTrigger.weekdayMask != originalTrigger.weekdayMask ||
-               currentTrigger.isActive != originalTrigger.isActive ||
-               currentTrigger.isAllDay != originalTrigger.isAllDay {
+        // Compare schedule config
+        let hasOriginalSchedule = original.scheduleConfig != nil
+        let hasCurrentSchedule = scheduleConfig != nil
+        if hasOriginalSchedule != hasCurrentSchedule { return true }
+        if let origSchedule = original.scheduleConfig, let currSchedule = scheduleConfig {
+            if origSchedule.id != currSchedule.id ||
+               origSchedule.fireDate != currSchedule.fireDate ||
+               origSchedule.recurrenceRule != currSchedule.recurrenceRule ||
+               origSchedule.weekdayMask != currSchedule.weekdayMask ||
+               origSchedule.isActive != currSchedule.isActive ||
+               origSchedule.isAllDay != currSchedule.isAllDay {
+                return true
+            }
+        }
+
+        // Compare location config
+        let hasOriginalLocation = original.locationConfig != nil
+        let hasCurrentLocation = locationConfig != nil
+        if hasOriginalLocation != hasCurrentLocation { return true }
+        if let origLocation = original.locationConfig, let currLocation = locationConfig {
+            if origLocation.id != currLocation.id ||
+               origLocation.latitude != currLocation.latitude ||
+               origLocation.longitude != currLocation.longitude ||
+               origLocation.radius != currLocation.radius ||
+               origLocation.event != currLocation.event ||
+               origLocation.isActive != currLocation.isActive {
                 return true
             }
         }
@@ -322,93 +340,63 @@ final class MemoryEditorViewModel: ObservableObject {
         fileAttachments.removeAll { !ids.contains($0.id) }
     }
 
-    func updateSchedule(
-        fireDate: Date?,
-        recurrence: RecurrenceRule?,
-        weekdaySelection: Set<Int>,
-        weekdayReferenceTime: Date,
-        isAllDay: Bool = false
-    ) {
-        setScheduledTrigger(
-            fireDate: fireDate,
-            recurrence: recurrence,
-            weekdaySelection: weekdaySelection,
-            referenceTime: weekdayReferenceTime,
-            isAllDay: isAllDay
-        )
-    }
+    // MARK: - Schedule Config Methods
 
-    func setScheduledTrigger(
+    func setScheduleConfig(
         fireDate: Date?,
         recurrence: RecurrenceRule?,
         weekdaySelection: Set<Int>,
         referenceTime: Date,
         isAllDay: Bool = false
     ) {
-        updateScheduledTrigger(
+        guard let fireDate = fireDate else {
+            removeScheduleConfig()
+            return
+        }
+
+        let mask = weekdaySelection.reduce(into: Int16(0)) { partialResult, day in
+            partialResult |= Int16(1 << day)
+        }
+
+        let existingID = scheduleConfig?.id ?? UUID()
+
+        scheduleConfig = ScheduleConfigDraft(
+            id: existingID,
             fireDate: fireDate,
-            recurrence: recurrence,
-            weekdaySelection: weekdaySelection,
-            referenceTime: referenceTime,
+            startDate: fireDate,
+            recurrenceRule: recurrence,
+            timeZoneIdentifier: TimeZone.current.identifier,
+            weekdayMask: mask,
+            isActive: true,
             isAllDay: isAllDay
         )
     }
 
+    func removeScheduleConfig() {
+        scheduleConfig = nil
+    }
 
-    func addLocationTrigger(name: String, latitude: Double, longitude: Double, radius: Double, event: LocationEvent) {
-        let draft = MemoryTriggerDraft(
-            type: .location,
-            fireDate: nil,
-            startDate: Date(),
-            timeZoneIdentifier: TimeZone.current.identifier,
-            weekdayMask: 0,
-            isActive: true,
-            location: .init(latitude: latitude, longitude: longitude, radius: radius, name: name, event: event)
+    // MARK: - Location Config Methods
+
+    func setLocationConfig(name: String, latitude: Double, longitude: Double, radius: Double, event: LocationEvent) {
+        let existingID = locationConfig?.id ?? UUID()
+
+        locationConfig = LocationConfigDraft(
+            id: existingID,
+            latitude: latitude,
+            longitude: longitude,
+            radius: radius,
+            name: name,
+            event: event,
+            isActive: true
         )
-        triggers.append(draft)
+    }
+
+    func removeLocationConfig() {
+        locationConfig = nil
     }
 
 
-
-
-
-    func removeTrigger(id: UUID) {
-        triggers.removeAll { $0.id == id }
-    }
-
-    func updateTrigger(id: UUID, with updated: MemoryTriggerDraft) {
-        guard let index = triggers.firstIndex(where: { $0.id == id }) else { return }
-        triggers[index] = updated
-    }
-
-    func clearScheduleTriggers() {
-        triggers.removeAll { $0.type == .scheduled }
-    }
-
-    func updateSequentialTrigger(sequenceID: UUID, stepIndex: Int, startDate: Date? = nil, currentStepIndex: Int = 0) {
-        let sequential = MemoryTriggerModel.TriggerSequential(
-            sequenceID: sequenceID,
-            stepIndex: stepIndex,
-            startDate: startDate,
-            currentStepIndex: currentStepIndex
-        )
-
-        if let index = triggers.firstIndex(where: { $0.type == .sequential }) {
-            triggers[index].sequential = sequential
-            triggers[index].isActive = true
-        } else {
-            let draft = MemoryTriggerDraft(
-                type: .sequential,
-                isActive: true,
-                sequential: sequential
-            )
-            triggers.append(draft)
-        }
-    }
-
-    func removeSequentialTrigger() {
-        triggers.removeAll { $0.type == .sequential }
-    }
 
     func selectTemplate(_ template: MemoryEditorTemplate) {
         applyTemplate(template)
@@ -422,7 +410,6 @@ final class MemoryEditorViewModel: ObservableObject {
         }
 
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        let triggerModels = triggers.map { $0.toModel() }
 
         let draft = MemoryDraft(
             id: editingMemoryID ?? UUID(),
@@ -431,7 +418,8 @@ final class MemoryEditorViewModel: ObservableObject {
             isPinned: isPinned,
             dueDate: nil,
             lobeID: selectedLobeID,
-            triggers: triggerModels,
+            scheduleConfigDraft: scheduleConfig,
+            locationConfigDraft: locationConfig,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
             photoAttachmentIDs: photoAttachments.map(\.id),
@@ -472,7 +460,6 @@ final class MemoryEditorViewModel: ObservableObject {
         }
 
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        let triggerModels = triggers.map { $0.toModel() }
 
         let draft = MemoryDraft(
             id: memoryID,
@@ -481,7 +468,8 @@ final class MemoryEditorViewModel: ObservableObject {
             isPinned: isPinned,
             dueDate: nil,
             lobeID: selectedLobeID,
-            triggers: triggerModels,
+            scheduleConfigDraft: scheduleConfig,
+            locationConfigDraft: locationConfig,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
             photoAttachmentIDs: photoAttachments.map(\.id),
@@ -533,8 +521,20 @@ private extension MemoryEditorViewModel {
         selectedLobeID = memory.lobe?.id
         status = memory.status
         isPinned = memory.isPinned
-        triggers = memory.triggers.map { draft(from: $0) }
         autoCompleteChecklist = memory.autoCompleteOnChecklistCompletion
+
+        // Load trigger configs
+        if let schedule = memory.scheduleConfig {
+            scheduleConfig = ScheduleConfigDraft.from(schedule)
+        } else {
+            scheduleConfig = nil
+        }
+
+        if let location = memory.locationConfig {
+            locationConfig = LocationConfigDraft.from(location)
+        } else {
+            locationConfig = nil
+        }
 
         // Load fixed content fields
         note = memory.note ?? ""
@@ -567,92 +567,12 @@ private extension MemoryEditorViewModel {
             break
         case .quickReminder:
             let fireDate = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date()) ?? Date().addingTimeInterval(3600)
-            let trigger = MemoryTriggerDraft(
-                type: .scheduled,
+            scheduleConfig = ScheduleConfigDraft(
                 fireDate: fireDate,
                 startDate: fireDate,
                 timeZoneIdentifier: TimeZone.current.identifier,
-                weekdayMask: 0,
                 isActive: true
             )
-            triggers = [trigger]
-        }
-    }
-
-    func draft(from model: MemoryTriggerModel) -> MemoryTriggerDraft {
-        let location = model.location.map {
-            MemoryTriggerModel.TriggerLocation(
-                latitude: $0.latitude,
-                longitude: $0.longitude,
-                radius: $0.radius,
-                name: $0.name,
-                event: $0.event
-            )
-        }
-
-        let sequential = model.sequential.map {
-            MemoryTriggerModel.TriggerSequential(
-                sequenceID: $0.sequenceID,
-                stepIndex: $0.stepIndex,
-                startDate: $0.startDate,
-                currentStepIndex: $0.currentStepIndex
-            )
-        }
-
-        return MemoryTriggerDraft(
-            id: model.id,
-            type: model.type,
-            fireDate: model.fireDate,
-            startDate: model.startDate,
-            recurrenceRule: model.recurrenceRule,
-            timeZoneIdentifier: model.timeZoneIdentifier,
-            weekdayMask: model.weekdayMask,
-            isActive: model.isActive,
-            isAllDay: model.isAllDay,
-            location: location,
-            sequential: sequential,
-            spacedStage: model.spacedStage,
-            lastReviewDate: model.lastReviewDate,
-            ignoreCount: model.ignoreCount
-        )
-    }
-
-    func updateScheduledTrigger(
-        fireDate: Date?,
-        recurrence: RecurrenceRule?,
-        weekdaySelection: Set<Int>,
-        referenceTime: Date,
-        isAllDay: Bool = false
-    ) {
-        let mask = weekdaySelection.reduce(into: Int16(0)) { partialResult, day in
-            partialResult |= Int16(1 << day)
-        }
-
-        // If there's no fireDate, remove trigger
-        guard let fireDate = fireDate else {
-            triggers.removeAll { $0.type == .scheduled }
-            return
-        }
-
-        let existingIndex = triggers.firstIndex { $0.type == .scheduled }
-        let identifier = existingIndex.map { triggers[$0].id } ?? UUID()
-
-        let draft = MemoryTriggerDraft(
-            id: identifier,
-            type: .scheduled,
-            fireDate: fireDate,
-            startDate: fireDate,
-            recurrenceRule: recurrence,
-            timeZoneIdentifier: TimeZone.current.identifier,
-            weekdayMask: mask,
-            isActive: true,
-            isAllDay: isAllDay
-        )
-
-        if let existingIndex {
-            triggers[existingIndex] = draft
-        } else {
-            triggers.append(draft)
         }
     }
 }

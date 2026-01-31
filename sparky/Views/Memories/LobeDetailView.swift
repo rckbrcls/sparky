@@ -509,7 +509,12 @@ struct LobeDetailView: View {
             return true
         }
         return selectedTriggerTypes.contains { triggerType in
-            memory.triggers.contains { $0.type == triggerType && $0.isActive }
+            switch triggerType {
+            case .scheduled:
+                return memory.hasSchedule
+            case .location:
+                return memory.hasLocation
+            }
         }
     }
 

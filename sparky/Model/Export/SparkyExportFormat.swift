@@ -346,7 +346,19 @@ struct ExportedAttachment: Codable, Identifiable {
 
 extension Memory {
     func toExported() -> ExportedMemory {
-        ExportedMemory(
+        var triggers: [ExportedTrigger] = []
+
+        // Convert scheduleConfig to ExportedTrigger for backward compatibility
+        if let config = scheduleConfig, config.isActive {
+            triggers.append(config.toExportedTrigger())
+        }
+
+        // Convert locationConfig to ExportedTrigger for backward compatibility
+        if let config = locationConfig, config.isActive {
+            triggers.append(config.toExportedTrigger())
+        }
+
+        return ExportedMemory(
             id: id,
             title: title,
             note: note,
@@ -358,7 +370,7 @@ extension Memory {
             userOrder: userOrder,
             autoCompleteOnChecklistCompletion: autoCompleteOnChecklistCompletion,
             lobeID: lobe?.id,
-            triggers: triggers.map { $0.toExported() },
+            triggers: triggers,
             checkItems: checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { $0.toExported() },
             photoAttachmentIDs: photoAttachmentIDs,
             linkAttachmentIDs: linkAttachmentIDs,
@@ -369,11 +381,11 @@ extension Memory {
     }
 }
 
-extension MemoryTriggerModel {
-    func toExported() -> ExportedTrigger {
+extension ScheduleConfig {
+    func toExportedTrigger() -> ExportedTrigger {
         ExportedTrigger(
             id: id,
-            type: type.rawValue,
+            type: MemoryTriggerType.scheduled.rawValue,
             fireDate: fireDate,
             startDate: startDate,
             recurrenceRule: recurrenceRule?.toExported(),
@@ -381,11 +393,38 @@ extension MemoryTriggerModel {
             weekdayMask: weekdayMask,
             isActive: isActive,
             isAllDay: isAllDay,
-            location: location?.toExported(),
-            sequential: sequential?.toExported(),
-            spacedStage: spacedStage,
-            lastReviewDate: lastReviewDate,
-            ignoreCount: ignoreCount
+            location: nil,
+            sequential: nil,
+            spacedStage: 0,
+            lastReviewDate: nil,
+            ignoreCount: 0
+        )
+    }
+}
+
+extension LocationConfig {
+    func toExportedTrigger() -> ExportedTrigger {
+        ExportedTrigger(
+            id: id,
+            type: MemoryTriggerType.location.rawValue,
+            fireDate: nil,
+            startDate: nil,
+            recurrenceRule: nil,
+            timeZoneIdentifier: nil,
+            weekdayMask: 0,
+            isActive: isActive,
+            isAllDay: false,
+            location: ExportedLocationTrigger(
+                latitude: latitude,
+                longitude: longitude,
+                radius: radius,
+                name: name,
+                event: event.rawValue
+            ),
+            sequential: nil,
+            spacedStage: 0,
+            lastReviewDate: nil,
+            ignoreCount: 0
         )
     }
 }
@@ -396,29 +435,6 @@ extension RecurrenceRule {
             frequency: frequency.rawValue,
             interval: interval,
             endDate: endDate
-        )
-    }
-}
-
-extension MemoryTriggerLocation {
-    func toExported() -> ExportedLocationTrigger {
-        ExportedLocationTrigger(
-            latitude: latitude,
-            longitude: longitude,
-            radius: radius,
-            name: name,
-            event: event.rawValue
-        )
-    }
-}
-
-extension MemoryTriggerSequential {
-    func toExported() -> ExportedSequentialTrigger {
-        ExportedSequentialTrigger(
-            sequenceID: sequenceID,
-            stepIndex: stepIndex,
-            startDate: startDate,
-            currentStepIndex: currentStepIndex
         )
     }
 }

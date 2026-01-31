@@ -11,13 +11,13 @@ struct MemoriesMapView: View {
         let locationName: String?
         let event: LocationEvent
 
-        init(memory: Memory, trigger: MemoryTriggerModel, location: MemoryTriggerModel.TriggerLocation) {
-            self.id = trigger.id
+        init(memory: Memory, config: LocationConfig) {
+            self.id = config.id
             self.memory = memory
-            self.coordinate = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
-            self.radius = max(location.radius, 60)
-            self.locationName = location.name
-            self.event = location.event
+            self.coordinate = CLLocationCoordinate2D(latitude: config.latitude, longitude: config.longitude)
+            self.radius = max(config.radius, 60)
+            self.locationName = config.name
+            self.event = config.event
         }
     }
 
@@ -27,25 +27,21 @@ struct MemoriesMapView: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var hasCenteredOnAnnotations = false
     @State private var hasCenteredOnUser = false
-    @State private var selectedTriggerID: UUID?
+    @State private var selectedConfigID: UUID?
     @StateObject private var userLocationProvider = UserLocationProvider()
 
     private var annotations: [MemoryAnnotation] {
-        memories.flatMap { memory in
-            memory.triggers
-                .filter { $0.isActive && $0.type == .location }
-                .compactMap { trigger in
-                    guard let location = trigger.location else { return nil }
-                    let coordinate = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
-                    guard CLLocationCoordinate2DIsValid(coordinate) else { return nil }
-                    return MemoryAnnotation(memory: memory, trigger: trigger, location: location)
-                }
+        memories.compactMap { memory in
+            guard let config = memory.locationConfig, config.isActive else { return nil }
+            let coordinate = CLLocationCoordinate2D(latitude: config.latitude, longitude: config.longitude)
+            guard CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+            return MemoryAnnotation(memory: memory, config: config)
         }
     }
 
     private var selectedAnnotation: MemoryAnnotation? {
-        guard let triggerID = selectedTriggerID else { return nil }
-        return annotations.first { $0.id == triggerID }
+        guard let configID = selectedConfigID else { return nil }
+        return annotations.first { $0.id == configID }
     }
 
     private var annotationsSignature: String {
@@ -81,10 +77,10 @@ struct MemoriesMapView: View {
                     .stroke(Color.accentColor.opacity(0.5), lineWidth: 1)
 
                 Annotation(annotation.memory.title, coordinate: annotation.coordinate) {
-                    MemoryMapMarkerView(isSelected: selectedTriggerID == annotation.id)
+                    MemoryMapMarkerView(isSelected: selectedConfigID == annotation.id)
                         .onTapGesture {
                             withAnimation(.easeInOut) {
-                                selectedTriggerID = annotation.id
+                                selectedConfigID = annotation.id
                             }
                         }
                 }

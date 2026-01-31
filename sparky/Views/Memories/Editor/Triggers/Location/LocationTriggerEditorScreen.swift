@@ -4,8 +4,9 @@ struct LocationTriggerEditorScreen: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: MemoryEditorViewModel
     private let showsCloseButton: Bool
-    private var existingTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .location })
+
+    private var existingConfig: LocationConfigDraft? {
+        viewModel.locationConfig
     }
 
     init(viewModel: MemoryEditorViewModel, showsCloseButton: Bool = true) {
@@ -15,7 +16,7 @@ struct LocationTriggerEditorScreen: View {
 
     var body: some View {
         LocationPickerView(showsCloseButton: showsCloseButton) { name, latitude, longitude, radius, event in
-            viewModel.addLocationTrigger(
+            viewModel.setLocationConfig(
                 name: name,
                 latitude: latitude,
                 longitude: longitude,
@@ -26,8 +27,8 @@ struct LocationTriggerEditorScreen: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                if existingTrigger != nil {
-                    Button(role: .destructive, action: removeLocationTrigger) {
+                if existingConfig != nil {
+                    Button(role: .destructive, action: removeLocationConfig) {
                         Image(systemName: "trash")
                     }
                     .accessibilityLabel("Remove location trigger")
@@ -36,9 +37,8 @@ struct LocationTriggerEditorScreen: View {
         }
     }
 
-    private func removeLocationTrigger() {
-        guard let trigger = existingTrigger else { return }
-        viewModel.removeTrigger(id: trigger.id)
+    private func removeLocationConfig() {
+        viewModel.removeLocationConfig()
         dismiss()
     }
 }

@@ -243,53 +243,6 @@ final class CalendarDataManager: ObservableObject {
             }
         }
 
-        // Also load sequential memories that are "current" (stepIndex == currentStepIndex)
-        let sequentialMemories = memoryService.memories.filter { memory in
-            guard let seqTrigger = memory.triggers.first(where: { $0.type == .sequential && $0.isActive }),
-                  let seqInfo = seqTrigger.sequential else {
-                return false
-            }
-            // Only include if this memory is the current step in the sequence
-            return seqInfo.stepIndex == seqInfo.currentStepIndex
-        }
-
-        for memory in sequentialMemories {
-            // Find the sequential trigger
-            guard let seqTrigger = memory.triggers.first(where: { $0.type == .sequential && $0.isActive }),
-                  let seqInfo = seqTrigger.sequential else {
-                continue
-            }
-
-            // Determine the effective start date (sequence startDate or range startDate, whichever is later)
-            let sequenceStartDay: Date
-            if let seqStartDate = seqInfo.startDate {
-                sequenceStartDay = calendar.startOfDay(for: seqStartDate)
-            } else {
-                sequenceStartDay = calendar.startOfDay(for: startDate)
-            }
-
-            let rangeStartDay = calendar.startOfDay(for: startDate)
-            let effectiveStartDay = max(sequenceStartDay, rangeStartDay)
-            let rangeEndDay = calendar.startOfDay(for: endDate)
-
-            // Add this memory to every day from effectiveStartDay to rangeEndDay
-            var currentDay = effectiveStartDay
-            while currentDay <= rangeEndDay {
-                // Avoid duplicates
-                if memoriesByDay[currentDay]?.contains(where: { $0.id == memory.id }) != true {
-                    memoriesByDay[currentDay, default: []].append(memory)
-
-                    let monthKey = normalizeToMonth(currentDay)
-                    monthsWithMemories.insert(monthKey)
-                }
-
-                guard let nextDay = calendar.date(byAdding: .day, value: 1, to: currentDay) else {
-                    break
-                }
-                currentDay = nextDay
-            }
-        }
-
         // Sort memories within each affected day by fire date
         let dayCount = calendar.dateComponents([.day], from: startDate, to: endDate).day ?? 0
         var affectedDays: Set<Date> = []

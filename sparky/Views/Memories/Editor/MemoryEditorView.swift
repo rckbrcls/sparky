@@ -465,7 +465,7 @@ struct MemoryEditorView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
-        .animation(.easeInOut(duration: 0.3), value: viewModel.triggers.count)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.hasAnyTrigger)
     }
 
     // MARK: - Fixed Content Card Views

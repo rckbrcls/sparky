@@ -12,8 +12,10 @@ struct MemoryDraft: Identifiable, Hashable {
     var isPinned: Bool
     var dueDate: Date?
     var lobeID: UUID?
-    var triggers: [MemoryTriggerModel]
-    // Fixed content attributes (replacing dynamic contents array)
+    // New trigger config drafts
+    var scheduleConfigDraft: ScheduleConfigDraft?
+    var locationConfigDraft: LocationConfigDraft?
+    // Fixed content attributes
     var note: String?
     var checkItems: [CheckItemDraft]
     var photoAttachmentIDs: [UUID]
@@ -31,7 +33,8 @@ struct MemoryDraft: Identifiable, Hashable {
          isPinned: Bool = false,
          dueDate: Date? = nil,
          lobeID: UUID? = nil,
-         triggers: [MemoryTriggerModel] = [],
+         scheduleConfigDraft: ScheduleConfigDraft? = nil,
+         locationConfigDraft: LocationConfigDraft? = nil,
          note: String? = nil,
          checkItems: [CheckItemDraft] = [],
          photoAttachmentIDs: [UUID] = [],
@@ -47,7 +50,8 @@ struct MemoryDraft: Identifiable, Hashable {
         self.isPinned = isPinned
         self.dueDate = dueDate
         self.lobeID = lobeID
-        self.triggers = triggers
+        self.scheduleConfigDraft = scheduleConfigDraft
+        self.locationConfigDraft = locationConfigDraft
         self.note = note
         self.checkItems = checkItems
         self.photoAttachmentIDs = photoAttachmentIDs

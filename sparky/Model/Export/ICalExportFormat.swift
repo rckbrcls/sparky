@@ -9,7 +9,7 @@ import Foundation
 import os.log
 
 /// iCalendar (RFC 5545) export format converter
-/// Only supports memories with scheduled triggers (no location, person, or sequential triggers)
+/// Only supports memories with schedule configs (no location triggers)
 struct ICalExportFormat {
     static func convert(memories: [Memory]) -> String {
         var lines: [String] = []
@@ -23,17 +23,9 @@ struct ICalExportFormat {
 
         // Convert each memory to VTODO
         for memory in memories {
-            // Only export memories with scheduled triggers
-            let scheduledTriggers = memory.triggers.filter {
-                $0.type == .scheduled && $0.isActive
-            }
-
-            guard !scheduledTriggers.isEmpty else { continue }
-
-            // Create a VTODO for each scheduled trigger
-            for trigger in scheduledTriggers {
-                lines.append(contentsOf: convertMemoryToVTODO(memory: memory, trigger: trigger))
-            }
+            // Only export memories with schedule config
+            guard let config = memory.scheduleConfig, config.isActive else { continue }
+            lines.append(contentsOf: convertMemoryToVTODO(memory: memory, config: config))
         }
 
         // iCalendar footer
@@ -42,13 +34,13 @@ struct ICalExportFormat {
         return lines.joined(separator: "\r\n")
     }
 
-    private static func convertMemoryToVTODO(memory: Memory, trigger: MemoryTriggerModel) -> [String] {
+    private static func convertMemoryToVTODO(memory: Memory, config: ScheduleConfig) -> [String] {
         var lines: [String] = []
 
         lines.append("BEGIN:VTODO")
 
         // UID
-        lines.append("UID:\(memory.id.uuidString)-\(trigger.id.uuidString)")
+        lines.append("UID:\(memory.id.uuidString)-\(config.id.uuidString)")
 
         // DTSTAMP (current time)
         lines.append("DTSTAMP:\(formatDate(Date()))")
@@ -81,8 +73,8 @@ struct ICalExportFormat {
         }
 
         // DTSTART (fire date)
-        if let fireDate = trigger.fireDate {
-            if trigger.isAllDay {
+        if let fireDate = config.fireDate {
+            if config.isAllDay {
                 lines.append("DTSTART;VALUE=DATE:\(formatDateOnly(fireDate))")
             } else {
                 lines.append("DTSTART:\(formatDate(fireDate))")
@@ -90,12 +82,12 @@ struct ICalExportFormat {
         }
 
         // RRULE (recurrence rule)
-        if let recurrence = trigger.recurrenceRule {
-            let rrule = formatRRULE(recurrence: recurrence, weekdayMask: trigger.weekdayMask)
+        if let recurrence = config.recurrenceRule {
+            let rrule = formatRRULE(recurrence: recurrence, weekdayMask: config.weekdayMask)
             lines.append("RRULE:\(rrule)")
-        } else if trigger.weekdayMask != 0 {
+        } else if config.weekdayMask != 0 {
             // Weekday mask without recurrence
-            let rrule = formatWeekdayMask(weekdayMask: trigger.weekdayMask, fireDate: trigger.fireDate)
+            let rrule = formatWeekdayMask(weekdayMask: config.weekdayMask, fireDate: config.fireDate)
             if !rrule.isEmpty {
                 lines.append("RRULE:\(rrule)")
             }
@@ -228,10 +220,10 @@ struct ICalExportFormat {
 
 extension DataExportService {
     func exportToICal() async throws -> String {
-        // Collect only memories with scheduled triggers
+        // Collect only memories with schedule config
         let allMemories = await collectMemories(includeCompleted: true)
         let scheduledMemories = allMemories.filter { memory in
-            memory.triggers.contains { $0.type == MemoryTriggerType.scheduled && $0.isActive }
+            memory.scheduleConfig?.isActive == true
         }
 
         guard !scheduledMemories.isEmpty else {

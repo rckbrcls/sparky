@@ -1,33 +1,5 @@
 import SwiftUI
 
-// MARK: - Time of Day Type
-
-enum TimeOfDayType: String, CaseIterable {
-    case allDay = "All Day"
-    case specificTime = "Specific Time"
-}
-
-// MARK: - Repeat Type
-
-enum RepeatType: String, CaseIterable, Identifiable {
-    case never = "Never"
-    case daily = "Daily"
-    case weekly = "Weekly"
-    case yearly = "Yearly"
-    case custom = "Custom"
-
-    var id: String { rawValue }
-}
-
-// MARK: - Custom Repeat Type
-
-enum CustomRepeatType: String, CaseIterable, Identifiable {
-    case weekly = "Every Week"
-    case monthly = "Every Month"
-
-    var id: String { rawValue }
-}
-
 // MARK: - Main View
 
 struct ScheduledTriggerEditorScreen: View {
@@ -38,7 +10,7 @@ struct ScheduledTriggerEditorScreen: View {
     // State
     @State private var fireDate: Date
     @State private var timeOfDayType: TimeOfDayType
-    @State private var repeatType: RepeatType
+    @State private var repeatType: ScheduleRepeatType
     @State private var showCustomRepeatSheet: Bool = false
 
     // Custom repeat state
@@ -46,31 +18,31 @@ struct ScheduledTriggerEditorScreen: View {
     @State private var selectedWeekdays: Set<Int>
     @State private var selectedMonthDays: Set<Int>
 
-    private var existingTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .scheduled })
+    private var existingConfig: ScheduleConfigDraft? {
+        viewModel.scheduleConfig
     }
 
     init(viewModel: MemoryEditorViewModel, showsCloseButton: Bool = true) {
         self.viewModel = viewModel
         self.showsCloseButton = showsCloseButton
 
-        let scheduledTrigger = viewModel.triggers.first(where: { $0.type == .scheduled })
-        let defaultDate = scheduledTrigger?.fireDate ?? Date().addingTimeInterval(3600)
+        let scheduleConfig = viewModel.scheduleConfig
+        let defaultDate = scheduleConfig?.fireDate ?? Date().addingTimeInterval(3600)
         _fireDate = State(initialValue: defaultDate)
 
         // Detect time of day type from isAllDay flag
-        let detectedTimeOfDay: TimeOfDayType = scheduledTrigger?.isAllDay == true ? .allDay : .specificTime
+        let detectedTimeOfDay: TimeOfDayType = scheduleConfig?.isAllDay == true ? .allDay : .specificTime
         _timeOfDayType = State(initialValue: detectedTimeOfDay)
 
-        // Detect repeat type from existing trigger
-        let detectedRepeatType = Self.detectRepeatType(from: scheduledTrigger)
+        // Detect repeat type from existing config
+        let detectedRepeatType = Self.detectRepeatType(from: scheduleConfig)
         _repeatType = State(initialValue: detectedRepeatType)
 
         // Initialize weekday selection
-        let initialWeekdays = Self.weekdaySet(from: scheduledTrigger?.weekdayMask ?? 0)
+        let initialWeekdays = Self.weekdaySet(from: scheduleConfig?.weekdayMask ?? 0)
         _selectedWeekdays = State(initialValue: initialWeekdays)
 
-        // Initialize month day selection (stored in recurrence interval for monthly custom)
+        // Initialize month day selection
         _selectedMonthDays = State(initialValue: [])
 
         // Set custom repeat type based on existing data
@@ -100,7 +72,7 @@ struct ScheduledTriggerEditorScreen: View {
 
                 // Repeat
                 Picker("Repeat", selection: $repeatType) {
-                    ForEach(RepeatType.allCases) { type in
+                    ForEach(ScheduleRepeatType.allCases) { type in
                         Text(type.rawValue).tag(type)
                     }
                 }
@@ -143,11 +115,11 @@ struct ScheduledTriggerEditorScreen: View {
                     Image(systemName: "checkmark")
                 }
                 .disabled(!isValid)
-                .accessibilityLabel(existingTrigger == nil ? "Add" : "Save")
+                .accessibilityLabel(existingConfig == nil ? "Add" : "Save")
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                if existingTrigger != nil {
-                    Button(role: .destructive, action: removeTrigger) {
+                if existingConfig != nil {
+                    Button(role: .destructive, action: removeConfig) {
                         Image(systemName: "trash")
                     }
                     .accessibilityLabel("Remove date & time trigger")
@@ -249,7 +221,7 @@ struct ScheduledTriggerEditorScreen: View {
             }
         }
 
-        viewModel.setScheduledTrigger(
+        viewModel.setScheduleConfig(
             fireDate: adjustedFireDate,
             recurrence: recurrence,
             weekdaySelection: weekdaySelection,
@@ -259,21 +231,20 @@ struct ScheduledTriggerEditorScreen: View {
         dismiss()
     }
 
-    private func removeTrigger() {
-        guard let trigger = existingTrigger else { return }
-        viewModel.removeTrigger(id: trigger.id)
+    private func removeConfig() {
+        viewModel.removeScheduleConfig()
         dismiss()
     }
 
     // MARK: - Helper Methods
 
-    private static func detectRepeatType(from trigger: MemoryTriggerDraft?) -> RepeatType {
-        guard let trigger = trigger, let recurrence = trigger.recurrenceRule else {
+    private static func detectRepeatType(from config: ScheduleConfigDraft?) -> ScheduleRepeatType {
+        guard let config = config, let recurrence = config.recurrenceRule else {
             return .never
         }
 
         // Check if it's a custom repeat (has weekday selection)
-        if trigger.weekdayMask != 0 {
+        if config.weekdayMask != 0 {
             return .custom
         }
 

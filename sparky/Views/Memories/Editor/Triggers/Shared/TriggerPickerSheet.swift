@@ -5,7 +5,6 @@ struct TriggerPickerSheet: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     @State private var showDateAndTimeSheet = false
     @State private var showLocationSheet = false
-    @State private var showSequentialSheet = false
 
     var body: some View {
         NavigationStack {
@@ -25,18 +24,6 @@ struct TriggerPickerSheet: View {
                 ) {
                     showLocationSheet = true
                 }
-
-
-
-                triggerRow(
-                    title: "Sequence",
-                    icon: "arrow.right",
-                    isActive: isSequentialActive
-                ) {
-                    showSequentialSheet = true
-                }
-
-
             }
             .listStyle(.plain)
             .navigationTitle("Add Trigger")
@@ -63,14 +50,6 @@ struct TriggerPickerSheet: View {
                     LocationTriggerEditorScreen(viewModel: viewModel)
                 }
             }
-
-            .sheet(isPresented: $showSequentialSheet) {
-                NavigationStack {
-                    SequentialTriggerEditorScreen(viewModel: viewModel)
-                }
-                .presentationDetents([.large])
-            }
-
         }
         .presentationDetents([.medium])
         .presentationBackground(.clear)
@@ -102,18 +81,10 @@ struct TriggerPickerSheet: View {
     }
 
     private var isDateAndTimeActive: Bool {
-        viewModel.triggers.contains(where: { $0.type == .scheduled })
+        viewModel.hasScheduleTrigger
     }
 
     private var isLocationActive: Bool {
-        viewModel.triggers.contains(where: { $0.type == .location })
+        viewModel.hasLocationTrigger
     }
-
-
-
-    private var isSequentialActive: Bool {
-        viewModel.sequentialTrigger != nil
-    }
-
-
 }

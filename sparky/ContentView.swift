@@ -174,14 +174,17 @@ struct ContentView: View {
                 },
                 onQuickCreate: { lobe, title, reminderMinutes in
                     Task {
-                        // Create triggers array with single alarm if selected
-                        var triggers: [MemoryTriggerModel] = []
+                        // Create schedule config if reminder selected
+                        var scheduleConfigDraft: ScheduleConfigDraft?
                         if let minutes = reminderMinutes {
-                            let alarmTrigger = Memory.createSingleAlarmTrigger(
-                                minutes: minutes,
-                                fromDate: Date()
+                            let fireDate = Date().addingTimeInterval(TimeInterval(minutes * 60))
+                            scheduleConfigDraft = ScheduleConfigDraft(
+                                fireDate: fireDate,
+                                recurrenceRule: nil,
+                                weekdayMask: 0,
+                                isActive: true,
+                                isAllDay: false
                             )
-                            triggers.append(alarmTrigger)
                         }
 
                         let draft = MemoryDraft(
@@ -191,7 +194,7 @@ struct ContentView: View {
                             isPinned: false,
                             dueDate: nil,
                             lobeID: lobe?.id,
-                            triggers: triggers,
+                            scheduleConfigDraft: scheduleConfigDraft,
                             note: nil,
                             checkItems: [],
                             photoAttachmentIDs: [],

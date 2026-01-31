@@ -71,6 +71,16 @@ final class Memory: Identifiable {
     @Relationship(deleteRule: .cascade, inverse: \CheckItemModel.memory)
     var checkItems: [CheckItemModel] = []
 
+    // MARK: - New Trigger Configs (1:1 relationships)
+
+    @Relationship(deleteRule: .cascade, inverse: \ScheduleConfig.memory)
+    var scheduleConfig: ScheduleConfig?
+
+    @Relationship(deleteRule: .cascade, inverse: \LocationConfig.memory)
+    var locationConfig: LocationConfig?
+
+    // MARK: - Legacy Triggers (kept temporarily for migration)
+
     @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerModel.memory)
     var triggers: [MemoryTriggerModel] = []
 
@@ -101,6 +111,8 @@ final class Memory: Identifiable {
         userOrder: Int = 0,
         autoCompleteOnChecklistCompletion: Bool = false,
         checkItems: [CheckItemModel] = [],
+        scheduleConfig: ScheduleConfig? = nil,
+        locationConfig: LocationConfig? = nil,
         triggers: [MemoryTriggerModel] = [],
         attachmentReferences: [MemoryAttachmentReference] = [],
         completionDateEntries: [MemoryCompletionDate] = [],
@@ -118,6 +130,8 @@ final class Memory: Identifiable {
         self.userOrder = userOrder
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
         self.checkItems = checkItems
+        self.scheduleConfig = scheduleConfig
+        self.locationConfig = locationConfig
         self.triggers = triggers
         self.attachmentReferences = attachmentReferences
         self.completionDateEntries = completionDateEntries
@@ -166,12 +180,22 @@ final class Memory: Identifiable {
         !checkItems.isEmpty
     }
 
+    // MARK: - New Config-based Computed Properties
+
+    var hasSchedule: Bool {
+        scheduleConfig?.isActive ?? false
+    }
+
+    var hasLocation: Bool {
+        locationConfig?.isActive ?? false
+    }
+
     var hasTriggers: Bool {
-        triggers.contains { $0.isActive }
+        hasSchedule || hasLocation
     }
 
     var hasRecurringTriggers: Bool {
-        triggers.contains { $0.recurrenceRule != nil || $0.weekdayMask != 0 }
+        scheduleConfig?.hasRecurrence ?? false
     }
 
     var hasAttachments: Bool {
@@ -180,42 +204,6 @@ final class Memory: Identifiable {
 
     var isCompleted: Bool {
         status == .completed
-    }
-
-    var hasSequenceTrigger: Bool {
-        triggers.contains { $0.type == .sequential && $0.sequential != nil }
-    }
-
-    var isCurrentInSequence: Bool {
-        guard let seqTrigger = triggers.first(where: { $0.type == .sequential }),
-              let seq = seqTrigger.sequential else {
-            return false
-        }
-
-        if let startDate = seq.startDate {
-            let calendar = Calendar.current
-            if calendar.startOfDay(for: Date()) < calendar.startOfDay(for: startDate) {
-                return false
-            }
-        }
-
-        return seq.stepIndex == seq.currentStepIndex
-    }
-
-    var isNextInSequence: Bool {
-        guard let seqTrigger = triggers.first(where: { $0.type == .sequential }),
-              let seq = seqTrigger.sequential else {
-            return false
-        }
-
-        if let startDate = seq.startDate {
-            let calendar = Calendar.current
-            if calendar.startOfDay(for: Date()) < calendar.startOfDay(for: startDate) {
-                return true
-            }
-        }
-
-        return seq.stepIndex != seq.currentStepIndex
     }
 
     // MARK: - Methods
@@ -229,32 +217,24 @@ final class Memory: Identifiable {
     }
 
     func nextFireDate(referenceDate: Date = Date()) -> Date? {
-        let activeTriggers = triggers.filter { $0.isActive }
-        guard !activeTriggers.isEmpty else { return nil }
+        guard hasTriggers else { return nil }
 
         var nextDates: [Date] = []
-        for trigger in activeTriggers {
-            if let date = trigger.nextFireDate(after: referenceDate) {
-                nextDates.append(date)
-            }
+
+        if let schedule = scheduleConfig, schedule.isActive,
+           let date = schedule.nextFireDate(after: referenceDate) {
+            nextDates.append(date)
         }
+
+        // Location triggers don't have a "next fire date" in the traditional sense
+        // They fire based on geofence events
 
         return nextDates.min()
     }
 
     func dates(from startDate: Date, to endDate: Date) -> [Date] {
-        let activeTriggers = triggers.filter { $0.isActive }
-        guard !activeTriggers.isEmpty else { return [] }
-
-        var allDates: Set<Date> = []
-
-        for trigger in activeTriggers {
-            guard trigger.type == .scheduled else { continue }
-            let triggerDates = trigger.dates(from: startDate, to: endDate)
-            allDates.formUnion(triggerDates)
-        }
-
-        return Array(allDates).sorted()
+        guard let schedule = scheduleConfig, schedule.isActive else { return [] }
+        return schedule.dates(from: startDate, to: endDate)
     }
 
     func dates(within range: Range<Date>) -> [Date] {
@@ -281,26 +261,14 @@ final class Memory: Identifiable {
 // MARK: - Static Factory Methods
 
 extension Memory {
-    static func createSingleAlarmTrigger(
+    static func createDefaultScheduleConfig(
         minutes: Int = 15,
         fromDate: Date = Date()
-    ) -> MemoryTriggerModel {
-        let fireDate = fromDate.addingTimeInterval(TimeInterval(minutes * 60))
+    ) -> ScheduleConfig {
+        ScheduleConfig.createDefault(minutes: minutes, from: fromDate)
+    }
 
-        return MemoryTriggerModel(
-            id: UUID(),
-            type: .scheduled,
-            fireDate: fireDate,
-            startDate: nil,
-            recurrenceRule: nil,
-            timeZoneIdentifier: TimeZone.current.identifier,
-            weekdayMask: 0,
-            isActive: true,
-            location: nil,
-            sequential: nil,
-            spacedStage: 0,
-            lastReviewDate: nil,
-            ignoreCount: 0
-        )
+    static func createDefaultLocationConfig() -> LocationConfig {
+        LocationConfig.createDefault()
     }
 }

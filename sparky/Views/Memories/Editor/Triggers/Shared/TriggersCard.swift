@@ -6,19 +6,18 @@ import UniformTypeIdentifiers
 
 struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
-    let memoryLookup: [UUID: Memory]
     var isEditable: Bool = true
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(spacing: 8) {
-                // Scheduled Trigger - Inline Form (existing or empty)
-                if hasScheduledTrigger {
+                // Schedule Trigger - Inline Form
+                if hasScheduleTrigger {
                     ScheduledTriggerInlineForm(
                         viewModel: viewModel,
                         isEditable: isEditable,
-                        onDelete: { removeTrigger(type: .scheduled) }
+                        onDelete: { removeScheduleTrigger() }
                     )
                 }
 
@@ -27,22 +26,7 @@ struct TriggersCard: View {
                     LocationTriggerInlineForm(
                         viewModel: viewModel,
                         isEditable: isEditable,
-                        onDelete: { removeTrigger(type: .location) }
-                    )
-                }
-
-
-
-                // Sequential Trigger - Inline Form
-                if hasSequentialTrigger {
-                    SequentialTriggerInlineForm(
-                        viewModel: viewModel,
-                        memoryLookup: memoryLookup,
-                        isEditable: isEditable,
-                        onDelete: {
-                            feedbackGenerator.impactOccurred()
-                            viewModel.removeSequentialTrigger()
-                        }
+                        onDelete: { removeLocationTrigger() }
                     )
                 }
 
@@ -56,9 +40,9 @@ struct TriggersCard: View {
 
     private var addTriggerButton: some View {
         Menu {
-            if !hasScheduledTrigger {
+            if !hasScheduleTrigger {
                 Button {
-                    createDefaultScheduledTrigger()
+                    createDefaultScheduleTrigger()
                 } label: {
                     Label("Date & Time", systemImage: "clock.badge")
                 }
@@ -69,16 +53,6 @@ struct TriggersCard: View {
                     createDefaultLocationTrigger()
                 } label: {
                     Label("Location", systemImage: "mappin.circle.fill")
-                }
-            }
-
-
-
-            if !hasSequentialTrigger {
-                Button {
-                    createDefaultSequentialTrigger()
-                } label: {
-                    Label("Sequence", systemImage: "arrow.right")
                 }
             }
         } label: {
@@ -96,37 +70,34 @@ struct TriggersCard: View {
 
     // MARK: - Trigger State Helpers
 
-    private var hasScheduledTrigger: Bool {
-        viewModel.triggers.contains(where: { $0.type == .scheduled })
+    private var hasScheduleTrigger: Bool {
+        viewModel.hasScheduleTrigger
     }
 
     private var hasLocationTrigger: Bool {
-        viewModel.triggers.contains(where: { $0.type == .location })
-    }
-
-
-
-    private var hasSequentialTrigger: Bool {
-        return viewModel.sequentialTrigger?.sequential != nil
+        viewModel.hasLocationTrigger
     }
 
     private var hasAnyTrigger: Bool {
-        hasScheduledTrigger || hasLocationTrigger || hasSequentialTrigger
+        hasScheduleTrigger || hasLocationTrigger
     }
 
     // MARK: - Helper Functions
 
-    private func removeTrigger(type: MemoryTriggerType) {
+    private func removeScheduleTrigger() {
         feedbackGenerator.impactOccurred()
-        if let trigger = viewModel.triggers.first(where: { $0.type == type }) {
-            viewModel.removeTrigger(id: trigger.id)
-        }
+        viewModel.removeScheduleConfig()
     }
 
-    private func createDefaultScheduledTrigger() {
+    private func removeLocationTrigger() {
+        feedbackGenerator.impactOccurred()
+        viewModel.removeLocationConfig()
+    }
+
+    private func createDefaultScheduleTrigger() {
         feedbackGenerator.impactOccurred()
         let fireDate = Date().addingTimeInterval(3600) // 1 hour from now
-        viewModel.setScheduledTrigger(
+        viewModel.setScheduleConfig(
             fireDate: fireDate,
             recurrence: nil,
             weekdaySelection: [],
@@ -138,20 +109,13 @@ struct TriggersCard: View {
     private func createDefaultLocationTrigger() {
         feedbackGenerator.impactOccurred()
         // Default to Apple Park coordinates
-        viewModel.addLocationTrigger(
+        viewModel.setLocationConfig(
             name: "Select a location",
             latitude: 37.3349,
             longitude: -122.00902,
             radius: 200,
             event: .onEntry
         )
-    }
-
-
-
-    private func createDefaultSequentialTrigger() {
-        feedbackGenerator.impactOccurred()
-        viewModel.updateSequentialTrigger(sequenceID: UUID(), stepIndex: 0, startDate: Date(), currentStepIndex: 0)
     }
 }
 
@@ -164,14 +128,14 @@ private struct ScheduledTriggerInlineForm: View {
 
     @State private var fireDate: Date
     @State private var timeOfDayType: TimeOfDayType
-    @State private var repeatType: RepeatType
+    @State private var repeatType: ScheduleRepeatType
     @State private var showCustomRepeatSheet: Bool = false
     @State private var customRepeatType: CustomRepeatType = .weekly
     @State private var selectedWeekdays: Set<Int>
     @State private var selectedMonthDays: Set<Int>
 
-    private var existingTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .scheduled })
+    private var existingConfig: ScheduleConfigDraft? {
+        viewModel.scheduleConfig
     }
 
     init(viewModel: MemoryEditorViewModel, isEditable: Bool, onDelete: @escaping () -> Void) {
@@ -179,17 +143,17 @@ private struct ScheduledTriggerInlineForm: View {
         self.isEditable = isEditable
         self.onDelete = onDelete
 
-        let scheduledTrigger = viewModel.triggers.first(where: { $0.type == .scheduled })
-        let defaultDate = scheduledTrigger?.fireDate ?? Date().addingTimeInterval(3600)
+        let scheduleConfig = viewModel.scheduleConfig
+        let defaultDate = scheduleConfig?.fireDate ?? Date().addingTimeInterval(3600)
         _fireDate = State(initialValue: defaultDate)
 
-        let detectedTimeOfDay: TimeOfDayType = scheduledTrigger?.isAllDay == true ? .allDay : .specificTime
+        let detectedTimeOfDay: TimeOfDayType = scheduleConfig?.isAllDay == true ? .allDay : .specificTime
         _timeOfDayType = State(initialValue: detectedTimeOfDay)
 
-        let detectedRepeatType = Self.detectRepeatType(from: scheduledTrigger)
+        let detectedRepeatType = Self.detectRepeatType(from: scheduleConfig)
         _repeatType = State(initialValue: detectedRepeatType)
 
-        let initialWeekdays = Self.weekdaySet(from: scheduledTrigger?.weekdayMask ?? 0)
+        let initialWeekdays = Self.weekdaySet(from: scheduleConfig?.weekdayMask ?? 0)
         _selectedWeekdays = State(initialValue: initialWeekdays)
         _selectedMonthDays = State(initialValue: [])
 
@@ -271,7 +235,7 @@ private struct ScheduledTriggerInlineForm: View {
                     Spacer()
 
                     Menu {
-                        ForEach(RepeatType.allCases) { type in
+                        ForEach(ScheduleRepeatType.allCases) { type in
                             Button {
                                 if type == .custom && repeatType == .custom {
                                     // Already custom, open sheet
@@ -395,7 +359,7 @@ private struct ScheduledTriggerInlineForm: View {
             }
         }
 
-        viewModel.setScheduledTrigger(
+        viewModel.setScheduleConfig(
             fireDate: adjustedFireDate,
             recurrence: recurrence,
             weekdaySelection: weekdaySelection,
@@ -404,12 +368,12 @@ private struct ScheduledTriggerInlineForm: View {
         )
     }
 
-    private static func detectRepeatType(from trigger: MemoryTriggerDraft?) -> RepeatType {
-        guard let trigger = trigger, let recurrence = trigger.recurrenceRule else {
+    private static func detectRepeatType(from config: ScheduleConfigDraft?) -> ScheduleRepeatType {
+        guard let config = config, let recurrence = config.recurrenceRule else {
             return .never
         }
 
-        if trigger.weekdayMask != 0 {
+        if config.weekdayMask != 0 {
             return .custom
         }
 
@@ -462,9 +426,8 @@ private struct LocationTriggerInlineForm: View {
 
     private let defaultRadius: Double = 200
 
-
-    private var existingTrigger: MemoryTriggerDraft? {
-        viewModel.triggers.first(where: { $0.type == .location })
+    private var existingConfig: LocationConfigDraft? {
+        viewModel.locationConfig
     }
 
     init(viewModel: MemoryEditorViewModel, isEditable: Bool, onDelete: @escaping () -> Void) {
@@ -472,11 +435,11 @@ private struct LocationTriggerInlineForm: View {
         self.isEditable = isEditable
         self.onDelete = onDelete
 
-        let trigger = viewModel.triggers.first(where: { $0.type == .location })
-        let lat = trigger?.location?.latitude ?? 37.3349
-        let lon = trigger?.location?.longitude ?? -122.00902
-        let name = trigger?.location?.name ?? ""
-        let eventType = trigger?.location?.event ?? .onEntry
+        let config = viewModel.locationConfig
+        let lat = config?.latitude ?? 37.3349
+        let lon = config?.longitude ?? -122.00902
+        let name = config?.name ?? ""
+        let eventType = config?.event ?? .onEntry
 
         let initialRegion = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
@@ -501,14 +464,14 @@ private struct LocationTriggerInlineForm: View {
 
 
                 // Location info
-                if let location = existingTrigger?.location {
+                if let config = existingConfig {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(location.name ?? "Selected Location")
+                            Text(config.name ?? "Selected Location")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
 
-                            Text(String(format: "%.4f, %.4f", location.latitude, location.longitude))
+                            Text(String(format: "%.4f, %.4f", config.latitude, config.longitude))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -747,7 +710,7 @@ private struct LocationTriggerInlineForm: View {
     private func applyChanges() {
         guard let coordinate = selectedCoordinate else { return }
         let name = resolvedLocationName
-        viewModel.addLocationTrigger(
+        viewModel.setLocationConfig(
             name: name,
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
@@ -759,386 +722,3 @@ private struct LocationTriggerInlineForm: View {
 
 
 
-// MARK: - Sequential Trigger Inline Form
-
-private struct SequentialTriggerInlineForm: View {
-    @ObservedObject var viewModel: MemoryEditorViewModel
-    let memoryLookup: [UUID: Memory]
-    var isEditable: Bool
-    let onDelete: () -> Void
-
-    @State private var sequenceItems: [SequentialItem] = []
-    @State private var showingPicker = false
-    @State private var draggedItem: SequentialItem?
-    @State private var sequenceStartDate: Date = Date()
-
-    private var sequentialConfig: MemoryTriggerModel.TriggerSequential? {
-        viewModel.sequentialTrigger?.sequential
-    }
-
-    private var currentStepIndex: Int {
-        sequentialConfig?.currentStepIndex ?? 0
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 12) {
-                if sequentialConfig != nil {
-                    VStack(alignment: .leading, spacing: 8) {
-
-                        // Start Date Row
-                        VStack(spacing: 0) {
-                            HStack {
-                                Text("Start Date")
-                                    .font(.body)
-                                    .foregroundStyle(.secondary)
-
-                                Spacer()
-
-                                DatePicker("", selection: $sequenceStartDate, displayedComponents: [.date])
-                                    .labelsHidden()
-                                    .disabled(!isEditable)
-                            }
-                            .padding(.vertical, 10)
-                        }
-
-                        Divider()
-                            .padding(.bottom, 8)
-
-                        // List of items
-                        VStack(spacing: 8) {
-                            ForEach(Array(sequenceItems.enumerated()), id: \.element.id) { index, item in
-                                SequentialItemRow(
-                                    item: item,
-                                    currentMemoryID: viewModel.editingMemoryID,
-                                    memoryLookup: memoryLookup,
-                                    isEditable: isEditable,
-                                    canMoveUp: index > 0,
-                                    canMoveDown: index < sequenceItems.count - 1,
-                                    onMoveUp: {
-                                        if index > 0 {
-                                            withAnimation {
-                                                sequenceItems.swapAt(index, index - 1)
-                                            }
-                                            Task { await saveSequenceChanges() }
-                                        }
-                                    },
-                                    onMoveDown: {
-                                        if index < sequenceItems.count - 1 {
-                                            withAnimation {
-                                                sequenceItems.swapAt(index, index + 1)
-                                            }
-                                            Task { await saveSequenceChanges() }
-                                        }
-                                    },
-                                    onDelete: {
-                                        if !item.isCurrent, let idx = sequenceItems.firstIndex(of: item) {
-                                            withAnimation { _ = sequenceItems.remove(at: idx) }
-                                            Task { await saveSequenceChanges() }
-                                        }
-                                    }
-                                )
-                                .disabled(!isEditable)
-                            }
-                        }
-
-                        // Add Memory button
-                        if isEditable {
-                            Button {
-                                showingPicker = true
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "plus")
-                                        .font(.caption.bold())
-                                    Text("Add Memory")
-                                        .font(.caption.bold())
-                                }
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                                        .foregroundStyle(Color.secondary.opacity(0.4))
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-            .padding(16)
-        }
-        .cardStyle(cornerRadius: 24)
-        .contextMenu {
-            if isEditable {
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Label("Delete Trigger", systemImage: "trash")
-                }
-            }
-        }
-        .sheet(isPresented: $showingPicker) {
-            SequentialMemoryPickerSheet(
-                viewModel: viewModel,
-                excludedMemoryIDs: Set(sequenceItems.map(\.id)),
-                onSelect: { memory in
-                    let item = SequentialItem(id: memory.id, title: memory.title, isCurrent: false)
-                    sequenceItems.append(item)
-                    Task { await saveSequenceChanges() }
-                }
-            )
-        }
-        .onAppear {
-            loadExistingConfiguration()
-        }
-        .onChange(of: sequenceStartDate) { _, _ in
-            Task { await saveSequenceChanges() }
-        }
-    }
-
-    private func loadExistingConfiguration() {
-        var items: [SequentialItem] = []
-        let currentID = viewModel.editingMemoryID ?? UUID()
-
-        if let seqInfo = viewModel.sequentialTrigger?.sequential {
-            let sequenceID = seqInfo.sequenceID
-            let allMemories = viewModel.environment.memoryService.memories.filter { memory in
-                memory.triggers.contains { t in
-                    t.type == .sequential && t.sequential?.sequenceID == sequenceID
-                }
-            }
-
-            items = allMemories.map { mem in
-                SequentialItem(id: mem.id, title: mem.title, isCurrent: mem.id == viewModel.editingMemoryID)
-            }
-
-            items.sort { lhs, rhs in
-                let lhsIndex = allMemories.first(where: { $0.id == lhs.id })?.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex ?? 0
-                let rhsIndex = allMemories.first(where: { $0.id == rhs.id })?.triggers.first(where: { $0.type == .sequential })?.sequential?.stepIndex ?? 0
-                return lhsIndex < rhsIndex
-            }
-
-            // Load start date from sequence
-            if let startDate = seqInfo.startDate {
-                self.sequenceStartDate = startDate
-            }
-        }
-
-        if !items.contains(where: { $0.isCurrent }) {
-            let title = viewModel.title.isEmpty ? "New Memory" : viewModel.title
-            let current = SequentialItem(id: currentID, title: title, isCurrent: true)
-            items.append(current)
-        }
-
-        self.sequenceItems = items
-    }
-
-    private func saveSequenceChanges() async {
-        let sequenceID = viewModel.sequentialTrigger?.sequential?.sequenceID ?? UUID()
-        let currentStepIdx = viewModel.sequentialTrigger?.sequential?.currentStepIndex ?? 0
-
-        for (index, item) in sequenceItems.enumerated() {
-            if item.isCurrent {
-                viewModel.updateSequentialTrigger(
-                    sequenceID: sequenceID,
-                    stepIndex: index,
-                    startDate: sequenceStartDate,
-                    currentStepIndex: currentStepIdx
-                )
-            } else {
-                if let memory = viewModel.environment.memoryService.memory(id: item.id) {
-                    await updateMemoryTrigger(memory, sequenceID: sequenceID, index: index, startDate: sequenceStartDate, currentStepIndex: currentStepIdx)
-                }
-            }
-        }
-
-        // Handle removed items
-        let service = viewModel.environment.memoryService
-        let staleMemories = service.memories.filter { mem in
-            mem.triggers.contains { $0.type == .sequential && $0.sequential?.sequenceID == sequenceID } &&
-            !sequenceItems.contains { $0.id == mem.id }
-        }
-
-        for mem in staleMemories {
-            await removeSequentialTrigger(from: mem)
-        }
-    }
-
-    private func updateMemoryTrigger(_ memory: Memory, sequenceID: UUID, index: Int, startDate: Date, currentStepIndex: Int) async {
-        var triggers = memory.triggers
-        let newSeq = MemoryTriggerModel.TriggerSequential(
-            sequenceID: sequenceID,
-            stepIndex: index,
-            startDate: startDate,
-            currentStepIndex: currentStepIndex
-        )
-
-        if let idx = triggers.firstIndex(where: { $0.type == .sequential }) {
-            triggers[idx].sequential = newSeq
-        } else {
-            let t = MemoryTriggerModel(
-                id: UUID(),
-                type: .sequential,
-                weekdayMask: 0,
-                isActive: true,
-                sequential: newSeq,
-                spacedStage: 0,
-                ignoreCount: 0
-            )
-            triggers.append(t)
-        }
-
-        let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
-        _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
-    }
-
-    private func removeSequentialTrigger(from memory: Memory) async {
-        var triggers = memory.triggers
-        triggers.removeAll { $0.type == .sequential }
-        let draft = MemoryDraft.from(model: memory, withTriggers: triggers)
-        _ = try? await viewModel.environment.memoryService.updateMemory(from: draft)
-    }
-}
-
-private struct SequentialItemRow: View {
-    let item: SequentialItem
-    let currentMemoryID: UUID?
-    let memoryLookup: [UUID: Memory]
-    let isEditable: Bool
-    let canMoveUp: Bool
-    let canMoveDown: Bool
-    let onMoveUp: () -> Void
-    let onMoveDown: () -> Void
-    let onDelete: () -> Void
-    
-    private var memory: Memory? {
-        memoryLookup[item.id]
-    }
-    
-    private var spaceIcon: String {
-        memory?.lobe?.iconName ?? "brain.fill"
-    }
-    
-    private var spaceColor: Color {
-        memory?.lobe?.colorHex.flatMap { Color(hex: $0) } ?? .gray
-    }
-    
-    private var title: String {
-        let trimmed = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Untitled" : trimmed
-    }
-    
-    private var isCompletedForDisplay: Bool {
-        if let memory = memory {
-            return memory.isCompleted
-        }
-        return false
-    }
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            if isEditable {
-                Menu {
-                    if canMoveUp {
-                        Button(action: onMoveUp) {
-                            Label("Move Up", systemImage: "arrow.up")
-                        }
-                    }
-
-                    if canMoveDown {
-                        Button(action: onMoveDown) {
-                            Label("Move Down", systemImage: "arrow.down")
-                        }
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down")
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                        .frame(width: 36, height: 36)
-                        .background(Color(uiColor: .secondarySystemFill))
-                        .clipShape(Circle())
-                }
-                .menuStyle(.borderlessButton)
-                .tint(.primary)
-                .disabled(!canMoveUp && !canMoveDown)
-            }
-
-            if !isEditable {
-                Image(systemName: spaceIcon)
-                    .foregroundStyle(spaceColor)
-                    .frame(width: 20, height: 20)
-                    .glassEffect(.regular.tint(spaceColor.opacity(0.15)))
-            }
-            
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle((!isEditable && isCompletedForDisplay) ? .secondary : .primary)
-                .strikethrough(!isEditable && isCompletedForDisplay, color: .secondary)
-                .lineLimit(1)
-            
-            Spacer(minLength: 8)
-            
-            if item.isCurrent {
-                Image(systemName: "circle.circle")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(Color.accentColor)
-            } else if isEditable {
-                Button {
-                    withAnimation { onDelete() }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.secondary)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color("ElementBackground"))
-                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color("ElementBorder"), lineWidth: 2)
-        )
-    }
-}
-
-
-fileprivate struct SequentialItem: Identifiable, Equatable {
-    let id: UUID
-    let title: String
-    var isCurrent: Bool
-}
-
-
-
-fileprivate extension MemoryDraft {
-    static func from(model: Memory, withTriggers triggers: [MemoryTriggerModel]) -> MemoryDraft {
-        MemoryDraft(
-            id: model.id,
-            title: model.title,
-            status: model.status,
-            isPinned: model.isPinned,
-            dueDate: model.dueDate,
-            lobeID: model.lobe?.id,
-            triggers: triggers,
-            note: model.note,
-            checkItems: model.checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { CheckItemDraft(id: $0.id, title: $0.title, detail: $0.detail ?? "", isCompleted: $0.isCompleted, sortOrder: $0.sortOrder, createdAt: $0.createdAt, completedAt: $0.completedAt) },
-            photoAttachmentIDs: model.photoAttachmentIDs,
-            linkAttachmentIDs: model.linkAttachmentIDs,
-            audioAttachmentIDs: model.audioAttachmentIDs,
-            fileAttachmentIDs: model.fileAttachmentIDs,
-            attachments: model.attachments,
-            autoCompleteOnChecklistCompletion: model.autoCompleteOnChecklistCompletion,
-            completedDates: model.completedDates
-        )
-    }
-}

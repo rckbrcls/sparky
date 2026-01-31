@@ -210,7 +210,7 @@ final class MemoryService: ObservableObject {
 
     func scheduledMemories() -> [Memory] {
         memories.filter { memory in
-            memory.status == .active && memory.triggers.contains { $0.type == .scheduled && $0.isActive }
+            memory.status == .active && memory.hasSchedule
         }
     }
 
@@ -258,12 +258,16 @@ final class MemoryService: ObservableObject {
             )
         }
 
-        let triggers = draft.triggers.map { trigger in
-            cloneTrigger(trigger, for: memory)
+        // Set up trigger configs
+        if let scheduleDraft = draft.scheduleConfigDraft {
+            memory.scheduleConfig = scheduleDraft.toModel(memory: memory)
+        }
+
+        if let locationDraft = draft.locationConfigDraft {
+            memory.locationConfig = locationDraft.toModel(memory: memory)
         }
 
         memory.checkItems = checkItems
-        memory.triggers = triggers
         memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
         memory.completionDateEntries = buildCompletionEntries(from: draft, memory: memory)
 
@@ -301,12 +305,14 @@ final class MemoryService: ObservableObject {
         memory.space = space
 
         let previousCheckItems = memory.checkItems
-        let previousTriggers = memory.triggers
+        let previousScheduleConfig = memory.scheduleConfig
+        let previousLocationConfig = memory.locationConfig
         let previousAttachments = memory.attachmentReferences
         let previousCompletionDates = memory.completionDateEntries
 
         memory.checkItems = []
-        memory.triggers = []
+        memory.scheduleConfig = nil
+        memory.locationConfig = nil
         memory.attachmentReferences = []
         memory.completionDateEntries = []
 
@@ -314,8 +320,12 @@ final class MemoryService: ObservableObject {
             context.delete(item)
         }
 
-        for trigger in previousTriggers {
-            context.delete(trigger)
+        if let scheduleConfig = previousScheduleConfig {
+            context.delete(scheduleConfig)
+        }
+
+        if let locationConfig = previousLocationConfig {
+            context.delete(locationConfig)
         }
 
         for attachment in previousAttachments {
@@ -340,9 +350,15 @@ final class MemoryService: ObservableObject {
             )
         }
 
-        memory.triggers = draft.triggers.map { trigger in
-            cloneTrigger(trigger, for: memory)
+        // Set up trigger configs
+        if let scheduleDraft = draft.scheduleConfigDraft {
+            memory.scheduleConfig = scheduleDraft.toModel(memory: memory)
         }
+
+        if let locationDraft = draft.locationConfigDraft {
+            memory.locationConfig = locationDraft.toModel(memory: memory)
+        }
+
         memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
         memory.completionDateEntries = buildCompletionEntries(from: draft, memory: memory)
 
@@ -468,6 +484,35 @@ final class MemoryService: ObservableObject {
             throw MemoryServiceError.memoryNotFound
         }
 
+        // Clone schedule config if exists
+        var scheduleConfigDraft: ScheduleConfigDraft?
+        if let schedule = source.scheduleConfig {
+            scheduleConfigDraft = ScheduleConfigDraft(
+                id: UUID(),
+                fireDate: schedule.fireDate,
+                startDate: schedule.startDate,
+                recurrenceRule: schedule.recurrenceRule,
+                timeZoneIdentifier: schedule.timeZoneIdentifier,
+                weekdayMask: schedule.weekdayMask,
+                isActive: schedule.isActive,
+                isAllDay: schedule.isAllDay
+            )
+        }
+
+        // Clone location config if exists
+        var locationConfigDraft: LocationConfigDraft?
+        if let location = source.locationConfig {
+            locationConfigDraft = LocationConfigDraft(
+                id: UUID(),
+                latitude: location.latitude,
+                longitude: location.longitude,
+                radius: location.radius,
+                name: location.name,
+                event: location.event,
+                isActive: location.isActive
+            )
+        }
+
         let draft = MemoryDraft(
             id: UUID(),
             title: source.title,
@@ -475,9 +520,8 @@ final class MemoryService: ObservableObject {
             isPinned: false,
             dueDate: source.dueDate,
             lobeID: source.space?.id,
-            triggers: source.triggers.map { trigger in
-                cloneTrigger(trigger, for: nil, id: UUID())
-            },
+            scheduleConfigDraft: scheduleConfigDraft,
+            locationConfigDraft: locationConfigDraft,
             note: source.note,
             checkItems: source.checkItems.map { item in
                 CheckItemDraft(
@@ -545,48 +589,4 @@ private extension MemoryService {
         }
     }
 
-    func cloneTrigger(_ source: MemoryTriggerModel, for memory: Memory?, id: UUID? = nil) -> MemoryTriggerModel {
-        let location = source.location.map { location in
-            MemoryTriggerLocation(
-                id: UUID(),
-                latitude: location.latitude,
-                longitude: location.longitude,
-                radius: location.radius,
-                name: location.name,
-                event: location.event
-            )
-        }
-
-        let sequential = source.sequential.map { sequential in
-            MemoryTriggerSequential(
-                id: UUID(),
-                sequenceID: sequential.sequenceID,
-                stepIndex: sequential.stepIndex,
-                startDate: sequential.startDate,
-                currentStepIndex: sequential.currentStepIndex
-            )
-        }
-
-        let trigger = MemoryTriggerModel(
-            id: id ?? source.id,
-            type: source.type,
-            fireDate: source.fireDate,
-            startDate: source.startDate,
-            recurrenceRule: source.recurrenceRule,
-            timeZoneIdentifier: source.timeZoneIdentifier,
-            weekdayMask: source.weekdayMask,
-            isActive: source.isActive,
-            isAllDay: source.isAllDay,
-            location: location,
-            sequential: sequential,
-            spacedStage: source.spacedStage,
-            lastReviewDate: source.lastReviewDate,
-            ignoreCount: source.ignoreCount,
-            memory: memory
-        )
-
-        location?.trigger = trigger
-        sequential?.trigger = trigger
-        return trigger
-    }
 }

@@ -176,12 +176,10 @@ final class DataImportService {
             do {
                 // Map lobe ID
                 let newLobeID = exportedMemory.lobeID.flatMap { lobeIDMap[$0] }
-                
-                // Convert triggers
-                let triggers = exportedMemory.triggers.compactMap { exportedTrigger -> MemoryTriggerModel? in
-                    convertTrigger(exportedTrigger, memoryIDMap: &memoryIDMap)
-                }
-                
+
+                // Convert triggers to configs
+                let (scheduleConfig, locationConfig) = convertTriggersToConfigs(exportedMemory.triggers)
+
                 // Convert check items
                 let checkItems = exportedMemory.checkItems.enumerated().map { index, exportedItem in
                     CheckItemDraft(
@@ -194,7 +192,7 @@ final class DataImportService {
                         completedAt: exportedItem.completedAt
                     )
                 }
-                
+
                 // Create memory draft
                 let draft = MemoryDraft(
                     id: UUID(), // New ID
@@ -203,7 +201,8 @@ final class DataImportService {
                     isPinned: exportedMemory.isPinned,
                     dueDate: exportedMemory.dueDate,
                     lobeID: newLobeID,
-                    triggers: triggers,
+                    scheduleConfigDraft: scheduleConfig,
+                    locationConfigDraft: locationConfig,
                     note: exportedMemory.note,
                     checkItems: checkItems,
                     photoAttachmentIDs: [],
