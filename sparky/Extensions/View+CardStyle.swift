@@ -1,16 +1,13 @@
 import SwiftUI
 
 extension View {
-    func cardStyle(cornerRadius: CGFloat = 12) -> some View {
+    func cardStyle(cornerRadius: CGFloat = 24) -> some View {
         self
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.Theme.secondaryBackground)
-                    .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.Theme.border, lineWidth: 2)
+                    .fill(Color.Theme.tertiaryBackground)
+                    .stroke(Color.Theme.border, lineWidth: 1)
+                    .shadow(color: .black.opacity(0.1), radius: 24, x: 3, y: 3)
             )
             .contentShape(Rectangle())
     }

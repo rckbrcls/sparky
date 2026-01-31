@@ -181,47 +181,12 @@ struct MemoryCardView: View {
                     trigger: scheduledTrigger,
                     isCompletedForDisplay: isCompletedForDisplay
                 )
-                .background(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 12,
-                        bottomLeadingRadius: 0,
-                        bottomTrailingRadius: 0,
-                        topTrailingRadius: 12
-                    )
-                    .fill(Color("ElementBackground"))
-                )
-//                .overlay(
-//                    UnevenRoundedRectangle(
-//                        topLeadingRadius: 12,
-//                        bottomLeadingRadius: 0,
-//                        bottomTrailingRadius: 0,
-//                        topTrailingRadius: 12
-//                    )
-//                    .stroke(Color("ElementBorder"), lineWidth: 2)
-//                )
             }
             
             // Map (if has location trigger)
             if let locationTrigger = locationTrigger, let location = locationTrigger.location {
                 MemoryCardLocationMapView(location: location)
                     .frame(height: 120)
-                    .clipShape(
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: scheduledTrigger != nil ? 0 : 12,
-                            bottomLeadingRadius: 0,
-                            bottomTrailingRadius: 0,
-                            topTrailingRadius: scheduledTrigger != nil ? 0 : 12
-                        )
-                    )
-//                    .overlay(
-//                        UnevenRoundedRectangle(
-//                            topLeadingRadius: scheduledTrigger != nil ? 0 : 12,
-//                            bottomLeadingRadius: 0,
-//                            bottomTrailingRadius: 0,
-//                            topTrailingRadius: scheduledTrigger != nil ? 0 : 12
-//                        )
-//                        .stroke(Color("ElementBorder"), lineWidth: 2)
-//                    )
             }
             
             // Card content
@@ -280,24 +245,6 @@ struct MemoryCardView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .background(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12,
-                    bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-                    topTrailingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12
-                )
-                .fill(Color("ElementBackground"))
-            )
-//            .overlay(
-//                UnevenRoundedRectangle(
-//                    topLeadingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12,
-//                    bottomLeadingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-//                    bottomTrailingRadius: memory.hasChecklist && !memory.checkItems.isEmpty ? 0 : 12,
-//                    topTrailingRadius: (scheduledTrigger != nil || locationTrigger != nil) ? 0 : 12
-//                )
-//                .stroke(Color("ElementBorder"), lineWidth: 2)
-//            )
             
             // Checklist collapsible section
             if memory.hasChecklist && !memory.checkItems.isEmpty {
@@ -312,11 +259,8 @@ struct MemoryCardView: View {
                 )
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color("ElementBackground"))
-                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-        )
+        .padding(6)
+        .cardStyle()
         .contentShape(Rectangle())
         .contextMenu {
             if isContextMenuEnabled {

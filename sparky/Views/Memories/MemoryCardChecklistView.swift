@@ -101,23 +101,5 @@ struct MemoryCardChecklistView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
-        .background(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 0,
-                bottomLeadingRadius: 12,
-                bottomTrailingRadius: 12,
-                topTrailingRadius: 0
-            )
-            .fill(Color("ElementBackground").opacity(0.5))
-        )
-        .overlay(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 0,
-                bottomLeadingRadius: 12,
-                bottomTrailingRadius: 12,
-                topTrailingRadius: 0
-            )
-            .stroke(Color("ElementBorder"), lineWidth: 2)
-        )
     }
 }
