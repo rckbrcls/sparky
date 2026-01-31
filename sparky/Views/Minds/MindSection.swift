@@ -13,13 +13,14 @@ struct MindSection<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             MindSectionHeaderButton(
                 sectionType: sectionType,
                 count: count,
                 isExpanded: isExpanded,
                 onToggle: onToggleExpanded
             )
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 16)
             .padding(.bottom, 4)
             .padding(.horizontal, 20)
@@ -44,13 +45,14 @@ struct MindMemorySection: View {
     let onToggleExpanded: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             MindSectionHeaderButton(
                 sectionType: sectionType,
                 count: memories.count,
                 isExpanded: isExpanded,
                 onToggle: onToggleExpanded
             )
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 16)
             .padding(.bottom, 4)
             .padding(.horizontal, 20)
@@ -89,13 +91,14 @@ struct MindMindsSection: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             MindSectionHeaderButton(
                 sectionType: .minds,
                 count: childMinds.count,
                 isExpanded: isExpanded,
                 onToggle: onToggleExpanded
             )
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 16)
             .padding(.bottom, 4)
             .padding(.horizontal, 20)

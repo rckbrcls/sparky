@@ -78,13 +78,13 @@ struct MemoryCardView: View {
     private func relativeDateString(for date: Date) -> String {
         let calendar = Calendar.current
         let now = Date()
-        
+
         // Se for muito recente (menos de 1 minuto), mostra "just now"
         if let seconds = calendar.dateComponents([.second], from: date, to: now).second,
            seconds < 60 {
             return "just now"
         }
-        
+
         // Usa o formato relativo padrão que não mostra segundos
         return Self.relativeFormatter.localizedString(for: date, relativeTo: now)
     }
@@ -138,12 +138,12 @@ struct MemoryCardView: View {
             return ("Completed", "checkmark.circle.fill", .green)
         }
     }
-    
+
     private var locationTrigger: MemoryTriggerModel? {
         guard let memory = memory else { return nil }
         return memory.triggers.first(where: { $0.type == .location && $0.isActive })
     }
-    
+
     private var scheduledTrigger: MemoryTriggerModel? {
         guard let memory = memory else { return nil }
         return memory.triggers.first(where: { $0.type == .scheduled && $0.isActive })
@@ -166,14 +166,16 @@ struct MemoryCardView: View {
                     trigger: scheduledTrigger,
                     isCompletedForDisplay: isCompletedForDisplay
                 )
+                .padding(6)
             }
-            
+
             // Map (if has location trigger)
             if let locationTrigger = locationTrigger, let location = locationTrigger.location {
                 MemoryCardLocationMapView(location: location)
                     .frame(height: 120)
+                    .padding(6)
             }
-            
+
             // Card content
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -198,10 +200,32 @@ struct MemoryCardView: View {
                 }
 
                 Spacer()
+
+                Button {
+                    feedbackGenerator.impactOccurred()
+                    if let onToggleCompletion {
+                        onToggleCompletion()
+                    } else {
+                        Task {
+                            if let displayDate, memory.hasRecurringTriggers {
+                                try? await memoryService.toggleCompletionForDate(memoryID: memoryID, date: displayDate)
+                            } else {
+                                try? await memoryService.toggleCompletion(memoryID: memoryID)
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundStyle(isCompletedForDisplay ? Color.accentColor : .secondary.opacity(0.5))
+                }
+                .buttonStyle(.plain)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .padding(.top, 6)
+
             // Checklist collapsible section
             if memory.hasChecklist && !memory.checkItems.isEmpty {
                 MemoryCardChecklistView(
@@ -213,9 +237,19 @@ struct MemoryCardView: View {
                     },
                     isCompletedForDisplay: isCompletedForDisplay
                 )
+                .background(
+                    Color.Theme.secondaryBackgroundag
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: 0,
+                                bottomLeadingRadius: 10,
+                                bottomTrailingRadius: 10,
+                                topTrailingRadius: 0
+                            )
+                        )
+                )
             }
         }
-        .padding(6)
         .cardStyle()
         .contentShape(Rectangle())
         .contextMenu {

@@ -126,8 +126,10 @@ struct MindDetailView: View {
                     .appLargeTitleStyle()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
 
                 FilterBadgesBar(selectedTriggerTypes: $selectedTriggerTypes, sortStrategy: $sortStrategy)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if childMinds.isEmpty && memories.isEmpty {
                     EmptyStateView(
