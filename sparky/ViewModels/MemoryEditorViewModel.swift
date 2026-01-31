@@ -83,9 +83,7 @@ final class MemoryEditorViewModel: ObservableObject {
         !checkItems.isEmpty
     }
 
-    var sequentialTrigger: MemoryTriggerDraft? {
-        triggers.first(where: { $0.type == .sequential })
-    }
+
 
     var hasAnyAttachment: Bool {
         !photoAttachments.isEmpty || !linkAttachments.isEmpty || !audioAttachments.isEmpty || !fileAttachments.isEmpty
@@ -93,9 +91,43 @@ final class MemoryEditorViewModel: ObservableObject {
 
     var hasAnyTrigger: Bool {
         triggers.contains { $0.type == .scheduled } ||
-        triggers.contains { $0.type == .location } ||
-        triggers.contains { $0.type == .location } ||
-        sequentialTrigger?.sequential != nil
+        triggers.contains { $0.type == .location }
+    }
+
+    var hasScheduleTrigger: Bool {
+        triggers.contains { $0.type == .scheduled }
+    }
+
+    var hasLocationTrigger: Bool {
+        triggers.contains { $0.type == .location }
+    }
+
+    /// Returns the current schedule configuration as a draft for editing
+    var scheduleConfig: ScheduleConfigDraft? {
+        guard let trigger = triggers.first(where: { $0.type == .scheduled }) else { return nil }
+        return ScheduleConfigDraft(
+            id: trigger.id,
+            fireDate: trigger.fireDate,
+            startDate: trigger.startDate,
+            recurrenceRule: trigger.recurrenceRule,
+            timeZoneIdentifier: trigger.timeZoneIdentifier,
+            weekdayMask: trigger.weekdayMask,
+            isActive: trigger.isActive,
+            isAllDay: trigger.isAllDay
+        )
+    }
+
+    /// Returns the current location configuration as a draft for editing
+    var locationConfig: LocationConfigDraft? {
+        guard let trigger = triggers.first(where: { $0.type == .location }),
+              let location = trigger.location else { return nil }
+        return LocationConfigDraft(
+            latitude: location.latitude,
+            longitude: location.longitude,
+            radius: location.radius,
+            name: location.name,
+            event: location.event
+        )
     }
 
     var currentMemory: Memory? {
@@ -385,30 +417,42 @@ final class MemoryEditorViewModel: ObservableObject {
         triggers.removeAll { $0.type == .scheduled }
     }
 
-    func updateSequentialTrigger(sequenceID: UUID, stepIndex: Int, startDate: Date? = nil, currentStepIndex: Int = 0) {
-        let sequential = MemoryTriggerModel.TriggerSequential(
-            sequenceID: sequenceID,
-            stepIndex: stepIndex,
-            startDate: startDate,
-            currentStepIndex: currentStepIndex
+    /// Convenience method to set schedule config (same as setScheduledTrigger but with different naming for views)
+    func setScheduleConfig(
+        fireDate: Date?,
+        recurrence: RecurrenceRule?,
+        weekdaySelection: Set<Int>,
+        referenceTime: Date,
+        isAllDay: Bool = false
+    ) {
+        setScheduledTrigger(
+            fireDate: fireDate,
+            recurrence: recurrence,
+            weekdaySelection: weekdaySelection,
+            referenceTime: referenceTime,
+            isAllDay: isAllDay
         )
-
-        if let index = triggers.firstIndex(where: { $0.type == .sequential }) {
-            triggers[index].sequential = sequential
-            triggers[index].isActive = true
-        } else {
-            let draft = MemoryTriggerDraft(
-                type: .sequential,
-                isActive: true,
-                sequential: sequential
-            )
-            triggers.append(draft)
-        }
     }
 
-    func removeSequentialTrigger() {
-        triggers.removeAll { $0.type == .sequential }
+    /// Removes the schedule trigger
+    func removeScheduleConfig() {
+        triggers.removeAll { $0.type == .scheduled }
     }
+
+    /// Sets or updates the location trigger configuration
+    func setLocationConfig(name: String, latitude: Double, longitude: Double, radius: Double, event: LocationEvent) {
+        // Remove existing location trigger first
+        triggers.removeAll { $0.type == .location }
+        // Add new one
+        addLocationTrigger(name: name, latitude: latitude, longitude: longitude, radius: radius, event: event)
+    }
+
+    /// Removes the location trigger
+    func removeLocationConfig() {
+        triggers.removeAll { $0.type == .location }
+    }
+
+
 
     func selectTemplate(_ template: MemoryEditorTemplate) {
         applyTemplate(template)
@@ -590,14 +634,7 @@ private extension MemoryEditorViewModel {
             )
         }
 
-        let sequential = model.sequential.map {
-            MemoryTriggerModel.TriggerSequential(
-                sequenceID: $0.sequenceID,
-                stepIndex: $0.stepIndex,
-                startDate: $0.startDate,
-                currentStepIndex: $0.currentStepIndex
-            )
-        }
+
 
         return MemoryTriggerDraft(
             id: model.id,
@@ -610,7 +647,6 @@ private extension MemoryEditorViewModel {
             isActive: model.isActive,
             isAllDay: model.isAllDay,
             location: location,
-            sequential: sequential,
             spacedStage: model.spacedStage,
             lastReviewDate: model.lastReviewDate,
             ignoreCount: model.ignoreCount

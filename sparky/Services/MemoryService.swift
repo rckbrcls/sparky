@@ -557,16 +557,6 @@ private extension MemoryService {
             )
         }
 
-        let sequential = source.sequential.map { sequential in
-            MemoryTriggerSequential(
-                id: UUID(),
-                sequenceID: sequential.sequenceID,
-                stepIndex: sequential.stepIndex,
-                startDate: sequential.startDate,
-                currentStepIndex: sequential.currentStepIndex
-            )
-        }
-
         let trigger = MemoryTriggerModel(
             id: id ?? source.id,
             type: source.type,
@@ -578,7 +568,6 @@ private extension MemoryService {
             isActive: source.isActive,
             isAllDay: source.isAllDay,
             location: location,
-            sequential: sequential,
             spacedStage: source.spacedStage,
             lastReviewDate: source.lastReviewDate,
             ignoreCount: source.ignoreCount,
@@ -586,7 +575,6 @@ private extension MemoryService {
         )
 
         location?.trigger = trigger
-        sequential?.trigger = trigger
         return trigger
     }
 }

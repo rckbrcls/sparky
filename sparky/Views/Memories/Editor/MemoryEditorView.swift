@@ -266,10 +266,6 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var memoryLookup: [UUID: Memory] {
-        Dictionary(uniqueKeysWithValues: viewModel.environment.memoryService.memories.map { ($0.id, $0) })
-    }
-
     private var navigationTitle: String {
         switch mode {
         case .create:
@@ -494,7 +490,6 @@ struct MemoryEditorView: View {
     private var triggersCard: some View {
         TriggersCard(
             viewModel: viewModel,
-            memoryLookup: memoryLookup,
             isEditable: isEditingEnabled
         )
     }

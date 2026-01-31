@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     var isEditable: Bool = true
+
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
@@ -719,6 +720,3 @@ private struct LocationTriggerInlineForm: View {
         )
     }
 }
-
-
-

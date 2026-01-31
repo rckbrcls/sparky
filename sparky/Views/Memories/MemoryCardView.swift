@@ -157,12 +157,6 @@ struct MemoryCardView: View {
         guard let memory = memory else { return nil }
         return memory.triggers.first(where: { $0.type == .scheduled && $0.isActive })
     }
-    
-    private var sequentialTrigger: MemoryTriggerModel? {
-        guard let memory = memory else { return nil }
-        return memory.triggers.first(where: { $0.type == .sequential && $0.isActive })
-    }
-    
 
     var body: some View {
         if let memory = memory {
@@ -225,23 +219,6 @@ struct MemoryCardView: View {
                 }
 
                 Spacer()
-
-                // Completion check circle button
-                // Only show checkbox if:
-                // 1. Memory has no sequence trigger, OR
-                // 2. Memory is the current step in its sequence
-                let shouldShowCheckbox = !memory.hasSequenceTrigger || memory.isCurrentInSequence
-                if let onToggleCompletion = onToggleCompletion, shouldShowCheckbox {
-                    Button {
-                        feedbackGenerator.impactOccurred()
-                        onToggleCompletion()
-                    } label: {
-                        Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                    }
-                    .buttonStyle(.plain)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)

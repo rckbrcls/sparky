@@ -42,23 +42,6 @@ enum TriggerFactory {
                 lastReviewDate: model.lastReviewDate,
                 ignoreCount: model.ignoreCount
             )
-
-        case .sequential:
-            let sequentialData = SequentialTrigger.SequentialData(
-                sequenceID: model.sequential?.sequenceID ?? UUID(),
-                stepIndex: model.sequential?.stepIndex ?? 0,
-                startDate: model.sequential?.startDate,
-                currentStepIndex: model.sequential?.currentStepIndex ?? 0
-            )
-            return SequentialTrigger(
-                id: model.id,
-                startDate: model.startDate,
-                isActive: model.isActive,
-                sequential: sequentialData,
-                spacedStage: model.spacedStage,
-                lastReviewDate: model.lastReviewDate,
-                ignoreCount: model.ignoreCount
-            )
         }
     }
 
@@ -79,7 +62,6 @@ enum TriggerFactory {
                 weekdayMask: scheduled.weekdayMask,
                 isActive: scheduled.isActive,
                 location: nil,
-                sequential: nil,
                 spacedStage: scheduled.spacedStage,
                 lastReviewDate: scheduled.lastReviewDate,
                 ignoreCount: scheduled.ignoreCount
@@ -105,36 +87,9 @@ enum TriggerFactory {
                 weekdayMask: 0,
                 isActive: location.isActive,
                 location: locationModel,
-
-                sequential: nil,
                 spacedStage: location.spacedStage,
                 lastReviewDate: location.lastReviewDate,
                 ignoreCount: location.ignoreCount
-            )
-        case .sequential:
-            guard let sequential = trigger as? SequentialTrigger else {
-                fatalError("Trigger type mismatch")
-            }
-            let sequentialModel = MemoryTriggerModel.TriggerSequential(
-                sequenceID: sequential.sequential.sequenceID,
-                stepIndex: sequential.sequential.stepIndex,
-                startDate: sequential.sequential.startDate,
-                currentStepIndex: sequential.sequential.currentStepIndex
-            )
-            return MemoryTriggerModel(
-                id: sequential.id,
-                type: .sequential,
-                fireDate: nil,
-                startDate: sequential.startDate,
-                recurrenceRule: nil,
-                timeZoneIdentifier: nil,
-                weekdayMask: 0,
-                isActive: sequential.isActive,
-                location: nil,
-                sequential: sequentialModel,
-                spacedStage: sequential.spacedStage,
-                lastReviewDate: sequential.lastReviewDate,
-                ignoreCount: sequential.ignoreCount
             )
         }
     }
