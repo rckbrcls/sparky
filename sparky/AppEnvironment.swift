@@ -92,12 +92,7 @@ final class AppEnvironment: ObservableObject {
     }
 
     func completeOnboarding() {
-#if DEBUG
-        settings.hasCompletedOnboarding = false
-        hasCompletedOnboarding = false
-#else
         settings.hasCompletedOnboarding = true
-#endif
     }
 }
 

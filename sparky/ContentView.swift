@@ -194,8 +194,9 @@ struct ContentView: View {
             showingOnboarding = !environment.hasCompletedOnboarding
         }
         .onChange(of: environment.hasCompletedOnboarding) { _, completed in
+            guard completed else { return }
             withAnimation(.easeInOut) {
-                showingOnboarding = !completed
+                showingOnboarding = false
             }
         }
         .onChange(of: environment.pendingDeepLinkMemoryID) { _, memoryID in

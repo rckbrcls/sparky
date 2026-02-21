@@ -288,7 +288,6 @@
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sparky uses your location to trigger reminders when you arrive at or leave a place.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sparky needs microphone access so you can record audio notes for your memories.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sparky needs speech recognition to transcribe voice input into memory titles.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = location;
@@ -331,7 +330,6 @@
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sparky uses your location to trigger reminders when you arrive at or leave a place.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sparky needs microphone access so you can record audio notes for your memories.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sparky needs speech recognition to transcribe voice input into memory titles.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = location;
