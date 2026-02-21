@@ -199,10 +199,10 @@ export default function PrivacyPage() {
           <p className="mt-2 leading-relaxed text-muted-foreground">
             If you have any questions about this Privacy Policy, contact us at{" "}
             <a
-              href="mailto:support@sparky-app.com"
+              href="mailto:contact@polterware.com"
               className="text-foreground underline underline-offset-4 hover:text-primary"
             >
-              support@sparky-app.com
+              contact@polterware.com
             </a>
             .
           </p>

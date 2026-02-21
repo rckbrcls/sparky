@@ -25,7 +25,7 @@ export function HeroSection() {
           </Link>
         </Button>
         <Button asChild variant="ghost" size="lg">
-          <Link href="#features">Learn More</Link>
+          <a href="#features">Learn More</a>
         </Button>
       </div>
       <div className="mt-12">

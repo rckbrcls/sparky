@@ -9,6 +9,15 @@ export function Footer() {
         <div className="flex items-center gap-2">
           <span className="font-serif font-bold">Sparky</span>
           <span className="text-sm text-muted-foreground">© 2026</span>
+          <span className="text-sm text-muted-foreground">·</span>
+          <a
+            href="https://www.polterware.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Made by Polterware
+          </a>
         </div>
         <nav className="flex items-center gap-6">
           <Link

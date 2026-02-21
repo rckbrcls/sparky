@@ -38,7 +38,7 @@ export function PrivacyHighlightSection() {
         <div className="mt-12 grid gap-6 sm:grid-cols-3">
           {highlights.map((item) => (
             <Card key={item.title}>
-              <CardHeader className="items-center text-center">
+              <CardHeader className="items-center justify-items-center text-center">
                 <item.icon className="mb-2 h-8 w-8 text-muted-foreground" />
                 <CardTitle>{item.title}</CardTitle>
                 <CardDescription>{item.description}</CardDescription>
