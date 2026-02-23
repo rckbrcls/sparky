@@ -79,6 +79,9 @@ final class Memory: Identifiable {
     @Relationship(deleteRule: .cascade, inverse: \LocationConfig.memory)
     var locationConfig: LocationConfig?
 
+    @Relationship(deleteRule: .cascade, inverse: \ReminderConfig.memory)
+    var reminderConfig: ReminderConfig?
+
     // MARK: - Legacy (schema-only, do not use)
     // MemoryTriggerModel must remain in the SwiftData schema to avoid migration crashes.
     // These triggers are no longer read or written by the app.
@@ -115,6 +118,7 @@ final class Memory: Identifiable {
         checkItems: [CheckItemModel] = [],
         scheduleConfig: ScheduleConfig? = nil,
         locationConfig: LocationConfig? = nil,
+        reminderConfig: ReminderConfig? = nil,
         attachmentReferences: [MemoryAttachmentReference] = [],
         completionDateEntries: [MemoryCompletionDate] = [],
         mind: Mind? = nil
@@ -133,6 +137,7 @@ final class Memory: Identifiable {
         self.checkItems = checkItems
         self.scheduleConfig = scheduleConfig
         self.locationConfig = locationConfig
+        self.reminderConfig = reminderConfig
         self.attachmentReferences = attachmentReferences
         self.completionDateEntries = completionDateEntries
         self.mind = mind
@@ -184,8 +189,16 @@ final class Memory: Identifiable {
         locationConfig?.isActive ?? false
     }
 
-    var hasTriggers: Bool {
+    var hasReminder: Bool {
+        reminderConfig?.isActive ?? false
+    }
+
+    var hasPrimaryTrigger: Bool {
         hasSchedule || hasLocation
+    }
+
+    var hasTriggers: Bool {
+        hasSchedule || hasLocation || hasReminder
     }
 
     var hasRecurringTriggers: Bool {

@@ -32,6 +32,7 @@ enum CustomTab: String, CaseIterable {
 
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var environment: AppEnvironment
     @State private var editorRoute: MemoryEditorRoute?
     @State private var mindComposerRequest: MindComposerRequest?
@@ -216,7 +217,10 @@ struct ContentView: View {
         .onChange(of: environment.hasBootstrapped) { _, _ in
             tryConsumePendingMemoryOpenRequest()
         }
-        .onReceive(environment.memoryService.$lastRefreshed) { _ in
+        .onChange(of: scenePhase) { _, _ in
+            tryConsumePendingMemoryOpenRequest()
+        }
+        .onReceive(environment.memoryService.$lastRefreshed.receive(on: RunLoop.main)) { _ in
             tryConsumePendingMemoryOpenRequest()
         }
         .onChange(of: activeTab) { _, newTab in
@@ -408,7 +412,15 @@ struct ContentView: View {
     }
 
     private func tryConsumePendingMemoryOpenRequest() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async {
+                tryConsumePendingMemoryOpenRequest()
+            }
+            return
+        }
+
         guard let request = environment.pendingMemoryOpenRequest else { return }
+        guard scenePhase == .active else { return }
         guard !hasBlockingPresentation else { return }
 
         if let memory = environment.memoryService.memory(id: request.memoryID) {

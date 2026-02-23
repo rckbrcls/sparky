@@ -22,6 +22,8 @@ struct PendingMemoryOpenRequest: Identifiable, Equatable {
 
 @MainActor
 final class AppEnvironment: ObservableObject {
+    static let notificationDelegate = ForegroundNotificationDelegate()
+
     let dataController: DataController
     let mindService: MindService
     let memoryService: MemoryService
@@ -43,7 +45,6 @@ final class AppEnvironment: ObservableObject {
     @Published var pendingMemoryOpenRequest: PendingMemoryOpenRequest?
 
     private var cancellables: Set<AnyCancellable> = []
-    private let notificationDelegate = ForegroundNotificationDelegate()
 
     init(dataController: DataController) {
         self.dataController = dataController
@@ -63,13 +64,13 @@ final class AppEnvironment: ObservableObject {
 
         // Allow notifications to appear even when the app is in the foreground.
         // The delegate is retained by this class; UNUserNotificationCenter holds an unowned ref.
-        notificationDelegate.onMemoryTapped = { [weak self] memoryID in
+        Self.notificationDelegate.onMemoryTapped = { [weak self] memoryID in
             self?.pendingMemoryOpenRequest = PendingMemoryOpenRequest(
                 memoryID: memoryID,
                 source: .notification
             )
         }
-        UNUserNotificationCenter.current().delegate = notificationDelegate
+        UNUserNotificationCenter.current().delegate = Self.notificationDelegate
 
         settings.$hasCompletedOnboarding
             .receive(on: DispatchQueue.main)
@@ -113,24 +114,51 @@ final class AppEnvironment: ObservableObject {
 
 /// Enables notification banners, sounds, and badges while the app is in the foreground.
 /// Without this delegate iOS silently suppresses notifications when the app is active.
-private final class ForegroundNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    var onMemoryTapped: (@MainActor (UUID) -> Void)?
+@MainActor
+final class ForegroundNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    var onMemoryTapped: ((UUID) -> Void)? {
+        didSet {
+            flushBufferedTapsIfNeeded()
+        }
+    }
+    private var bufferedMemoryIDs: [UUID] = []
 
-    nonisolated func userNotificationCenter(
+    override init() {
+        super.init()
+    }
+
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .badge]
     }
 
-    nonisolated func userNotificationCenter(
+    func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
+        guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
         let userInfo = response.notification.request.content.userInfo
         guard let idString = userInfo["memoryID"] as? String,
               let memoryID = UUID(uuidString: idString) else { return }
-        await onMemoryTapped?(memoryID)
+        handleMemoryTapOnMain(memoryID)
+    }
+
+    private func handleMemoryTapOnMain(_ memoryID: UUID) {
+        if let onMemoryTapped {
+            onMemoryTapped(memoryID)
+            return
+        }
+        bufferedMemoryIDs.append(memoryID)
+    }
+
+    private func flushBufferedTapsIfNeeded() {
+        guard let onMemoryTapped, !bufferedMemoryIDs.isEmpty else { return }
+        let queued = bufferedMemoryIDs
+        bufferedMemoryIDs.removeAll(keepingCapacity: true)
+        for memoryID in queued {
+            onMemoryTapped(memoryID)
+        }
     }
 }

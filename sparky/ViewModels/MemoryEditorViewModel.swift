@@ -23,6 +23,7 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var isPinned: Bool = false
     @Published var scheduleConfigDraft: ScheduleConfigDraft?
     @Published var locationConfigDraft: LocationConfigDraft?
+    @Published var reminderConfigDraft: ReminderConfigDraft?
     // Fixed content properties (replacing dynamic contentQueue)
     @Published var note: String = ""
     @Published var checkItems: [CheckItemDraft] = []
@@ -77,7 +78,7 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     var hasAnyTrigger: Bool {
-        scheduleConfigDraft != nil || locationConfigDraft != nil
+        scheduleConfigDraft != nil || locationConfigDraft != nil || reminderConfigDraft != nil
     }
 
     var hasScheduleTrigger: Bool {
@@ -88,6 +89,14 @@ final class MemoryEditorViewModel: ObservableObject {
         locationConfigDraft != nil
     }
 
+    var hasReminderTrigger: Bool {
+        reminderConfigDraft != nil
+    }
+
+    var hasPrimaryTrigger: Bool {
+        hasScheduleTrigger || hasLocationTrigger
+    }
+
     /// Returns the current schedule configuration as a draft for editing
     var scheduleConfig: ScheduleConfigDraft? {
         scheduleConfigDraft
@@ -96,6 +105,11 @@ final class MemoryEditorViewModel: ObservableObject {
     /// Returns the current location configuration as a draft for editing
     var locationConfig: LocationConfigDraft? {
         locationConfigDraft
+    }
+
+    /// Returns the current reminder configuration as a draft for editing
+    var reminderConfig: ReminderConfigDraft? {
+        reminderConfigDraft
     }
 
     var currentMemory: Memory? {
@@ -158,6 +172,20 @@ final class MemoryEditorViewModel: ObservableObject {
                draft.radius != orig.radius ||
                draft.isActive != orig.isActive ||
                draft.event != orig.event { return true }
+        }
+
+        // Compare reminder config
+        let origReminder = original.reminderConfig
+        if (reminderConfigDraft == nil) != (origReminder == nil) { return true }
+        if let draft = reminderConfigDraft, let orig = origReminder {
+            if draft.intervalValue != orig.intervalValue ||
+               draft.intervalUnit != orig.intervalUnit ||
+               draft.repeatCount != orig.repeatCount ||
+               draft.isActive != orig.isActive ||
+               draft.startedAt != orig.startedAt ||
+               draft.startedBy != orig.startedBy {
+                return true
+            }
         }
 
         // Compare attachments
@@ -383,6 +411,7 @@ final class MemoryEditorViewModel: ObservableObject {
 
     func clearScheduleTriggers() {
         scheduleConfigDraft = nil
+        removeReminderIfPrimaryTriggerMissing()
     }
 
     /// Sets or updates the schedule configuration
@@ -400,6 +429,7 @@ final class MemoryEditorViewModel: ObservableObject {
 
         guard let fireDate = fireDate else {
             scheduleConfigDraft = nil
+            removeReminderIfPrimaryTriggerMissing()
             return
         }
 
@@ -419,6 +449,7 @@ final class MemoryEditorViewModel: ObservableObject {
     /// Removes the schedule config
     func removeScheduleConfig() {
         scheduleConfigDraft = nil
+        removeReminderIfPrimaryTriggerMissing()
     }
 
     /// Sets or updates the location trigger configuration
@@ -437,6 +468,30 @@ final class MemoryEditorViewModel: ObservableObject {
     /// Removes the location trigger
     func removeLocationConfig() {
         locationConfigDraft = nil
+        removeReminderIfPrimaryTriggerMissing()
+    }
+
+    /// Sets or updates the reminder policy configuration
+    func setReminderConfig(intervalValue: Int, intervalUnit: ReminderIntervalUnit, repeatCount: Int?) {
+        guard hasPrimaryTrigger else {
+            reminderConfigDraft = nil
+            return
+        }
+
+        reminderConfigDraft = ReminderConfigDraft(
+            id: reminderConfigDraft?.id ?? UUID(),
+            intervalValue: max(1, intervalValue),
+            intervalUnit: intervalUnit,
+            repeatCount: repeatCount,
+            isActive: true,
+            startedAt: reminderConfigDraft?.startedAt,
+            startedBy: reminderConfigDraft?.startedBy
+        )
+    }
+
+    /// Removes the reminder policy
+    func removeReminderConfig() {
+        reminderConfigDraft = nil
     }
 
     /// Returns true when the iOS geofence limit is reached and this memory doesn't already have a slot
@@ -472,6 +527,7 @@ final class MemoryEditorViewModel: ObservableObject {
             mindID: selectedMindID,
             scheduleConfig: scheduleConfigDraft,
             locationConfig: locationConfigDraft,
+            reminderConfig: effectiveReminderDraft,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
             photoAttachmentIDs: photoAttachments.map(\.id),
@@ -522,6 +578,7 @@ final class MemoryEditorViewModel: ObservableObject {
             mindID: selectedMindID,
             scheduleConfig: scheduleConfigDraft,
             locationConfig: locationConfigDraft,
+            reminderConfig: effectiveReminderDraft,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
             photoAttachmentIDs: photoAttachments.map(\.id),
@@ -572,6 +629,7 @@ private extension MemoryEditorViewModel {
         isPinned = memory.isPinned
         scheduleConfigDraft = memory.scheduleConfig.map { ScheduleConfigDraft.from($0) }
         locationConfigDraft = memory.locationConfig.map { LocationConfigDraft.from($0) }
+        reminderConfigDraft = memory.reminderConfig.map { ReminderConfigDraft.from($0) }
         // Load fixed content fields
         note = memory.note ?? ""
         checkItems = memory.checkItems.sorted(by: { $0.sortOrder < $1.sortOrder }).map { item in
@@ -609,5 +667,15 @@ private extension MemoryEditorViewModel {
                 isActive: true
             )
         }
+    }
+
+    var effectiveReminderDraft: ReminderConfigDraft? {
+        guard hasPrimaryTrigger else { return nil }
+        return reminderConfigDraft
+    }
+
+    func removeReminderIfPrimaryTriggerMissing() {
+        guard !hasPrimaryTrigger else { return }
+        reminderConfigDraft = nil
     }
 }

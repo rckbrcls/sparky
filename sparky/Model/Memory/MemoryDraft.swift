@@ -14,6 +14,7 @@ struct MemoryDraft: Identifiable, Hashable {
     var mindID: UUID?
     var scheduleConfig: ScheduleConfigDraft?
     var locationConfig: LocationConfigDraft?
+    var reminderConfig: ReminderConfigDraft?
     // Fixed content attributes (replacing dynamic contents array)
     var note: String?
     var checkItems: [CheckItemDraft]
@@ -34,6 +35,7 @@ struct MemoryDraft: Identifiable, Hashable {
          mindID: UUID? = nil,
          scheduleConfig: ScheduleConfigDraft? = nil,
          locationConfig: LocationConfigDraft? = nil,
+         reminderConfig: ReminderConfigDraft? = nil,
          note: String? = nil,
          checkItems: [CheckItemDraft] = [],
          photoAttachmentIDs: [UUID] = [],
@@ -51,6 +53,7 @@ struct MemoryDraft: Identifiable, Hashable {
         self.mindID = mindID
         self.scheduleConfig = scheduleConfig
         self.locationConfig = locationConfig
+        self.reminderConfig = reminderConfig
         self.note = note
         self.checkItems = checkItems
         self.photoAttachmentIDs = photoAttachmentIDs

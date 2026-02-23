@@ -7,12 +7,17 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct sparkyApp: App {
     @StateObject private var appEnvironment = AppEnvironment(dataController: DataController.shared)
     @StateObject private var themeManager = ThemeManager.shared
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        UNUserNotificationCenter.current().delegate = AppEnvironment.notificationDelegate
+    }
 
     var body: some Scene {
         WindowGroup {

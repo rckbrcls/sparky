@@ -36,6 +36,7 @@ final class DataController: Sendable {
             // New trigger config models
             ScheduleConfig.self,
             LocationConfig.self,
+            ReminderConfig.self,
             // Legacy trigger models (kept for migration)
             MemoryTriggerModel.self,
             MemoryTriggerLocation.self,

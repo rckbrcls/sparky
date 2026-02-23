@@ -152,6 +152,7 @@ struct ExportedTrigger: Codable, Identifiable {
     let isActive: Bool
     let isAllDay: Bool
     let location: ExportedLocationTrigger?
+    let reminder: ExportedReminderTrigger?
     let sequential: ExportedSequentialTrigger?
     let spacedStage: Int
     let lastReviewDate: Date?
@@ -168,6 +169,7 @@ struct ExportedTrigger: Codable, Identifiable {
         isActive: Bool = true,
         isAllDay: Bool = false,
         location: ExportedLocationTrigger? = nil,
+        reminder: ExportedReminderTrigger? = nil,
         sequential: ExportedSequentialTrigger? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
@@ -183,6 +185,7 @@ struct ExportedTrigger: Codable, Identifiable {
         self.isActive = isActive
         self.isAllDay = isAllDay
         self.location = location
+        self.reminder = reminder
         self.sequential = sequential
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
@@ -227,6 +230,30 @@ struct ExportedLocationTrigger: Codable {
         self.radius = radius
         self.name = name
         self.event = event
+    }
+}
+
+// MARK: - Exported Reminder Trigger
+
+struct ExportedReminderTrigger: Codable {
+    let intervalValue: Int
+    let intervalUnit: String
+    let repeatCount: Int?
+    let startedAt: Date?
+    let startedBy: String?
+
+    init(
+        intervalValue: Int,
+        intervalUnit: String,
+        repeatCount: Int? = nil,
+        startedAt: Date? = nil,
+        startedBy: String? = nil
+    ) {
+        self.intervalValue = intervalValue
+        self.intervalUnit = intervalUnit
+        self.repeatCount = repeatCount
+        self.startedAt = startedAt
+        self.startedBy = startedBy
     }
 }
 
@@ -330,6 +357,11 @@ extension Memory {
             triggers.append(config.toExportedTrigger())
         }
 
+        // Convert reminderConfig to ExportedTrigger
+        if let config = reminderConfig, config.isActive {
+            triggers.append(config.toExportedTrigger())
+        }
+
         return ExportedMemory(
             id: id,
             title: title,
@@ -366,6 +398,7 @@ extension ScheduleConfig {
             isActive: isActive,
             isAllDay: isAllDay,
             location: nil,
+            reminder: nil,
             sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,
@@ -392,6 +425,35 @@ extension LocationConfig {
                 radius: radius,
                 name: name,
                 event: event.rawValue
+            ),
+            reminder: nil,
+            sequential: nil,
+            spacedStage: 0,
+            lastReviewDate: nil,
+            ignoreCount: 0
+        )
+    }
+}
+
+extension ReminderConfig {
+    func toExportedTrigger() -> ExportedTrigger {
+        ExportedTrigger(
+            id: id,
+            type: "reminder",
+            fireDate: nil,
+            startDate: nil,
+            recurrenceRule: nil,
+            timeZoneIdentifier: nil,
+            weekdayMask: 0,
+            isActive: isActive,
+            isAllDay: false,
+            location: nil,
+            reminder: ExportedReminderTrigger(
+                intervalValue: intervalValue,
+                intervalUnit: intervalUnit.rawValue,
+                repeatCount: repeatCount,
+                startedAt: startedAt,
+                startedBy: startedBy?.rawValue
             ),
             sequential: nil,
             spacedStage: 0,
@@ -453,4 +515,3 @@ extension Mind {
         )
     }
 }
-

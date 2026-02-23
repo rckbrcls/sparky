@@ -180,6 +180,11 @@ struct MemoryCardView: View {
         return memory.scheduleConfig?.isActive == true ? memory.scheduleConfig : nil
     }
 
+    private var reminderTrigger: ReminderConfig? {
+        guard let memory = memory else { return nil }
+        return memory.reminderConfig?.isActive == true ? memory.reminderConfig : nil
+    }
+
     var body: some View {
         if let memory = memory {
             memoryContent(memory: memory)
@@ -206,6 +211,16 @@ struct MemoryCardView: View {
             if let locationConfig = locationTrigger {
                 MemoryCardLocationMapView(
                     location: locationConfig,
+                    isCompletedForDisplay: isCompletedForDisplay
+                )
+
+                Divider()
+            }
+
+            // Reminder policy
+            if let reminderConfig = reminderTrigger {
+                MemoryCardReminderView(
+                    reminder: reminderConfig,
                     isCompletedForDisplay: isCompletedForDisplay
                 )
 

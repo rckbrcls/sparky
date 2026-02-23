@@ -213,6 +213,7 @@ final class MemoryService: ObservableObject {
 
         let context = dataController.modelContext
         let now = Date()
+        let normalizedReminderDraft = normalizedReminderDraft(for: draft)
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
@@ -252,6 +253,9 @@ final class MemoryService: ObservableObject {
         if let locationDraft = draft.locationConfig {
             memory.locationConfig = locationDraft.toModel(memory: memory)
         }
+        if let reminderDraft = normalizedReminderDraft {
+            memory.reminderConfig = reminderDraft.toModel(memory: memory)
+        }
 
         memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
         memory.completionDateEntries = buildCompletionEntries(from: draft, memory: memory)
@@ -277,6 +281,12 @@ final class MemoryService: ObservableObject {
 
         let context = dataController.modelContext
         let now = Date()
+        let previousStatus = memory.status
+        var normalizedReminderDraft = normalizedReminderDraft(for: draft)
+        if previousStatus == .completed, draft.status == .active {
+            normalizedReminderDraft?.startedAt = nil
+            normalizedReminderDraft?.startedBy = nil
+        }
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
@@ -310,6 +320,10 @@ final class MemoryService: ObservableObject {
             memory.locationConfig = nil
             context.delete(oldLocation)
         }
+        if let oldReminder = memory.reminderConfig {
+            memory.reminderConfig = nil
+            context.delete(oldReminder)
+        }
 
         for attachment in previousAttachments {
             context.delete(attachment)
@@ -339,6 +353,9 @@ final class MemoryService: ObservableObject {
         }
         if let locationDraft = draft.locationConfig {
             memory.locationConfig = locationDraft.toModel(memory: memory)
+        }
+        if let reminderDraft = normalizedReminderDraft {
+            memory.reminderConfig = reminderDraft.toModel(memory: memory)
         }
 
         memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
@@ -391,6 +408,7 @@ final class MemoryService: ObservableObject {
             throw MemoryServiceError.memoryNotFound
         }
 
+        let previousStatus = memory.status
         let now = Date()
         memory.status = status
         memory.updatedAt = now
@@ -411,10 +429,48 @@ final class MemoryService: ObservableObject {
             }
         }
 
+        if previousStatus == .completed, status == .active {
+            memory.reminderConfig?.clearStart()
+        }
+
         dataController.save()
 
         if status == .completed, let coordinator = triggerExecutorCoordinator {
             await coordinator.unregisterAll(for: memoryID)
+        }
+
+        _ = await refresh(force: true)
+    }
+
+    func markPrimaryTriggerFired(
+        memoryID: UUID,
+        at date: Date,
+        source: ReminderStartSource
+    ) async {
+        guard let memory = memory(id: memoryID),
+              memory.status == .active,
+              memory.hasPrimaryTrigger,
+              let reminder = memory.reminderConfig,
+              reminder.isActive else {
+            return
+        }
+
+        let shouldUpdateStart: Bool
+        if let startedAt = reminder.startedAt {
+            shouldUpdateStart = date < startedAt
+        } else {
+            shouldUpdateStart = true
+        }
+
+        guard shouldUpdateStart else { return }
+
+        reminder.startedAt = date
+        reminder.startedBy = source
+        memory.updatedAt = Date()
+        dataController.save()
+
+        if let coordinator = triggerExecutorCoordinator {
+            await coordinator.sync(memory: memory)
         }
 
         _ = await refresh(force: true)
@@ -535,6 +591,7 @@ final class MemoryService: ObservableObject {
                 }
             } else if !allCompleted && memory.status == .completed {
                 memory.status = .active
+                memory.reminderConfig?.clearStart()
             }
         }
 
@@ -581,6 +638,18 @@ final class MemoryService: ObservableObject {
                     isActive: draft.isActive
                 )
             },
+            reminderConfig: source.reminderConfig.map {
+                let draft = ReminderConfigDraft.from($0)
+                return ReminderConfigDraft(
+                    id: UUID(),
+                    intervalValue: draft.intervalValue,
+                    intervalUnit: draft.intervalUnit,
+                    repeatCount: draft.repeatCount,
+                    isActive: draft.isActive,
+                    startedAt: nil,
+                    startedBy: nil
+                )
+            },
             note: source.note,
             checkItems: source.checkItems.map { item in
                 CheckItemDraft(
@@ -610,6 +679,17 @@ final class MemoryService: ObservableObject {
 // MARK: - Model cloning
 
 private extension MemoryService {
+    func normalizedReminderDraft(for draft: MemoryDraft) -> ReminderConfigDraft? {
+        guard let reminderDraft = draft.reminderConfig,
+              reminderDraft.isActive else {
+            return nil
+        }
+
+        let hasPrimaryTrigger = (draft.scheduleConfig?.isActive ?? false) || (draft.locationConfig?.isActive ?? false)
+        guard hasPrimaryTrigger else { return nil }
+        return reminderDraft
+    }
+
     func buildAttachmentReferences(from draft: MemoryDraft, memory: Memory) -> [MemoryAttachmentReference] {
         let createdAtLookup = Dictionary(uniqueKeysWithValues: draft.attachments.map { ($0.id, $0.createdAt) })
 

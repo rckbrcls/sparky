@@ -126,6 +126,7 @@ final class DataImportService {
                 // Convert triggers to config drafts
                 var scheduleDraft: ScheduleConfigDraft?
                 var locationDraft: LocationConfigDraft?
+                var reminderDraft: ReminderConfigDraft?
 
                 for exported in exportedMemory.triggers {
                     if exported.type == "scheduled" {
@@ -162,6 +163,16 @@ final class DataImportService {
                             event: event,
                             isActive: exported.isActive
                         )
+                    } else if exported.type == "reminder",
+                              let reminder = exported.reminder {
+                        reminderDraft = ReminderConfigDraft(
+                            intervalValue: max(1, reminder.intervalValue),
+                            intervalUnit: ReminderIntervalUnit(rawValue: reminder.intervalUnit) ?? .hours,
+                            repeatCount: reminder.repeatCount,
+                            isActive: exported.isActive,
+                            startedAt: reminder.startedAt,
+                            startedBy: reminder.startedBy.flatMap(ReminderStartSource.init(rawValue:))
+                        )
                     }
                 }
 
@@ -188,6 +199,7 @@ final class DataImportService {
                     mindID: newMindID,
                     scheduleConfig: scheduleDraft,
                     locationConfig: locationDraft,
+                    reminderConfig: reminderDraft,
                     note: exportedMemory.note,
                     checkItems: checkItems,
                     photoAttachmentIDs: [],

@@ -16,6 +16,7 @@ struct TriggersCard: View {
         VStack(alignment: .leading, spacing: 12) {
             scheduleSection
             locationSection
+            reminderSection
         }
     }
 
@@ -80,6 +81,36 @@ struct TriggersCard: View {
         }
     }
 
+    // MARK: - Reminder Section
+
+    @ViewBuilder
+    private var reminderSection: some View {
+        if isEditable || viewModel.hasReminderTrigger {
+            VStack(spacing: 0) {
+                if isEditable {
+                    triggerToggleHeader(
+                        title: "Reminder",
+                        icon: "bell.badge.fill",
+                        isOn: reminderToggleBinding
+                    )
+                    .disabled(!viewModel.hasPrimaryTrigger)
+                    .opacity(viewModel.hasPrimaryTrigger ? 1 : 0.5)
+                }
+
+                if viewModel.hasReminderTrigger {
+                    if isEditable {
+                        Divider().padding(.horizontal, 16)
+                    }
+                    ReminderTriggerInlineForm(
+                        viewModel: viewModel,
+                        isEditable: isEditable
+                    )
+                }
+            }
+            .cardStyle(cornerRadius: 24)
+        }
+    }
+
     // MARK: - Toggle Header
 
     private func triggerToggleHeader(title: String, icon: String, isOn: Binding<Bool>) -> some View {
@@ -131,6 +162,22 @@ struct TriggersCard: View {
         )
     }
 
+    private var reminderToggleBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.hasReminderTrigger },
+            set: { newValue in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    if newValue {
+                        guard viewModel.hasPrimaryTrigger else { return }
+                        createDefaultReminderTrigger()
+                    } else {
+                        viewModel.removeReminderConfig()
+                    }
+                }
+            }
+        )
+    }
+
     // MARK: - Helper Functions
 
     private func createDefaultScheduleTrigger() {
@@ -155,6 +202,15 @@ struct TriggersCard: View {
             longitude: fallback.longitude,
             radius: 200,
             event: .onEntry
+        )
+    }
+
+    private func createDefaultReminderTrigger() {
+        feedbackGenerator.impactOccurred()
+        viewModel.setReminderConfig(
+            intervalValue: 1,
+            intervalUnit: .hours,
+            repeatCount: nil
         )
     }
 }
@@ -503,6 +559,166 @@ private struct ScheduledTriggerInlineForm: View {
             }
         }
         return set
+    }
+}
+
+// MARK: - Reminder Trigger Inline Form
+
+private struct ReminderTriggerInlineForm: View {
+    @ObservedObject var viewModel: MemoryEditorViewModel
+    var isEditable: Bool
+
+    @State private var intervalValue: Int
+    @State private var intervalUnit: ReminderIntervalUnit
+    @State private var repeatMode: ReminderRepeatMode
+    @State private var repeatCount: Int
+
+    init(viewModel: MemoryEditorViewModel, isEditable: Bool) {
+        self.viewModel = viewModel
+        self.isEditable = isEditable
+
+        let config = viewModel.reminderConfig
+        let initialCount = config?.repeatCount ?? 3
+        _intervalValue = State(initialValue: config?.intervalValue ?? 1)
+        _intervalUnit = State(initialValue: config?.intervalUnit ?? .hours)
+        _repeatMode = State(initialValue: config?.repeatCount == nil ? .untilCompleted : .afterCount)
+        _repeatCount = State(initialValue: max(1, initialCount))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                inlineRow {
+                    Text("Every")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    HStack(spacing: 8) {
+                        Stepper(value: $intervalValue, in: 1...999) {
+                            Text("\(intervalValue)")
+                                .font(.body)
+                                .fontWeight(.semibold)
+                        }
+                        .fixedSize()
+
+                        Menu {
+                            ForEach(ReminderIntervalUnit.allCases) { unit in
+                                Button {
+                                    intervalUnit = unit
+                                } label: {
+                                    if intervalUnit == unit {
+                                        Label(unit.displayName, systemImage: "checkmark")
+                                    } else {
+                                        Text(unit.displayName)
+                                    }
+                                }
+                            }
+                        } label: {
+                            capsuleLabel(intervalUnit.unitLabel(for: intervalValue))
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(1)
+                        .tint(.primary)
+                    }
+                }
+
+                Divider()
+
+                inlineRow {
+                    Text("Ends")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Menu {
+                        ForEach(ReminderRepeatMode.allCases) { mode in
+                            Button {
+                                repeatMode = mode
+                            } label: {
+                                if repeatMode == mode {
+                                    Label(mode.label, systemImage: "checkmark")
+                                } else {
+                                    Text(mode.label)
+                                }
+                            }
+                        }
+                    } label: {
+                        capsuleLabel(repeatMode.label)
+                    }
+                    .tint(.primary)
+                }
+
+                if repeatMode == .afterCount {
+                    Divider()
+
+                    inlineRow {
+                        Stepper(value: $repeatCount, in: 1...999) {
+                            HStack(spacing: 4) {
+                                Text("After")
+                                    .foregroundStyle(.secondary)
+                                Text("\(repeatCount)")
+                                    .fontWeight(.semibold)
+                                Text(repeatCount == 1 ? "reminder" : "reminders")
+                            }
+                            .font(.body)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .disabled(!isEditable)
+        }
+        .onChange(of: intervalValue) { _, _ in applyChanges() }
+        .onChange(of: intervalUnit) { _, _ in applyChanges() }
+        .onChange(of: repeatMode) { _, _ in applyChanges() }
+        .onChange(of: repeatCount) { _, _ in applyChanges() }
+    }
+
+    @ViewBuilder
+    private func inlineRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack { content() }
+            .padding(.vertical, 10)
+    }
+
+    private func capsuleLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.body)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.Theme.elementBackground)
+            )
+    }
+
+    private func applyChanges() {
+        let resolvedRepeatCount = repeatMode == .afterCount ? repeatCount : nil
+        viewModel.setReminderConfig(
+            intervalValue: intervalValue,
+            intervalUnit: intervalUnit,
+            repeatCount: resolvedRepeatCount
+        )
+    }
+
+    private enum ReminderRepeatMode: String, CaseIterable, Identifiable {
+        case untilCompleted
+        case afterCount
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .untilCompleted: return "Until completed"
+            case .afterCount: return "After count"
+            }
+        }
     }
 }
 

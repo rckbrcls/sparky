@@ -598,73 +598,37 @@ struct MemoryEditorView: View {
 
                 titleSectionRow
 
+                if shouldShowNotesCard {
 
+                    notesCard
 
-                if isEditingEnabled || viewModel.hasAnyAttachment {
+                        .padding(.horizontal, 20)
 
-                    VStack(spacing: 0) {
+                }
 
-                        if isEditingEnabled {
+                if shouldShowChecklistCard {
 
-                            sectionToggleHeader(
+                    checklistCard
 
-                                title: "Media",
+                        .padding(.horizontal, 20)
 
-                                icon: "photo",
+                }
 
-                                isOn: mediaToggleBinding
+                if shouldShowMediaCard {
 
-                            )
+                    mediaCard
 
-                        }
+                        .padding(.horizontal, 20)
 
-                        if !isEditingEnabled || isMediaVisible {
+                }
 
-                            if isEditingEnabled {
+                if shouldShowTriggersCard {
 
-                                Divider().padding(.horizontal, 16)
+                    triggersCard
 
-                            }
+                        .padding(.horizontal, 20)
 
-                            MemoryEditorAttachmentsCard(
-
-                                viewModel: viewModel,
-
-                                isEditable: isEditingEnabled,
-
-                                onAddPhoto: { addPhotosFromLibraryFixed() },
-
-                                onAddCamera: { addPhotosFromCameraFixed() },
-
-                                onAddLink: {
-
-                                    pendingLinkContentID = nil
-
-                                    showAddLinkSheet = true
-
-                                },
-
-                                onAddAudio: { isShowingAudioRecorder = true },
-
-                                onAddFile: { beginFileImportFixed() },
-
-                                onAttachmentTap: { attachment in
-
-                                    handleAttachmentTap(attachment)
-
-                                }
-
-                            )
-
-                        }
-
-                    }
-
-                    .cardStyle(cornerRadius: 24)
-
-                    .padding(.horizontal, 20)
-
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                        .transition(.opacity.combined(with: .move(edge: .top)))
 
                 }
 
@@ -910,128 +874,215 @@ struct MemoryEditorView: View {
 
     private var titleSectionRow: some View {
 
-        VStack(alignment: .leading, spacing: 12) {
+        MemoryEditorTitleCard(
 
-            MemoryEditorTitleCard(
+            viewModel: viewModel,
 
-                viewModel: viewModel,
+            environment: environment,
 
-                environment: environment,
+            isTitleFocused: $isTitleFocused,
 
-                isTitleFocused: $isTitleFocused,
+            isEditingEnabled: isEditingEnabled
 
-                isEditingEnabled: isEditingEnabled
-
-            )
-
-            if isEditingEnabled || !viewModel.note.isEmpty {
-
-                VStack(spacing: 0) {
-
-                    if isEditingEnabled {
-
-                        sectionToggleHeader(
-
-                            title: "Notes",
-
-                            icon: "note.text",
-
-                            isOn: notesToggleBinding
-
-                        )
-
-                    }
-
-                    if !isEditingEnabled || isNotesVisible {
-
-                        if isEditingEnabled {
-
-                            Divider().padding(.horizontal, 16)
-
-                        }
-
-                        MemoryEditorNotesCard(
-
-                            viewModel: viewModel,
-
-                            isEditingEnabled: isEditingEnabled
-
-                        )
-
-                    }
-
-                }
-
-                .cardStyle(cornerRadius: 24)
-
-                .transition(.opacity.combined(with: .move(edge: .top)))
-
-            }
-
-            if isEditingEnabled || !viewModel.checkItems.isEmpty {
-
-                VStack(spacing: 0) {
-
-                    if isEditingEnabled {
-
-                        sectionToggleHeader(
-
-                            title: "Checklist",
-
-                            icon: "checklist",
-
-                            isOn: checklistToggleBinding
-
-                        )
-
-                    }
-
-                    if !isEditingEnabled || isChecklistVisible {
-
-                        if isEditingEnabled {
-
-                            Divider().padding(.horizontal, 16)
-
-                        }
-
-                        MemoryEditorChecklistCard(
-
-                            viewModel: viewModel,
-
-                            isEditingEnabled: isEditingEnabled,
-
-                            focusedDraftID: $focusedDraftID
-
-                        )
-
-                    }
-
-                }
-
-                .cardStyle(cornerRadius: 24)
-
-                .transition(.opacity.combined(with: .move(edge: .top)))
-
-            }
-
-
-            if isEditingEnabled || viewModel.hasAnyTrigger {
-
-                triggersCard
-
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-
-            }
-            
-
-
-        }
+        )
 
         .padding(.horizontal, 20)
 
         .padding(.top, 20)
 
-        .animation(.easeInOut(duration: 0.3), value: viewModel.hasAnyTrigger)
+    }
+
+
+
+    private var shouldShowNotesCard: Bool {
+
+        isEditingEnabled || !viewModel.note.isEmpty
+
+    }
+
+
+
+    private var shouldShowChecklistCard: Bool {
+
+        isEditingEnabled || !viewModel.checkItems.isEmpty
+
+    }
+
+
+
+    private var shouldShowMediaCard: Bool {
+
+        isEditingEnabled || viewModel.hasAnyAttachment
+
+    }
+
+
+
+    private var shouldShowTriggersCard: Bool {
+
+        isEditingEnabled || viewModel.hasAnyTrigger
+
+    }
+
+
+
+    private var notesCard: some View {
+
+        VStack(spacing: 0) {
+
+            if isEditingEnabled {
+
+                sectionToggleHeader(
+
+                    title: "Notes",
+
+                    icon: "note.text",
+
+                    isOn: notesToggleBinding
+
+                )
+
+            }
+
+            if !isEditingEnabled || isNotesVisible {
+
+                if isEditingEnabled {
+
+                    Divider().padding(.horizontal, 16)
+
+                }
+
+                MemoryEditorNotesCard(
+
+                    viewModel: viewModel,
+
+                    isEditingEnabled: isEditingEnabled
+
+                )
+
+            }
+
+        }
+
+        .cardStyle(cornerRadius: 24)
+
+        .transition(.opacity.combined(with: .move(edge: .top)))
+
+    }
+
+
+
+    private var checklistCard: some View {
+
+        VStack(spacing: 0) {
+
+            if isEditingEnabled {
+
+                sectionToggleHeader(
+
+                    title: "Checklist",
+
+                    icon: "checklist",
+
+                    isOn: checklistToggleBinding
+
+                )
+
+            }
+
+            if !isEditingEnabled || isChecklistVisible {
+
+                if isEditingEnabled {
+
+                    Divider().padding(.horizontal, 16)
+
+                }
+
+                MemoryEditorChecklistCard(
+
+                    viewModel: viewModel,
+
+                    isEditingEnabled: isEditingEnabled,
+
+                    focusedDraftID: $focusedDraftID
+
+                )
+
+            }
+
+        }
+
+        .cardStyle(cornerRadius: 24)
+
+        .transition(.opacity.combined(with: .move(edge: .top)))
+
+    }
+
+
+
+    private var mediaCard: some View {
+
+        VStack(spacing: 0) {
+
+            if isEditingEnabled {
+
+                sectionToggleHeader(
+
+                    title: "Media",
+
+                    icon: "photo",
+
+                    isOn: mediaToggleBinding
+
+                )
+
+            }
+
+            if !isEditingEnabled || isMediaVisible {
+
+                if isEditingEnabled {
+
+                    Divider().padding(.horizontal, 16)
+
+                }
+
+                MemoryEditorAttachmentsCard(
+
+                    viewModel: viewModel,
+
+                    isEditable: isEditingEnabled,
+
+                    onAddPhoto: { addPhotosFromLibraryFixed() },
+
+                    onAddCamera: { addPhotosFromCameraFixed() },
+
+                    onAddLink: {
+
+                        pendingLinkContentID = nil
+
+                        showAddLinkSheet = true
+
+                    },
+
+                    onAddAudio: { isShowingAudioRecorder = true },
+
+                    onAddFile: { beginFileImportFixed() },
+
+                    onAttachmentTap: { attachment in
+
+                        handleAttachmentTap(attachment)
+
+                    }
+
+                )
+
+            }
+
+        }
+
+        .cardStyle(cornerRadius: 24)
+
+        .transition(.opacity.combined(with: .move(edge: .top)))
 
     }
 
