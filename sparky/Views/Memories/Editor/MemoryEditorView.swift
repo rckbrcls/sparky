@@ -888,8 +888,6 @@ struct MemoryEditorView: View {
 
                     }
 
-                    Spacer()
-
                 }
 
             }

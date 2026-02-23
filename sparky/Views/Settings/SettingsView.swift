@@ -171,7 +171,7 @@ private struct AppIconSettingsView: View {
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 16)
                                             .stroke(
-                                                appIconManager.currentIcon == icon ? Color.accentColor : Color.Theme.border,
+                                                appIconManager.currentIcon == icon ? Color.blue : Color.Theme.border,
                                                 lineWidth: appIconManager.currentIcon == icon ? 3 : 1
                                             )
                                     )

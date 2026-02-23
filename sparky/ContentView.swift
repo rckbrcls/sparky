@@ -47,6 +47,7 @@ struct ContentView: View {
     @State private var quickMemoryRequest: QuickMemoryRequest?
     @State private var longPressTimer: Timer?
     @State private var hasTriggeredLongPress = false
+    @State private var unavailableMemoryAlertMessage: String?
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     init(environment: AppEnvironment) {
@@ -120,6 +121,12 @@ struct ContentView: View {
                     mode: .create(mind: mind, template: template),
                     initialTitle: route.initialTitle
                 )
+            case let .preview(memory):
+                MemoryEditorView(
+                    environment: environment,
+                    mode: .edit(memory: memory),
+                    startEditing: false
+                )
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,
@@ -192,6 +199,7 @@ struct ContentView: View {
         .onAppear {
             UITabBar.appearance().isHidden = true
             showingOnboarding = !environment.hasCompletedOnboarding
+            tryConsumePendingMemoryOpenRequest()
         }
         .onChange(of: environment.hasCompletedOnboarding) { _, completed in
             guard completed else { return }
@@ -199,17 +207,35 @@ struct ContentView: View {
                 showingOnboarding = false
             }
         }
-        .onChange(of: environment.pendingDeepLinkMemoryID) { _, memoryID in
-            guard let memoryID,
-                  let memory = environment.memoryService.memory(id: memoryID) else { return }
-            environment.pendingDeepLinkMemoryID = nil
-            editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+        .onChange(of: environment.pendingMemoryOpenRequest) { _, _ in
+            tryConsumePendingMemoryOpenRequest()
+        }
+        .onChange(of: hasBlockingPresentation) { _, _ in
+            tryConsumePendingMemoryOpenRequest()
+        }
+        .onChange(of: environment.hasBootstrapped) { _, _ in
+            tryConsumePendingMemoryOpenRequest()
+        }
+        .onReceive(environment.memoryService.$lastRefreshed) { _ in
+            tryConsumePendingMemoryOpenRequest()
         }
         .onChange(of: activeTab) { _, newTab in
             // Clear context when switching away from mind tab
             if newTab != .mind {
                 currentMindContext = nil
             }
+        }
+        .alert("Memory unavailable", isPresented: Binding(
+            get: { unavailableMemoryAlertMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    unavailableMemoryAlertMessage = nil
+                }
+            }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(unavailableMemoryAlertMessage ?? "")
         }
         .onDisappear {
             // Limpa o timer quando a view desaparece
@@ -374,6 +400,28 @@ struct ContentView: View {
         }
     }
 
+    private var hasBlockingPresentation: Bool {
+        showingOnboarding
+            || mindComposerRequest != nil
+            || quickMemoryRequest != nil
+            || editorRoute != nil
+    }
+
+    private func tryConsumePendingMemoryOpenRequest() {
+        guard let request = environment.pendingMemoryOpenRequest else { return }
+        guard !hasBlockingPresentation else { return }
+
+        if let memory = environment.memoryService.memory(id: request.memoryID) {
+            environment.pendingMemoryOpenRequest = nil
+            editorRoute = MemoryEditorRoute(mode: .preview(memory: memory))
+            return
+        }
+
+        guard environment.hasBootstrapped else { return }
+        environment.pendingMemoryOpenRequest = nil
+        unavailableMemoryAlertMessage = "This memory is no longer available."
+    }
+
     private func targetMindForCreation() -> Mind? {
         guard activeTab == .mind else { return nil }
         if let context = currentMindContext {
@@ -386,6 +434,7 @@ struct ContentView: View {
 private struct MemoryEditorRoute: Identifiable {
     enum Mode {
         case create(mind: Mind?, template: MemoryEditorTemplate)
+        case preview(memory: Memory)
         case edit(memory: Memory)
     }
 

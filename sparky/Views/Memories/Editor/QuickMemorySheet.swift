@@ -68,6 +68,8 @@ struct QuickMemorySheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var mindService: MindService
 
+    @AppStorage("quickMemory.lastReminderMinutes") private var lastReminderMinutes: Int = -1
+
     let environment: AppEnvironment
     let mind: Mind?
     let onExpandToEditor: (Mind?, String) -> Void
@@ -107,6 +109,15 @@ struct QuickMemorySheet: View {
             return font
         }
         return .systemFont(ofSize: 20, weight: .regular)
+    }
+
+    private func setReminderSelection(_ minutes: Int?) {
+        selectedReminderMinutes = minutes
+        lastReminderMinutes = minutes ?? -1
+    }
+
+    private func loadPersistedReminderSelection() {
+        selectedReminderMinutes = lastReminderMinutes > 0 ? lastReminderMinutes : nil
     }
 
     var body: some View {
@@ -160,6 +171,7 @@ struct QuickMemorySheet: View {
             } else {
                 selectedMindID = mind?.id
             }
+            loadPersistedReminderSelection()
         }
     }
 
@@ -185,7 +197,7 @@ struct QuickMemorySheet: View {
     private var reminderMenu: some View {
         Menu {
             Button {
-                selectedReminderMinutes = nil
+                setReminderSelection(nil)
             } label: {
                 if selectedReminderMinutes == nil {
                     Label("No Reminder", systemImage: "checkmark")
@@ -199,7 +211,7 @@ struct QuickMemorySheet: View {
             // Quick minute options
             ForEach([5, 10, 15, 30, 60], id: \.self) { minutes in
                 Button {
-                    selectedReminderMinutes = minutes
+                    setReminderSelection(minutes)
                 } label: {
                     let isSelected = selectedReminderMinutes == minutes
                     let displayText = "in \(minutes) min"

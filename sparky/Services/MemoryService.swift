@@ -199,7 +199,6 @@ final class MemoryService: ObservableObject {
 
     func scheduledMemories() -> [Memory] {
         memories.filter { memory in
-            guard memory.status == .active else { return false }
             return memory.scheduleConfig?.isActive == true
         }
     }

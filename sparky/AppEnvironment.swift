@@ -10,6 +10,16 @@ import SwiftUI
 import Combine
 import UserNotifications
 
+struct PendingMemoryOpenRequest: Identifiable, Equatable {
+    enum Source: String {
+        case notification
+    }
+
+    let id = UUID()
+    let memoryID: UUID
+    let source: Source
+}
+
 @MainActor
 final class AppEnvironment: ObservableObject {
     let dataController: DataController
@@ -30,7 +40,7 @@ final class AppEnvironment: ObservableObject {
     @Published var isBootstrapping = true
     @Published var hasBootstrapped = false
     @Published var hasCompletedOnboarding = false
-    @Published var pendingDeepLinkMemoryID: UUID?
+    @Published var pendingMemoryOpenRequest: PendingMemoryOpenRequest?
 
     private var cancellables: Set<AnyCancellable> = []
     private let notificationDelegate = ForegroundNotificationDelegate()
@@ -54,7 +64,10 @@ final class AppEnvironment: ObservableObject {
         // Allow notifications to appear even when the app is in the foreground.
         // The delegate is retained by this class; UNUserNotificationCenter holds an unowned ref.
         notificationDelegate.onMemoryTapped = { [weak self] memoryID in
-            self?.pendingDeepLinkMemoryID = memoryID
+            self?.pendingMemoryOpenRequest = PendingMemoryOpenRequest(
+                memoryID: memoryID,
+                source: .notification
+            )
         }
         UNUserNotificationCenter.current().delegate = notificationDelegate
 
@@ -114,6 +127,7 @@ private final class ForegroundNotificationDelegate: NSObject, UNUserNotification
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
         let userInfo = response.notification.request.content.userInfo
         guard let idString = userInfo["memoryID"] as? String,
               let memoryID = UUID(uuidString: idString) else { return }
