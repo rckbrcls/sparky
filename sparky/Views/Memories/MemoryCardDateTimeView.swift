@@ -57,7 +57,7 @@ struct MemoryCardDateTimeView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 6) {
             // Calendar icon
             Image(systemName: "calendar")
                 .font(.caption)

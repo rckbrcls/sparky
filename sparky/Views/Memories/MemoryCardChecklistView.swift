@@ -100,7 +100,7 @@ struct MemoryCardChecklistView: View {
                             }
                         }
                     }
-                    .frame(maxWidth: 80, maxHeight: 4)
+                    .frame(maxWidth: .infinity, maxHeight: 4)
 
                     Spacer()
                 }

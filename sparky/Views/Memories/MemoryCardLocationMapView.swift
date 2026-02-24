@@ -19,7 +19,7 @@ struct MemoryCardLocationMapView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 6) {
             Image(systemName: "location.fill")
                 .font(.caption)
                 .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)

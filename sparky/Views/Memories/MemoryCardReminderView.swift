@@ -23,7 +23,7 @@ struct MemoryCardReminderView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 6) {
             Image(systemName: "bell.badge.fill")
                 .font(.caption)
                 .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
