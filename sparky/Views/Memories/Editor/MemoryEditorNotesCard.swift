@@ -25,7 +25,7 @@ struct MemoryEditorNotesCard: View {
 
             Spacer(minLength: 0)
         }
-        .frame(minHeight: 120, alignment: .top)
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }

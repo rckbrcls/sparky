@@ -28,6 +28,7 @@ struct MindSectionHeaderButton: View {
                     .font(.caption2)
                     .fontWeight(.semibold)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .animation(.easeInOut(duration: 0.2), value: isExpanded)
             }
             .foregroundStyle(Color.Theme.accentForeground)
             .padding(6)

@@ -82,7 +82,7 @@ struct MindMindsSection: View {
     let childMinds: [Mind]
     let isExpanded: Bool
     let mindService: MindService
-    let activeMemoryCountProvider: (Mind) -> Int
+    let activeMemoryCounts: [Mind.ID: Int]
     let onEditMind: ((Mind) -> Void)?
     let onToggleExpanded: () -> Void
 
@@ -111,7 +111,7 @@ struct MindMindsSection: View {
                             MindGridItemView(
                                 mind: childMind,
                                 count: childMind.children?.count ?? 0,
-                                activeCount: activeMemoryCountProvider(childMind),
+                                activeCount: activeMemoryCounts[childMind.id, default: 0],
                                 mindService: mindService,
                                 onEdit: onEditMind
                             )

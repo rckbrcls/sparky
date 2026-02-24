@@ -282,8 +282,9 @@ final class MemoryService: ObservableObject {
         let context = dataController.modelContext
         let now = Date()
         let previousStatus = memory.status
+        let primaryTriggerChanged = hasPrimaryTriggerChanged(previous: memory, draft: draft)
         var normalizedReminderDraft = normalizedReminderDraft(for: draft)
-        if previousStatus == .completed, draft.status == .active {
+        if (previousStatus == .completed && draft.status == .active) || primaryTriggerChanged {
             normalizedReminderDraft?.startedAt = nil
             normalizedReminderDraft?.startedBy = nil
         }
@@ -679,6 +680,45 @@ final class MemoryService: ObservableObject {
 // MARK: - Model cloning
 
 private extension MemoryService {
+    func hasPrimaryTriggerChanged(previous: Memory, draft: MemoryDraft) -> Bool {
+        let sameSchedule = isSameScheduleTrigger(previous: previous.scheduleConfig, next: draft.scheduleConfig)
+        let sameLocation = isSameLocationTrigger(previous: previous.locationConfig, next: draft.locationConfig)
+        return !sameSchedule || !sameLocation
+    }
+
+    func isSameScheduleTrigger(previous: ScheduleConfig?, next: ScheduleConfigDraft?) -> Bool {
+        switch (previous, next) {
+        case (nil, nil):
+            return true
+        case let (previous?, next?):
+            return previous.isActive == next.isActive
+                && previous.fireDate == next.fireDate
+                && previous.startDate == next.startDate
+                && previous.recurrenceRule == next.recurrenceRule
+                && previous.weekdayMask == next.weekdayMask
+                && previous.isAllDay == next.isAllDay
+                && previous.recurrenceEndType == next.recurrenceEndType
+                && previous.timeZoneIdentifier == next.timeZoneIdentifier
+        default:
+            return false
+        }
+    }
+
+    func isSameLocationTrigger(previous: LocationConfig?, next: LocationConfigDraft?) -> Bool {
+        switch (previous, next) {
+        case (nil, nil):
+            return true
+        case let (previous?, next?):
+            return previous.isActive == next.isActive
+                && previous.latitude == next.latitude
+                && previous.longitude == next.longitude
+                && previous.radius == next.radius
+                && previous.event == next.event
+        default:
+            return false
+        }
+    }
+
     func normalizedReminderDraft(for draft: MemoryDraft) -> ReminderConfigDraft? {
         guard let reminderDraft = draft.reminderConfig,
               reminderDraft.isActive else {

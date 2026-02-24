@@ -27,6 +27,7 @@ struct MindDetailView: View {
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
     @State private var expandedSections: Set<MindSectionType> = Set(MindSectionType.allCases.filter { $0 != .complete })
+    private let animatedMindsSectionItemLimit = 20
     enum TriggerFilter: String, CaseIterable, Identifiable {
         case scheduled
         case location
@@ -177,7 +178,11 @@ struct MindDetailView: View {
     }
 
     private var baseView: some View {
-        ScrollView {
+        let isMindsSectionExpanded = expandedSections.contains(.minds)
+        let activeMemoryCountsByMindID = isMindsSectionExpanded ? makeActiveMemoryCountsByMindID() : [:]
+        let shouldAnimateMindsSection = childMinds.count <= animatedMindsSectionItemLimit
+
+        return ScrollView {
             VStack(spacing: 0) {
                 Text(resolvedMind.name)
                     .appLargeTitleStyle()
@@ -190,20 +195,14 @@ struct MindDetailView: View {
                         if !childMinds.isEmpty {
                             MindMindsSection(
                                 childMinds: childMinds,
-                                isExpanded: expandedSections.contains(.minds),
+                                isExpanded: isMindsSectionExpanded,
                                 mindService: mindService,
-                                activeMemoryCountProvider: activeMemoryCount,
+                                activeMemoryCounts: activeMemoryCountsByMindID,
                                 onEditMind: { mind in
                                     mindComposerPresentation = .edit(mind)
                                 },
                                 onToggleExpanded: {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        if expandedSections.contains(.minds) {
-                                            expandedSections.remove(.minds)
-                                        } else {
-                                            expandedSections.insert(.minds)
-                                        }
-                                    }
+                                    toggleSection(.minds, animated: shouldAnimateMindsSection)
                                 }
                             )
                         }
@@ -219,13 +218,7 @@ struct MindDetailView: View {
                             onEditMemory: onEditMemory,
                             onToggleSelection: toggleMemorySelection,
                             onToggleExpanded: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    if expandedSections.contains(.pinned) {
-                                        expandedSections.remove(.pinned)
-                                    } else {
-                                        expandedSections.insert(.pinned)
-                                    }
-                                }
+                                toggleSection(.pinned)
                             }
                         )
 
@@ -240,13 +233,7 @@ struct MindDetailView: View {
                             onEditMemory: onEditMemory,
                             onToggleSelection: toggleMemorySelection,
                             onToggleExpanded: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    if expandedSections.contains(.active) {
-                                        expandedSections.remove(.active)
-                                    } else {
-                                        expandedSections.insert(.active)
-                                    }
-                                }
+                                toggleSection(.active)
                             }
                         )
 
@@ -261,13 +248,7 @@ struct MindDetailView: View {
                             onEditMemory: onEditMemory,
                             onToggleSelection: toggleMemorySelection,
                             onToggleExpanded: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    if expandedSections.contains(.complete) {
-                                        expandedSections.remove(.complete)
-                                    } else {
-                                        expandedSections.insert(.complete)
-                                    }
-                                }
+                                toggleSection(.complete)
                             }
                         )
                     }
@@ -408,21 +389,39 @@ struct MindDetailView: View {
         .navigationBarBackButtonHidden(true)
     }
 
-    private func activeMemoryCount(_ mind: Mind) -> Int {
-        let memories: [Memory]
-        if mind.isAllMinds {
-            memories = memoryService.memories
-        } else if mind.isLimbo {
-            memories = memoryService.memories.filter { $0.mind == nil }
-        } else {
-            let descendantIDs = mind.allDescendantIDs
-            memories = memoryService.memories.filter { memory in
-                guard let mindID = memory.mind?.id else { return false }
-                return descendantIDs.contains(mindID)
+    private func toggleSection(_ section: MindSectionType, animated: Bool = true) {
+        let toggleAction = {
+            if expandedSections.contains(section) {
+                expandedSections.remove(section)
+            } else {
+                expandedSections.insert(section)
             }
         }
 
-        return memories.filter { $0.status == .active }.count
+        if animated {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                toggleAction()
+            }
+        } else {
+            toggleAction()
+        }
+    }
+
+    private func makeActiveMemoryCountsByMindID() -> [Mind.ID: Int] {
+        var counts: [Mind.ID: Int] = [:]
+
+        for memory in memoryService.memories where memory.status == .active {
+            guard var currentMind = memory.mind else { continue }
+            var visitedMindIDs: Set<Mind.ID> = []
+
+            while visitedMindIDs.insert(currentMind.id).inserted {
+                counts[currentMind.id, default: 0] += 1
+                guard let parentMind = currentMind.parent else { break }
+                currentMind = parentMind
+            }
+        }
+
+        return counts
     }
 
     private func isTriggerTypeActive(_ type: TriggerFilter) -> Bool {
