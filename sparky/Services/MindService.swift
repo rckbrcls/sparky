@@ -124,7 +124,7 @@ final class MindService: ObservableObject {
             return minds
         }
     }
-    
+
     @discardableResult
     func refreshTags(force: Bool) async -> [Tag] {
         if !force,
@@ -231,7 +231,7 @@ final class MindService: ObservableObject {
         }
 
         let context = dataController.modelContext
-        
+
         func recursivelyDelete(mind: Mind) {
             if let children = mind.children {
                 for child in children {
@@ -240,14 +240,14 @@ final class MindService: ObservableObject {
             }
             context.delete(mind)
         }
-        
+
         recursivelyDelete(mind: mind)
-        
+
         dataController.save()
 
         _ = await refresh(force: true)
     }
-    
+
     // MARK: - Tag Operations
 
     func createTag(name: String, colorHex: String?) async throws -> Tag {
@@ -292,7 +292,7 @@ final class MindService: ObservableObject {
         descriptor.fetchLimit = 1
         return try context.fetch(descriptor).first
     }
-    
+
     func fetchTag(by id: UUID, context: ModelContext) throws -> Tag? {
         var descriptor = FetchDescriptor<Tag>(
             predicate: #Predicate { $0.id == id }

@@ -129,7 +129,7 @@ struct MindComposerView: View {
 
                     MindAutoFocusTextField(
                         text: $name,
-                        placeholder: "Mind name",
+                        placeholder: "Mind",
                         font: titleFont,
                         onSubmit: {
                             guard canSave else { return }
