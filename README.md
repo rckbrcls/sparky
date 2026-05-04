@@ -1,84 +1,158 @@
 # Sparky
 
-> **Status:** Active
-> This project is currently maintained as a native iOS second-brain app.
+> Status: Active native iOS app.
 
-Native iOS second-brain app for memories, reminders, tasks, attachments, timeline planning, and contextual triggers. Sparky is built around private local organization with SwiftUI, SwiftData, services, and trigger executors.
+Sparky is a local-first iOS app for capturing memories, reminders, tasks, notes, links, audio, files, and location-aware prompts. It is designed as a private second brain: the user's content is stored on device, organized into hierarchical areas called Minds, and surfaced through calendar, timeline, search, filters, notifications, and geofence triggers.
 
-## Summary
+The repository is a single Xcode project. It is not a backend, web app, CLI, monorepo, Swift package, or multi-service system.
 
-- Native iOS second-brain app for local memories, reminders, tasks, attachments, timeline planning, and contextual triggers.
-- Solves private personal organization without accounts, cloud dependency, or tracking.
-- Main stack: SwiftUI, SwiftData, MVVM, services, trigger executors, local import/export, and native iOS project tests.
-- Current status: active native app with App Store metadata and dedicated screenshot placeholders.
-- Technical value: demonstrates local-first persistence, trigger synchronization, attachment storage, and a clear domain model around `Memory`, `Mind`, `Tag`, and triggers.
+## What Sparky Solves
 
-## Overview
+Sparky gives users a private place to capture things they do not want to forget and connect them to time, place, context, and supporting material.
 
-Sparky is an iOS app for capturing and organizing things the user does not want to forget: ideas, tasks, reminders, checklists, notes, links, photos, files, and recurring plans. It combines a memory system with hierarchical minds and trigger-based reminders.
+Core goals:
 
-## Motivation
+- Capture memories quickly without requiring an account or custom backend.
+- Organize memories into Minds, tags, calendar views, and filters.
+- Support actionable memories through checklists, completion state, reminders, and recurring schedules.
+- Attach local material such as photos, audio recordings, files, and links.
+- Keep import, export, and privacy concerns visible in the product and codebase.
 
-- Give users a fast private place to capture memories and tasks.
-- Organize memories inside minds, tags, and timeline views.
-- Support scheduled and location-based reminders.
-- Store rich attachments locally.
-- Keep the product useful without accounts, cloud dependency, or tracking.
-- Make import/export and local persistence first-class concerns.
+## Main Features
 
-## Features
+- Memories: title, note/body, status, pinning, due date, checklist items, attachments, completion history, and trigger configuration.
+- Minds: hierarchical organization units with color, icon, sort order, default mind support, and virtual All/Limbo views.
+- Tags: lightweight classification records with display colors.
+- Timeline and calendar: calendar, day, month, and period views for browsing memories over time.
+- Scheduled triggers: one-time, recurring, weekday-mask, all-day, and interval-based notification scheduling.
+- Location triggers: geofence-based reminders for arrival or departure from a selected place.
+- Follow-up reminders: repeated reminders that start after a primary schedule or location trigger.
+- Attachments: photos, links, audio recordings, and files stored in the app's local Application Support area.
+- Import/export: JSON backup/restore through `SparkyExportFormat` version `1.0`, plus iCalendar export for scheduled memories.
+- Settings: theme selection, app icon selection, data management, attachment cache clearing, onboarding reset, and app info.
+- Onboarding: guided permission setup for notifications, location, microphone, and camera.
 
-- `Memory`: the core item, with title, body, status, checklist, attachments, completion history, and trigger configuration.
-- `Mind`: a hierarchical organization unit for contexts, projects, or areas of life.
-- `Tag`: lightweight cross-cutting classification.
-- `ScheduleConfig`: one-time or recurring scheduled reminder setup.
-- `LocationConfig`: geofence-style reminder setup.
-- `Attachment`: reference to local files managed by the attachment store.
+## Technology Stack
+
+| Area | Technology |
+| --- | --- |
+| App platform | Native iOS |
+| UI | SwiftUI |
+| Persistence | SwiftData |
+| State and reactivity | `ObservableObject`, `@Published`, Combine, async/await |
+| Notifications | UserNotifications |
+| Location | CoreLocation, MapKit |
+| Attachments | FileManager, PhotosUI, AVFoundation, UniformTypeIdentifiers |
+| Link previews | LinkPresentation |
+| Testing | Swift Testing for unit tests, XCTest for generated UI tests |
+| Project system | Xcode project (`sparky.xcodeproj`) |
+
+No package manager files, Docker configuration, Makefile, CI workflow, backend service, or server deployment configuration were identified in the current repository.
+
+## Architecture Overview
+
+Sparky follows an MVVM + Services + Executors structure with `AppEnvironment` as the dependency container.
+
+- `sparky/sparkyApp.swift` creates `AppEnvironment`, injects the SwiftData model container, wires the theme manager, and bootstraps the app.
+- `sparky/AppEnvironment.swift` owns long-lived services and trigger executors.
+- `sparky/Data/DataController.swift` configures SwiftData, owns the main `ModelContext`, seeds preview data, and runs the trigger migration.
+- `sparky/Services/MemoryService.swift` owns memory CRUD, filtering, refresh, attachment replacement, and trigger synchronization.
+- `sparky/Services/MindService.swift` owns Minds and Tags.
+- `sparky/Executors/TriggerExecutorCoordinator.swift` coordinates scheduled, location, and follow-up reminder executors.
+- `sparky/Managers/MemoryAttachmentStore.swift` stores attachment payloads outside SwiftData.
+- `sparky/ViewModels/MemoryEditorViewModel.swift` bridges editor state, drafts, persisted models, and trigger configuration.
+- `sparky/Views/` contains the Calendar, Mind, Me/Settings, onboarding, memory editor, map, and shared UI surfaces.
+
+See [`docs/architecture.md`](docs/architecture.md) for the full technical walkthrough.
 
 ## Project Structure
 
 ```text
 sparky/
-├── sparky/
-│   ├── AppEnvironment.swift        # Dependency container and bootstrap owner
-│   ├── ContentView.swift           # Root navigation shell
-│   ├── Data/                       # SwiftData stack and migrations
-│   ├── Executors/                  # Scheduled and location trigger executors
-│   ├── Model/                      # SwiftData models and draft/value types
-│   ├── Services/                   # Memory, mind, import/export, bulk action services
-│   ├── Settings/                   # UserDefaults-backed settings
-│   ├── Managers/                   # Theme, app icon, attachment store
-│   ├── ViewModels/                 # Editor and screen view models
-│   ├── Views/                      # Memories, minds, onboarding, settings, shared UI
-│   └── sparkyApp.swift
-├── sparky.xcodeproj
-├── sparkyTests/
-├── sparkyUITests/
-├── AppStoreMetadata.md
-└── CLAUDE.md
+├── sparky.xcodeproj/              # Xcode project with app, unit test, and UI test targets
+├── sparky/                        # Native iOS app source
+│   ├── sparkyApp.swift            # App entry point
+│   ├── AppEnvironment.swift       # Dependency container and bootstrap owner
+│   ├── ContentView.swift          # Root tab/navigation shell
+│   ├── Data/                      # SwiftData container and migration logic
+│   ├── Executors/                 # Notification, location, and reminder execution
+│   ├── Managers/                  # Theme, app icon, and attachment file storage
+│   ├── Model/                     # SwiftData models, drafts, triggers, recurrence, export types
+│   ├── Services/                  # Memory, mind, import/export, and bulk action services
+│   ├── Settings/                  # UserDefaults-backed app settings
+│   ├── Utilities/                 # Small helpers and extensions
+│   ├── ViewModels/                # Screen/editor view models
+│   └── Views/                     # SwiftUI screens and reusable UI
+├── sparkyTests/                   # Swift Testing unit tests
+├── sparkyUITests/                 # XCTest UI test targets generated by Xcode
+├── docs/                          # Project documentation
+├── screenshots/                   # Screenshot checklist and future visual assets
+├── AppStoreMetadata.md            # App Store copy and submission notes
+└── CLAUDE.md                      # Agent-focused technical guide
 ```
 
-## Architecture
+## Requirements
 
-Sparky follows an MVVM + Services + Executors shape:
+- macOS with Xcode installed.
+- Xcode/iOS SDK capable of targeting iOS `26.0`, as configured in the project.
+- An iOS simulator or physical iOS device for local development.
+- Apple Developer signing setup for archive, TestFlight, or App Store submission.
 
-- `AppEnvironment` owns long-lived services and bootstraps data.
-- `DataController` manages SwiftData persistence.
-- `MemoryService` owns memory CRUD, attachment loading, and trigger synchronization.
-- `MindService` owns minds and tags.
-- `TriggerExecutorCoordinator` coordinates scheduled and location executors.
-- `MemoryAttachmentStore` manages local attachment files.
-- `SettingsStore` persists app preferences.
+No project-specific environment variables were identified.
 
-The app currently has a dual trigger system while migrating from legacy array-based triggers to dedicated schedule/location config models.
+## Local Development
+
+Open the project in Xcode:
+
+```text
+sparky/sparky.xcodeproj
+```
+
+Use the `sparky` scheme for app development. The project has three targets:
+
+- `sparky`: the iOS app.
+- `sparkyTests`: unit tests using Swift Testing (`import Testing`, `@Test`, `#expect`).
+- `sparkyUITests`: generated UI test target using XCTest.
+
+This documentation refresh did not execute build, run, simulator, or `xcodebuild` commands. The repository does not contain shell scripts or package manager scripts for local workflow.
+
+## Build and Test Notes
+
+Build and test flows are expected to happen through Xcode or through equivalent `xcodebuild` invocations in an environment where running builds is allowed.
+
+Important project settings detected in `sparky.xcodeproj/project.pbxproj`:
+
+- Bundle identifier: `polterware.sparky`
+- Marketing version: `1.0`
+- Current project version: `1`
+- Deployment target: iOS `26.0`
+- Development team: `VCF3DS6BTV`
+- Default actor isolation: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`
+- Background mode: location
+
+## Privacy and Security Summary
+
+Sparky has no custom backend, account system, authentication layer, analytics SDK, or tracking configuration in this repository. User-created content is stored locally through SwiftData and file-system attachment storage.
+
+Important caveat: the app uses Apple/system frameworks such as MapKit, CoreLocation, and LinkPresentation. Features like location search, maps, reverse geocoding, and link metadata may rely on Apple or destination network services when used. The app should not be documented as having "zero network calls" unless that claim is revalidated at the platform behavior level.
+
+See [`docs/security.md`](docs/security.md) for permissions, Privacy Manifest details, and local data risks.
+
+## Documentation
+
+- [`docs/index.md`](docs/index.md): documentation map.
+- [`docs/getting-started.md`](docs/getting-started.md): setup and local workflow.
+- [`docs/architecture.md`](docs/architecture.md): architecture and data flow.
+- [`docs/development.md`](docs/development.md): development conventions.
+- [`docs/database.md`](docs/database.md): SwiftData models, migration, import/export, and attachment storage.
+- [`docs/security.md`](docs/security.md): privacy, permissions, and data handling.
+- [`docs/deployment.md`](docs/deployment.md): App Store release notes.
+- [`docs/troubleshooting.md`](docs/troubleshooting.md): common development and runtime issues.
 
 ## Current Status
 
-The repository is a real native iOS app with tests and App Store metadata. `CLAUDE.md` is the densest technical guide and documents MainActor isolation, SwiftData models, trigger migration, theme conventions, and key entry points.
+The repository contains a working native iOS app codebase, active app metadata, screenshot planning, unit tests, UI test targets, and project-specific technical guidance. Some release steps remain external to the repository, including Apple Developer configuration, App Store Connect setup, final screenshots, and TestFlight validation.
 
-## Known Limitations
+## License
 
-- Do not run build or test commands from agent sessions in this workspace.
-- Use Swift Testing conventions in new tests.
-- Keep code identifiers and new comments in English.
-- Preserve local-first privacy claims in implementation and public copy.
+No license file was identified in the current repository. Add a `LICENSE` file before distributing the code publicly or accepting external contributions.
