@@ -9,7 +9,7 @@ import os
 
 @MainActor
 final class FocusNotificationService {
-    private static let logger = Logger(subsystem: "sparky", category: "FocusNotificationService")
+    nonisolated private static let logger = Logger(subsystem: "sparky", category: "FocusNotificationService")
     private let center = UNUserNotificationCenter.current()
     private let settings: SettingsStore
 

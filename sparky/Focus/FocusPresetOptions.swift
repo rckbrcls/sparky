@@ -13,11 +13,11 @@ enum FocusPresetOptions {
     static let longBreakMinutes = [15, 20, 30, 45]
     static let pomodorosUntilLongBreak = [2, 3, 4, 5, 6]
 
-    static func durationLabel(_ minutes: Int) -> String {
+    nonisolated static func durationLabel(_ minutes: Int) -> String {
         "\(minutes) min"
     }
 
-    static func sessionLabel(_ count: Int) -> String {
+    nonisolated static func sessionLabel(_ count: Int) -> String {
         "\(count) \(count == 1 ? "session" : "sessions")"
     }
 }
