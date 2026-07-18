@@ -153,13 +153,17 @@ struct MindComposerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(role: .cancel) {
                         dismiss()
+                    } label: {
+                        Label("Cancel", systemImage: "xmark")
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(role: .confirm) {
                         saveMind()
+                    } label: {
+                        Label("Save", systemImage: "checkmark")
                     }
                     .disabled(!canSave)
                 }

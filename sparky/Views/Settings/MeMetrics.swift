@@ -12,9 +12,9 @@ struct MeMetrics {
         let completedOccurrences: Int
         let scheduledOccurrences: Int
 
-        var value: Double? {
-            guard scheduledOccurrences > 0 else { return nil }
-            return Double(completedOccurrences) / Double(scheduledOccurrences)
+        var value: Double {
+            guard scheduledOccurrences > 0 else { return 0 }
+            return min(max(Double(completedOccurrences) / Double(scheduledOccurrences), 0), 1)
         }
     }
 
@@ -24,7 +24,6 @@ struct MeMetrics {
     let longestStreakDays: Int
     let totalCompletionCount: Int
     let topMindName: String?
-    let insight: String
 
     var completionCountLast30Days: Int {
         activityDays.reduce(0) { $0 + $1.completionCount }
@@ -56,22 +55,13 @@ struct MeMetrics {
             now: now,
             calendar: calendar
         )
-        let insight = makeInsight(
-            events: events,
-            activityDays: activityDays,
-            streakDays: streakDays,
-            now: now,
-            calendar: calendar
-        )
-
         return MeMetrics(
             activityDays: activityDays,
             completionRate: completionRate,
             streakDays: streakDays,
             longestStreakDays: longestStreakDays,
             totalCompletionCount: events.count,
-            topMindName: dominantMindName(in: events),
-            insight: insight
+            topMindName: dominantMindName(in: events)
         )
     }
 }
@@ -231,41 +221,6 @@ private extension MeMetrics {
         return memory.completedDates.contains {
             calendar.isDate($0, inSameDayAs: occurrence)
         }
-    }
-
-    static func makeInsight(
-        events: [CompletionEvent],
-        activityDays: [ActivityDay],
-        streakDays: Int,
-        now: Date,
-        calendar: Calendar
-    ) -> String {
-        if streakDays >= 2 {
-            return "You have shown up for \(streakDays) days in a row."
-        }
-
-        let recentEvents = events.filter { event in
-            guard let start = activityDays.first?.date else { return false }
-            return event.date >= start && event.date <= now
-        }
-        if let mindName = dominantMindName(in: recentEvents) {
-            return "Most of your recent progress happened in \(mindName)."
-        }
-
-        let today = calendar.startOfDay(for: now)
-        let lastSevenDays = Set(activityDays.suffix(7).filter { $0.completionCount > 0 }.map(\.date))
-        let completionCount = activityDays.suffix(7).reduce(0) { $0 + $1.completionCount }
-        if completionCount > 0 {
-            let completionLabel = completionCount == 1 ? "memory" : "memories"
-            let dayLabel = lastSevenDays.count == 1 ? "day" : "days"
-            return "You completed \(completionCount) \(completionLabel) across \(lastSevenDays.count) \(dayLabel) in the last 7 days."
-        }
-
-        if events.contains(where: { $0.date < today }) {
-            return "A small completion today can start a new rhythm."
-        }
-
-        return "Complete a memory to start seeing your rhythm."
     }
 
     static func dominantMindName(in events: [CompletionEvent]) -> String? {

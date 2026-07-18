@@ -44,6 +44,7 @@ struct MeView: View {
                     activityCard
                     completionRateCard
                     personalBestsCard
+                    quoteCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -72,6 +73,7 @@ struct MeView: View {
             }
             .onAppear {
                 draftName = settings.userDisplayName
+                viewModel.refreshQuote()
             }
             .onChange(of: settings.userDisplayName) { _, newValue in
                 draftName = newValue
@@ -190,24 +192,24 @@ private extension MeView {
 
     var lastSevenDaysCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Last 7 Days")
+            Text("Week")
                 .font(.title3.weight(.semibold))
 
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(spacing: 14) {
-                    weeklyMetricRow(title: "Completed", value: "\(viewModel.completionCountLast7Days)")
+                    weeklyMetricRow(title: "Done", value: "\(viewModel.completionCountLast7Days)")
                     Divider()
-                    weeklyMetricRow(title: "Active Days", value: "\(viewModel.activeDaysLast7Days)")
+                    weeklyMetricRow(title: "Active", value: "\(viewModel.activeDaysLast7Days)")
                     Divider()
-                    weeklyMetricRow(title: "Current Streak", value: streakText(viewModel.streakDays))
+                    weeklyMetricRow(title: "Streak", value: compactStreakText(viewModel.streakDays))
                 }
             } else {
                 HStack(spacing: 12) {
-                    weeklyMetric(title: "Completed", value: "\(viewModel.completionCountLast7Days)")
+                    weeklyMetric(title: "Done", value: "\(viewModel.completionCountLast7Days)")
                     Divider()
-                    weeklyMetric(title: "Active Days", value: "\(viewModel.activeDaysLast7Days)")
+                    weeklyMetric(title: "Active", value: "\(viewModel.activeDaysLast7Days)")
                     Divider()
-                    weeklyMetric(title: "Current Streak", value: streakText(viewModel.streakDays))
+                    weeklyMetric(title: "Streak", value: compactStreakText(viewModel.streakDays))
                 }
                 .frame(minHeight: 54)
             }
@@ -215,7 +217,7 @@ private extension MeView {
         .padding(16)
         .cardStyle()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Last 7 days")
+        .accessibilityLabel("Week")
         .accessibilityValue(lastSevenDaysAccessibilityValue)
     }
 
@@ -242,14 +244,9 @@ private extension MeView {
     }
 
     var completionRateCopy: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("Completion Rate")
-                .font(.title3.weight(.semibold))
-            Text(completionRateSubtitle)
-                .font(.subheadline)
-                .foregroundStyle(Color.Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        Text("Completion Rate")
+            .font(.custom("Baskerville", size: 20, relativeTo: .title3))
+            .fontWeight(.semibold)
     }
 
     var completionRateRing: some View {
@@ -257,19 +254,18 @@ private extension MeView {
             Circle()
                 .stroke(Color.Theme.border, lineWidth: 8)
 
-            if let rate = viewModel.completionRate.value {
-                Circle()
-                    .trim(from: 0, to: rate)
-                    .stroke(
-                        Color.accentColor,
-                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .animation(reduceMotion ? nil : .spring, value: rate)
-            }
+            Circle()
+                .trim(from: 0, to: viewModel.completionRate.value)
+                .stroke(
+                    Color.accentColor,
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(reduceMotion ? nil : .spring, value: viewModel.completionRate.value)
 
             Text(completionRateText)
-                .font(.subheadline.weight(.bold))
+                .font(.custom("Baskerville", size: 17, relativeTo: .subheadline))
+                .fontWeight(.bold)
         }
         .frame(width: 68, height: 68)
         .accessibilityHidden(true)
@@ -277,56 +273,73 @@ private extension MeView {
 
     var personalBestsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Personal Bests")
-                .font(.title3.weight(.semibold))
-
             personalBestRow(
-                title: "Longest Streak",
+                icon: "flame.fill",
+                title: "Streak",
                 value: viewModel.totalCompletionCount > 0
-                    ? streakText(viewModel.longestStreakDays)
+                    ? compactStreakText(viewModel.longestStreakDays)
                     : "—"
             )
             Divider()
             personalBestRow(
-                title: "Total Completions",
+                icon: "checkmark.circle.fill",
+                title: "Completed",
                 value: viewModel.totalCompletionCount > 0
                     ? "\(viewModel.totalCompletionCount)"
                     : "—"
             )
             Divider()
-            personalBestRow(title: "Top Mind", value: viewModel.topMindName ?? "—")
-
-            Divider()
-
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(Color.Theme.textSecondary)
-                    .accessibilityHidden(true)
-
-                Text(viewModel.insight)
-                    .font(.subheadline)
-                    .italic()
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            personalBestRow(
+                icon: "brain.head.profile",
+                title: "Top Mind",
+                value: viewModel.topMindName ?? "—"
+            )
         }
         .frame(maxWidth: .infinity)
         .padding(16)
         .cardStyle()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Personal bests")
+        .accessibilityLabel("Bests")
         .accessibilityValue(personalBestsAccessibilityValue)
     }
 
+    var quoteCard: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Image(systemName: "quote.opening")
+                .font(.title2)
+                .foregroundStyle(Color.Theme.textSecondary)
+                .accessibilityHidden(true)
+
+            Text(viewModel.quoteOfTheDay.text)
+                .font(.body)
+                .italic()
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("- " + viewModel.quoteOfTheDay.author)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundStyle(Color.Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .cardStyle()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Quote of the day")
+        .accessibilityValue("\(viewModel.quoteOfTheDay.text), by \(viewModel.quoteOfTheDay.author)")
+    }
+
     func weeklyMetric(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .center, spacing: 5) {
             Text(value)
-                .font(.title2.weight(.semibold))
+                .font(.custom("Baskerville", size: 28, relativeTo: .title2))
+                .fontWeight(.semibold)
             Text(title)
                 .font(.caption)
                 .foregroundStyle(Color.Theme.textSecondary)
                 .lineLimit(2)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     func weeklyMetricRow(title: String, value: String) -> some View {
@@ -335,19 +348,39 @@ private extension MeView {
                 .foregroundStyle(Color.Theme.textSecondary)
             Spacer()
             Text(value)
-                .font(.headline)
+                .font(.custom("Baskerville", size: 17, relativeTo: .headline))
+                .fontWeight(.semibold)
         }
     }
 
-    func personalBestRow(title: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 16) {
-            Text(title)
-                .foregroundStyle(Color.Theme.textSecondary)
-            Spacer(minLength: 16)
-            Text(value)
-                .font(.headline)
-                .multilineTextAlignment(.trailing)
+    @ViewBuilder
+    func personalBestRow(icon: String, title: String, value: String) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 8) {
+                personalBestLabel(icon: icon, title: title)
+                Text(value)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                personalBestLabel(icon: icon, title: title)
+                Spacer(minLength: 16)
+                Text(value)
+                    .font(.headline)
+                    .multilineTextAlignment(.trailing)
+            }
         }
+    }
+
+    func personalBestLabel(icon: String, title: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: icon)
+                .frame(width: 18)
+                .accessibilityHidden(true)
+            Text(title)
+        }
+        .foregroundStyle(Color.Theme.textSecondary)
     }
 
     func activityColor(for count: Int) -> Color {
@@ -384,6 +417,10 @@ private extension MeView {
         "\(days) \(days == 1 ? "day" : "days")"
     }
 
+    func compactStreakText(_ days: Int) -> String {
+        "\(days)d"
+    }
+
     var lastSevenDaysAccessibilityValue: String {
         "\(viewModel.completionCountLast7Days) completed, \(viewModel.activeDaysLast7Days) active days, current streak \(streakText(viewModel.streakDays))"
     }
@@ -396,28 +433,15 @@ private extension MeView {
             ? "\(viewModel.totalCompletionCount)"
             : "not available"
         let topMind = viewModel.topMindName ?? "not available"
-        return "Longest streak \(longest), total completions \(total), top Mind \(topMind). \(viewModel.insight)"
+        return "Longest streak \(longest), total completions \(total), top Mind \(topMind)"
     }
 
     var completionRateText: String {
-        guard let rate = viewModel.completionRate.value else { return "—" }
-        return "\(Int((rate * 100).rounded()))%"
-    }
-
-    var completionRateSubtitle: String {
-        let scheduled = viewModel.completionRate.scheduledOccurrences
-        guard scheduled > 0 else {
-            return "No scheduled memories in the last 7 days."
-        }
-        let occurrenceLabel = scheduled == 1 ? "occurrence" : "occurrences"
-        return "Based on \(scheduled) scheduled \(occurrenceLabel) in the last 7 days."
+        "\(Int((viewModel.completionRate.value * 100).rounded()))%"
     }
 
     var completionRateAccessibilityValue: String {
-        guard viewModel.completionRate.scheduledOccurrences > 0 else {
-            return "No scheduled memories in the last 7 days"
-        }
-        return "\(completionRateText), \(viewModel.completionRate.completedOccurrences) of \(viewModel.completionRate.scheduledOccurrences) scheduled occurrences completed in the last 7 days"
+        completionRateText
     }
 
     func saveName() {

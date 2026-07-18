@@ -35,7 +35,7 @@ struct MindRootView: View {
                     Button {
                         onCreateMind()
                     } label: {
-                        Image(systemName: "plus.circle.fill")
+                        Image(systemName: "plus")
                             .foregroundStyle(Color.accentColor)
                     }
                     .accessibilityLabel("Add Mind")

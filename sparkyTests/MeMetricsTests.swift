@@ -23,11 +23,10 @@ struct MeMetricsTests {
         #expect(metrics.totalCompletionCount == 4)
         #expect(metrics.completionCountLast7Days == 4)
         #expect(metrics.activeDaysLast7Days == 3)
-        #expect(metrics.insight == "You have shown up for 3 days in a row.")
     }
 
     @MainActor
-    @Test func dominantMindBecomesInsightWhenThereIsNoStreak() throws {
+    @Test func dominantMindIsCalculatedWhenThereIsAClearWinner() throws {
         let now = try testDate(day: 18, hour: 12)
         let mind = Mind(name: "Work")
         let first = completedMemory(title: "First", at: try testDate(day: 14, hour: 9))
@@ -43,28 +42,16 @@ struct MeMetricsTests {
 
         #expect(metrics.streakDays == 0)
         #expect(metrics.topMindName == "Work")
-        #expect(metrics.insight == "Most of your recent progress happened in Work.")
     }
 
     @MainActor
-    @Test func emptyAndReturningInsightsAreDistinct() throws {
+    @Test func personalBestsAreEmptyWithoutCompletionHistory() throws {
         let now = try testDate(day: 18, hour: 12)
         let empty = MeMetrics.calculate(memories: [], now: now, calendar: testCalendar)
-        let oldCompletion = completedMemory(
-            title: "Older progress",
-            at: try testDate(month: 5, day: 1, hour: 9)
-        )
-        let returning = MeMetrics.calculate(
-            memories: [oldCompletion],
-            now: now,
-            calendar: testCalendar
-        )
 
-        #expect(empty.insight == "Complete a memory to start seeing your rhythm.")
         #expect(empty.totalCompletionCount == 0)
         #expect(empty.longestStreakDays == 0)
         #expect(empty.topMindName == nil)
-        #expect(returning.insight == "A small completion today can start a new rhythm.")
     }
 
     @MainActor
@@ -187,7 +174,7 @@ struct MeMetricsTests {
     }
 
     @MainActor
-    @Test func completionRateIsUnavailableWithoutScheduledOccurrences() throws {
+    @Test func completionRateIsZeroWithoutScheduledOccurrences() throws {
         let metrics = MeMetrics.calculate(
             memories: [completedMemory(title: "Unscheduled", at: try testDate(day: 18, hour: 9))],
             now: try testDate(day: 18, hour: 12),
@@ -195,7 +182,23 @@ struct MeMetricsTests {
         )
 
         #expect(metrics.completionRate.scheduledOccurrences == 0)
-        #expect(metrics.completionRate.value == nil)
+        #expect(metrics.completionRate.value == 0)
+    }
+
+    @MainActor
+    @Test func quoteChangesOnConsecutiveDaysAndPreservesTheDefault() throws {
+        let today = try testDate(day: 18, hour: 12)
+        let quotes = (0..<20).compactMap { dayOffset -> MeViewModel.Quote? in
+            guard let date = testCalendar.date(byAdding: .day, value: dayOffset, to: today) else {
+                return nil
+            }
+            return MeViewModel.quote(for: date, calendar: testCalendar)
+        }
+
+        #expect(MeViewModel.Quote.defaultQuote.text == "The best way to predict the future is to create it.")
+        #expect(MeViewModel.Quote.defaultQuote.author == "Peter Drucker")
+        #expect(quotes.count == 20)
+        #expect(Set(quotes).count == 20)
     }
 }
 
