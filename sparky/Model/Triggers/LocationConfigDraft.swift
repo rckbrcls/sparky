@@ -15,7 +15,6 @@ struct LocationConfigDraft: Identifiable, Hashable {
     var name: String?
     var event: LocationEvent
     var isActive: Bool
-    var reminder: NestedReminderPolicy
 
     init(
         id: UUID = UUID(),
@@ -24,8 +23,7 @@ struct LocationConfigDraft: Identifiable, Hashable {
         radius: Double = 200,
         name: String? = nil,
         event: LocationEvent = .onEntry,
-        isActive: Bool = true,
-        reminder: NestedReminderPolicy = NestedReminderPolicy()
+        isActive: Bool = true
     ) {
         self.id = id
         self.latitude = latitude
@@ -34,7 +32,6 @@ struct LocationConfigDraft: Identifiable, Hashable {
         self.name = name
         self.event = event
         self.isActive = isActive
-        self.reminder = reminder
     }
 
     static func == (lhs: LocationConfigDraft, rhs: LocationConfigDraft) -> Bool {
@@ -59,7 +56,6 @@ extension LocationConfigDraft {
             name: name,
             event: event,
             isActive: isActive,
-            reminder: reminder,
             memory: memory
         )
     }
@@ -73,8 +69,7 @@ extension LocationConfigDraft {
             radius: model.radius,
             name: model.name,
             event: model.event,
-            isActive: model.isActive,
-            reminder: model.reminder
+            isActive: model.isActive
         )
     }
 

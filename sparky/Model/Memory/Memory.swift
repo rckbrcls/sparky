@@ -72,23 +72,13 @@ final class Memory: Identifiable {
     @Relationship(deleteRule: .cascade, inverse: \CheckItemModel.memory)
     var checkItems: [CheckItemModel] = []
 
-    // MARK: - New Trigger Configs (1:1 relationships)
+    // MARK: - Trigger Configs (1:1 relationships)
 
     @Relationship(deleteRule: .cascade, inverse: \ScheduleConfig.memory)
     var scheduleConfig: ScheduleConfig?
 
     @Relationship(deleteRule: .cascade, inverse: \LocationConfig.memory)
     var locationConfig: LocationConfig?
-
-    // MARK: - Legacy (schema-only, do not use)
-    // ReminderConfig / MemoryTriggerModel remain in the SwiftData schema to avoid migration crashes.
-    // Active reminder policy is nested on ScheduleConfig / LocationConfig.
-
-    @Relationship(deleteRule: .cascade, inverse: \ReminderConfig.memory)
-    var reminderConfig: ReminderConfig?
-
-    @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerModel.memory)
-    var triggers: [MemoryTriggerModel] = []
 
     @Relationship(deleteRule: .cascade, inverse: \MemoryAttachmentReference.memory)
     var attachmentReferences: [MemoryAttachmentReference] = []
@@ -120,7 +110,6 @@ final class Memory: Identifiable {
         checkItems: [CheckItemModel] = [],
         scheduleConfig: ScheduleConfig? = nil,
         locationConfig: LocationConfig? = nil,
-        reminderConfig: ReminderConfig? = nil, // legacy schema only
         attachmentReferences: [MemoryAttachmentReference] = [],
         completionDateEntries: [MemoryCompletionDate] = [],
         mind: Mind? = nil
@@ -140,7 +129,6 @@ final class Memory: Identifiable {
         self.checkItems = checkItems
         self.scheduleConfig = scheduleConfig
         self.locationConfig = locationConfig
-        self.reminderConfig = reminderConfig
         self.attachmentReferences = attachmentReferences
         self.completionDateEntries = completionDateEntries
         self.mind = mind
@@ -182,7 +170,7 @@ final class Memory: Identifiable {
         !checkItems.isEmpty
     }
 
-    // MARK: - New Config-based Computed Properties
+    // MARK: - Config-based Computed Properties
 
     var hasSchedule: Bool {
         scheduleConfig?.isActive ?? false
@@ -192,30 +180,17 @@ final class Memory: Identifiable {
         locationConfig?.isActive ?? false
     }
 
-    var hasReminder: Bool {
-        (scheduleConfig?.hasActiveReminder ?? false) || (locationConfig?.hasActiveReminder ?? false)
-    }
-
     var hasFocus: Bool {
         scheduleConfig?.isActive == true && (scheduleConfig?.focusEnabled ?? false)
     }
 
-    func focusRecipe(settings: FocusSettings) -> FocusRecipe? {
+    func focusRecipe() -> FocusRecipe? {
         guard let schedule = scheduleConfig, schedule.isActive else { return nil }
-        return FocusRecipe.resolve(schedule: schedule, settings: settings)
-    }
-
-    var hasPrimaryTrigger: Bool {
-        hasSchedule || hasLocation
+        return FocusRecipe.resolve(schedule: schedule)
     }
 
     var hasTriggers: Bool {
-        hasSchedule || hasLocation || hasReminder
-    }
-
-    func clearNestedReminderStarts() {
-        scheduleConfig?.clearReminderStart()
-        locationConfig?.clearReminderStart()
+        hasSchedule || hasLocation
     }
 
     var hasRecurringTriggers: Bool {

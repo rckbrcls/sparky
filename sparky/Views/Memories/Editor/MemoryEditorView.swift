@@ -943,10 +943,8 @@ struct MemoryEditorView: View {
               schedule.isActive else {
             return false
         }
-        if let fireDate = schedule.fireDate {
-            return fireDate <= Date()
-        }
-        return schedule.reminder.startedAt != nil
+        guard let fireDate = schedule.fireDate else { return false }
+        return fireDate <= Date()
     }
 
     private var notesCard: some View {

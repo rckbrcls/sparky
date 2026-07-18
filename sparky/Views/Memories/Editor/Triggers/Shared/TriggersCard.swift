@@ -309,13 +309,15 @@ private struct ScheduledTriggerInlineForm: View {
 
                         Spacer()
 
-                        Stepper(value: $interval, in: 1...999) {
-                            HStack(spacing: 4) {
-                                Text("\(interval)")
-                                    .fontWeight(.semibold)
-                                Text(interval == 1 ? frequency.singularUnitLabel : frequency.unitLabel)
-                            }
-                            .font(.body)
+                        HStack(spacing: 8) {
+                            BoundedIntegerField(
+                                value: $interval,
+                                in: 1...999,
+                                accessibilityLabel: "Repeat interval"
+                            )
+
+                            Text(interval == 1 ? frequency.singularUnitLabel : frequency.unitLabel)
+                                .font(.body)
                         }
                     }
 
@@ -378,45 +380,28 @@ private struct ScheduledTriggerInlineForm: View {
                         }
                     }
 
-                    // Occurrence count stepper
+                    // Occurrence count
                     if endType == .afterCount {
                         Divider()
                         inlineRow {
-                            Stepper(value: $occurrenceCount, in: 1...999) {
-                                HStack(spacing: 4) {
-                                    Text("After")
-                                        .foregroundStyle(.secondary)
-                                    Text("\(occurrenceCount)")
-                                        .fontWeight(.semibold)
-                                    Text(occurrenceCount == 1 ? "time" : "times")
-                                }
+                            Text("After")
                                 .font(.body)
+                                .foregroundStyle(.secondary)
+
+                            Spacer()
+
+                            HStack(spacing: 8) {
+                                BoundedIntegerField(
+                                    value: $occurrenceCount,
+                                    in: 1...999,
+                                    accessibilityLabel: "Number of occurrences"
+                                )
+
+                                Text(occurrenceCount == 1 ? "time" : "times")
+                                    .font(.body)
                             }
                         }
                     }
-                }
-
-                Divider()
-
-                // Nested Reminder
-                nestedFeatureToggleRow(
-                    title: "Reminder",
-                    icon: "bell.badge.fill",
-                    isOn: scheduleReminderBinding
-                )
-
-                if viewModel.hasScheduleReminder {
-                    NestedReminderInlineForm(
-                        policy: viewModel.scheduleConfig?.reminder ?? .createDefault(),
-                        isEditable: isEditable,
-                        onChange: { policy in
-                            viewModel.setScheduleReminder(
-                                intervalValue: policy.intervalValue,
-                                intervalUnit: policy.intervalUnit,
-                                repeatCount: policy.repeatCount
-                            )
-                        }
-                    )
                 }
 
                 Divider()
@@ -456,21 +441,6 @@ private struct ScheduledTriggerInlineForm: View {
     }
 
     // MARK: - Helpers
-
-    private var scheduleReminderBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.hasScheduleReminder },
-            set: { newValue in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    if newValue {
-                        viewModel.setScheduleReminder(intervalValue: 1, intervalUnit: .hours, repeatCount: nil)
-                    } else {
-                        viewModel.removeScheduleReminder()
-                    }
-                }
-            }
-        )
-    }
 
     private var focusBinding: Binding<Bool> {
         Binding(
@@ -547,13 +517,7 @@ private struct ScheduledTriggerInlineForm: View {
             Spacer()
 
             Menu {
-                ForEach(
-                    FocusPresetOptions.choices(
-                        including: value,
-                        presets: presets
-                    ),
-                    id: \.self
-                ) { option in
+                ForEach(presets, id: \.self) { option in
                     Button {
                         onChange(option)
                     } label: {
@@ -678,162 +642,6 @@ private struct ScheduledTriggerInlineForm: View {
     }
 }
 
-// MARK: - Nested Reminder Inline Form
-
-private struct NestedReminderInlineForm: View {
-    var isEditable: Bool
-    var onChange: (NestedReminderPolicy) -> Void
-
-    @State private var intervalValue: Int
-    @State private var intervalUnit: ReminderIntervalUnit
-    @State private var repeatMode: ReminderRepeatMode
-    @State private var repeatCount: Int
-
-    init(policy: NestedReminderPolicy, isEditable: Bool, onChange: @escaping (NestedReminderPolicy) -> Void) {
-        self.isEditable = isEditable
-        self.onChange = onChange
-        let initialCount = policy.repeatCount ?? 3
-        _intervalValue = State(initialValue: max(1, policy.intervalValue))
-        _intervalUnit = State(initialValue: policy.intervalUnit)
-        _repeatMode = State(initialValue: policy.repeatCount == nil ? .untilCompleted : .afterCount)
-        _repeatCount = State(initialValue: max(1, initialCount))
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            inlineRow {
-                Text("Every")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Stepper(value: $intervalValue, in: 1...999) {
-                        Text("\(intervalValue)")
-                            .font(.body)
-                            .fontWeight(.semibold)
-                    }
-                    .fixedSize()
-
-                    Menu {
-                        ForEach(ReminderIntervalUnit.allCases) { unit in
-                            Button {
-                                intervalUnit = unit
-                            } label: {
-                                if intervalUnit == unit {
-                                    Label(unit.displayName, systemImage: "checkmark")
-                                } else {
-                                    Text(unit.displayName)
-                                }
-                            }
-                        }
-                    } label: {
-                        capsuleLabel(intervalUnit.unitLabel(for: intervalValue))
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .layoutPriority(1)
-                    .tint(.primary)
-                }
-            }
-
-            Divider()
-
-            inlineRow {
-                Text("Ends")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Menu {
-                    ForEach(ReminderRepeatMode.allCases) { mode in
-                        Button {
-                            repeatMode = mode
-                        } label: {
-                            if repeatMode == mode {
-                                Label(mode.label, systemImage: "checkmark")
-                            } else {
-                                Text(mode.label)
-                            }
-                        }
-                    }
-                } label: {
-                    capsuleLabel(repeatMode.label)
-                }
-                .tint(.primary)
-            }
-
-            if repeatMode == .afterCount {
-                Divider()
-
-                inlineRow {
-                    Stepper(value: $repeatCount, in: 1...999) {
-                        HStack(spacing: 4) {
-                            Text("After")
-                                .foregroundStyle(.secondary)
-                            Text("\(repeatCount)")
-                                .fontWeight(.semibold)
-                            Text(repeatCount == 1 ? "reminder" : "reminders")
-                        }
-                        .font(.body)
-                    }
-                }
-            }
-        }
-        .disabled(!isEditable)
-        .onChange(of: intervalValue) { _, _ in applyChanges() }
-        .onChange(of: intervalUnit) { _, _ in applyChanges() }
-        .onChange(of: repeatMode) { _, _ in applyChanges() }
-        .onChange(of: repeatCount) { _, _ in applyChanges() }
-    }
-
-    @ViewBuilder
-    private func inlineRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        HStack { content() }
-            .padding(.vertical, 10)
-    }
-
-    private func capsuleLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.body)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(Color.Theme.elementBackground)
-            )
-    }
-
-    private func applyChanges() {
-        onChange(
-            NestedReminderPolicy(
-                isActive: true,
-                intervalValue: intervalValue,
-                intervalUnit: intervalUnit,
-                repeatCount: repeatMode == .afterCount ? repeatCount : nil
-            )
-        )
-    }
-
-    private enum ReminderRepeatMode: String, CaseIterable, Identifiable {
-        case untilCompleted
-        case afterCount
-
-        var id: String { rawValue }
-
-        var label: String {
-            switch self {
-            case .untilCompleted: return "Until completed"
-            case .afterCount: return "After count"
-            }
-        }
-    }
-}
-
 // MARK: - Location Trigger Inline Form
 
 private struct LocationTriggerInlineForm: View {
@@ -950,32 +758,6 @@ private struct LocationTriggerInlineForm: View {
             }
             .padding(.vertical, 10)
 
-            Divider()
-
-            // Nested Reminder
-            HStack {
-                Label("Reminder", systemImage: "bell.badge.fill")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Toggle("", isOn: locationReminderBinding)
-                    .labelsHidden()
-            }
-            .padding(.vertical, 10)
-
-            if viewModel.hasLocationReminder {
-                NestedReminderInlineForm(
-                    policy: viewModel.locationConfig?.reminder ?? .createDefault(),
-                    isEditable: isEditable,
-                    onChange: { policy in
-                        viewModel.setLocationReminder(
-                            intervalValue: policy.intervalValue,
-                            intervalUnit: policy.intervalUnit,
-                            repeatCount: policy.repeatCount
-                        )
-                    }
-                )
-            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
@@ -990,21 +772,6 @@ private struct LocationTriggerInlineForm: View {
             geocodeTask?.cancel()
             cameraCooldownTask?.cancel()
         }
-    }
-
-    private var locationReminderBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.hasLocationReminder },
-            set: { newValue in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    if newValue {
-                        viewModel.setLocationReminder(intervalValue: 1, intervalUnit: .hours, repeatCount: nil)
-                    } else {
-                        viewModel.removeLocationReminder()
-                    }
-                }
-            }
-        )
     }
 
     // MARK: - Expanded Map

@@ -28,24 +28,7 @@ struct FocusRecipeTests {
         #expect(recipe.workDurationSeconds == 1800)
     }
 
-    @Test func resolveLegacyUsesGlobals() {
-        let settings = FocusSettings(defaults: UserDefaults(suiteName: "FocusRecipeTests.legacy")!)
-        settings.resetToDefaults()
-        settings.workDurationMinutes = 40
-        settings.autoContinue = false
-
-        let schedule = ScheduleConfig(focusEnabled: true)
-        let recipe = FocusRecipe.resolve(schedule: schedule, settings: settings)
-        #expect(recipe != nil)
-        #expect(recipe?.workDurationMinutes == 40)
-        #expect(recipe?.autoContinue == false)
-    }
-
     @Test func resolveCustomUsesStored() {
-        let settings = FocusSettings(defaults: UserDefaults(suiteName: "FocusRecipeTests.custom")!)
-        settings.resetToDefaults()
-        settings.workDurationMinutes = 25
-
         let schedule = ScheduleConfig(
             focusEnabled: true,
             focusWorkDurationMinutes: 15,
@@ -54,7 +37,7 @@ struct FocusRecipeTests {
             focusPomodorosUntilLongBreak: 2,
             focusAutoContinue: false
         )
-        let recipe = FocusRecipe.resolve(schedule: schedule, settings: settings)
+        let recipe = FocusRecipe.resolve(schedule: schedule)
         #expect(recipe?.workDurationMinutes == 15)
         #expect(recipe?.shortBreakDurationMinutes == 3)
         #expect(recipe?.longBreakDurationMinutes == 10)
@@ -63,9 +46,13 @@ struct FocusRecipeTests {
     }
 
     @Test func resolveDisabledReturnsNil() {
-        let settings = FocusSettings(defaults: UserDefaults(suiteName: "FocusRecipeTests.disabled")!)
         let schedule = ScheduleConfig(focusEnabled: false, focusWorkDurationMinutes: 15)
-        #expect(FocusRecipe.resolve(schedule: schedule, settings: settings) == nil)
+        #expect(FocusRecipe.resolve(schedule: schedule) == nil)
+    }
+
+    @Test func resolveIncompleteRecipeReturnsNil() {
+        let schedule = ScheduleConfig(focusEnabled: true)
+        #expect(FocusRecipe.resolve(schedule: schedule) == nil)
     }
 
     @Test func clampsOutOfRangeValues() {

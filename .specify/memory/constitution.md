@@ -169,11 +169,8 @@ Non-negotiable rules:
   bulk processors). Services own index refresh and trigger re-sync after writes.
 - Persistence: SwiftData `@Model` types with `@Attribute(.unique)` ids, explicit
   cascade relationships, and draft converters at the UI boundary.
-- Dual trigger system: write active `scheduleConfig` / `locationConfig` paths;
-  treat legacy `triggers` / `reminderConfig` as migration-only unless a task
-  explicitly maintains compatibility.
-- Executors under `Executors/` are the live notification/geofence path. Do not
-  extend deprecated `Managers/GeofenceManager` or `NotificationScheduler`.
+- Trigger state uses only `scheduleConfig` / `locationConfig` paths.
+- Executors under `Executors/` are the notification/geofence path.
 - Platform-limited capabilities (e.g. geofence density, background modes,
   certain sensors) MUST degrade gracefully via availability checks; domain
   models stay shared.
@@ -233,7 +230,7 @@ API has no SwiftUI equivalent, isolated behind small adapters.
 use in-memory `DataController.preview`.
 
 **Triggers**: `TriggerExecutorCoordinator` → scheduled (UserNotifications) +
-location (CoreLocation where available) + follow-up reminders. Unavailable
+location (CoreLocation where available). Unavailable
 platform capabilities MUST no-op or surface clear UI, not crash.
 
 **Testing**: Swift Testing (`import Testing`, `@Test`, `#expect`) for unit
@@ -244,7 +241,7 @@ may be PT-BR. Prefer English for new inline comments.
 
 **Forbidden by default**: separate Mac rewrite; third-party UI kits that replace
 system look; parallel color systems; direct durable model writes from views;
-reintroducing deprecated trigger managers; `@Observable` migration without
+parallel trigger managers; `@Observable` migration without
 amendment; network-backed identity or mandatory accounts; unguarded
 platform-only API use in shared files.
 

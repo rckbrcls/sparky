@@ -135,13 +135,7 @@ struct FocusConfigurationMenu: View {
             Spacer(minLength: 12)
 
             Menu {
-                ForEach(
-                    FocusPresetOptions.choices(
-                        including: value,
-                        presets: presets
-                    ),
-                    id: \.self
-                ) { option in
+                ForEach(presets, id: \.self) { option in
                     Button {
                         onSelect(option)
                     } label: {

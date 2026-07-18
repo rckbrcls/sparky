@@ -213,7 +213,7 @@ final class MemoryService: ObservableObject {
 
         let context = dataController.modelContext
         let now = Date()
-        let normalizedDraft = normalizedNestedReminderDraft(for: draft)
+        let normalizedDraft = sanitizeDraft(draft)
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
@@ -280,18 +280,7 @@ final class MemoryService: ObservableObject {
         let context = dataController.modelContext
         let now = Date()
         let previousStatus = memory.status
-        let primaryTriggerChanged = hasPrimaryTriggerChanged(previous: memory, draft: draft)
-        var normalizedDraft = normalizedNestedReminderDraft(for: draft)
-        if (previousStatus == .completed && draft.status == .active) || primaryTriggerChanged {
-            if var schedule = normalizedDraft.scheduleConfig {
-                schedule.reminder = schedule.reminder.clearingStart()
-                normalizedDraft.scheduleConfig = schedule
-            }
-            if var location = normalizedDraft.locationConfig {
-                location.reminder = location.reminder.clearingStart()
-                normalizedDraft.locationConfig = location
-            }
-        }
+        let normalizedDraft = sanitizeDraft(draft)
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
@@ -332,12 +321,6 @@ final class MemoryService: ObservableObject {
             memory.locationConfig = nil
             context.delete(oldLocation)
         }
-        // Clear any leftover legacy memory-level reminder
-        if let oldReminder = memory.reminderConfig {
-            memory.reminderConfig = nil
-            context.delete(oldReminder)
-        }
-
         for attachment in previousAttachments {
             context.delete(attachment)
         }
@@ -360,7 +343,7 @@ final class MemoryService: ObservableObject {
             )
         }
 
-        // Create new configs from draft (reminder is nested on each primary)
+        // Create new configs from draft
         if let scheduleDraft = normalizedDraft.scheduleConfig {
             memory.scheduleConfig = scheduleDraft.toModel(memory: memory)
         }
@@ -444,72 +427,10 @@ final class MemoryService: ObservableObject {
             }
         }
 
-        if previousStatus == .completed, status == .active {
-            memory.clearNestedReminderStarts()
-        }
-
         dataController.save()
 
         if status == .completed, let coordinator = triggerExecutorCoordinator {
             await coordinator.unregisterAll(for: memoryID)
-        }
-
-        _ = await refresh(force: true)
-    }
-
-    func markPrimaryTriggerFired(
-        memoryID: UUID,
-        at date: Date,
-        source: ReminderStartSource
-    ) async {
-        guard let memory = memory(id: memoryID),
-              memory.status == .active,
-              memory.hasPrimaryTrigger else {
-            return
-        }
-
-        var didUpdate = false
-
-        switch source {
-        case .schedule:
-            if let schedule = memory.scheduleConfig,
-               schedule.isActive,
-               schedule.reminderIsActive {
-                let shouldUpdate: Bool
-                if let startedAt = schedule.reminderStartedAt {
-                    shouldUpdate = date < startedAt
-                } else {
-                    shouldUpdate = true
-                }
-                if shouldUpdate {
-                    schedule.reminderStartedAt = date
-                    didUpdate = true
-                }
-            }
-        case .location:
-            if let location = memory.locationConfig,
-               location.isActive,
-               location.reminderIsActive {
-                let shouldUpdate: Bool
-                if let startedAt = location.reminderStartedAt {
-                    shouldUpdate = date < startedAt
-                } else {
-                    shouldUpdate = true
-                }
-                if shouldUpdate {
-                    location.reminderStartedAt = date
-                    didUpdate = true
-                }
-            }
-        }
-
-        guard didUpdate else { return }
-
-        memory.updatedAt = Date()
-        dataController.save()
-
-        if let coordinator = triggerExecutorCoordinator {
-            await coordinator.sync(memory: memory)
         }
 
         _ = await refresh(force: true)
@@ -632,7 +553,6 @@ final class MemoryService: ObservableObject {
             } else if !allCompleted && memory.status == .completed {
                 memory.status = .active
                 memory.completedAt = nil
-                memory.clearNestedReminderStarts()
             }
         }
 
@@ -665,7 +585,6 @@ final class MemoryService: ObservableObject {
                     isActive: draft.isActive,
                     isAllDay: draft.isAllDay,
                     recurrenceEndType: draft.recurrenceEndType,
-                    reminder: draft.reminder.clearingStart(),
                     focusEnabled: draft.focusEnabled,
                     focusWorkDurationMinutes: draft.focusWorkDurationMinutes,
                     focusShortBreakDurationMinutes: draft.focusShortBreakDurationMinutes,
@@ -683,8 +602,7 @@ final class MemoryService: ObservableObject {
                     radius: draft.radius,
                     name: draft.name,
                     event: draft.event,
-                    isActive: draft.isActive,
-                    reminder: draft.reminder.clearingStart()
+                    isActive: draft.isActive
                 )
             },
             note: source.note,
@@ -714,73 +632,17 @@ final class MemoryService: ObservableObject {
 
 }
 
-// MARK: - Model cloning
+// MARK: - Draft normalization
 
 private extension MemoryService {
-    func hasPrimaryTriggerChanged(previous: Memory, draft: MemoryDraft) -> Bool {
-        let sameSchedule = isSameScheduleTrigger(previous: previous.scheduleConfig, next: draft.scheduleConfig)
-        let sameLocation = isSameLocationTrigger(previous: previous.locationConfig, next: draft.locationConfig)
-        return !sameSchedule || !sameLocation
-    }
-
-    func isSameScheduleTrigger(previous: ScheduleConfig?, next: ScheduleConfigDraft?) -> Bool {
-        switch (previous, next) {
-        case (nil, nil):
-            return true
-        case let (previous?, next?):
-            return previous.isActive == next.isActive
-                && previous.fireDate == next.fireDate
-                && previous.startDate == next.startDate
-                && previous.recurrenceRule == next.recurrenceRule
-                && previous.weekdayMask == next.weekdayMask
-                && previous.isAllDay == next.isAllDay
-                && previous.recurrenceEndType == next.recurrenceEndType
-                && previous.timeZoneIdentifier == next.timeZoneIdentifier
-        default:
-            return false
-        }
-    }
-
-    func isSameLocationTrigger(previous: LocationConfig?, next: LocationConfigDraft?) -> Bool {
-        switch (previous, next) {
-        case (nil, nil):
-            return true
-        case let (previous?, next?):
-            return previous.isActive == next.isActive
-                && previous.latitude == next.latitude
-                && previous.longitude == next.longitude
-                && previous.radius == next.radius
-                && previous.event == next.event
-        default:
-            return false
-        }
-    }
-
-    /// Ensures nested reminders only stay active on active primaries.
-    func normalizedNestedReminderDraft(for draft: MemoryDraft) -> MemoryDraft {
+    func sanitizeDraft(_ draft: MemoryDraft) -> MemoryDraft {
         var result = draft
 
         if var schedule = result.scheduleConfig {
             if !schedule.isActive {
-                schedule.reminder = NestedReminderPolicy()
                 schedule.focusEnabled = false
-            } else if !schedule.reminder.isActive {
-                schedule.reminder = NestedReminderPolicy()
-            } else {
-                schedule.reminder.intervalValue = max(1, schedule.reminder.intervalValue)
             }
             result.scheduleConfig = schedule
-        }
-
-        if var location = result.locationConfig {
-            if !location.isActive {
-                location.reminder = NestedReminderPolicy()
-            } else if !location.reminder.isActive {
-                location.reminder = NestedReminderPolicy()
-            } else {
-                location.reminder.intervalValue = max(1, location.reminder.intervalValue)
-            }
-            result.locationConfig = location
         }
 
         return result

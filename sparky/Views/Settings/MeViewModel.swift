@@ -12,6 +12,11 @@ import Foundation
 final class MeViewModel: ObservableObject {
     @Published var activityDays: [MeMetrics.ActivityDay] = []
     @Published var streakDays: Int = 0
+    @Published var longestStreakDays: Int = 0
+    @Published var totalCompletionCount: Int = 0
+    @Published var topMindName: String?
+    @Published var completionCountLast7Days: Int = 0
+    @Published var activeDaysLast7Days: Int = 0
     @Published var completionRate = MeMetrics.CompletionRate(
         completedOccurrences: 0,
         scheduledOccurrences: 0
@@ -52,6 +57,11 @@ final class MeViewModel: ObservableObject {
         )
         activityDays = metrics.activityDays
         streakDays = metrics.streakDays
+        longestStreakDays = metrics.longestStreakDays
+        totalCompletionCount = metrics.totalCompletionCount
+        topMindName = metrics.topMindName
+        completionCountLast7Days = metrics.completionCountLast7Days
+        activeDaysLast7Days = metrics.activeDaysLast7Days
         completionRate = metrics.completionRate
         insight = metrics.insight
         completionCountLast30Days = metrics.completionCountLast30Days

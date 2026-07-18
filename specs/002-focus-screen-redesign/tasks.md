@@ -45,7 +45,7 @@ description: "Task list for Focus Screen Visual Redesign"
 - [x] T004 Extend `FocusTimer.beginQuickSession(workDurationMinutes: Int? = nil)` to snapshot globals into `FocusRecipe`, clamp override to 1…120, bind quick session, start work phase in `sparky/Focus/FocusTimer.swift` per `specs/002-focus-screen-redesign/contracts/focus-session-extensions.md`
 - [x] T005 Implement `FocusTimer.extendCurrentPhase(byMinutes: Int = 1)` (+ internal total/remaining/`phaseEndsAt` updates) and `canExtendPhase` in `sparky/Focus/FocusTimer.swift` per contract (no-op when idle or `isWaitingForManualStart`)
 - [x] T006 Expose phase window fields: publish or readable `phaseStartedAt` / `phaseEndsAt`, set `phaseStartedAt` in `configurePhase`, and add `displayStartDate` / `displayEndDate` helpers in `sparky/Focus/FocusTimer.swift` per `specs/002-focus-screen-redesign/data-model.md`
-- [x] T007 Update `AppEnvironment.startQuickFocus(workDurationMinutes: Int? = nil)` to forward override into `focusTimer.beginQuickSession(workDurationMinutes:)` in `sparky/AppEnvironment.swift` (keep backward-compatible default `nil`)
+- [x] T007 Update `AppEnvironment.startQuickFocus(workDurationMinutes: Int? = nil)` to forward the optional override into `focusTimer.beginQuickSession(workDurationMinutes:)` in `sparky/AppEnvironment.swift`
 - [x] T008 [P] Add Swift Testing for quick work override + clamp (0→1, 999→120, 15→900s first phase) in `sparkyTests/Focus/FocusQuickDurationTests.swift`
 - [x] T009 [P] Add Swift Testing for extend +1 running/paused, no-op idle/waiting, progress/total invariants in `sparkyTests/Focus/FocusTimerExtendTests.swift`
 

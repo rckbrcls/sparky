@@ -51,47 +51,32 @@ struct FocusRecipe: Equatable, Hashable, Sendable {
     }
 
     /// Returns nil when Focus is not enabled on the schedule.
-    static func resolve(schedule: ScheduleConfig, settings: FocusSettings) -> FocusRecipe? {
-        guard schedule.focusEnabled else { return nil }
-        return resolveStored(
-            work: schedule.focusWorkDurationMinutes,
-            shortBreak: schedule.focusShortBreakDurationMinutes,
-            longBreak: schedule.focusLongBreakDurationMinutes,
-            untilLong: schedule.focusPomodorosUntilLongBreak,
-            autoContinue: schedule.focusAutoContinue,
-            settings: settings
+    static func resolve(schedule: ScheduleConfig) -> FocusRecipe? {
+        guard schedule.focusEnabled,
+              schedule.focusWorkDurationMinutes > 0,
+              schedule.focusShortBreakDurationMinutes > 0,
+              schedule.focusLongBreakDurationMinutes > 0,
+              schedule.focusPomodorosUntilLongBreak > 0 else {
+            return nil
+        }
+        return FocusRecipe(
+            workDurationMinutes: schedule.focusWorkDurationMinutes,
+            shortBreakDurationMinutes: schedule.focusShortBreakDurationMinutes,
+            longBreakDurationMinutes: schedule.focusLongBreakDurationMinutes,
+            pomodorosUntilLongBreak: schedule.focusPomodorosUntilLongBreak,
+            autoContinue: schedule.focusAutoContinue
         )
     }
 
     /// Returns nil when Focus is not enabled on the draft.
-    static func resolve(draft: ScheduleConfigDraft, settings: FocusSettings) -> FocusRecipe? {
-        guard draft.focusEnabled else { return nil }
-        return resolveStored(
-            work: draft.focusWorkDurationMinutes,
-            shortBreak: draft.focusShortBreakDurationMinutes,
-            longBreak: draft.focusLongBreakDurationMinutes,
-            untilLong: draft.focusPomodorosUntilLongBreak,
-            autoContinue: draft.focusAutoContinue,
-            settings: settings
-        )
-    }
-
-    /// Legacy rows store 0 durations; fill those from globals.
-    private static func resolveStored(
-        work: Int,
-        shortBreak: Int,
-        longBreak: Int,
-        untilLong: Int,
-        autoContinue: Bool,
-        settings: FocusSettings
-    ) -> FocusRecipe {
-        let isLegacyUnset = work <= 0 || shortBreak <= 0 || longBreak <= 0 || untilLong <= 0
+    static func resolve(draft: ScheduleConfigDraft) -> FocusRecipe? {
+        guard draft.focusEnabled, draft.hasConcreteFocusRecipe else { return nil }
         return FocusRecipe(
-            workDurationMinutes: work > 0 ? work : settings.workDurationMinutes,
-            shortBreakDurationMinutes: shortBreak > 0 ? shortBreak : settings.shortBreakDurationMinutes,
-            longBreakDurationMinutes: longBreak > 0 ? longBreak : settings.longBreakDurationMinutes,
-            pomodorosUntilLongBreak: untilLong > 0 ? untilLong : settings.pomodorosUntilLongBreak,
-            autoContinue: isLegacyUnset ? settings.autoContinue : autoContinue
+            workDurationMinutes: draft.focusWorkDurationMinutes,
+            shortBreakDurationMinutes: draft.focusShortBreakDurationMinutes,
+            longBreakDurationMinutes: draft.focusLongBreakDurationMinutes,
+            pomodorosUntilLongBreak: draft.focusPomodorosUntilLongBreak,
+            autoContinue: draft.focusAutoContinue
         )
     }
 

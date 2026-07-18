@@ -57,7 +57,7 @@ Most mutations should go through services rather than directly editing models fr
 - Use `DataExportService` and `DataImportService` for backup/restore.
 - Use `TriggerExecutorCoordinator` as the shared entry point for trigger sync/unregister behavior.
 
-This matters because `MemoryService` does more than save SwiftData models. It also updates transient attachments, rebuilds its index, refreshes cached arrays, and re-syncs notification/geofence/reminder executors.
+This matters because `MemoryService` does more than save SwiftData models. It also updates transient attachments, rebuilds its index, refreshes cached arrays, and re-syncs notification/geofence executors.
 
 ## Draft Pattern
 
@@ -67,7 +67,6 @@ Editor flows should use draft structs before persisting changes:
 - `CheckItemDraft`
 - `ScheduleConfigDraft`
 - `LocationConfigDraft`
-- Nested reminder fields on `ScheduleConfigDraft` / `LocationConfigDraft` (`NestedReminderPolicy`)
 - `FocusSettings` / `FocusTimer` for schedule-gated Focus sessions
 
 The pattern keeps SwiftUI editing state separate from SwiftData model instances. Convert drafts to models only at service boundaries, and prefer existing `from(...)` and `toModel(...)` helpers when adding fields.
@@ -79,23 +78,20 @@ When adding a persisted field:
 3. Update conversion helpers.
 4. Update import/export types when the field should be backed up.
 5. Update tests if the field affects behavior.
-6. Consider migration or backward compatibility if existing installs may already have data.
+6. Decide explicitly whether existing installs require a migration.
 
 ## Trigger Development
 
-Sparky currently has three active trigger config models:
+Sparky has two trigger config models:
 
 - `ScheduleConfig`
 - `LocationConfig`
-- `ReminderConfig`
-
-Legacy `MemoryTriggerModel` and `MemoryTriggerLocation` remain in the SwiftData schema to avoid migration crashes and support migration from older data.
 
 When changing trigger behavior:
 
 - Keep `MemoryService` as the owner of trigger state changes.
 - Re-sync through `TriggerExecutorCoordinator`.
-- Confirm scheduled notifications, location geofences, and follow-up reminders are all considered.
+- Confirm scheduled notifications and location geofences are both considered.
 - Respect the location executor's `maxGeofences = 20` limit.
 - Keep notification identifiers stable enough for unregister operations to remove stale pending requests.
 

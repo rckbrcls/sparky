@@ -85,14 +85,18 @@ struct ScheduledTriggerEditorScreen: View {
                         }
                     }
 
-                    // Interval stepper
-                    Stepper(value: $interval, in: 1...999) {
-                        HStack {
-                            Text("Every")
-                            Text("\(interval)")
-                                .fontWeight(.semibold)
-                            Text(interval == 1 ? frequency.singularUnitLabel : frequency.unitLabel)
-                        }
+                    HStack {
+                        Text("Every")
+
+                        Spacer()
+
+                        BoundedIntegerField(
+                            value: $interval,
+                            in: 1...999,
+                            accessibilityLabel: "Repeat interval"
+                        )
+
+                        Text(interval == 1 ? frequency.singularUnitLabel : frequency.unitLabel)
                     }
 
                     // Weekday selection for weekly
@@ -117,13 +121,18 @@ struct ScheduledTriggerEditorScreen: View {
                     }
 
                     if endType == .afterCount {
-                        Stepper(value: $occurrenceCount, in: 1...999) {
-                            HStack {
-                                Text("After")
-                                Text("\(occurrenceCount)")
-                                    .fontWeight(.semibold)
-                                Text(occurrenceCount == 1 ? "time" : "times")
-                            }
+                        HStack {
+                            Text("After")
+
+                            Spacer()
+
+                            BoundedIntegerField(
+                                value: $occurrenceCount,
+                                in: 1...999,
+                                accessibilityLabel: "Number of occurrences"
+                            )
+
+                            Text(occurrenceCount == 1 ? "time" : "times")
                         }
                     }
                 }

@@ -92,7 +92,7 @@ A person switching tabs mid-session, using VoiceOver, larger text, or Reduce Mot
 - App backgrounds during session: returning shows accurate remaining time; redesign does not change notification obligations from existing Focus behavior.
 - Light appearance: immersive design must not assume pure black only; semantic surfaces and text remain legible.
 - Replace-session alert during redesigned UI: still understandable and actionable.
-- Session started from legacy entry points (notification, editor): lands in the same redesigned active chrome.
+- Session started from notification or editor entry points: lands in the same redesigned active chrome.
 
 ## Requirements *(mandatory)*
 

@@ -26,12 +26,12 @@ FocusRecipe
 ```text
 FocusRecipe.from(settings: FocusSettings) -> FocusRecipe
 
-FocusRecipe.resolve(schedule: ScheduleConfig, settings: FocusSettings) -> FocusRecipe?
+FocusRecipe.resolve(schedule: ScheduleConfig) -> FocusRecipe?
   // nil if !schedule.focusEnabled
-  // if duration fields unset (0): take from settings
-  // else: concrete schedule fields (+ autoContinue: if legacy unset durations, settings.autoContinue)
+  // nil if any duration field is 0
+  // else: concrete schedule fields
 
-FocusRecipe.resolve(draft: ScheduleConfigDraft, settings: FocusSettings) -> FocusRecipe?
+FocusRecipe.resolve(draft: ScheduleConfigDraft) -> FocusRecipe?
   // same rules
 ```
 

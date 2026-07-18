@@ -171,7 +171,7 @@ Idle → pick Memory → replace gate → beginSession(id,title,recipe)
 
 ## Migration
 
-**None.** No SwiftData schema version bump. Optional UserDefaults key for last quick minutes is additive and backward compatible.
+**None.** No SwiftData schema version bump. The optional UserDefaults key for last quick minutes is additive.
 
 ## Export / import
 

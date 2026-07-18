@@ -180,20 +180,6 @@ struct MemoryCardView: View {
         return memory.scheduleConfig?.isActive == true ? memory.scheduleConfig : nil
     }
 
-    private var scheduleReminder: NestedReminderPolicy? {
-        guard let memory = memory,
-              let schedule = memory.scheduleConfig,
-              schedule.hasActiveReminder else { return nil }
-        return schedule.reminder
-    }
-
-    private var locationReminder: NestedReminderPolicy? {
-        guard let memory = memory,
-              let location = memory.locationConfig,
-              location.hasActiveReminder else { return nil }
-        return location.reminder
-    }
-
     private var hasFocus: Bool {
         memory?.hasFocus == true
     }
@@ -224,27 +210,6 @@ struct MemoryCardView: View {
             if let locationConfig = locationTrigger {
                 MemoryCardLocationMapView(
                     location: locationConfig,
-                    isCompletedForDisplay: isCompletedForDisplay
-                )
-
-                Divider()
-            }
-
-            // Nested reminders
-            if let scheduleReminder {
-                MemoryCardReminderView(
-                    policy: scheduleReminder,
-                    sourceLabel: "Schedule",
-                    isCompletedForDisplay: isCompletedForDisplay
-                )
-
-                Divider()
-            }
-
-            if let locationReminder {
-                MemoryCardReminderView(
-                    policy: locationReminder,
-                    sourceLabel: "Location",
                     isCompletedForDisplay: isCompletedForDisplay
                 )
 

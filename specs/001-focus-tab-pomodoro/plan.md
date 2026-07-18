@@ -26,7 +26,7 @@ Ship a first-class **Focus tab** on iPhone and upgrade Memory Focus from a boole
 
 **Performance Goals**: Focus tab list lazy; timer ticks must not stall other tabs; filtering Focus-ready Memories O(n) over in-memory `MemoryService` index is acceptable at current scale
 
-**Constraints**: Local-first; semantic theme only; drafts for editor writes; active `scheduleConfig` path (not legacy `triggers`); one active Focus session app-wide; no network
+**Constraints**: Local-first; semantic theme only; drafts for editor writes; `scheduleConfig` persistence; one active Focus session app-wide; no network
 
 **Scale/Scope**: ~1 new tab root + editor Focus form expansion + FocusTimer session-config API + ScheduleConfig/Draft/export/migration touchpoints; ~4–6 core types touched, 1–2 new view files
 
@@ -114,7 +114,7 @@ See [research.md](./research.md) for decisions on recipe storage shape, timer co
 
 ## Implementation approach (planning only)
 
-1. **Domain**: Introduce `FocusRecipe` (value type) with work/short/long minutes, pomodorosUntilLongBreak, autoContinue. Resolve `ScheduleConfig` → recipe with fallback to `FocusSettings` when fields unset (legacy toggle-only rows).
+1. **Domain**: Introduce `FocusRecipe` (value type) with work/short/long minutes, pomodorosUntilLongBreak, and autoContinue. Resolve only complete stored recipes; incomplete configurations are invalid.
 2. **Persistence**: Add optional/defaulted Int/Bool fields on `ScheduleConfig` + mirror on `ScheduleConfigDraft`; `setFocusEnabled(true)` copies current globals into draft; disable clears or leaves values (prefer keep last values but `focusEnabled = false`).
 3. **Timer**: `FocusTimer.beginQuickSession()` and `beginSession(memoryID:title:recipe:)` bind an active `FocusRecipe` for the session lifetime; ignore global settings mid-session except optional future “apply defaults” (out of scope). Prefer wall-clock end date on start/resume for background accuracy.
 4. **Editor UI**: Under schedule Focus toggle, show steppers aligned with `FocusSettingsView` ranges when enabled.

@@ -28,7 +28,6 @@ KEY FEATURES
 • Minds - Organize memories into nested categories with custom icons and colors.
 • Smart Reminders - Schedule one-time or recurring reminders with daily, weekly, monthly, yearly, weekday, or custom interval patterns.
 • Location Triggers - Get notified when you arrive at or leave a selected place.
-• Follow-Up Reminders - Repeat reminders after a scheduled or location trigger starts.
 • Rich Attachments - Add photos, audio recordings, files, and links to any memory.
 • Checklists - Break memories into actionable items and track completion.
 • Calendar Timeline - Browse memories through day, month, and timeline views.
@@ -160,7 +159,7 @@ Sparky requests Always location permission for user-created geofence reminders. 
 PERMISSIONS REQUESTED:
 
 - Location Always / When In Use: For geofence-based reminders and location selection.
-- Notifications: For scheduled, location-triggered, and follow-up reminders.
+- Notifications: For scheduled and location-triggered reminders.
 - Camera: To capture photos for memories.
 - Microphone: To record audio notes.
 - Photo Library: To attach existing images.

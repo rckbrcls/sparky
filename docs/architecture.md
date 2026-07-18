@@ -22,7 +22,6 @@ flowchart TD
 
     Coordinator --> Scheduled["ScheduledTriggerExecutor"]
     Coordinator --> Location["LocationTriggerExecutor"]
-    Coordinator --> Reminder["ReminderTriggerExecutor"]
     Environment --> FocusTimer["FocusTimer / FocusSettings"]
 
     Views["SwiftUI Views"] --> ViewModels["ViewModels"]
@@ -69,9 +68,7 @@ The model layer lives under `sparky/Model/` and is split by domain:
 - `Mind`: hierarchical organization entity with virtual All and Limbo sentinels.
 - `Tag`: color-coded classification entity.
 - `CheckItemModel`: persisted checklist item.
-- `ScheduleConfig`, `LocationConfig`: active primary trigger models. Nested reminder policy fields live on each primary; `ScheduleConfig.focusEnabled` gates Focus.
-- `ReminderConfig`: legacy memory-level reminder retained only for SwiftData schema safety.
-- `MemoryTriggerModel` and `MemoryTriggerLocation`: legacy trigger models retained in the SwiftData schema for migration safety.
+- `ScheduleConfig`, `LocationConfig`: primary trigger models; `ScheduleConfig.focusEnabled` gates Focus.
 - `SparkyExportFormat`: JSON backup/restore contract.
 - `ICalExportFormat`: iCalendar converter for scheduled memories.
 
@@ -81,8 +78,8 @@ UI editing flows use value-type drafts before writing to SwiftData:
 
 - `MemoryDraft`
 - `CheckItemDraft`
-- `ScheduleConfigDraft` (includes nested reminder + focusEnabled)
-- `LocationConfigDraft` (includes nested reminder)
+- `ScheduleConfigDraft` (includes recurrence and Focus configuration)
+- `LocationConfigDraft`
 
 This keeps editor state separate from persisted objects until create/update actions are submitted through services.
 
@@ -102,7 +99,6 @@ Trigger executors translate persisted trigger config into OS behavior:
 
 - `ScheduledTriggerExecutor` registers local notifications for one-time, recurring, weekday-mask, and interval schedules.
 - `LocationTriggerExecutor` monitors CoreLocation circular regions and emits local notifications on entry or exit.
-- `ReminderTriggerExecutor` schedules follow-up notifications from nested reminder policies on schedule and/or location configs.
 - Focus sessions are started from schedule notifications (`Start Focus` action) via `FocusTimer` / `FocusSessionView` using global `FocusSettings`.
 - `TriggerExecutorCoordinator` provides a single sync/unregister interface for the app.
 
@@ -115,7 +111,6 @@ The location executor enforces `LocationTriggerExecutor.maxGeofences = 20`, matc
 - `DataController.shared` for production data.
 - `DataController.preview` for in-memory SwiftUI previews.
 - `modelContext.autosaveEnabled = true` for the main context.
-- A version-gated migration that copies legacy scheduled/location triggers into the newer 1:1 config models.
 
 Memory attachments are not stored as SwiftData blobs. SwiftData stores attachment references, while `MemoryAttachmentStore` writes payloads to the app's Application Support directory under `MemoryAttachments`.
 
@@ -124,8 +119,7 @@ Memory attachments are not stored as SwiftData blobs. SwiftData stores attachmen
 1. A view or view model submits a `MemoryDraft` to `MemoryService`.
 2. `MemoryService` validates the draft, creates or updates SwiftData models, replaces attachment files, and saves the context.
 3. `MemoryService.refresh(force: true)` reloads memories, repopulates transient attachments, rebuilds the memory index, and asks `TriggerExecutorCoordinator` to sync.
-4. The coordinator syncs scheduled notifications, location geofences, and follow-up reminders from active memories.
-5. If a location trigger fires, `LocationTriggerExecutor` notifies the user and calls back into `MemoryService.markPrimaryTriggerFired(...)` so reminders can start from the actual location event.
+4. The coordinator syncs scheduled notifications and location geofences from active memories.
 
 ## External Framework Boundaries
 
@@ -141,7 +135,6 @@ These are not backend integrations owned by the app, but some may use network-ba
 
 ## Current Architectural Limitations
 
-- Trigger migration is still represented in the schema through legacy trigger models.
 - There is no documented cloud backup or sync implementation.
 - App Store release automation and CI/CD are not present in the repository.
 - Final release validation depends on Xcode, signing configuration, App Store Connect, screenshots, and physical-device/TestFlight checks outside the current codebase.

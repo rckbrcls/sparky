@@ -88,7 +88,7 @@ Start with:
 Likely causes:
 
 - The file is not valid Sparky JSON.
-- The export `version` is not `1.0`.
+- The export `version` is not `2.0`.
 - The selected file cannot be accessed through security-scoped resource access.
 - Attachment data is missing or invalid.
 - A Mind or Memory validation rule rejected imported data.
@@ -133,22 +133,6 @@ Check:
 - The desired event matches user action: arrival vs departure.
 
 iOS geofence behavior is system-managed and may not fire instantly in every simulator/device scenario.
-
-## Follow-Up Reminders Do Not Start
-
-Start with:
-
-- `sparky/Executors/ReminderTriggerExecutor.swift`
-- `sparky/Services/MemoryService.swift`
-- `sparky/Model/Triggers/ReminderConfig.swift`
-
-Check:
-
-- The Memory has an active primary trigger: schedule or location.
-- nested reminder is active on the owning schedule and/or location config (`reminderIsActive`).
-- For scheduled triggers, `ReminderTriggerExecutor` can derive `startedAt` from `scheduleConfig.fireDate`.
-- For location triggers, `LocationTriggerExecutor` called back into `MemoryService.markPrimaryTriggerFired(...)`.
-- Reminder start values were not reset by reactivating the Memory or changing the primary trigger.
 
 ## Map Search Or Location Names Do Not Resolve
 

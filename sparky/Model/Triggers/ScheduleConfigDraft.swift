@@ -17,7 +17,6 @@ struct ScheduleConfigDraft: Identifiable, Hashable {
     var isActive: Bool
     var isAllDay: Bool
     var recurrenceEndType: RecurrenceEndType
-    var reminder: NestedReminderPolicy
     var focusEnabled: Bool
     var focusWorkDurationMinutes: Int
     var focusShortBreakDurationMinutes: Int
@@ -35,7 +34,6 @@ struct ScheduleConfigDraft: Identifiable, Hashable {
         isActive: Bool = true,
         isAllDay: Bool = false,
         recurrenceEndType: RecurrenceEndType = .never,
-        reminder: NestedReminderPolicy = NestedReminderPolicy(),
         focusEnabled: Bool = false,
         focusWorkDurationMinutes: Int = 0,
         focusShortBreakDurationMinutes: Int = 0,
@@ -52,7 +50,6 @@ struct ScheduleConfigDraft: Identifiable, Hashable {
         self.isActive = isActive
         self.isAllDay = isAllDay
         self.recurrenceEndType = recurrenceEndType
-        self.reminder = reminder
         self.focusEnabled = focusEnabled
         self.focusWorkDurationMinutes = focusWorkDurationMinutes
         self.focusShortBreakDurationMinutes = focusShortBreakDurationMinutes
@@ -100,7 +97,6 @@ extension ScheduleConfigDraft {
             isActive: isActive,
             isAllDay: isAllDay,
             recurrenceEndType: recurrenceEndType,
-            reminder: reminder,
             focusEnabled: focusEnabled,
             focusWorkDurationMinutes: focusWorkDurationMinutes,
             focusShortBreakDurationMinutes: focusShortBreakDurationMinutes,
@@ -123,7 +119,6 @@ extension ScheduleConfigDraft {
             isActive: model.isActive,
             isAllDay: model.isAllDay,
             recurrenceEndType: model.recurrenceEndType,
-            reminder: model.reminder,
             focusEnabled: model.focusEnabled,
             focusWorkDurationMinutes: model.focusWorkDurationMinutes,
             focusShortBreakDurationMinutes: model.focusShortBreakDurationMinutes,

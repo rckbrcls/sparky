@@ -21,7 +21,7 @@
 | | |
 |--|--|
 | **Effect** | Optional replace policy (current env may auto-end — tab UI should gate before call). Then `focusTimer.beginQuickSession(workDurationMinutes:)` |
-| **Default** | nil minutes → global work default (backward compatible) |
+| **Default** | nil minutes → global work default |
 
 ## 2. Extend current phase
 

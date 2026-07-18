@@ -35,7 +35,7 @@ ScheduleConfig ──1:1── Memory
 | autoContinue | Bool | true | — |
 
 **Storage**: `UserDefaults` keys `focus.*` (existing).  
-**Role**: Quick Focus recipe; seed when enabling Memory Focus; fallback for legacy rows.
+**Role**: Quick Focus recipe and seed when enabling Memory Focus.
 
 ### 2. Memory Focus Configuration (on `ScheduleConfig` / draft)
 
@@ -49,13 +49,9 @@ Extends existing schedule primary.
 | focusLongBreakDurationMinutes | Int | 0 | 0 = unset |
 | focusPomodorosUntilLongBreak | Int | 0 | 0 = unset |
 | focusAutoContinue | Bool | true | Meaningful when `focusRecipeConfigured == true` |
-| focusRecipeConfigured | Bool | false | true once seeded/customized; distinguishes legacy toggle-only |
+| focusRecipeConfigured | Bool | false | true once seeded/customized |
 
-**Simpler alternative if avoiding extra flag**: treat “all duration fields == 0” as unset legacy; when seeding, write non-zero durations always. `focusAutoContinue` alone cannot use 0-sentinel — then either:
-- always seed all fields including autoContinue when enabling (so legacy = durations 0), and for autoContinue on legacy use globals; **or**
-- use `focusAutoContinueRaw: Int` (-1 unset, 0 false, 1 true).
-
-**Chosen for implementation**: On enable, **always seed full concrete recipe** from globals (all durations > 0). Legacy rows keep durations at 0 → resolver fills from globals including autoContinue from globals. New field `focusAutoContinue` defaults `true` but resolver uses globals when any duration still 0 (legacy detection).
+**Chosen for implementation**: On enable, **always seed a full concrete recipe** from globals. A Focus-enabled configuration with any zero duration is invalid and cannot start.
 
 **Relationships**:
 - `ScheduleConfig.memory` → `Memory` (existing)
@@ -144,17 +140,7 @@ Not persisted. Projection for Focus tab list:
 3. Enabling Focus requires an active schedule draft/config (existing editor constraint).
 4. Saving Memory persists recipe fields through `MemoryService` schedule `toModel` path.
 5. Disabling Focus sets `focusEnabled = false` without wiping recipe fields (re-enable restores).
-6. Export includes recipe when configured; import tolerates missing keys.
-
-## Migration
-
-| Case | Behavior |
-|------|----------|
-| Existing DB rows | New Int fields default 0; Bool autoContinue default true; SwiftData lightweight add |
-| Focus enabled legacy | Resolver uses globals until user edits/saves seeded values |
-| Optional explicit migration | Not required for correctness; optional “touch on load” out of scope |
-
-No version bump of trigger migration UserDefaults keys required unless export versioning needs a format flag (optional `exportVersion` already handled elsewhere — only add optional Codable fields).
+6. Export includes the complete recipe; import rejects an incomplete enabled recipe.
 
 ## Memory.hasFocus
 

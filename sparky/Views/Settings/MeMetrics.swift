@@ -21,6 +21,9 @@ struct MeMetrics {
     let activityDays: [ActivityDay]
     let completionRate: CompletionRate
     let streakDays: Int
+    let longestStreakDays: Int
+    let totalCompletionCount: Int
+    let topMindName: String?
     let insight: String
 
     var completionCountLast30Days: Int {
@@ -28,7 +31,15 @@ struct MeMetrics {
     }
 
     var activeDaysLast30Days: Int {
-        activityDays.count { $0.completionCount > 0 }
+        activityDays.filter { $0.completionCount > 0 }.count
+    }
+
+    var completionCountLast7Days: Int {
+        activityDays.suffix(7).reduce(0) { $0 + $1.completionCount }
+    }
+
+    var activeDaysLast7Days: Int {
+        activityDays.suffix(7).filter { $0.completionCount > 0 }.count
     }
 
     static func calculate(
@@ -39,6 +50,7 @@ struct MeMetrics {
         let events = completionEvents(from: memories, through: now)
         let activityDays = makeActivityDays(events: events, now: now, calendar: calendar)
         let streakDays = calculateStreak(events: events, now: now, calendar: calendar)
+        let longestStreakDays = calculateLongestStreak(events: events, calendar: calendar)
         let completionRate = calculateCompletionRate(
             memories: memories,
             now: now,
@@ -56,6 +68,9 @@ struct MeMetrics {
             activityDays: activityDays,
             completionRate: completionRate,
             streakDays: streakDays,
+            longestStreakDays: longestStreakDays,
+            totalCompletionCount: events.count,
+            topMindName: dominantMindName(in: events),
             insight: insight
         )
     }
@@ -153,20 +168,43 @@ private extension MeMetrics {
                 .filter { $0 <= now }
 
             scheduled += occurrences.count
-            completed += occurrences.count { occurrence in
+            completed += occurrences.filter { occurrence in
                 isOccurrenceCompleted(
                     occurrence,
                     for: memory,
                     now: now,
                     calendar: calendar
                 )
-            }
+            }.count
         }
 
         return CompletionRate(
             completedOccurrences: completed,
             scheduledOccurrences: scheduled
         )
+    }
+
+    static func calculateLongestStreak(
+        events: [CompletionEvent],
+        calendar: Calendar
+    ) -> Int {
+        let activeDays = Set(events.map { calendar.startOfDay(for: $0.date) }).sorted()
+        guard let firstDay = activeDays.first else { return 0 }
+
+        var longest = 1
+        var current = 1
+        var previousDay = firstDay
+
+        for day in activeDays.dropFirst() {
+            if calendar.date(byAdding: .day, value: 1, to: previousDay) == day {
+                current += 1
+                longest = max(longest, current)
+            } else {
+                current = 1
+            }
+            previousDay = day
+        }
+        return longest
     }
 
     static func isOccurrenceCompleted(

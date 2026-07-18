@@ -17,6 +17,7 @@ struct MeView: View {
     @State private var isEditing = false
     @FocusState private var isNameFieldFocused: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private enum Route: Hashable {
         case settings
@@ -39,9 +40,10 @@ struct MeView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     greeting
+                    lastSevenDaysCard
                     activityCard
                     completionRateCard
-                    insightCard
+                    personalBestsCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -160,14 +162,15 @@ private extension MeView {
             Text("Activity")
                 .font(.title3.weight(.semibold))
 
-            HStack(spacing: 4) {
+            HStack(alignment: .bottom, spacing: 4) {
                 ForEach(viewModel.activityDays) { day in
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
                         .fill(activityColor(for: day.completionCount))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 24)
+                        .frame(height: activityBarHeight(for: day.completionCount))
                 }
             }
+            .frame(height: 24, alignment: .bottom)
             .accessibilityHidden(true)
 
             HStack {
@@ -183,6 +186,37 @@ private extension MeView {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Activity")
         .accessibilityValue(activityAccessibilityValue)
+    }
+
+    var lastSevenDaysCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Last 7 Days")
+                .font(.title3.weight(.semibold))
+
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: 14) {
+                    weeklyMetricRow(title: "Completed", value: "\(viewModel.completionCountLast7Days)")
+                    Divider()
+                    weeklyMetricRow(title: "Active Days", value: "\(viewModel.activeDaysLast7Days)")
+                    Divider()
+                    weeklyMetricRow(title: "Current Streak", value: streakText(viewModel.streakDays))
+                }
+            } else {
+                HStack(spacing: 12) {
+                    weeklyMetric(title: "Completed", value: "\(viewModel.completionCountLast7Days)")
+                    Divider()
+                    weeklyMetric(title: "Active Days", value: "\(viewModel.activeDaysLast7Days)")
+                    Divider()
+                    weeklyMetric(title: "Current Streak", value: streakText(viewModel.streakDays))
+                }
+                .frame(minHeight: 54)
+            }
+        }
+        .padding(16)
+        .cardStyle()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Last 7 days")
+        .accessibilityValue(lastSevenDaysAccessibilityValue)
     }
 
     var completionRateCard: some View {
@@ -231,7 +265,7 @@ private extension MeView {
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring, value: rate)
+                    .animation(reduceMotion ? nil : .spring, value: rate)
             }
 
             Text(completionRateText)
@@ -241,26 +275,79 @@ private extension MeView {
         .accessibilityHidden(true)
     }
 
-    var insightCard: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "sparkles")
-                .font(.title2)
-                .foregroundStyle(Color.Theme.textSecondary)
-                .accessibilityHidden(true)
+    var personalBestsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Personal Bests")
+                .font(.title3.weight(.semibold))
 
-            Text(viewModel.insight)
-                .font(.body)
-                .italic()
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            personalBestRow(
+                title: "Longest Streak",
+                value: viewModel.totalCompletionCount > 0
+                    ? streakText(viewModel.longestStreakDays)
+                    : "—"
+            )
+            Divider()
+            personalBestRow(
+                title: "Total Completions",
+                value: viewModel.totalCompletionCount > 0
+                    ? "\(viewModel.totalCompletionCount)"
+                    : "—"
+            )
+            Divider()
+            personalBestRow(title: "Top Mind", value: viewModel.topMindName ?? "—")
+
+            Divider()
+
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(Color.Theme.textSecondary)
+                    .accessibilityHidden(true)
+
+                Text(viewModel.insight)
+                    .font(.subheadline)
+                    .italic()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 28)
+        .padding(16)
         .cardStyle()
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Personal insight")
-        .accessibilityValue(viewModel.insight)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Personal bests")
+        .accessibilityValue(personalBestsAccessibilityValue)
+    }
+
+    func weeklyMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(value)
+                .font(.title2.weight(.semibold))
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(Color.Theme.textSecondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    func weeklyMetricRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(Color.Theme.textSecondary)
+            Spacer()
+            Text(value)
+                .font(.headline)
+        }
+    }
+
+    func personalBestRow(title: String, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            Text(title)
+                .foregroundStyle(Color.Theme.textSecondary)
+            Spacer(minLength: 16)
+            Text(value)
+                .font(.headline)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     func activityColor(for count: Int) -> Color {
@@ -276,12 +363,40 @@ private extension MeView {
         }
     }
 
+    func activityBarHeight(for count: Int) -> CGFloat {
+        switch count {
+        case 0: return 10
+        case 1: return 15
+        case 2: return 20
+        default: return 24
+        }
+    }
+
     var activityAccessibilityValue: String {
         let completionCount = viewModel.completionCountLast30Days
         let activeDays = viewModel.activeDaysLast30Days
         let completionLabel = completionCount == 1 ? "completion" : "completions"
         let dayLabel = activeDays == 1 ? "day" : "days"
         return "\(completionCount) \(completionLabel) across \(activeDays) active \(dayLabel) in the last 30 days"
+    }
+
+    func streakText(_ days: Int) -> String {
+        "\(days) \(days == 1 ? "day" : "days")"
+    }
+
+    var lastSevenDaysAccessibilityValue: String {
+        "\(viewModel.completionCountLast7Days) completed, \(viewModel.activeDaysLast7Days) active days, current streak \(streakText(viewModel.streakDays))"
+    }
+
+    var personalBestsAccessibilityValue: String {
+        let longest = viewModel.totalCompletionCount > 0
+            ? streakText(viewModel.longestStreakDays)
+            : "not available"
+        let total = viewModel.totalCompletionCount > 0
+            ? "\(viewModel.totalCompletionCount)"
+            : "not available"
+        let topMind = viewModel.topMindName ?? "not available"
+        return "Longest streak \(longest), total completions \(total), top Mind \(topMind). \(viewModel.insight)"
     }
 
     var completionRateText: String {

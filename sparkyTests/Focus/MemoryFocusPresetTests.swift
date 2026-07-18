@@ -41,35 +41,6 @@ struct MemoryFocusPresetTests {
         #expect(environment.focusSettings.shortBreakDurationMinutes == 5)
     }
 
-    @Test func editingLegacyRecipeResolvesUntouchedFieldsFromGlobals() {
-        let environment = makeEnvironment(suite: "MemoryFocusPresetTests.legacy")
-        environment.focusSettings.shortBreakDurationMinutes = 10
-        environment.focusSettings.longBreakDurationMinutes = 30
-        environment.focusSettings.pomodorosUntilLongBreak = 5
-        environment.focusSettings.autoContinue = false
-
-        let viewModel = MemoryEditorViewModel(
-            environment: environment,
-            attachmentStore: environment.attachmentStore,
-            memory: nil,
-            defaultMind: nil,
-            template: .blank
-        )
-        viewModel.scheduleConfigDraft = ScheduleConfigDraft(
-            fireDate: Date().addingTimeInterval(600),
-            isActive: true,
-            focusEnabled: true
-        )
-
-        viewModel.setFocusWorkDurationMinutes(30)
-
-        #expect(viewModel.focusRecipe?.workDurationMinutes == 30)
-        #expect(viewModel.focusRecipe?.shortBreakDurationMinutes == 10)
-        #expect(viewModel.focusRecipe?.longBreakDurationMinutes == 30)
-        #expect(viewModel.focusRecipe?.pomodorosUntilLongBreak == 5)
-        #expect(viewModel.focusRecipe?.autoContinue == false)
-    }
-
     private func makeEnvironment(suite: String) -> AppEnvironment {
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)

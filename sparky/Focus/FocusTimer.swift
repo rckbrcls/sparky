@@ -155,15 +155,6 @@ final class FocusTimer: ObservableObject {
         start()
     }
 
-    /// Convenience: begin with globals when caller has no recipe (legacy call sites).
-    func beginSession(memoryID: UUID, memoryTitle: String) {
-        beginSession(
-            memoryID: memoryID,
-            memoryTitle: memoryTitle,
-            recipe: FocusRecipe.from(settings: settings)
-        )
-    }
-
     func start() {
         guard !isRunning else { return }
         isRunning = true

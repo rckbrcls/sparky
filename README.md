@@ -26,9 +26,8 @@ Core goals:
 - Timeline and calendar: calendar, day, month, and period views for browsing memories over time.
 - Scheduled triggers: one-time, recurring, weekday-mask, all-day, and interval-based notification scheduling.
 - Location triggers: geofence-based reminders for arrival or departure from a selected place.
-- Follow-up reminders: repeated reminders that start after a primary schedule or location trigger.
 - Attachments: photos, links, audio recordings, and files stored in the app's local Application Support area.
-- Import/export: JSON backup/restore through `SparkyExportFormat` version `1.0`, plus iCalendar export for scheduled memories.
+- Import/export: JSON backup/restore through `SparkyExportFormat` version `2.0`, plus iCalendar export for scheduled memories.
 - Settings: theme selection, app icon selection, data management, attachment cache clearing, onboarding reset, and app info.
 - Onboarding: guided permission setup for notifications, location, microphone, and camera.
 
@@ -55,10 +54,10 @@ Sparky follows an MVVM + Services + Executors structure with `AppEnvironment` as
 
 - `sparky/sparkyApp.swift` creates `AppEnvironment`, injects the SwiftData model container, wires the theme manager, and bootstraps the app.
 - `sparky/AppEnvironment.swift` owns long-lived services and trigger executors.
-- `sparky/Data/DataController.swift` configures SwiftData, owns the main `ModelContext`, seeds preview data, and runs the trigger migration.
+- `sparky/Data/DataController.swift` configures SwiftData, owns the main `ModelContext`, and seeds preview data.
 - `sparky/Services/MemoryService.swift` owns memory CRUD, filtering, refresh, attachment replacement, and trigger synchronization.
 - `sparky/Services/MindService.swift` owns Minds and Tags.
-- `sparky/Executors/TriggerExecutorCoordinator.swift` coordinates scheduled, location, and follow-up reminder executors.
+- `sparky/Executors/TriggerExecutorCoordinator.swift` coordinates scheduled and location executors.
 - `sparky/Managers/MemoryAttachmentStore.swift` stores attachment payloads outside SwiftData.
 - `sparky/ViewModels/MemoryEditorViewModel.swift` bridges editor state, drafts, persisted models, and trigger configuration.
 - `sparky/Views/` contains the Calendar, Mind, Me/Settings, onboarding, memory editor, map, and shared UI surfaces.
@@ -74,8 +73,8 @@ sparky/
 │   ├── sparkyApp.swift            # App entry point
 │   ├── AppEnvironment.swift       # Dependency container and bootstrap owner
 │   ├── ContentView.swift          # Root tab/navigation shell
-│   ├── Data/                      # SwiftData container and migration logic
-│   ├── Executors/                 # Notification, location, and reminder execution
+│   ├── Data/                      # SwiftData container
+│   ├── Executors/                 # Scheduled notification and location execution
 │   ├── Managers/                  # Theme, app icon, and attachment file storage
 │   ├── Model/                     # SwiftData models, drafts, triggers, recurrence, export types
 │   ├── Services/                  # Memory, mind, import/export, and bulk action services
@@ -144,7 +143,7 @@ See [`docs/security.md`](docs/security.md) for permissions, Privacy Manifest det
 - [`docs/getting-started.md`](docs/getting-started.md): setup and local workflow.
 - [`docs/architecture.md`](docs/architecture.md): architecture and data flow.
 - [`docs/development.md`](docs/development.md): development conventions.
-- [`docs/database.md`](docs/database.md): SwiftData models, migration, import/export, and attachment storage.
+- [`docs/database.md`](docs/database.md): SwiftData models, import/export, and attachment storage.
 - [`docs/security.md`](docs/security.md): privacy, permissions, and data handling.
 - [`docs/deployment.md`](docs/deployment.md): App Store release notes.
 - [`docs/troubleshooting.md`](docs/troubleshooting.md): common development and runtime issues.

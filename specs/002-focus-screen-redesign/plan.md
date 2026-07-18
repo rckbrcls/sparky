@@ -92,7 +92,7 @@ sparkyTests/
     └── FocusQuickDurationTests.swift # NEW (or extend FocusTimerTests)
 ```
 
-**Structure Decision**: Keep domain in `sparky/Focus/`. All redesign chrome under `sparky/Views/Focus/` with one type per file. Reuse tab shell and `FocusTimer` singleton from 001. Do not revive deprecated Managers.
+**Structure Decision**: Keep domain in `sparky/Focus/`. All redesign chrome under `sparky/Views/Focus/` with one type per file. Reuse the tab shell and `FocusTimer` singleton from 001; do not create parallel managers.
 
 ## Complexity Tracking
 

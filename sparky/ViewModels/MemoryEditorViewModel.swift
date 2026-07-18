@@ -88,28 +88,13 @@ final class MemoryEditorViewModel: ObservableObject {
         locationConfigDraft != nil
     }
 
-    var hasScheduleReminder: Bool {
-        scheduleConfigDraft?.reminder.isActive == true
-    }
-
-    var hasLocationReminder: Bool {
-        locationConfigDraft?.reminder.isActive == true
-    }
-
     var hasFocusEnabled: Bool {
         scheduleConfigDraft?.focusEnabled == true
     }
 
     var focusRecipe: FocusRecipe? {
         guard let scheduleConfigDraft else { return nil }
-        return FocusRecipe.resolve(
-            draft: scheduleConfigDraft,
-            settings: environment.focusSettings
-        )
-    }
-
-    var hasPrimaryTrigger: Bool {
-        hasScheduleTrigger || hasLocationTrigger
+        return FocusRecipe.resolve(draft: scheduleConfigDraft)
     }
 
     /// Returns the current schedule configuration as a draft for editing
@@ -161,7 +146,7 @@ final class MemoryEditorViewModel: ObservableObject {
             }
         }
 
-        // Compare schedule config (includes nested reminder + focus)
+        // Compare schedule config
         let origSchedule = original.scheduleConfig
         if (scheduleConfigDraft == nil) != (origSchedule == nil) { return true }
         if let draft = scheduleConfigDraft, let orig = origSchedule {
@@ -176,13 +161,12 @@ final class MemoryEditorViewModel: ObservableObject {
                draft.focusShortBreakDurationMinutes != orig.focusShortBreakDurationMinutes ||
                draft.focusLongBreakDurationMinutes != orig.focusLongBreakDurationMinutes ||
                draft.focusPomodorosUntilLongBreak != orig.focusPomodorosUntilLongBreak ||
-               draft.focusAutoContinue != orig.focusAutoContinue ||
-               draft.reminder != orig.reminder {
+               draft.focusAutoContinue != orig.focusAutoContinue {
                 return true
             }
         }
 
-        // Compare location config (includes nested reminder)
+        // Compare location config
         let origLocation = original.locationConfig
         if (locationConfigDraft == nil) != (origLocation == nil) { return true }
         if let draft = locationConfigDraft, let orig = origLocation {
@@ -190,8 +174,7 @@ final class MemoryEditorViewModel: ObservableObject {
                draft.longitude != orig.longitude ||
                draft.radius != orig.radius ||
                draft.isActive != orig.isActive ||
-               draft.event != orig.event ||
-               draft.reminder != orig.reminder {
+               draft.event != orig.event {
                 return true
             }
         }
@@ -450,7 +433,6 @@ final class MemoryEditorViewModel: ObservableObject {
             isActive: true,
             isAllDay: isAllDay,
             recurrenceEndType: endType,
-            reminder: existing?.reminder ?? NestedReminderPolicy(),
             focusEnabled: existing?.focusEnabled ?? false,
             focusWorkDurationMinutes: existing?.focusWorkDurationMinutes ?? 0,
             focusShortBreakDurationMinutes: existing?.focusShortBreakDurationMinutes ?? 0,
@@ -475,52 +457,13 @@ final class MemoryEditorViewModel: ObservableObject {
             radius: radius,
             name: name,
             event: event,
-            isActive: true,
-            reminder: existing?.reminder ?? NestedReminderPolicy()
+            isActive: true
         )
     }
 
     /// Removes the location trigger
     func removeLocationConfig() {
         locationConfigDraft = nil
-    }
-
-    /// Sets nested reminder under the schedule primary
-    func setScheduleReminder(intervalValue: Int, intervalUnit: ReminderIntervalUnit, repeatCount: Int?) {
-        guard var schedule = scheduleConfigDraft else { return }
-        schedule.reminder = NestedReminderPolicy(
-            isActive: true,
-            intervalValue: max(1, intervalValue),
-            intervalUnit: intervalUnit,
-            repeatCount: repeatCount,
-            startedAt: schedule.reminder.startedAt
-        )
-        scheduleConfigDraft = schedule
-    }
-
-    func removeScheduleReminder() {
-        guard var schedule = scheduleConfigDraft else { return }
-        schedule.reminder = NestedReminderPolicy()
-        scheduleConfigDraft = schedule
-    }
-
-    /// Sets nested reminder under the location primary
-    func setLocationReminder(intervalValue: Int, intervalUnit: ReminderIntervalUnit, repeatCount: Int?) {
-        guard var location = locationConfigDraft else { return }
-        location.reminder = NestedReminderPolicy(
-            isActive: true,
-            intervalValue: max(1, intervalValue),
-            intervalUnit: intervalUnit,
-            repeatCount: repeatCount,
-            startedAt: location.reminder.startedAt
-        )
-        locationConfigDraft = location
-    }
-
-    func removeLocationReminder() {
-        guard var location = locationConfigDraft else { return }
-        location.reminder = NestedReminderPolicy()
-        locationConfigDraft = location
     }
 
     func setFocusEnabled(_ enabled: Bool) {
@@ -595,10 +538,7 @@ final class MemoryEditorViewModel: ObservableObject {
     private func updateFocusRecipe(_ update: (FocusRecipe) -> FocusRecipe) {
         guard var schedule = scheduleConfigDraft,
               schedule.focusEnabled,
-              let recipe = FocusRecipe.resolve(
-                draft: schedule,
-                settings: environment.focusSettings
-              ) else {
+              let recipe = FocusRecipe.resolve(draft: schedule) else {
             return
         }
         schedule.applyFocusRecipe(update(recipe))
@@ -646,6 +586,7 @@ final class MemoryEditorViewModel: ObservableObject {
             fileAttachmentIDs: fileAttachments.map(\.id),
             attachments: allAttachments,
             autoCompleteOnChecklistCompletion: existingMemory?.autoCompleteOnChecklistCompletion ?? false,
+            completedAt: existingMemory?.completedAt,
             completedDates: existingMemory?.completedDates ?? []
         )
 
@@ -696,6 +637,7 @@ final class MemoryEditorViewModel: ObservableObject {
             fileAttachmentIDs: fileAttachments.map(\.id),
             attachments: allAttachments,
             autoCompleteOnChecklistCompletion: existingMemory.autoCompleteOnChecklistCompletion,
+            completedAt: existingMemory.completedAt,
             completedDates: existingMemory.completedDates
         )
 

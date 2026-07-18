@@ -19,6 +19,10 @@ struct MeMetricsTests {
         #expect(metrics.activityDays.count == 30)
         #expect(metrics.activityDays.last?.completionCount == 2)
         #expect(metrics.streakDays == 3)
+        #expect(metrics.longestStreakDays == 3)
+        #expect(metrics.totalCompletionCount == 4)
+        #expect(metrics.completionCountLast7Days == 4)
+        #expect(metrics.activeDaysLast7Days == 3)
         #expect(metrics.insight == "You have shown up for 3 days in a row.")
     }
 
@@ -38,6 +42,7 @@ struct MeMetricsTests {
         )
 
         #expect(metrics.streakDays == 0)
+        #expect(metrics.topMindName == "Work")
         #expect(metrics.insight == "Most of your recent progress happened in Work.")
     }
 
@@ -56,7 +61,53 @@ struct MeMetricsTests {
         )
 
         #expect(empty.insight == "Complete a memory to start seeing your rhythm.")
+        #expect(empty.totalCompletionCount == 0)
+        #expect(empty.longestStreakDays == 0)
+        #expect(empty.topMindName == nil)
         #expect(returning.insight == "A small completion today can start a new rhythm.")
+    }
+
+    @MainActor
+    @Test func topMindIsUnavailableForTiesAndUnsortedCompletions() throws {
+        let now = try testDate(day: 18, hour: 12)
+        let work = Mind(name: "Work")
+        let home = Mind(name: "Home")
+        let workMemory = completedMemory(title: "Work", at: try testDate(day: 14, hour: 9))
+        let homeMemory = completedMemory(title: "Home", at: try testDate(day: 14, hour: 10))
+        let unsorted = completedMemory(title: "Unsorted", at: try testDate(day: 14, hour: 11))
+        workMemory.mind = work
+        homeMemory.mind = home
+
+        let tied = MeMetrics.calculate(
+            memories: [workMemory, homeMemory],
+            now: now,
+            calendar: testCalendar
+        )
+        let withoutMind = MeMetrics.calculate(
+            memories: [unsorted],
+            now: now,
+            calendar: testCalendar
+        )
+
+        #expect(tied.topMindName == nil)
+        #expect(withoutMind.topMindName == nil)
+    }
+
+    @MainActor
+    @Test func weeklySummaryUsesARollingSevenDayWindow() throws {
+        let now = try testDate(day: 18, hour: 12)
+        let included = completedMemory(title: "Included", at: try testDate(day: 12, hour: 9))
+        let excluded = completedMemory(title: "Excluded", at: try testDate(day: 11, hour: 9))
+
+        let metrics = MeMetrics.calculate(
+            memories: [included, excluded],
+            now: now,
+            calendar: testCalendar
+        )
+
+        #expect(metrics.completionCountLast7Days == 1)
+        #expect(metrics.activeDaysLast7Days == 1)
+        #expect(metrics.totalCompletionCount == 2)
     }
 
     @MainActor

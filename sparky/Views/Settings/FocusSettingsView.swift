@@ -64,13 +64,7 @@ struct FocusSettingsView: View {
         label: @escaping (Int) -> String
     ) -> some View {
         Picker(title, selection: value) {
-            ForEach(
-                FocusPresetOptions.choices(
-                    including: value.wrappedValue,
-                    presets: presets
-                ),
-                id: \.self
-            ) { option in
+            ForEach(presets, id: \.self) { option in
                 Text(label(option))
                     .tag(option)
             }

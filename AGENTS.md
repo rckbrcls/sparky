@@ -49,25 +49,16 @@ sparkyApp (@main)
 | `Mind` | — (composed inline) | Hierarchical (self-referential `parent`/`children`). Two virtual sentinels: `Mind.allMinds`, `Mind.inbox` (not persisted) |
 | `Tag` | — | Simple name + colorHex |
 | `CheckItemModel` | `CheckItemDraft` | Belongs to Memory, has sortOrder |
-| `ScheduleConfig` | `ScheduleConfigDraft` | 1:1 schedule primary; nested reminder + `focusEnabled` |
-| `LocationConfig` | `LocationConfigDraft` | 1:1 location primary; nested reminder |
-| `MemoryTriggerModel` | `MemoryTriggerDraft` | **Legacy** trigger (kept for migration) |
+| `ScheduleConfig` | `ScheduleConfigDraft` | 1:1 schedule primary with recurrence and `focusEnabled` |
+| `LocationConfig` | `LocationConfigDraft` | 1:1 location primary |
 | `MemoryAttachmentReference` | — | Lightweight index into file-system store |
 | `MemoryCompletionDate` | — | Per-day completion tracking for recurring memories |
 
 **Draft pattern:** Every persisted model that goes through UI editing has a matching `struct` draft. Drafts are `Identifiable` + `Hashable` with `.toModel()` and `static func from(_ model:)` converters.
 
-## Dual Trigger System (Active Migration)
+## Trigger System
 
-Two parallel trigger representations coexist:
-
-- **Legacy:** `Memory.triggers: [MemoryTriggerModel]` — array of triggers, each with `typeRaw` (`.scheduled`/`.location`). Still used by `MemoryEditorViewModel` and `LocationTriggerExecutor.sync()`.
-- **Active:** `Memory.scheduleConfig` / `Memory.locationConfig` — 1:1 primaries with nested reminder fields. Focus is schedule-only (`focusEnabled`).
-- **Legacy:** `Memory.reminderConfig` is schema-only; do not write it.
-
-`DataController.migrateTriggersIfNeeded()` runs once (version-gated via UserDefaults) to copy legacy triggers into new config models.
-
-**Protocol layer:** `TriggerProtocol` with value-type conformers `ScheduledTrigger` and `LocationTrigger`. `TriggerFactory` converts between models, drafts, and protocol types.
+`Memory.scheduleConfig` and `Memory.locationConfig` are the only trigger representations. Focus is schedule-only (`focusEnabled`). Schedule recurrence provides repeated notifications; location triggers notify on entry or exit.
 
 **Recurrence:** `RecurrenceRule` (frequency + interval + endDate). `RecurrenceFrequency`: minutely, hourly, daily, weekly, monthly, yearly. `weekdayMask: Int16` bitmask where bit `(1 << weekdayNumber)` enables that day (Sunday = 1).
 
@@ -76,10 +67,10 @@ Two parallel trigger representations coexist:
 - `sparkyApp.swift` — App entry, bootstrap
 - `ContentView.swift` — Root TabView (calendar/mind/me), navigation stacks, editor sheets
 - `AppEnvironment.swift` — DI container, service wiring
-- `DataController.swift` — SwiftData stack, migration logic
+- `DataController.swift` — SwiftData stack
 - `MemoryService.swift` — All memory operations, triggers sync after every mutation
 - `MindService.swift` — Mind & Tag operations
-- `MemoryEditorViewModel.swift` — The main ViewModel, bridges legacy↔new trigger formats
+- `MemoryEditorViewModel.swift` — The main editor ViewModel
 - `TriggerExecutorCoordinator.swift` — Orchestrates scheduled + location executors
 
 ## Theme & Color System
@@ -99,4 +90,3 @@ Two parallel trigger representations coexist:
 - **`@Attribute(.unique)` on `id: UUID`** for all `@Model` types.
 - **Cascade deletes** declared explicitly with `@Relationship(deleteRule: .cascade, inverse:)`.
 - **Tests** use Swift Testing (`import Testing`, `@Test`, `#expect`), not XCTest.
-- **Legacy files in `Managers/`:** `GeofenceManager.swift` and `NotificationScheduler.swift` are deprecated — active implementations are in `Executors/`.

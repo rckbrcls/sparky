@@ -48,15 +48,14 @@ The schema in `DataController` includes:
 | `Memory` | Core user-created item |
 | `Tag` | Lightweight labels with colors |
 | `CheckItemModel` | Checklist items attached to a Memory |
-| `ScheduleConfig` | Date/time, recurrence, nested reminder, and Focus flag |
-| `LocationConfig` | Geofence configuration and nested reminder |
-| `ReminderConfig` | Legacy memory-level reminder (schema-only; nested policies replaced it) |
-| `MemoryTriggerModel` | Legacy trigger model retained for migration safety |
-| `MemoryTriggerLocation` | Legacy trigger location model retained for migration safety |
+| `ScheduleConfig` | Date/time, recurrence, and Focus configuration |
+| `LocationConfig` | Geofence configuration |
 | `MemoryAttachmentReference` | Ordered references to attachment payloads |
 | `MemoryCompletionDate` | Completion history for recurring memories |
 
 Models generally use `@Attribute(.unique)` UUID identifiers and explicit relationship delete rules.
+
+The current schema has no compatibility migration. Existing installations must reset local app data after incompatible model changes, and JSON imports must use format `2.0`.
 
 ## Core Relationships
 
@@ -64,10 +63,8 @@ Models generally use `@Attribute(.unique)` UUID identifiers and explicit relatio
 - A `Mind` may have child Minds through its self-referential hierarchy.
 - A `Memory` may have many `CheckItemModel` records.
 - A `Memory` has optional 1:1 `ScheduleConfig` and `LocationConfig` relationships.
-- Nested follow-up reminder fields live on each primary config; `ReminderConfig` remains only for schema migration safety.
 - A `Memory` has many `MemoryAttachmentReference` records.
 - A `Memory` has many `MemoryCompletionDate` records.
-- Legacy trigger records remain related to Memory but should not be used for new behavior.
 
 `Mind.allMinds` and `Mind.limbo` are virtual sentinels. They are created through static factory properties and should not be persisted as normal Mind records.
 
@@ -79,32 +76,12 @@ Models generally use `@Attribute(.unique)` UUID identifiers and explicit relatio
 - State: `statusRaw`, `isPinned`, `priorityRaw`, `dueDate`, `userOrder`.
 - Timestamps: `createdAt`, `updatedAt`.
 - Checklist behavior: `checkItems`, `autoCompleteOnChecklistCompletion`.
-- Trigger configuration: `scheduleConfig` (optional nested reminder + Focus), `locationConfig` (optional nested reminder). Legacy `reminderConfig` is schema-only.
-- Legacy migration support: `triggers`.
+- Trigger configuration: `scheduleConfig` (recurrence + Focus) and `locationConfig`.
 - Attachment references: `attachmentReferences`.
 - Recurrence completion history: `completionDateEntries`.
 - Transient loaded attachments: `attachments`.
 
 `attachments` is marked transient and is populated by `MemoryService` using `MemoryAttachmentStore`.
-
-## Trigger Migration
-
-The current migration is version-gated by:
-
-```text
-sparky.triggerMigrationVersion
-```
-
-The current migration version is `1`.
-
-`DataController.migrateTriggersIfNeeded()` fetches persisted Memories and copies active legacy trigger data into the newer config models:
-
-- legacy scheduled trigger -> `ScheduleConfig`
-- legacy location trigger -> `LocationConfig`
-
-Sequential triggers are intentionally not migrated because that behavior is being removed from the active model.
-
-After a successful migration, the version is stored in UserDefaults. If a future schema change requires another migration, increment the migration version and keep older model classes in the schema until existing data can be handled safely.
 
 ## Attachment Storage
 
@@ -150,7 +127,7 @@ The Privacy Manifest declares UserDefaults access with reason `CA92.1`.
 
 Current format:
 
-- `version`: currently `1.0`
+- `version`: currently `2.0`
 - `exportedAt`
 - `appVersion`
 - `minds`
@@ -170,7 +147,7 @@ When attachments are included, they are exported inline through the JSON format.
 
 ## JSON Import Behavior
 
-`DataImportService` imports only `SparkyExportFormat` version `1.0`.
+`DataImportService` imports only `SparkyExportFormat` version `2.0`.
 
 During import it:
 
@@ -178,7 +155,7 @@ During import it:
 - Imports Mind hierarchy.
 - Maps old Mind IDs to new or existing Minds.
 - Creates new Memories from exported data.
-- Converts exported triggers into schedule, location, and reminder drafts.
+- Converts exported schedule and location configs into drafts.
 - Recreates checklist items.
 - Imports attachment payloads and remaps attachment IDs.
 - Refreshes Mind and Memory services after import.
@@ -195,7 +172,6 @@ Current scope:
 - Produces `VTODO` entries.
 - Includes title, description, status, completion date, due date, start date, recurrence rule, created date, and last modified date when available.
 - Does not export location triggers.
-- Does not export follow-up reminder configs.
 
 Use the JSON export for full-fidelity Sparky backup/restore.
 
@@ -203,8 +179,7 @@ Use the JSON export for full-fidelity Sparky backup/restore.
 
 Before changing persisted models:
 
-- Check whether SwiftData migration is needed.
-- Keep legacy models in the schema if existing installs might still contain them.
+- Decide whether a destructive schema reset is acceptable before changing persisted models.
 - Update draft conversion paths.
 - Update import/export types if the data should be backed up.
 - Update tests around service behavior.

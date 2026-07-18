@@ -26,7 +26,6 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
     private let settings: SettingsStore
     private var monitoredIdentifiers: Set<String> = []
     private var memoryLookup: [String: MonitoredMemoryInfo] = [:]
-    var onPrimaryTriggerFired: ((UUID, Date, ReminderStartSource) -> Void)?
     @Published private(set) var activeGeofenceCount: Int = 0
     static let maxGeofences = 20
 
@@ -166,8 +165,6 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
             )
             try? await UNUserNotificationCenter.current().add(request)
         }
-
-        onPrimaryTriggerFired?(info.memoryID, Date(), .location)
     }
 }
 

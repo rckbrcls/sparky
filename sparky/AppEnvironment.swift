@@ -38,14 +38,6 @@ final class AppEnvironment: ObservableObject {
     let focusSettings: FocusSettings
     let focusTimer: FocusTimer
 
-    // Mantidos para compatibilidade durante transição
-    var notificationScheduler: ScheduledTriggerExecutor {
-        triggerExecutorCoordinator.scheduled
-    }
-    var geofenceManager: LocationTriggerExecutor {
-        triggerExecutorCoordinator.location
-    }
-
     @Published var isBootstrapping = true
     @Published var hasBootstrapped = false
     @Published var hasCompletedOnboarding = false
@@ -70,7 +62,7 @@ final class AppEnvironment: ObservableObject {
         self.memoryService = MemoryService(dataController: dataController,
                                            mindService: mindService,
                                            attachmentStore: attachmentStore)
-        self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings, memoryService: memoryService)
+        self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings)
 
         self.hasCompletedOnboarding = settings.hasCompletedOnboarding
 
@@ -130,7 +122,7 @@ final class AppEnvironment: ObservableObject {
     func startFocus(for memoryID: UUID) {
         guard let memory = memoryService.memory(id: memoryID),
               memory.hasFocus,
-              let recipe = memory.focusRecipe(settings: focusSettings) else {
+              let recipe = memory.focusRecipe() else {
             return
         }
 
@@ -161,9 +153,6 @@ final class AppEnvironment: ObservableObject {
         !focusTimer.wouldReplaceSession(withMemoryID: memoryID)
     }
 
-    func focusRecipe(for memory: Memory) -> FocusRecipe? {
-        memory.focusRecipe(settings: focusSettings)
-    }
 }
 
 // MARK: - Foreground Notification Delegate

@@ -29,7 +29,7 @@ Use the `sparky` scheme for app development.
 | `sparkyTests` | Unit tests for domain and service behavior | Swift Testing |
 | `sparkyUITests` | Generated UI test target | XCTest |
 
-The unit test target currently includes tests around memory CRUD, timeline filtering, and reminder start/reset behavior.
+The unit test target includes tests around memory CRUD, timeline filtering, schedule recurrence, location triggers, Focus, and import/export.
 
 ## Local Workflow
 
@@ -76,7 +76,7 @@ No third-party packages were identified in the current repository.
 - `sparky/sparkyApp.swift`: app entry point and environment injection.
 - `sparky/AppEnvironment.swift`: dependency container and bootstrap flow.
 - `sparky/ContentView.swift`: root tabs, editor presentations, onboarding, and notification-open handling.
-- `sparky/Data/DataController.swift`: SwiftData schema and migration.
+- `sparky/Data/DataController.swift`: SwiftData schema and contexts.
 - `sparky/Services/MemoryService.swift`: memory lifecycle and trigger synchronization.
 - `sparky/ViewModels/MemoryEditorViewModel.swift`: editor state and draft/model conversion.
 

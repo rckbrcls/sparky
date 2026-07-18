@@ -16,25 +16,24 @@
 
 **Recommended write rule**: On `setFocusEnabled(true)`, if recipe unset, copy all five values from `FocusSettings`. Thereafter editor edits concrete values. On disable, keep stored values but `focusEnabled = false` (re-enable restores last recipe).
 
-**Rationale**: Matches nested reminder pattern on the same model; avoids a new SwiftData entity; export stays on schedule payload; legacy rows with only `focusEnabled == true` resolve via globals.
+**Rationale**: Avoids a new SwiftData entity and keeps export data on the schedule payload.
 
 **Alternatives considered**:
 | Alternative | Why rejected |
 |-------------|--------------|
 | Only global settings forever | Fails FR-004–FR-008 (per-Memory config) |
-| Separate `FocusConfig` `@Model` 1:1 | Extra relationship/migration for five scalars |
+| Separate `FocusConfig` `@Model` 1:1 | Extra relationship for five scalars |
 | Store recipe JSON blob | Harder to query/export; inconsistent with schedule field style |
 
-## 2. Unset / legacy resolution
+## 2. Incomplete recipe handling
 
-**Decision**: `FocusRecipe.resolve(schedule:globals:)`  
-- If `focusEnabled == false` → no recipe / not a target.  
-- If enabled and any duration is `0`/missing → fill that field from `FocusSettings`.  
+**Decision**: `FocusRecipe.resolve(schedule:)`
+
+- If `focusEnabled == false` → no recipe / not a target.
+- If enabled and any duration is `0` → no recipe / invalid target.
 - If enabled and all set → use stored values only.
 
-**Rationale**: FR-015 backward compatibility without a data migration rewrite of every row.
-
-**Alternatives considered**: One-shot migration copying globals into every Focus-enabled row — unnecessary if resolver is pure and tested.
+**Rationale**: New Focus configurations are seeded completely when enabled, so runtime fallback is unnecessary.
 
 ## 3. FocusTimer session configuration
 
@@ -68,7 +67,7 @@
 Deep links (notification Start Focus, editor Focus):
 - Ensure session started with recipe.
 - Select Focus tab.
-- Prefer **in-tab** session UI; keep `fullScreenCover` only if needed for interruption hierarchy — target end-state: tab-owned session, cover optional/legacy.
+- Prefer **in-tab** session UI; keep `fullScreenCover` only when needed for interruption hierarchy.
 
 **Rationale**: Spec P1 stories center on tab discovery; Converge uses a dedicated pomodoro surface.
 
@@ -112,7 +111,7 @@ Deep links (notification Start Focus, editor Focus):
 ## 11. Testing strategy
 
 **Decision**: Swift Testing unit tests for:
-- `FocusRecipe.resolve` legacy + full custom
+- `FocusRecipe.resolve` incomplete + full custom
 - `FocusTimer` first phase duration equals recipe work minutes
 - Replace guard / same-id no-op
 - Draft ↔ model recipe round-trip

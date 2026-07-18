@@ -45,7 +45,7 @@ description: "Task list for Focus Tab & Memory Pomodoro Configuration"
 **⚠️ CRITICAL**: No user story UI work depends on incomplete foundation
 
 - [x] T006 Implement `FocusRecipe` value type (minutes fields, seconds helpers, range clamps) in `sparky/Focus/FocusRecipe.swift` per `specs/001-focus-tab-pomodoro/data-model.md` and `contracts/focus-session.md`
-- [x] T007 Implement `FocusRecipe.from(settings:)` and `FocusRecipe.resolve(schedule:settings:)` / `resolve(draft:settings:)` (legacy 0-duration → globals) in `sparky/Focus/FocusRecipe.swift`
+- [x] T007 Implement `FocusRecipe.from(settings:)` and strict `FocusRecipe.resolve(schedule:)` / `resolve(draft:)` in `sparky/Focus/FocusRecipe.swift`
 - [x] T008 Extend `ScheduleConfig` with focus recipe persisted fields (`focusWorkDurationMinutes`, `focusShortBreakDurationMinutes`, `focusLongBreakDurationMinutes`, `focusPomodorosUntilLongBreak`, `focusAutoContinue`) and init wiring in `sparky/Model/Triggers/ScheduleConfig.swift`
 - [x] T009 Mirror Focus recipe fields on `ScheduleConfigDraft` including `toModel` / `from` / defaults in `sparky/Model/Triggers/ScheduleConfigDraft.swift`
 - [x] T010 Preserve Focus recipe fields in schedule copy/update helpers in `sparky/Services/MemoryService.swift` (search existing `ScheduleConfigDraft` reconstructions)
@@ -53,7 +53,7 @@ description: "Task list for Focus Tab & Memory Pomodoro Configuration"
 - [x] T012 Refactor `FocusTimer` to bind `activeRecipe`, add `beginQuickSession()` and `beginSession(memoryID:memoryTitle:recipe:)`, drive phase durations from recipe (not live globals mid-session) in `sparky/Focus/FocusTimer.swift`
 - [x] T013 Add wall-clock `phaseEndsAt` (or equivalent) so pause/resume/background restore accurate `remainingSeconds` in `sparky/Focus/FocusTimer.swift`
 - [x] T014 Update `AppEnvironment.startFocus(for:)` to resolve `FocusRecipe` from memory schedule + `focusSettings` before `beginSession` in `sparky/AppEnvironment.swift`
-- [x] T015 [P] Add Swift Testing coverage for recipe resolve (legacy + custom) in `sparkyTests/Focus/FocusRecipeTests.swift`
+- [x] T015 [P] Add Swift Testing coverage for incomplete and custom recipe resolution in `sparkyTests/Focus/FocusRecipeTests.swift`
 - [x] T016 [P] Add Swift Testing coverage for timer first-phase duration from recipe and quick session in `sparkyTests/Focus/FocusTimerTests.swift`
 
 **Checkpoint**: Recipe persists on schedule models; timer can start quick/memory sessions with bound recipe; unit tests green for foundation
@@ -80,7 +80,7 @@ description: "Task list for Focus Tab & Memory Pomodoro Configuration"
 - [x] T023 [US1] Ensure editor Focus start path (`canStartFocusFromEditor` / `environment.startFocus`) uses resolved Memory recipe via foundational `AppEnvironment.startFocus` in `sparky/Views/Memories/Editor/MemoryEditorView.swift` (verify only; fix call site if still bypassing recipe)
 - [x] T024 [US1] Optional helper `Memory.focusRecipe(settings:)` (or equivalent) beside `hasFocus` in `sparky/Model/Memory/Memory.swift` if it simplifies editor/service call sites
 
-**Checkpoint**: US1 MVP — per-Memory Focus recipe configurable and persisted; legacy toggle-only still resolves via globals
+**Checkpoint**: US1 MVP — per-Memory Focus recipe configurable, complete, and persisted
 
 ---
 
@@ -185,7 +185,7 @@ description: "Task list for Focus Tab & Memory Pomodoro Configuration"
 |-------|------------|-------------------------|
 | US1 Configure Memory Focus | Foundational | Yes — editor + save + startFocus recipe |
 | US2 Quick Focus tab | Foundational (+ tab stubs) | Yes — Quick Focus only, empty Memory list OK |
-| US3 Memory targets on tab | Foundational + US2 shell; US1 for rich fixtures | Yes with any `hasFocus` memory (legacy toggle enough) |
+| US3 Memory targets on tab | Foundational + US2 shell; US1 for rich fixtures | Yes with any valid `hasFocus` memory |
 | US4 Navigation polish | US2 (+ US3 for full continuity) | Yes as navigation/regression pass |
 
 ### Within Each Story

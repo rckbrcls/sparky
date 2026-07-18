@@ -15,21 +15,4 @@ struct FocusPresetOptionsTests {
         #expect(FocusPresetOptions.pomodorosUntilLongBreak == [2, 3, 4, 5, 6])
     }
 
-    @Test func choicesPreserveAUniqueLegacyValue() {
-        let choices = FocusPresetOptions.choices(
-            including: 7,
-            presets: FocusPresetOptions.shortBreakMinutes
-        )
-
-        #expect(choices == [5, 7, 10, 15])
-    }
-
-    @Test func choicesDoNotDuplicateAnExistingPreset() {
-        let choices = FocusPresetOptions.choices(
-            including: 25,
-            presets: FocusPresetOptions.workMinutes
-        )
-
-        #expect(choices == FocusPresetOptions.workMinutes)
-    }
 }

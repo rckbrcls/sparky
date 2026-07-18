@@ -486,7 +486,7 @@ struct ContentView: View {
         if let memory = environment.memoryService.memory(id: request.memoryID),
            memory.hasFocus {
             environment.pendingFocusOpenRequest = nil
-            if let recipe = memory.focusRecipe(settings: environment.focusSettings) {
+            if let recipe = memory.focusRecipe() {
                 if environment.focusTimer.activeMemoryID != memory.id || !environment.focusTimer.isSessionActive {
                     if environment.focusTimer.wouldReplaceSession(withMemoryID: memory.id) {
                         environment.focusTimer.endSession()

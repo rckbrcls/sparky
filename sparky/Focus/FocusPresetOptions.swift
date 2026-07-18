@@ -13,10 +13,6 @@ enum FocusPresetOptions {
     static let longBreakMinutes = [15, 20, 30, 45]
     static let pomodorosUntilLongBreak = [2, 3, 4, 5, 6]
 
-    static func choices(including currentValue: Int, presets: [Int]) -> [Int] {
-        Array(Set(presets + [currentValue])).sorted()
-    }
-
     static func durationLabel(_ minutes: Int) -> String {
         "\(minutes) min"
     }

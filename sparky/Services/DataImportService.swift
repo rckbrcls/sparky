@@ -89,7 +89,7 @@ final class DataImportService {
         }
 
         // Validate version
-        guard exportFormat.version == "1.0" else {
+        guard exportFormat.version == "2.0" else {
             throw ImportError.unsupportedVersion(exportFormat.version)
         }
 
@@ -123,83 +123,65 @@ final class DataImportService {
                 // Map mind ID
                 let newMindID = exportedMemory.mindID.flatMap { mindIDMap[$0] }
 
-                // Convert triggers to config drafts
-                var scheduleDraft: ScheduleConfigDraft?
-                var locationDraft: LocationConfigDraft?
-                var legacyStandaloneReminder: NestedReminderPolicy?
-
-                for exported in exportedMemory.triggers {
-                    if exported.type == "scheduled" {
-                        let recurrenceRule: RecurrenceRule?
-                        if let exportedRecurrence = exported.recurrenceRule,
-                           let frequency = RecurrenceFrequency(rawValue: exportedRecurrence.frequency) {
-                            recurrenceRule = RecurrenceRule(
-                                frequency: frequency,
-                                interval: exportedRecurrence.interval,
-                                endDate: exportedRecurrence.endDate,
-                                occurrenceCount: exportedRecurrence.occurrenceCount
-                            )
-                        } else {
-                            recurrenceRule = nil
+                let scheduleDraft = try exportedMemory.scheduleConfig.map { exported in
+                    let recurrenceRule: RecurrenceRule?
+                    if let exportedRecurrence = exported.recurrenceRule {
+                        guard let frequency = RecurrenceFrequency(rawValue: exportedRecurrence.frequency) else {
+                            throw ImportError.validationFailed("Invalid recurrence frequency.")
                         }
-
-                        let nestedReminder = Self.nestedReminder(from: exported.reminder, isActive: exported.reminder != nil)
-                        scheduleDraft = ScheduleConfigDraft(
-                            fireDate: exported.fireDate,
-                            startDate: exported.startDate,
-                            recurrenceRule: recurrenceRule,
-                            timeZoneIdentifier: exported.timeZoneIdentifier,
-                            weekdayMask: exported.weekdayMask,
-                            isActive: exported.isActive,
-                            isAllDay: exported.isAllDay,
-                            reminder: nestedReminder,
-                            focusEnabled: exported.focusEnabled ?? false,
-                            focusWorkDurationMinutes: exported.focusWorkDurationMinutes ?? 0,
-                            focusShortBreakDurationMinutes: exported.focusShortBreakDurationMinutes ?? 0,
-                            focusLongBreakDurationMinutes: exported.focusLongBreakDurationMinutes ?? 0,
-                            focusPomodorosUntilLongBreak: exported.focusPomodorosUntilLongBreak ?? 0,
-                            focusAutoContinue: exported.focusAutoContinue ?? true
+                        recurrenceRule = RecurrenceRule(
+                            frequency: frequency,
+                            interval: exportedRecurrence.interval,
+                            endDate: exportedRecurrence.endDate,
+                            occurrenceCount: exportedRecurrence.occurrenceCount
                         )
-                    } else if exported.type == "location",
-                              let loc = exported.location,
-                              let event = LocationEvent(rawValue: loc.event) {
-                        let nestedReminder = Self.nestedReminder(from: exported.reminder, isActive: exported.reminder != nil)
-                        locationDraft = LocationConfigDraft(
-                            latitude: loc.latitude,
-                            longitude: loc.longitude,
-                            radius: loc.radius,
-                            name: loc.name,
-                            event: event,
-                            isActive: exported.isActive,
-                            reminder: nestedReminder
-                        )
-                    } else if exported.type == "reminder",
-                              let reminder = exported.reminder,
-                              exported.isActive {
-                        // Legacy standalone reminder export — nest onto primaries below.
-                        legacyStandaloneReminder = NestedReminderPolicy(
-                            isActive: true,
-                            intervalValue: max(1, reminder.intervalValue),
-                            intervalUnit: ReminderIntervalUnit(rawValue: reminder.intervalUnit) ?? .hours,
-                            repeatCount: reminder.repeatCount,
-                            startedAt: reminder.startedAt
-                        )
+                    } else {
+                        recurrenceRule = nil
                     }
+
+                    guard let recurrenceEndType = RecurrenceEndType(rawValue: exported.recurrenceEndType) else {
+                        throw ImportError.validationFailed("Invalid recurrence end type.")
+                    }
+                    let hasIncompleteFocusRecipe = exported.focusWorkDurationMinutes <= 0
+                        || exported.focusShortBreakDurationMinutes <= 0
+                        || exported.focusLongBreakDurationMinutes <= 0
+                        || exported.focusPomodorosUntilLongBreak <= 0
+                    if exported.focusEnabled && hasIncompleteFocusRecipe {
+                        throw ImportError.validationFailed("Focus requires a complete recipe.")
+                    }
+
+                    return ScheduleConfigDraft(
+                        id: UUID(),
+                        fireDate: exported.fireDate,
+                        startDate: exported.startDate,
+                        recurrenceRule: recurrenceRule,
+                        timeZoneIdentifier: exported.timeZoneIdentifier,
+                        weekdayMask: exported.weekdayMask,
+                        isActive: exported.isActive,
+                        isAllDay: exported.isAllDay,
+                        recurrenceEndType: recurrenceEndType,
+                        focusEnabled: exported.focusEnabled,
+                        focusWorkDurationMinutes: exported.focusWorkDurationMinutes,
+                        focusShortBreakDurationMinutes: exported.focusShortBreakDurationMinutes,
+                        focusLongBreakDurationMinutes: exported.focusLongBreakDurationMinutes,
+                        focusPomodorosUntilLongBreak: exported.focusPomodorosUntilLongBreak,
+                        focusAutoContinue: exported.focusAutoContinue
+                    )
                 }
 
-                if let legacy = legacyStandaloneReminder {
-                    if var schedule = scheduleDraft, schedule.isActive, !schedule.reminder.isActive {
-                        schedule.reminder = legacy
-                        scheduleDraft = schedule
+                let locationDraft = try exportedMemory.locationConfig.map { exported in
+                    guard let event = LocationEvent(rawValue: exported.event) else {
+                        throw ImportError.validationFailed("Invalid location event.")
                     }
-                    if var location = locationDraft, location.isActive, !location.reminder.isActive {
-                        var locationLegacy = legacy
-                        if scheduleDraft?.isActive == true {
-                            locationLegacy.startedAt = nil
-                        }
-                        location.reminder = locationLegacy
-                        locationDraft = location
-                    }
+                    return LocationConfigDraft(
+                        id: UUID(),
+                        latitude: exported.latitude,
+                        longitude: exported.longitude,
+                        radius: exported.radius,
+                        name: exported.name,
+                        event: event,
+                        isActive: exported.isActive
+                    )
                 }
 
                 // Convert check items
@@ -234,8 +216,7 @@ final class DataImportService {
                     fileAttachmentIDs: [],
                     attachments: [],
                     autoCompleteOnChecklistCompletion: exportedMemory.autoCompleteOnChecklistCompletion,
-                    completedAt: exportedMemory.completedAt
-                        ?? (importedStatus == .completed ? exportedMemory.updatedAt : nil),
+                    completedAt: exportedMemory.completedAt,
                     completedDates: exportedMemory.completedDates
                 )
 
@@ -366,16 +347,4 @@ final class DataImportService {
         return imported
     }
 
-    private static func nestedReminder(from exported: ExportedReminderTrigger?, isActive: Bool) -> NestedReminderPolicy {
-        guard isActive, let exported else {
-            return NestedReminderPolicy()
-        }
-        return NestedReminderPolicy(
-            isActive: true,
-            intervalValue: max(1, exported.intervalValue),
-            intervalUnit: ReminderIntervalUnit(rawValue: exported.intervalUnit) ?? .hours,
-            repeatCount: exported.repeatCount,
-            startedAt: exported.startedAt
-        )
-    }
 }

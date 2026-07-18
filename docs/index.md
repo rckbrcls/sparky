@@ -10,7 +10,7 @@ This directory documents the native iOS app in this repository. It intentionally
 
 ## Technical References
 
-- [Data and Persistence](database.md): SwiftData schema, local attachment storage, migration, JSON import/export, and iCalendar export.
+- [Data and Persistence](database.md): SwiftData schema, local attachment storage, JSON import/export, and iCalendar export.
 - [Security and Privacy](security.md): local-first design, permissions, Privacy Manifest, and sensitive data risks.
 - [Troubleshooting](troubleshooting.md): focused checks for persistence, attachments, notifications, location triggers, import/export, maps, and metadata drift.
 

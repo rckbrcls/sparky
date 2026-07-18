@@ -72,64 +72,32 @@ struct CompletionHistoryTests {
     }
 
     @MainActor
-    @Test func completionBackfillUsesBestAvailableLegacyDate() {
-        let updatedAt = Date(timeIntervalSince1970: 1_700_000_000)
-        let createdAt = updatedAt.addingTimeInterval(-3_600)
-        let fallback = updatedAt.addingTimeInterval(3_600)
-        let completed = Memory(
-            title: "Legacy completed",
-            statusRaw: MemoryStatus.completed.rawValue,
-            createdAt: createdAt,
-            updatedAt: updatedAt
-        )
-        let active = Memory(
-            title: "Legacy active",
-            statusRaw: MemoryStatus.active.rawValue,
-            createdAt: createdAt,
-            updatedAt: updatedAt
-        )
-
-        DataController.backfillCompletionHistory(
-            in: [completed, active],
-            fallbackDate: fallback
-        )
-
-        #expect(completed.completedAt == updatedAt)
-        #expect(active.completedAt == nil)
-    }
-
-    @MainActor
-    @Test func exportedMemoryDecodesWhenCompletedAtIsMissing() throws {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let exported = ExportedMemory(
-            id: UUID(),
-            title: "Legacy export",
-            status: MemoryStatus.completed.rawValue,
-            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
-            updatedAt: Date(timeIntervalSince1970: 1_700_000_600),
-            completedAt: Date(timeIntervalSince1970: 1_700_000_300)
-        )
-
-        let encoded = try encoder.encode(exported)
-        var object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        object.removeValue(forKey: "completedAt")
-        let legacyData = try JSONSerialization.data(withJSONObject: object)
-        let decoded = try decoder.decode(ExportedMemory.self, from: legacyData)
-
-        #expect(decoded.completedAt == nil)
-    }
-
-    @MainActor
-    @Test func exportAndImportPreserveCompletionDate() async throws {
+    @Test func exportAndImportVersion2PreservesCurrentConfigs() async throws {
         let sourceEnvironment = AppEnvironment(dataController: DataController(inMemory: true))
         let completedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let fireDate = Date(timeIntervalSince1970: 1_700_003_600)
         _ = try await sourceEnvironment.memoryService.createMemory(
             from: MemoryDraft(
                 title: "Portable completion",
                 status: .completed,
+                scheduleConfig: ScheduleConfigDraft(
+                    fireDate: fireDate,
+                    startDate: fireDate,
+                    recurrenceRule: RecurrenceRule(frequency: .weekly, interval: 2),
+                    recurrenceEndType: .never,
+                    focusEnabled: true,
+                    focusWorkDurationMinutes: 25,
+                    focusShortBreakDurationMinutes: 5,
+                    focusLongBreakDurationMinutes: 15,
+                    focusPomodorosUntilLongBreak: 4
+                ),
+                locationConfig: LocationConfigDraft(
+                    latitude: 37.33,
+                    longitude: -122.01,
+                    radius: 250,
+                    name: "Office",
+                    event: .onExit
+                ),
                 completedAt: completedAt
             )
         )
@@ -140,6 +108,10 @@ struct CompletionHistoryTests {
             attachmentStore: sourceEnvironment.attachmentStore
         )
         let data = try await exporter.export(options: .withoutAttachments)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let exported = try decoder.decode(SparkyExportFormat.self, from: data)
+        #expect(exported.version == "2.0")
 
         let destinationEnvironment = AppEnvironment(dataController: DataController(inMemory: true))
         let importer = DataImportService(
@@ -152,5 +124,31 @@ struct CompletionHistoryTests {
         #expect(result.importedMemories == 1)
         let imported = destinationEnvironment.memoryService.memories.first
         #expect(imported?.completedAt == completedAt)
+        #expect(imported?.scheduleConfig?.recurrenceRule?.frequency == .weekly)
+        #expect(imported?.scheduleConfig?.focusWorkDurationMinutes == 25)
+        #expect(imported?.locationConfig?.event == .onExit)
+        #expect(imported?.locationConfig?.radius == 250)
+    }
+
+    @MainActor
+    @Test func importRejectsVersion1() async throws {
+        let environment = AppEnvironment(dataController: DataController(inMemory: true))
+        let importer = DataImportService(
+            memoryService: environment.memoryService,
+            mindService: environment.mindService,
+            attachmentStore: environment.attachmentStore
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(SparkyExportFormat(version: "1.0"))
+
+        do {
+            _ = try await importer.importFromData(data)
+            Issue.record("Expected version 1.0 to be rejected")
+        } catch DataImportService.ImportError.unsupportedVersion(let version) {
+            #expect(version == "1.0")
+        } catch {
+            Issue.record("Unexpected import error: \(error)")
+        }
     }
 }

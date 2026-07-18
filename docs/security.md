@@ -39,7 +39,7 @@ The Xcode project declares usage descriptions for:
 | Location When In Use | Select and use locations |
 | Location Always | Monitor geofence reminders in the background |
 
-The app also uses UserNotifications for scheduled, location-triggered, and follow-up reminders.
+The app also uses UserNotifications for scheduled and location-triggered notifications.
 
 `UIBackgroundModes = location` is configured so geofence reminders can work after the app leaves the foreground.
 
@@ -120,6 +120,6 @@ If future features introduce external services, do not hard-code secrets in Swif
 - Update `PrivacyInfo.xcprivacy` when using new required-reason APIs.
 - Update App Store privacy declarations when collected data, tracking, or external service behavior changes.
 - Review permission strings when adding a new OS permission.
-- Keep export/import format changes backward compatible or clearly versioned.
+- Version export/import format changes explicitly; only the current format is supported.
 - Avoid storing large or sensitive payloads directly in SwiftData without a deliberate migration and backup strategy.
 - Revalidate public privacy claims when adding networking, sync, telemetry, crash reporting, or third-party SDKs.

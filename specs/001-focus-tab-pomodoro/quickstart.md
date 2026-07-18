@@ -65,12 +65,12 @@ See also: [data-model.md](./data-model.md), [contracts/focus-session.md](./contr
 4. Confirm End & Start.
 5. **Expect**: new Memory-bound session; previous discarded.
 
-## Scenario E — Legacy Focus toggle only
+## Scenario E — Incomplete Focus recipe
 
-1. Use a Memory that only has `focusEnabled = true` without recipe fields (pre-migration data or fixture).
+1. Use a test fixture with `focusEnabled = true` and no recipe fields.
 2. Start from Focus tab.
-3. **Expect**: session uses current global defaults; no crash.
-4. Edit Memory Focus steppers and save.
+3. **Expect**: the session does not start.
+4. Enable Focus through the editor so a complete recipe is seeded, then save.
 5. **Expect**: subsequent sessions use saved recipe.
 
 ## Scenario F — Existing entry points
@@ -94,7 +94,7 @@ See also: [data-model.md](./data-model.md), [contracts/focus-session.md](./contr
 
 | Test | Assert |
 |------|--------|
-| Recipe resolve legacy | enabled + 0 durations → globals |
+| Recipe resolve incomplete | enabled + 0 durations → nil |
 | Recipe resolve custom | stored minutes used |
 | Timer begin with recipe | `remainingSeconds == work * 60` |
 | Quick vs memory identity | replace required when different |

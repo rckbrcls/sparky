@@ -26,7 +26,7 @@ struct SparkyExportFormat: Codable {
     var attachmentsDirectory: String?
     
     init(
-        version: String = "1.0",
+        version: String = "2.0",
         exportedAt: Date = Date(),
         appVersion: String? = nil,
         minds: [ExportedMind] = [],
@@ -91,7 +91,8 @@ struct ExportedMemory: Codable, Identifiable {
     let userOrder: Int
     let autoCompleteOnChecklistCompletion: Bool
     let mindID: UUID?
-    let triggers: [ExportedTrigger]
+    let scheduleConfig: ExportedScheduleConfig?
+    let locationConfig: ExportedLocationConfig?
     let checkItems: [ExportedCheckItem]
     let photoAttachmentIDs: [UUID]
     let linkAttachmentIDs: [UUID]
@@ -112,7 +113,8 @@ struct ExportedMemory: Codable, Identifiable {
         userOrder: Int = 0,
         autoCompleteOnChecklistCompletion: Bool = false,
         mindID: UUID? = nil,
-        triggers: [ExportedTrigger] = [],
+        scheduleConfig: ExportedScheduleConfig? = nil,
+        locationConfig: ExportedLocationConfig? = nil,
         checkItems: [ExportedCheckItem] = [],
         photoAttachmentIDs: [UUID] = [],
         linkAttachmentIDs: [UUID] = [],
@@ -132,7 +134,8 @@ struct ExportedMemory: Codable, Identifiable {
         self.userOrder = userOrder
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
         self.mindID = mindID
-        self.triggers = triggers
+        self.scheduleConfig = scheduleConfig
+        self.locationConfig = locationConfig
         self.checkItems = checkItems
         self.photoAttachmentIDs = photoAttachmentIDs
         self.linkAttachmentIDs = linkAttachmentIDs
@@ -142,11 +145,10 @@ struct ExportedMemory: Codable, Identifiable {
     }
 }
 
-// MARK: - Exported Trigger
+// MARK: - Exported Schedule Config
 
-struct ExportedTrigger: Codable, Identifiable {
+struct ExportedScheduleConfig: Codable, Identifiable {
     let id: UUID
-    let type: String
     let fireDate: Date?
     let startDate: Date?
     let recurrenceRule: ExportedRecurrenceRule?
@@ -154,22 +156,16 @@ struct ExportedTrigger: Codable, Identifiable {
     let weekdayMask: Int16
     let isActive: Bool
     let isAllDay: Bool
-    let location: ExportedLocationTrigger?
-    let reminder: ExportedReminderTrigger?
-    let sequential: ExportedSequentialTrigger?
-    let spacedStage: Int
-    let lastReviewDate: Date?
-    let ignoreCount: Int
-    let focusEnabled: Bool?
-    let focusWorkDurationMinutes: Int?
-    let focusShortBreakDurationMinutes: Int?
-    let focusLongBreakDurationMinutes: Int?
-    let focusPomodorosUntilLongBreak: Int?
-    let focusAutoContinue: Bool?
+    let recurrenceEndType: String
+    let focusEnabled: Bool
+    let focusWorkDurationMinutes: Int
+    let focusShortBreakDurationMinutes: Int
+    let focusLongBreakDurationMinutes: Int
+    let focusPomodorosUntilLongBreak: Int
+    let focusAutoContinue: Bool
 
     init(
         id: UUID,
-        type: String,
         fireDate: Date? = nil,
         startDate: Date? = nil,
         recurrenceRule: ExportedRecurrenceRule? = nil,
@@ -177,21 +173,15 @@ struct ExportedTrigger: Codable, Identifiable {
         weekdayMask: Int16 = 0,
         isActive: Bool = true,
         isAllDay: Bool = false,
-        location: ExportedLocationTrigger? = nil,
-        reminder: ExportedReminderTrigger? = nil,
-        sequential: ExportedSequentialTrigger? = nil,
-        spacedStage: Int = 0,
-        lastReviewDate: Date? = nil,
-        ignoreCount: Int = 0,
-        focusEnabled: Bool? = nil,
-        focusWorkDurationMinutes: Int? = nil,
-        focusShortBreakDurationMinutes: Int? = nil,
-        focusLongBreakDurationMinutes: Int? = nil,
-        focusPomodorosUntilLongBreak: Int? = nil,
-        focusAutoContinue: Bool? = nil
+        recurrenceEndType: String = RecurrenceEndType.never.rawValue,
+        focusEnabled: Bool = false,
+        focusWorkDurationMinutes: Int = 0,
+        focusShortBreakDurationMinutes: Int = 0,
+        focusLongBreakDurationMinutes: Int = 0,
+        focusPomodorosUntilLongBreak: Int = 0,
+        focusAutoContinue: Bool = true
     ) {
         self.id = id
-        self.type = type
         self.fireDate = fireDate
         self.startDate = startDate
         self.recurrenceRule = recurrenceRule
@@ -199,12 +189,7 @@ struct ExportedTrigger: Codable, Identifiable {
         self.weekdayMask = weekdayMask
         self.isActive = isActive
         self.isAllDay = isAllDay
-        self.location = location
-        self.reminder = reminder
-        self.sequential = sequential
-        self.spacedStage = spacedStage
-        self.lastReviewDate = lastReviewDate
-        self.ignoreCount = ignoreCount
+        self.recurrenceEndType = recurrenceEndType
         self.focusEnabled = focusEnabled
         self.focusWorkDurationMinutes = focusWorkDurationMinutes
         self.focusShortBreakDurationMinutes = focusShortBreakDurationMinutes
@@ -230,72 +215,33 @@ struct ExportedRecurrenceRule: Codable {
     }
 }
 
-// MARK: - Exported Location Trigger
+// MARK: - Exported Location Config
 
-struct ExportedLocationTrigger: Codable {
+struct ExportedLocationConfig: Codable, Identifiable {
+    let id: UUID
     let latitude: Double
     let longitude: Double
     let radius: Double
     let name: String?
     let event: String
+    let isActive: Bool
     
     init(
+        id: UUID,
         latitude: Double,
         longitude: Double,
         radius: Double,
         name: String? = nil,
-        event: String
+        event: String,
+        isActive: Bool = true
     ) {
+        self.id = id
         self.latitude = latitude
         self.longitude = longitude
         self.radius = radius
         self.name = name
         self.event = event
-    }
-}
-
-// MARK: - Exported Reminder Trigger
-
-struct ExportedReminderTrigger: Codable {
-    let intervalValue: Int
-    let intervalUnit: String
-    let repeatCount: Int?
-    let startedAt: Date?
-    let startedBy: String?
-
-    init(
-        intervalValue: Int,
-        intervalUnit: String,
-        repeatCount: Int? = nil,
-        startedAt: Date? = nil,
-        startedBy: String? = nil
-    ) {
-        self.intervalValue = intervalValue
-        self.intervalUnit = intervalUnit
-        self.repeatCount = repeatCount
-        self.startedAt = startedAt
-        self.startedBy = startedBy
-    }
-}
-
-// MARK: - Exported Sequential Trigger
-
-struct ExportedSequentialTrigger: Codable {
-    let sequenceID: UUID
-    let stepIndex: Int
-    let startDate: Date?
-    let currentStepIndex: Int
-    
-    init(
-        sequenceID: UUID,
-        stepIndex: Int = 0,
-        startDate: Date? = nil,
-        currentStepIndex: Int = 0
-    ) {
-        self.sequenceID = sequenceID
-        self.stepIndex = stepIndex
-        self.startDate = startDate
-        self.currentStepIndex = currentStepIndex
+        self.isActive = isActive
     }
 }
 
@@ -366,18 +312,6 @@ struct ExportedAttachment: Codable, Identifiable {
 
 extension Memory {
     func toExported() -> ExportedMemory {
-        var triggers: [ExportedTrigger] = []
-
-        // Convert scheduleConfig to ExportedTrigger for backward compatibility
-        if let config = scheduleConfig, config.isActive {
-            triggers.append(config.toExportedTrigger())
-        }
-
-        // Convert locationConfig to ExportedTrigger for backward compatibility
-        if let config = locationConfig, config.isActive {
-            triggers.append(config.toExportedTrigger())
-        }
-
         return ExportedMemory(
             id: id,
             title: title,
@@ -391,7 +325,8 @@ extension Memory {
             userOrder: userOrder,
             autoCompleteOnChecklistCompletion: autoCompleteOnChecklistCompletion,
             mindID: mind?.id,
-            triggers: triggers,
+            scheduleConfig: scheduleConfig?.toExported(),
+            locationConfig: locationConfig?.toExported(),
             checkItems: checkItems.sorted { $0.sortOrder < $1.sortOrder }.map { $0.toExported() },
             photoAttachmentIDs: photoAttachmentIDs,
             linkAttachmentIDs: linkAttachmentIDs,
@@ -403,10 +338,9 @@ extension Memory {
 }
 
 extension ScheduleConfig {
-    func toExportedTrigger() -> ExportedTrigger {
-        ExportedTrigger(
+    func toExported() -> ExportedScheduleConfig {
+        ExportedScheduleConfig(
             id: id,
-            type: "scheduled",
             fireDate: fireDate,
             startDate: startDate,
             recurrenceRule: recurrenceRule?.toExported(),
@@ -414,59 +348,27 @@ extension ScheduleConfig {
             weekdayMask: weekdayMask,
             isActive: isActive,
             isAllDay: isAllDay,
-            location: nil,
-            reminder: reminderIsActive ? reminder.toExported() : nil,
-            sequential: nil,
-            spacedStage: 0,
-            lastReviewDate: nil,
-            ignoreCount: 0,
+            recurrenceEndType: recurrenceEndType.rawValue,
             focusEnabled: focusEnabled,
-            focusWorkDurationMinutes: focusWorkDurationMinutes > 0 ? focusWorkDurationMinutes : nil,
-            focusShortBreakDurationMinutes: focusShortBreakDurationMinutes > 0 ? focusShortBreakDurationMinutes : nil,
-            focusLongBreakDurationMinutes: focusLongBreakDurationMinutes > 0 ? focusLongBreakDurationMinutes : nil,
-            focusPomodorosUntilLongBreak: focusPomodorosUntilLongBreak > 0 ? focusPomodorosUntilLongBreak : nil,
-            focusAutoContinue: focusEnabled ? focusAutoContinue : nil
+            focusWorkDurationMinutes: focusWorkDurationMinutes,
+            focusShortBreakDurationMinutes: focusShortBreakDurationMinutes,
+            focusLongBreakDurationMinutes: focusLongBreakDurationMinutes,
+            focusPomodorosUntilLongBreak: focusPomodorosUntilLongBreak,
+            focusAutoContinue: focusAutoContinue
         )
     }
 }
 
 extension LocationConfig {
-    func toExportedTrigger() -> ExportedTrigger {
-        ExportedTrigger(
+    func toExported() -> ExportedLocationConfig {
+        ExportedLocationConfig(
             id: id,
-            type: "location",
-            fireDate: nil,
-            startDate: nil,
-            recurrenceRule: nil,
-            timeZoneIdentifier: nil,
-            weekdayMask: 0,
-            isActive: isActive,
-            isAllDay: false,
-            location: ExportedLocationTrigger(
-                latitude: latitude,
-                longitude: longitude,
-                radius: radius,
-                name: name,
-                event: event.rawValue
-            ),
-            reminder: reminderIsActive ? reminder.toExported() : nil,
-            sequential: nil,
-            spacedStage: 0,
-            lastReviewDate: nil,
-            ignoreCount: 0,
-            focusEnabled: false
-        )
-    }
-}
-
-extension NestedReminderPolicy {
-    func toExported() -> ExportedReminderTrigger {
-        ExportedReminderTrigger(
-            intervalValue: intervalValue,
-            intervalUnit: intervalUnit.rawValue,
-            repeatCount: repeatCount,
-            startedAt: startedAt,
-            startedBy: nil
+            latitude: latitude,
+            longitude: longitude,
+            radius: radius,
+            name: name,
+            event: event.rawValue,
+            isActive: isActive
         )
     }
 }

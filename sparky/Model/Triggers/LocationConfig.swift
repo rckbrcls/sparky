@@ -18,13 +18,6 @@ final class LocationConfig: Identifiable {
     var eventRaw: String = LocationEvent.onEntry.rawValue
     var isActive: Bool = true
 
-    // Nested reminder policy (follow-ups after this geofence fires)
-    var reminderIsActive: Bool = false
-    var reminderIntervalValue: Int = 1
-    var reminderIntervalUnitRaw: String = ReminderIntervalUnit.hours.rawValue
-    var reminderRepeatCount: Int?
-    var reminderStartedAt: Date?
-
     var memory: Memory?
 
     init(
@@ -35,7 +28,6 @@ final class LocationConfig: Identifiable {
         name: String? = nil,
         event: LocationEvent = .onEntry,
         isActive: Bool = true,
-        reminder: NestedReminderPolicy = NestedReminderPolicy(),
         memory: Memory? = nil
     ) {
         self.id = id
@@ -45,11 +37,6 @@ final class LocationConfig: Identifiable {
         self.name = name
         self.eventRaw = event.rawValue
         self.isActive = isActive
-        self.reminderIsActive = reminder.isActive
-        self.reminderIntervalValue = max(1, reminder.intervalValue)
-        self.reminderIntervalUnitRaw = reminder.intervalUnit.rawValue
-        self.reminderRepeatCount = reminder.repeatCount
-        self.reminderStartedAt = reminder.startedAt
         self.memory = memory
     }
 }
@@ -62,37 +49,6 @@ extension LocationConfig {
         set { eventRaw = newValue.rawValue }
     }
 
-    var reminderIntervalUnit: ReminderIntervalUnit {
-        get { ReminderIntervalUnit(rawValue: reminderIntervalUnitRaw) ?? .hours }
-        set { reminderIntervalUnitRaw = newValue.rawValue }
-    }
-
-    var reminder: NestedReminderPolicy {
-        get {
-            NestedReminderPolicy(
-                isActive: reminderIsActive,
-                intervalValue: reminderIntervalValue,
-                intervalUnit: reminderIntervalUnit,
-                repeatCount: reminderRepeatCount,
-                startedAt: reminderStartedAt
-            )
-        }
-        set {
-            reminderIsActive = newValue.isActive
-            reminderIntervalValue = max(1, newValue.intervalValue)
-            reminderIntervalUnit = newValue.intervalUnit
-            reminderRepeatCount = newValue.repeatCount
-            reminderStartedAt = newValue.startedAt
-        }
-    }
-
-    var hasActiveReminder: Bool {
-        isActive && reminderIsActive
-    }
-
-    func clearReminderStart() {
-        reminderStartedAt = nil
-    }
 }
 
 // MARK: - Static Factory Methods

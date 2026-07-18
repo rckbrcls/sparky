@@ -93,7 +93,7 @@ final class DataExportService {
 
         // Build export format
         let exportFormat = SparkyExportFormat(
-            version: "1.0",
+            version: "2.0",
             exportedAt: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
             minds: minds,
