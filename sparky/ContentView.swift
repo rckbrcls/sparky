@@ -108,6 +108,7 @@ struct ContentView: View {
                 }
             }
             .toolbar(.hidden, for: .tabBar)
+            .scrollEdgeEffectHidden(true, for: .bottom)
             .safeAreaBar(edge: .bottom, spacing: 0){
                 Group {
                     if isMultiSelectionActive {
