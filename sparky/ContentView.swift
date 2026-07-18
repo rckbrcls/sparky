@@ -108,6 +108,7 @@ struct ContentView: View {
                 }
             }
             .toolbar(.hidden, for: .tabBar)
+            .scrollEdgeEffectHidden(true, for: .bottom)
             .safeAreaBar(edge: .bottom, spacing: 0){
                 Group {
                     if isMultiSelectionActive {
@@ -287,8 +288,9 @@ struct ContentView: View {
                 GeometryReader{
                     CustomTabBar(
                         size: $0.size,
-                        activeTint: Color.accent,
-                        barTint: Color.Theme.border,
+                        activeTint: Color.Theme.accentForeground,
+                        inactiveTint: Color.Theme.textSecondary,
+                        barTint: Color.accentColor,
                         activeTab: $activeTab,
                         tabItemView: { tab in
                         VStack(spacing: 3){
