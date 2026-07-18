@@ -1,1 +1,30 @@
 .DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*~
+
+# Xcode / Swift
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/config/registries.json
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+timeline.xctimeline
+playground.xcworkspace
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# IDE
+.idea/
+.vscode/
+
+# Env
+.env
+.env.*
+
+# Logs
+*.log

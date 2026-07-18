@@ -25,7 +25,11 @@ final class DataController: Sendable {
     let modelContext: ModelContext
 
     private static let migrationVersionKey = "sparky.triggerMigrationVersion"
-    private static let currentMigrationVersion = 1
+    /// v1: legacy MemoryTriggerModel → ScheduleConfig/LocationConfig
+    /// v2: memory-level ReminderConfig → nested reminder on primary configs + focusEnabled default
+    private static let currentMigrationVersion = 2
+    private static let completionHistoryMigrationKey = "sparky.completionHistoryMigrationVersion"
+    private static let currentCompletionHistoryMigrationVersion = 1
 
     init(inMemory: Bool = false) {
         let schema = Schema([
@@ -74,6 +78,7 @@ final class DataController: Sendable {
         // Run migration if needed
         if !inMemory {
             migrateTriggersIfNeeded()
+            migrateCompletionHistoryIfNeeded()
         }
     }
 
@@ -89,7 +94,12 @@ final class DataController: Sendable {
             let memories = try modelContext.fetch(descriptor)
 
             for memory in memories {
-                migrateMemoryTriggers(memory)
+                if currentVersion < 1 {
+                    migrateMemoryTriggersV1(memory)
+                }
+                if currentVersion < 2 {
+                    migrateMemoryReminderNestingV2(memory)
+                }
             }
 
             if modelContext.hasChanges {
@@ -102,7 +112,7 @@ final class DataController: Sendable {
         }
     }
 
-    private func migrateMemoryTriggers(_ memory: Memory) {
+    private func migrateMemoryTriggersV1(_ memory: Memory) {
         // Skip if already migrated (has new config models)
         if memory.scheduleConfig != nil || memory.locationConfig != nil {
             return
@@ -154,6 +164,82 @@ final class DataController: Sendable {
         }
 
         // Note: Sequential triggers are intentionally not migrated (being removed)
+    }
+
+    /// Copies legacy memory-level ReminderConfig into nested policies on active primaries.
+    private func migrateMemoryReminderNestingV2(_ memory: Memory) {
+        guard let legacy = memory.reminderConfig, legacy.isActive else {
+            // Still clear inactive legacy pointer so active path never reads it.
+            if let legacy = memory.reminderConfig {
+                memory.reminderConfig = nil
+                modelContext.delete(legacy)
+            }
+            return
+        }
+
+        let nested = NestedReminderPolicy(
+            isActive: true,
+            intervalValue: legacy.intervalValue,
+            intervalUnit: legacy.intervalUnit,
+            repeatCount: legacy.repeatCount,
+            startedAt: legacy.startedAt
+        )
+
+        let scheduleActive = memory.scheduleConfig?.isActive == true
+        let locationActive = memory.locationConfig?.isActive == true
+
+        if scheduleActive, let schedule = memory.scheduleConfig, !schedule.reminderIsActive {
+            schedule.reminder = nested
+            // Prefer schedule start source when available
+            if legacy.startedBy == .schedule || legacy.startedBy == nil {
+                schedule.reminderStartedAt = legacy.startedAt
+            }
+        }
+
+        if locationActive, let location = memory.locationConfig, !location.reminderIsActive {
+            var locationNested = nested
+            if legacy.startedBy == .location {
+                locationNested.startedAt = legacy.startedAt
+            } else if scheduleActive {
+                // Dual primary: location starts only after its own fire.
+                locationNested.startedAt = nil
+            }
+            location.reminder = locationNested
+        }
+
+        memory.reminderConfig = nil
+        modelContext.delete(legacy)
+    }
+
+    private func migrateCompletionHistoryIfNeeded() {
+        let currentVersion = UserDefaults.standard.integer(
+            forKey: Self.completionHistoryMigrationKey
+        )
+        guard currentVersion < Self.currentCompletionHistoryMigrationVersion else { return }
+
+        do {
+            var descriptor = FetchDescriptor<Memory>()
+            descriptor.includePendingChanges = true
+            let memories = try modelContext.fetch(descriptor)
+            Self.backfillCompletionHistory(in: memories)
+
+            if modelContext.hasChanges {
+                try modelContext.save()
+            }
+
+            UserDefaults.standard.set(
+                Self.currentCompletionHistoryMigrationVersion,
+                forKey: Self.completionHistoryMigrationKey
+            )
+        } catch {
+            assertionFailure("Completion history migration failed: \(error)")
+        }
+    }
+
+    static func backfillCompletionHistory(in memories: [Memory], fallbackDate: Date = Date()) {
+        for memory in memories where memory.status == .completed && memory.completedAt == nil {
+            memory.completedAt = memory.updatedAt ?? memory.createdAt ?? fallbackDate
+        }
     }
 
     func save() {

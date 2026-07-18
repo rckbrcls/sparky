@@ -23,6 +23,22 @@ final class ScheduleConfig: Identifiable {
     var recurrenceOccurrenceCount: Int?
     var recurrenceEndTypeRaw: String?
 
+    // Nested reminder policy (follow-ups after this schedule fires)
+    var reminderIsActive: Bool = false
+    var reminderIntervalValue: Int = 1
+    var reminderIntervalUnitRaw: String = ReminderIntervalUnit.hours.rawValue
+    var reminderRepeatCount: Int?
+    var reminderStartedAt: Date?
+
+    // Focus (pomodoro) — schedule-only
+    var focusEnabled: Bool = false
+    /// 0 = unset (legacy); resolve via FocusRecipe + globals
+    var focusWorkDurationMinutes: Int = 0
+    var focusShortBreakDurationMinutes: Int = 0
+    var focusLongBreakDurationMinutes: Int = 0
+    var focusPomodorosUntilLongBreak: Int = 0
+    var focusAutoContinue: Bool = true
+
     var memory: Memory?
 
     init(
@@ -35,6 +51,13 @@ final class ScheduleConfig: Identifiable {
         isActive: Bool = true,
         isAllDay: Bool = false,
         recurrenceEndType: RecurrenceEndType = .never,
+        reminder: NestedReminderPolicy = NestedReminderPolicy(),
+        focusEnabled: Bool = false,
+        focusWorkDurationMinutes: Int = 0,
+        focusShortBreakDurationMinutes: Int = 0,
+        focusLongBreakDurationMinutes: Int = 0,
+        focusPomodorosUntilLongBreak: Int = 0,
+        focusAutoContinue: Bool = true,
         memory: Memory? = nil
     ) {
         self.id = id
@@ -49,6 +72,17 @@ final class ScheduleConfig: Identifiable {
         self.weekdayMask = weekdayMask
         self.isActive = isActive
         self.isAllDay = isAllDay
+        self.reminderIsActive = reminder.isActive
+        self.reminderIntervalValue = max(1, reminder.intervalValue)
+        self.reminderIntervalUnitRaw = reminder.intervalUnit.rawValue
+        self.reminderRepeatCount = reminder.repeatCount
+        self.reminderStartedAt = reminder.startedAt
+        self.focusEnabled = focusEnabled
+        self.focusWorkDurationMinutes = focusWorkDurationMinutes
+        self.focusShortBreakDurationMinutes = focusShortBreakDurationMinutes
+        self.focusLongBreakDurationMinutes = focusLongBreakDurationMinutes
+        self.focusPomodorosUntilLongBreak = focusPomodorosUntilLongBreak
+        self.focusAutoContinue = focusAutoContinue
         self.memory = memory
     }
 }
@@ -94,6 +128,38 @@ extension ScheduleConfig {
 
     var hasRecurrence: Bool {
         recurrenceRule != nil || weekdayMask != 0
+    }
+
+    var reminderIntervalUnit: ReminderIntervalUnit {
+        get { ReminderIntervalUnit(rawValue: reminderIntervalUnitRaw) ?? .hours }
+        set { reminderIntervalUnitRaw = newValue.rawValue }
+    }
+
+    var reminder: NestedReminderPolicy {
+        get {
+            NestedReminderPolicy(
+                isActive: reminderIsActive,
+                intervalValue: reminderIntervalValue,
+                intervalUnit: reminderIntervalUnit,
+                repeatCount: reminderRepeatCount,
+                startedAt: reminderStartedAt
+            )
+        }
+        set {
+            reminderIsActive = newValue.isActive
+            reminderIntervalValue = max(1, newValue.intervalValue)
+            reminderIntervalUnit = newValue.intervalUnit
+            reminderRepeatCount = newValue.repeatCount
+            reminderStartedAt = newValue.startedAt
+        }
+    }
+
+    var hasActiveReminder: Bool {
+        isActive && reminderIsActive
+    }
+
+    func clearReminderStart() {
+        reminderStartedAt = nil
     }
 }
 

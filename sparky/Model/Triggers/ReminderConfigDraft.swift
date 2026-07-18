@@ -2,7 +2,8 @@
 //  ReminderConfigDraft.swift
 //  sparky
 //
-//  In-memory draft for editing reminder policy.
+//  LEGACY draft. Active reminder editing uses NestedReminderPolicy on
+//  ScheduleConfigDraft / LocationConfigDraft. Kept temporarily for reference.
 //
 
 import Foundation

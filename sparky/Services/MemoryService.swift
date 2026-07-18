@@ -213,7 +213,7 @@ final class MemoryService: ObservableObject {
 
         let context = dataController.modelContext
         let now = Date()
-        let normalizedReminderDraft = normalizedReminderDraft(for: draft)
+        let normalizedDraft = normalizedNestedReminderDraft(for: draft)
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
@@ -227,6 +227,7 @@ final class MemoryService: ObservableObject {
             dueDate: draft.dueDate,
             createdAt: now,
             updatedAt: now,
+            completedAt: draft.status == .completed ? (draft.completedAt ?? now) : nil,
             autoCompleteOnChecklistCompletion: draft.autoCompleteOnChecklistCompletion,
             mind: mind
         )
@@ -247,14 +248,11 @@ final class MemoryService: ObservableObject {
 
         memory.checkItems = checkItems
 
-        if let scheduleDraft = draft.scheduleConfig {
+        if let scheduleDraft = normalizedDraft.scheduleConfig {
             memory.scheduleConfig = scheduleDraft.toModel(memory: memory)
         }
-        if let locationDraft = draft.locationConfig {
+        if let locationDraft = normalizedDraft.locationConfig {
             memory.locationConfig = locationDraft.toModel(memory: memory)
-        }
-        if let reminderDraft = normalizedReminderDraft {
-            memory.reminderConfig = reminderDraft.toModel(memory: memory)
         }
 
         memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
@@ -283,10 +281,16 @@ final class MemoryService: ObservableObject {
         let now = Date()
         let previousStatus = memory.status
         let primaryTriggerChanged = hasPrimaryTriggerChanged(previous: memory, draft: draft)
-        var normalizedReminderDraft = normalizedReminderDraft(for: draft)
+        var normalizedDraft = normalizedNestedReminderDraft(for: draft)
         if (previousStatus == .completed && draft.status == .active) || primaryTriggerChanged {
-            normalizedReminderDraft?.startedAt = nil
-            normalizedReminderDraft?.startedBy = nil
+            if var schedule = normalizedDraft.scheduleConfig {
+                schedule.reminder = schedule.reminder.clearingStart()
+                normalizedDraft.scheduleConfig = schedule
+            }
+            if var location = normalizedDraft.locationConfig {
+                location.reminder = location.reminder.clearingStart()
+                normalizedDraft.locationConfig = location
+            }
         }
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
@@ -297,6 +301,13 @@ final class MemoryService: ObservableObject {
         memory.isPinned = draft.isPinned
         memory.dueDate = draft.dueDate
         memory.updatedAt = now
+        if draft.status == .active {
+            memory.completedAt = nil
+        } else if previousStatus != .completed {
+            memory.completedAt = draft.completedAt ?? now
+        } else {
+            memory.completedAt = draft.completedAt ?? memory.completedAt ?? now
+        }
         memory.autoCompleteOnChecklistCompletion = draft.autoCompleteOnChecklistCompletion
         memory.mind = mind
 
@@ -321,6 +332,7 @@ final class MemoryService: ObservableObject {
             memory.locationConfig = nil
             context.delete(oldLocation)
         }
+        // Clear any leftover legacy memory-level reminder
         if let oldReminder = memory.reminderConfig {
             memory.reminderConfig = nil
             context.delete(oldReminder)
@@ -348,15 +360,12 @@ final class MemoryService: ObservableObject {
             )
         }
 
-        // Create new configs from draft
-        if let scheduleDraft = draft.scheduleConfig {
+        // Create new configs from draft (reminder is nested on each primary)
+        if let scheduleDraft = normalizedDraft.scheduleConfig {
             memory.scheduleConfig = scheduleDraft.toModel(memory: memory)
         }
-        if let locationDraft = draft.locationConfig {
+        if let locationDraft = normalizedDraft.locationConfig {
             memory.locationConfig = locationDraft.toModel(memory: memory)
-        }
-        if let reminderDraft = normalizedReminderDraft {
-            memory.reminderConfig = reminderDraft.toModel(memory: memory)
         }
 
         memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
@@ -413,6 +422,11 @@ final class MemoryService: ObservableObject {
         let now = Date()
         memory.status = status
         memory.updatedAt = now
+        if status == .active {
+            memory.completedAt = nil
+        } else if previousStatus != .completed {
+            memory.completedAt = now
+        }
 
         // Cascade status to checklist items
         if !memory.checkItems.isEmpty {
@@ -431,7 +445,7 @@ final class MemoryService: ObservableObject {
         }
 
         if previousStatus == .completed, status == .active {
-            memory.reminderConfig?.clearStart()
+            memory.clearNestedReminderStarts()
         }
 
         dataController.save()
@@ -450,23 +464,47 @@ final class MemoryService: ObservableObject {
     ) async {
         guard let memory = memory(id: memoryID),
               memory.status == .active,
-              memory.hasPrimaryTrigger,
-              let reminder = memory.reminderConfig,
-              reminder.isActive else {
+              memory.hasPrimaryTrigger else {
             return
         }
 
-        let shouldUpdateStart: Bool
-        if let startedAt = reminder.startedAt {
-            shouldUpdateStart = date < startedAt
-        } else {
-            shouldUpdateStart = true
+        var didUpdate = false
+
+        switch source {
+        case .schedule:
+            if let schedule = memory.scheduleConfig,
+               schedule.isActive,
+               schedule.reminderIsActive {
+                let shouldUpdate: Bool
+                if let startedAt = schedule.reminderStartedAt {
+                    shouldUpdate = date < startedAt
+                } else {
+                    shouldUpdate = true
+                }
+                if shouldUpdate {
+                    schedule.reminderStartedAt = date
+                    didUpdate = true
+                }
+            }
+        case .location:
+            if let location = memory.locationConfig,
+               location.isActive,
+               location.reminderIsActive {
+                let shouldUpdate: Bool
+                if let startedAt = location.reminderStartedAt {
+                    shouldUpdate = date < startedAt
+                } else {
+                    shouldUpdate = true
+                }
+                if shouldUpdate {
+                    location.reminderStartedAt = date
+                    didUpdate = true
+                }
+            }
         }
 
-        guard shouldUpdateStart else { return }
+        guard didUpdate else { return }
 
-        reminder.startedAt = date
-        reminder.startedBy = source
         memory.updatedAt = Date()
         dataController.save()
 
@@ -587,12 +625,14 @@ final class MemoryService: ObservableObject {
             // Non-recurring memory: toggle global status
             if allCompleted && memory.status == .active {
                 memory.status = .completed
+                memory.completedAt = now
                 if let coordinator = triggerExecutorCoordinator {
                     await coordinator.unregisterAll(for: memoryID)
                 }
             } else if !allCompleted && memory.status == .completed {
                 memory.status = .active
-                memory.reminderConfig?.clearStart()
+                memory.completedAt = nil
+                memory.clearNestedReminderStarts()
             }
         }
 
@@ -609,7 +649,7 @@ final class MemoryService: ObservableObject {
         let draft = MemoryDraft(
             id: UUID(),
             title: source.title,
-            status: source.status,
+            status: .active,
             isPinned: false,
             dueDate: source.dueDate,
             mindID: source.mind?.id,
@@ -624,7 +664,14 @@ final class MemoryService: ObservableObject {
                     weekdayMask: draft.weekdayMask,
                     isActive: draft.isActive,
                     isAllDay: draft.isAllDay,
-                    recurrenceEndType: draft.recurrenceEndType
+                    recurrenceEndType: draft.recurrenceEndType,
+                    reminder: draft.reminder.clearingStart(),
+                    focusEnabled: draft.focusEnabled,
+                    focusWorkDurationMinutes: draft.focusWorkDurationMinutes,
+                    focusShortBreakDurationMinutes: draft.focusShortBreakDurationMinutes,
+                    focusLongBreakDurationMinutes: draft.focusLongBreakDurationMinutes,
+                    focusPomodorosUntilLongBreak: draft.focusPomodorosUntilLongBreak,
+                    focusAutoContinue: draft.focusAutoContinue
                 )
             },
             locationConfig: source.locationConfig.map {
@@ -636,19 +683,8 @@ final class MemoryService: ObservableObject {
                     radius: draft.radius,
                     name: draft.name,
                     event: draft.event,
-                    isActive: draft.isActive
-                )
-            },
-            reminderConfig: source.reminderConfig.map {
-                let draft = ReminderConfigDraft.from($0)
-                return ReminderConfigDraft(
-                    id: UUID(),
-                    intervalValue: draft.intervalValue,
-                    intervalUnit: draft.intervalUnit,
-                    repeatCount: draft.repeatCount,
                     isActive: draft.isActive,
-                    startedAt: nil,
-                    startedBy: nil
+                    reminder: draft.reminder.clearingStart()
                 )
             },
             note: source.note,
@@ -669,6 +705,7 @@ final class MemoryService: ObservableObject {
             fileAttachmentIDs: [],
             attachments: [],
             autoCompleteOnChecklistCompletion: source.autoCompleteOnChecklistCompletion,
+            completedAt: nil,
             completedDates: []
         )
 
@@ -719,15 +756,34 @@ private extension MemoryService {
         }
     }
 
-    func normalizedReminderDraft(for draft: MemoryDraft) -> ReminderConfigDraft? {
-        guard let reminderDraft = draft.reminderConfig,
-              reminderDraft.isActive else {
-            return nil
+    /// Ensures nested reminders only stay active on active primaries.
+    func normalizedNestedReminderDraft(for draft: MemoryDraft) -> MemoryDraft {
+        var result = draft
+
+        if var schedule = result.scheduleConfig {
+            if !schedule.isActive {
+                schedule.reminder = NestedReminderPolicy()
+                schedule.focusEnabled = false
+            } else if !schedule.reminder.isActive {
+                schedule.reminder = NestedReminderPolicy()
+            } else {
+                schedule.reminder.intervalValue = max(1, schedule.reminder.intervalValue)
+            }
+            result.scheduleConfig = schedule
         }
 
-        let hasPrimaryTrigger = (draft.scheduleConfig?.isActive ?? false) || (draft.locationConfig?.isActive ?? false)
-        guard hasPrimaryTrigger else { return nil }
-        return reminderDraft
+        if var location = result.locationConfig {
+            if !location.isActive {
+                location.reminder = NestedReminderPolicy()
+            } else if !location.reminder.isActive {
+                location.reminder = NestedReminderPolicy()
+            } else {
+                location.reminder.intervalValue = max(1, location.reminder.intervalValue)
+            }
+            result.locationConfig = location
+        }
+
+        return result
     }
 
     func buildAttachmentReferences(from draft: MemoryDraft, memory: Memory) -> [MemoryAttachmentReference] {

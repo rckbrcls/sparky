@@ -10,31 +10,21 @@ import SwiftUI
 struct MeView: View {
     @ObservedObject private var environment: AppEnvironment
     @ObservedObject private var settings: SettingsStore
-    @ObservedObject private var memoryService: MemoryService
-    @ObservedObject private var mindService: MindService
     @Binding private var settingsNavigationPath: NavigationPath
 
     @StateObject private var viewModel: MeViewModel
-    @State private var draftName: String = ""
-    @State private var didSaveName = false
+    @State private var draftName = ""
     @State private var isEditing = false
     @FocusState private var isNameFieldFocused: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private enum Route: Hashable {
         case settings
     }
 
-    private struct Stat: Identifiable {
-        let id = UUID()
-        let title: String
-        let value: String
-    }
-
     init(environment: AppEnvironment, settingsNavigationPath: Binding<NavigationPath>) {
         self.environment = environment
         _settings = ObservedObject(wrappedValue: environment.settings)
-        _memoryService = ObservedObject(wrappedValue: environment.memoryService)
-        _mindService = ObservedObject(wrappedValue: environment.mindService)
         _settingsNavigationPath = settingsNavigationPath
         _viewModel = StateObject(wrappedValue: MeViewModel(memoryService: environment.memoryService))
     }
@@ -47,62 +37,17 @@ struct MeView: View {
     var body: some View {
         NavigationStack(path: $settingsNavigationPath) {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 12) {
-                    // Greeting title with editable name
-                    VStack(alignment: .leading, spacing: 8) {
-                        if isEditing {
-                            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                                Text("Hello, ")
-                                    .appLargeTitleStyle()
-
-                                ZStack {
-                                    Text(draftName.isEmpty ? "Name" : draftName)
-                                        .appLargeTitleStyle()
-                                        .opacity(0)
-
-                                    TextField("Name", text: $draftName)
-                                        .textInputAutocapitalization(.words)
-                                        .disableAutocorrection(true)
-                                        .appLargeTitleStyle()
-                                        .underline()
-                                        .focused($isNameFieldFocused)
-                                        .onSubmit {
-                                            saveName()
-                                            isEditing = false
-                                        }
-                                        .onAppear {
-                                            isNameFieldFocused = true
-                                        }
-                                }
-
-                                Text("!")
-                                    .appLargeTitleStyle()
-                            }
-                        } else {
-                            Text("Hello, \(Text(displayName).underline())!")
-                                .appLargeTitleStyle()
-                                .onTapGesture {
-                                    isEditing = true
-                                }
-                        }
-
-                        Text("Member since \(viewModel.memberSince)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    statsCard
-
-                    heatmapSection
-
-                    completionRateSection
-
-                    quoteCard
+                VStack(alignment: .leading, spacing: 16) {
+                    greeting
+                    activityCard
+                    completionRateCard
+                    insightCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 120)
             }
+            .scrollDismissesKeyboard(.interactively)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -118,7 +63,8 @@ struct MeView: View {
                 case .settings:
                     SettingsView(
                         navigationPath: $settingsNavigationPath,
-                        embedsInNavigationStack: false
+                        embedsInNavigationStack: false,
+                        focusSettings: environment.focusSettings
                     )
                 }
             }
@@ -128,6 +74,12 @@ struct MeView: View {
             .onChange(of: settings.userDisplayName) { _, newValue in
                 draftName = newValue
             }
+            .onChange(of: isNameFieldFocused) { _, isFocused in
+                if !isFocused {
+                    saveName()
+                    isEditing = false
+                }
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -136,154 +88,231 @@ struct MeView: View {
                     }
                 }
             }
-            .onChange(of: isNameFieldFocused) { _, newValue in
-                if !newValue {
-                    isEditing = false
-                }
-            }
-            .onTapGesture {
-                isEditing = false
-            }
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
         }
     }
+}
 
-    private var statsCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                ForEach(meStats) { stat in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(stat.value)
-                                .appLargeTitleStyle()
-                        }
-
-                        Text(stat.title.uppercased())
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(16)
+private extension MeView {
+    @ViewBuilder
+    var greeting: some View {
+        if isEditing {
+            ViewThatFits(in: .horizontal) {
+                greetingEditorHorizontal
+                greetingEditorVertical
+            }
+        } else {
+            Button {
+                draftName = settings.userDisplayName
+                isEditing = true
+                isNameFieldFocused = true
+            } label: {
+                Text("Hello, \(Text(displayName).underline())!")
+                    .appLargeTitleStyle()
+                    .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .cardStyle()
-                }
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(minHeight: 44)
+            .accessibilityLabel("Hello, \(displayName). Edit display name")
+        }
+    }
+
+    var greetingEditorHorizontal: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text("Hello, ")
+                .appLargeTitleStyle()
+            nameField
+            Text("!")
+                .appLargeTitleStyle()
+        }
+    }
+
+    var greetingEditorVertical: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Hello,")
+                .appLargeTitleStyle()
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                nameField
+                Text("!")
+                    .appLargeTitleStyle()
             }
         }
     }
 
-    private var heatmapSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    var nameField: some View {
+        TextField("Name", text: $draftName)
+            .textInputAutocapitalization(.words)
+            .disableAutocorrection(true)
+            .appLargeTitleStyle()
+            .underline()
+            .focused($isNameFieldFocused)
+            .submitLabel(.done)
+            .onSubmit {
+                isNameFieldFocused = false
+            }
+            .accessibilityLabel("Display name")
+    }
+
+    var activityCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Activity")
-                .font(.headline)
+                .font(.title3.weight(.semibold))
 
-            // Simple Heatmap Grid (Last 12 weeks equivalent approx 84 days, or just fill width)
-            // Let's do past 30 days for simplicity and good mobile fit
             HStack(spacing: 4) {
-                ForEach(0..<30) { dayOffset in
-                    // 0 is today, 29 is 29 days ago.
-                    // We want to render left to right: oldest to newest?
-                    // Usually heatmaps are left-to-right.
-                    // So left is -29 days, right is 0 days.
-                    let date = Calendar.current.date(byAdding: .day, value: -(29 - dayOffset), to: Date())!
-                    let normalized = Calendar.current.startOfDay(for: date)
-                    let intensity = viewModel.heatmapData[normalized] ?? 0
-
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(intensity > 0 ? Color.accentColor : Color.gray.opacity(0.2))
-                        .frame(height: 20) // Aspect ratio roughly square?
-                        // Let screen width determine width
+                ForEach(viewModel.activityDays) { day in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(activityColor(for: day.completionCount))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 24)
                 }
             }
-            // Add labels
+            .accessibilityHidden(true)
+
             HStack {
-                Text("30 Days ago")
+                Text("30 days ago")
                 Spacer()
                 Text("Today")
             }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
+            .font(.caption)
+            .foregroundStyle(Color.Theme.textSecondary)
         }
         .padding(16)
         .cardStyle()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Activity")
+        .accessibilityValue(activityAccessibilityValue)
     }
 
-    private var completionRateSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Completion Rate")
-                    .font(.headline)
-                Text("Based on total memories")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    var completionRateCard: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 16) {
+                    completionRateCopy
+                    completionRateRing
+                }
+            } else {
+                HStack(spacing: 20) {
+                    completionRateCopy
+                    Spacer(minLength: 8)
+                    completionRateRing
+                }
             }
+        }
+        .padding(16)
+        .cardStyle()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Completion rate")
+        .accessibilityValue(completionRateAccessibilityValue)
+    }
 
-            Spacer()
+    var completionRateCopy: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Completion Rate")
+                .font(.title3.weight(.semibold))
+            Text(completionRateSubtitle)
+                .font(.subheadline)
+                .foregroundStyle(Color.Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
-            ZStack {
+    var completionRateRing: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.Theme.border, lineWidth: 8)
+
+            if let rate = viewModel.completionRate.value {
                 Circle()
-                    .stroke(Color(.secondarySystemFill), lineWidth: 8)
-                    .frame(width: 60, height: 60)
-
-                Circle()
-                    .trim(from: 0, to: viewModel.completionRate)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .frame(width: 60, height: 60)
+                    .trim(from: 0, to: rate)
+                    .stroke(
+                        Color.accentColor,
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring, value: viewModel.completionRate)
-
-                Text("\(Int(viewModel.completionRate * 100))%")
-                    .font(.caption)
-                    .fontWeight(.bold)
+                    .animation(.spring, value: rate)
             }
+
+            Text(completionRateText)
+                .font(.subheadline.weight(.bold))
         }
-        .padding(16)
-        .cardStyle()
+        .frame(width: 68, height: 68)
+        .accessibilityHidden(true)
     }
 
-    private var quoteCard: some View {
-        VStack(alignment: .center, spacing: 12) {
-            Image(systemName: "quote.opening")
+    var insightCard: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "sparkles")
                 .font(.title2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.Theme.textSecondary)
+                .accessibilityHidden(true)
 
-            Text(viewModel.quoteOfTheDay.text)
+            Text(viewModel.insight)
                 .font(.body)
                 .italic()
                 .multilineTextAlignment(.center)
-
-            Text("- " + viewModel.quoteOfTheDay.author)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
-        .padding(24)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 28)
         .cardStyle()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Personal insight")
+        .accessibilityValue(viewModel.insight)
     }
 
-    private var meStats: [Stat] {
-        [
-            Stat(title: "Streak", value: "\(viewModel.streakDays)"),
-            Stat(title: "This Week", value: "\(viewModel.completionsThisWeek)"),
-            Stat(title: "Active", value: "\(viewModel.activeMemoriesCount)"),
-            Stat(
-                title: "Checklist",
-                value: viewModel.checklistTotal > 0
-                    ? "\(viewModel.checklistCompleted)/\(viewModel.checklistTotal)"
-                    : "0"
-            ),
-        ]
-    }
-
-    private func saveName() {
-        let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        settings.userDisplayName = trimmed
-        didSaveName = true
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            didSaveName = false
+    func activityColor(for count: Int) -> Color {
+        switch count {
+        case 0:
+            return Color.Theme.border.opacity(0.7)
+        case 1:
+            return Color.accentColor.opacity(0.35)
+        case 2:
+            return Color.accentColor.opacity(0.65)
+        default:
+            return Color.accentColor
         }
+    }
+
+    var activityAccessibilityValue: String {
+        let completionCount = viewModel.completionCountLast30Days
+        let activeDays = viewModel.activeDaysLast30Days
+        let completionLabel = completionCount == 1 ? "completion" : "completions"
+        let dayLabel = activeDays == 1 ? "day" : "days"
+        return "\(completionCount) \(completionLabel) across \(activeDays) active \(dayLabel) in the last 30 days"
+    }
+
+    var completionRateText: String {
+        guard let rate = viewModel.completionRate.value else { return "—" }
+        return "\(Int((rate * 100).rounded()))%"
+    }
+
+    var completionRateSubtitle: String {
+        let scheduled = viewModel.completionRate.scheduledOccurrences
+        guard scheduled > 0 else {
+            return "No scheduled memories in the last 7 days."
+        }
+        let occurrenceLabel = scheduled == 1 ? "occurrence" : "occurrences"
+        return "Based on \(scheduled) scheduled \(occurrenceLabel) in the last 7 days."
+    }
+
+    var completionRateAccessibilityValue: String {
+        guard viewModel.completionRate.scheduledOccurrences > 0 else {
+            return "No scheduled memories in the last 7 days"
+        }
+        return "\(completionRateText), \(viewModel.completionRate.completedOccurrences) of \(viewModel.completionRate.scheduledOccurrences) scheduled occurrences completed in the last 7 days"
+    }
+
+    func saveName() {
+        let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            draftName = settings.userDisplayName
+            return
+        }
+        settings.userDisplayName = trimmed
+        draftName = trimmed
     }
 }
 

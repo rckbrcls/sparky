@@ -14,7 +14,6 @@ struct MemoryDraft: Identifiable, Hashable {
     var mindID: UUID?
     var scheduleConfig: ScheduleConfigDraft?
     var locationConfig: LocationConfigDraft?
-    var reminderConfig: ReminderConfigDraft?
     // Fixed content attributes (replacing dynamic contents array)
     var note: String?
     var checkItems: [CheckItemDraft]
@@ -24,6 +23,7 @@ struct MemoryDraft: Identifiable, Hashable {
     var fileAttachmentIDs: [UUID]
     var attachments: [Memory.Attachment]
     var autoCompleteOnChecklistCompletion: Bool
+    var completedAt: Date?
     /// Dates on which this memory was marked as completed (for recurring memories)
     var completedDates: [Date]
 
@@ -35,7 +35,6 @@ struct MemoryDraft: Identifiable, Hashable {
          mindID: UUID? = nil,
          scheduleConfig: ScheduleConfigDraft? = nil,
          locationConfig: LocationConfigDraft? = nil,
-         reminderConfig: ReminderConfigDraft? = nil,
          note: String? = nil,
          checkItems: [CheckItemDraft] = [],
          photoAttachmentIDs: [UUID] = [],
@@ -44,6 +43,7 @@ struct MemoryDraft: Identifiable, Hashable {
          fileAttachmentIDs: [UUID] = [],
          attachments: [Memory.Attachment] = [],
          autoCompleteOnChecklistCompletion: Bool = false,
+         completedAt: Date? = nil,
          completedDates: [Date] = []) {
         self.id = id
         self.title = title
@@ -53,7 +53,6 @@ struct MemoryDraft: Identifiable, Hashable {
         self.mindID = mindID
         self.scheduleConfig = scheduleConfig
         self.locationConfig = locationConfig
-        self.reminderConfig = reminderConfig
         self.note = note
         self.checkItems = checkItems
         self.photoAttachmentIDs = photoAttachmentIDs
@@ -62,6 +61,7 @@ struct MemoryDraft: Identifiable, Hashable {
         self.fileAttachmentIDs = fileAttachmentIDs
         self.attachments = attachments
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
+        self.completedAt = completedAt
         self.completedDates = completedDates
     }
 

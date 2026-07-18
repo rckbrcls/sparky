@@ -20,6 +20,11 @@ struct PendingMemoryOpenRequest: Identifiable, Equatable {
     let source: Source
 }
 
+struct PendingFocusOpenRequest: Identifiable, Equatable {
+    let id = UUID()
+    let memoryID: UUID
+}
+
 @MainActor
 final class AppEnvironment: ObservableObject {
     static let notificationDelegate = ForegroundNotificationDelegate()
@@ -30,6 +35,8 @@ final class AppEnvironment: ObservableObject {
     let triggerExecutorCoordinator: TriggerExecutorCoordinator
     let settings: SettingsStore
     let attachmentStore: MemoryAttachmentStore
+    let focusSettings: FocusSettings
+    let focusTimer: FocusTimer
 
     // Mantidos para compatibilidade durante transição
     var notificationScheduler: ScheduledTriggerExecutor {
@@ -43,13 +50,20 @@ final class AppEnvironment: ObservableObject {
     @Published var hasBootstrapped = false
     @Published var hasCompletedOnboarding = false
     @Published var pendingMemoryOpenRequest: PendingMemoryOpenRequest?
+    @Published var pendingFocusOpenRequest: PendingFocusOpenRequest?
 
     private var cancellables: Set<AnyCancellable> = []
 
-    init(dataController: DataController) {
+    init(
+        dataController: DataController,
+        focusSettings: FocusSettings? = nil
+    ) {
         self.dataController = dataController
         self.settings = SettingsStore()
         self.attachmentStore = MemoryAttachmentStore()
+        self.focusSettings = focusSettings ?? FocusSettings()
+        let focusNotifications = FocusNotificationService(settings: settings)
+        self.focusTimer = FocusTimer(settings: self.focusSettings, notifications: focusNotifications)
 
         // Initialize services - they will load data synchronously in their init
         self.mindService = MindService(dataController: dataController)
@@ -70,7 +84,11 @@ final class AppEnvironment: ObservableObject {
                 source: .notification
             )
         }
+        Self.notificationDelegate.onStartFocus = { [weak self] memoryID in
+            self?.pendingFocusOpenRequest = PendingFocusOpenRequest(memoryID: memoryID)
+        }
         UNUserNotificationCenter.current().delegate = Self.notificationDelegate
+        NotificationCategoryRegistrar.registerAll()
 
         settings.$hasCompletedOnboarding
             .receive(on: DispatchQueue.main)
@@ -108,6 +126,44 @@ final class AppEnvironment: ObservableObject {
     func completeOnboarding() {
         settings.hasCompletedOnboarding = true
     }
+
+    func startFocus(for memoryID: UUID) {
+        guard let memory = memoryService.memory(id: memoryID),
+              memory.hasFocus,
+              let recipe = memory.focusRecipe(settings: focusSettings) else {
+            return
+        }
+
+        // Deep-link / editor intent is explicit: replace any other active target.
+        if focusTimer.wouldReplaceSession(withMemoryID: memory.id) {
+            focusTimer.endSession()
+        }
+
+        focusTimer.beginSession(memoryID: memory.id, memoryTitle: memory.title, recipe: recipe)
+        pendingFocusOpenRequest = PendingFocusOpenRequest(memoryID: memory.id)
+    }
+
+    func startQuickFocus(workDurationMinutes: Int? = nil) {
+        if focusTimer.wouldReplaceSession(withMemoryID: nil) {
+            focusTimer.endSession()
+        }
+        focusTimer.beginQuickSession(workDurationMinutes: workDurationMinutes)
+    }
+
+    func startQuickFocus(recipe: FocusRecipe) {
+        if focusTimer.wouldReplaceSession(withMemoryID: nil) {
+            focusTimer.endSession()
+        }
+        focusTimer.beginQuickSession(recipe: recipe)
+    }
+
+    func canStartNewFocusTarget(memoryID: UUID?) -> Bool {
+        !focusTimer.wouldReplaceSession(withMemoryID: memoryID)
+    }
+
+    func focusRecipe(for memory: Memory) -> FocusRecipe? {
+        memory.focusRecipe(settings: focusSettings)
+    }
 }
 
 // MARK: - Foreground Notification Delegate
@@ -121,7 +177,14 @@ final class ForegroundNotificationDelegate: NSObject, UNUserNotificationCenterDe
             flushBufferedTapsIfNeeded()
         }
     }
+    var onStartFocus: ((UUID) -> Void)? {
+        didSet {
+            flushBufferedFocusIfNeeded()
+        }
+    }
+
     private var bufferedMemoryIDs: [UUID] = []
+    private var bufferedFocusMemoryIDs: [UUID] = []
 
     override init() {
         super.init()
@@ -140,8 +203,16 @@ final class ForegroundNotificationDelegate: NSObject, UNUserNotificationCenterDe
     ) async {
         guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
         let userInfo = response.notification.request.content.userInfo
-        guard let idString = userInfo["memoryID"] as? String,
+        let idString = (userInfo[NotificationUserInfoKey.memoryID] as? String)
+            ?? (userInfo["memoryID"] as? String)
+        guard let idString,
               let memoryID = UUID(uuidString: idString) else { return }
+
+        if response.actionIdentifier == NotificationActionID.startFocus {
+            handleFocusOnMain(memoryID)
+            return
+        }
+
         handleMemoryTapOnMain(memoryID)
     }
 
@@ -153,12 +224,29 @@ final class ForegroundNotificationDelegate: NSObject, UNUserNotificationCenterDe
         bufferedMemoryIDs.append(memoryID)
     }
 
+    private func handleFocusOnMain(_ memoryID: UUID) {
+        if let onStartFocus {
+            onStartFocus(memoryID)
+            return
+        }
+        bufferedFocusMemoryIDs.append(memoryID)
+    }
+
     private func flushBufferedTapsIfNeeded() {
         guard let onMemoryTapped, !bufferedMemoryIDs.isEmpty else { return }
         let queued = bufferedMemoryIDs
         bufferedMemoryIDs.removeAll(keepingCapacity: true)
         for memoryID in queued {
             onMemoryTapped(memoryID)
+        }
+    }
+
+    private func flushBufferedFocusIfNeeded() {
+        guard let onStartFocus, !bufferedFocusMemoryIDs.isEmpty else { return }
+        let queued = bufferedFocusMemoryIDs
+        bufferedFocusMemoryIDs.removeAll(keepingCapacity: true)
+        for memoryID in queued {
+            onStartFocus(memoryID)
         }
     }
 }

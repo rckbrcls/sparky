@@ -17,6 +17,13 @@ struct ScheduleConfigDraft: Identifiable, Hashable {
     var isActive: Bool
     var isAllDay: Bool
     var recurrenceEndType: RecurrenceEndType
+    var reminder: NestedReminderPolicy
+    var focusEnabled: Bool
+    var focusWorkDurationMinutes: Int
+    var focusShortBreakDurationMinutes: Int
+    var focusLongBreakDurationMinutes: Int
+    var focusPomodorosUntilLongBreak: Int
+    var focusAutoContinue: Bool
 
     init(
         id: UUID = UUID(),
@@ -27,7 +34,14 @@ struct ScheduleConfigDraft: Identifiable, Hashable {
         weekdayMask: Int16 = 0,
         isActive: Bool = true,
         isAllDay: Bool = false,
-        recurrenceEndType: RecurrenceEndType = .never
+        recurrenceEndType: RecurrenceEndType = .never,
+        reminder: NestedReminderPolicy = NestedReminderPolicy(),
+        focusEnabled: Bool = false,
+        focusWorkDurationMinutes: Int = 0,
+        focusShortBreakDurationMinutes: Int = 0,
+        focusLongBreakDurationMinutes: Int = 0,
+        focusPomodorosUntilLongBreak: Int = 0,
+        focusAutoContinue: Bool = true
     ) {
         self.id = id
         self.fireDate = fireDate
@@ -38,6 +52,13 @@ struct ScheduleConfigDraft: Identifiable, Hashable {
         self.isActive = isActive
         self.isAllDay = isAllDay
         self.recurrenceEndType = recurrenceEndType
+        self.reminder = reminder
+        self.focusEnabled = focusEnabled
+        self.focusWorkDurationMinutes = focusWorkDurationMinutes
+        self.focusShortBreakDurationMinutes = focusShortBreakDurationMinutes
+        self.focusLongBreakDurationMinutes = focusLongBreakDurationMinutes
+        self.focusPomodorosUntilLongBreak = focusPomodorosUntilLongBreak
+        self.focusAutoContinue = focusAutoContinue
     }
 
     static func == (lhs: ScheduleConfigDraft, rhs: ScheduleConfigDraft) -> Bool {
@@ -46,6 +67,21 @@ struct ScheduleConfigDraft: Identifiable, Hashable {
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+    }
+
+    var hasConcreteFocusRecipe: Bool {
+        focusWorkDurationMinutes > 0
+            && focusShortBreakDurationMinutes > 0
+            && focusLongBreakDurationMinutes > 0
+            && focusPomodorosUntilLongBreak > 0
+    }
+
+    mutating func applyFocusRecipe(_ recipe: FocusRecipe) {
+        focusWorkDurationMinutes = recipe.workDurationMinutes
+        focusShortBreakDurationMinutes = recipe.shortBreakDurationMinutes
+        focusLongBreakDurationMinutes = recipe.longBreakDurationMinutes
+        focusPomodorosUntilLongBreak = recipe.pomodorosUntilLongBreak
+        focusAutoContinue = recipe.autoContinue
     }
 }
 
@@ -64,6 +100,13 @@ extension ScheduleConfigDraft {
             isActive: isActive,
             isAllDay: isAllDay,
             recurrenceEndType: recurrenceEndType,
+            reminder: reminder,
+            focusEnabled: focusEnabled,
+            focusWorkDurationMinutes: focusWorkDurationMinutes,
+            focusShortBreakDurationMinutes: focusShortBreakDurationMinutes,
+            focusLongBreakDurationMinutes: focusLongBreakDurationMinutes,
+            focusPomodorosUntilLongBreak: focusPomodorosUntilLongBreak,
+            focusAutoContinue: focusAutoContinue,
             memory: memory
         )
     }
@@ -79,7 +122,14 @@ extension ScheduleConfigDraft {
             weekdayMask: model.weekdayMask,
             isActive: model.isActive,
             isAllDay: model.isAllDay,
-            recurrenceEndType: model.recurrenceEndType
+            recurrenceEndType: model.recurrenceEndType,
+            reminder: model.reminder,
+            focusEnabled: model.focusEnabled,
+            focusWorkDurationMinutes: model.focusWorkDurationMinutes,
+            focusShortBreakDurationMinutes: model.focusShortBreakDurationMinutes,
+            focusLongBreakDurationMinutes: model.focusLongBreakDurationMinutes,
+            focusPomodorosUntilLongBreak: model.focusPomodorosUntilLongBreak,
+            focusAutoContinue: model.focusAutoContinue
         )
     }
 

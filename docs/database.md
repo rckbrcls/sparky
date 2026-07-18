@@ -48,9 +48,9 @@ The schema in `DataController` includes:
 | `Memory` | Core user-created item |
 | `Tag` | Lightweight labels with colors |
 | `CheckItemModel` | Checklist items attached to a Memory |
-| `ScheduleConfig` | Date/time and recurrence configuration |
-| `LocationConfig` | Geofence configuration |
-| `ReminderConfig` | Follow-up reminders after a primary trigger |
+| `ScheduleConfig` | Date/time, recurrence, nested reminder, and Focus flag |
+| `LocationConfig` | Geofence configuration and nested reminder |
+| `ReminderConfig` | Legacy memory-level reminder (schema-only; nested policies replaced it) |
 | `MemoryTriggerModel` | Legacy trigger model retained for migration safety |
 | `MemoryTriggerLocation` | Legacy trigger location model retained for migration safety |
 | `MemoryAttachmentReference` | Ordered references to attachment payloads |
@@ -63,7 +63,8 @@ Models generally use `@Attribute(.unique)` UUID identifiers and explicit relatio
 - A `Memory` may belong to one `Mind`.
 - A `Mind` may have child Minds through its self-referential hierarchy.
 - A `Memory` may have many `CheckItemModel` records.
-- A `Memory` has optional 1:1 `ScheduleConfig`, `LocationConfig`, and `ReminderConfig` relationships.
+- A `Memory` has optional 1:1 `ScheduleConfig` and `LocationConfig` relationships.
+- Nested follow-up reminder fields live on each primary config; `ReminderConfig` remains only for schema migration safety.
 - A `Memory` has many `MemoryAttachmentReference` records.
 - A `Memory` has many `MemoryCompletionDate` records.
 - Legacy trigger records remain related to Memory but should not be used for new behavior.
@@ -78,7 +79,7 @@ Models generally use `@Attribute(.unique)` UUID identifiers and explicit relatio
 - State: `statusRaw`, `isPinned`, `priorityRaw`, `dueDate`, `userOrder`.
 - Timestamps: `createdAt`, `updatedAt`.
 - Checklist behavior: `checkItems`, `autoCompleteOnChecklistCompletion`.
-- Trigger configuration: `scheduleConfig`, `locationConfig`, `reminderConfig`.
+- Trigger configuration: `scheduleConfig` (optional nested reminder + Focus), `locationConfig` (optional nested reminder). Legacy `reminderConfig` is schema-only.
 - Legacy migration support: `triggers`.
 - Attachment references: `attachmentReferences`.
 - Recurrence completion history: `completionDateEntries`.

@@ -155,9 +155,9 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
             }
 
             content.sound = settings.notificationSoundEnabled ? .default : nil
-            content.categoryIdentifier = "REMINDER_ACTIONS"
+            content.categoryIdentifier = NotificationCategoryID.reminderActions
             content.threadIdentifier = info.memoryID.uuidString
-            content.userInfo = ["memoryID": info.memoryID.uuidString]
+            content.userInfo = [NotificationUserInfoKey.memoryID: info.memoryID.uuidString]
 
             let request = UNNotificationRequest(
                 identifier: "geofence-\(UUID().uuidString)",

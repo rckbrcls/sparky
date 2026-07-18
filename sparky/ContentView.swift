@@ -12,6 +12,7 @@ import UIKit
 enum CustomTab: String, CaseIterable {
     case calendar = "Calendar"
     case mind = "Mind"
+    case focus = "Focus"
     case me = "Me"
 
     var symbol: String {
@@ -20,6 +21,8 @@ enum CustomTab: String, CaseIterable {
             return "calendar"
         case .mind:
             return "mind"
+        case .focus:
+            return "timer"
         case .me:
             return "me"
         }
@@ -49,6 +52,7 @@ struct ContentView: View {
     @State private var longPressTimer: Timer?
     @State private var hasTriggeredLongPress = false
     @State private var unavailableMemoryAlertMessage: String?
+    @State private var focusSessionRoute: FocusSessionRoute?
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     init(environment: AppEnvironment) {
@@ -91,6 +95,11 @@ struct ContentView: View {
                         onSearchActiveChange: handleSearchActiveChange
                     )
                     .tabBarSpacer()
+                }
+
+                Tab.init(value: .focus) {
+                    FocusTabView(environment: environment)
+                        .tabBarSpacer()
                 }
 
                 Tab.init(value: .me){
@@ -197,10 +206,23 @@ struct ContentView: View {
                 showingOnboarding = false
             }
         }
+        .fullScreenCover(item: $focusSessionRoute, onDismiss: {
+            focusSessionRoute = nil
+        }) { _ in
+            FocusSessionView(
+                timer: environment.focusTimer,
+                onClose: {
+                    // Dismiss only — session continues in Focus tab.
+                    focusSessionRoute = nil
+                    activeTab = .focus
+                }
+            )
+        }
         .onAppear {
             UITabBar.appearance().isHidden = true
             showingOnboarding = !environment.hasCompletedOnboarding
             tryConsumePendingMemoryOpenRequest()
+            tryConsumePendingFocusOpenRequest()
         }
         .onChange(of: environment.hasCompletedOnboarding) { _, completed in
             guard completed else { return }
@@ -211,17 +233,27 @@ struct ContentView: View {
         .onChange(of: environment.pendingMemoryOpenRequest) { _, _ in
             tryConsumePendingMemoryOpenRequest()
         }
+        .onChange(of: environment.pendingFocusOpenRequest) { _, _ in
+            tryConsumePendingFocusOpenRequest()
+        }
         .onChange(of: hasBlockingPresentation) { _, _ in
             tryConsumePendingMemoryOpenRequest()
+            tryConsumePendingFocusOpenRequest()
         }
         .onChange(of: environment.hasBootstrapped) { _, _ in
             tryConsumePendingMemoryOpenRequest()
+            tryConsumePendingFocusOpenRequest()
         }
-        .onChange(of: scenePhase) { _, _ in
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                environment.focusTimer.refreshFromWallClock()
+            }
             tryConsumePendingMemoryOpenRequest()
+            tryConsumePendingFocusOpenRequest()
         }
         .onReceive(environment.memoryService.$lastRefreshed.receive(on: RunLoop.main)) { _ in
             tryConsumePendingMemoryOpenRequest()
+            tryConsumePendingFocusOpenRequest()
         }
         .onChange(of: activeTab) { _, newTab in
             // Clear context when switching away from mind tab
@@ -277,6 +309,7 @@ struct ContentView: View {
                         }
                         .symbolVariant(.fill)
                         .frame(maxWidth: .infinity)
+                        .accessibilityLabel(tab == .focus ? "Focus" : tab.rawValue)
                     },
                         onTabReselected: handleTabReselection
                     )
@@ -333,6 +366,8 @@ struct ContentView: View {
             if !mindsNavigationPath.isEmpty {
                 mindsNavigationPath.removeLast()
             }
+        case .focus:
+            break
         case .me:
             meNavigationPath = NavigationPath()
         }
@@ -409,6 +444,7 @@ struct ContentView: View {
             || mindComposerRequest != nil
             || quickMemoryRequest != nil
             || editorRoute != nil
+            || focusSessionRoute != nil
     }
 
     private func tryConsumePendingMemoryOpenRequest() {
@@ -432,6 +468,46 @@ struct ContentView: View {
         guard environment.hasBootstrapped else { return }
         environment.pendingMemoryOpenRequest = nil
         unavailableMemoryAlertMessage = "This memory is no longer available."
+    }
+
+    private func tryConsumePendingFocusOpenRequest() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async {
+                tryConsumePendingFocusOpenRequest()
+            }
+            return
+        }
+
+        guard let request = environment.pendingFocusOpenRequest else { return }
+        guard scenePhase == .active else { return }
+        // Focus can present over editor, but not onboarding.
+        guard !showingOnboarding else { return }
+
+        if let memory = environment.memoryService.memory(id: request.memoryID),
+           memory.hasFocus {
+            environment.pendingFocusOpenRequest = nil
+            if let recipe = memory.focusRecipe(settings: environment.focusSettings) {
+                if environment.focusTimer.activeMemoryID != memory.id || !environment.focusTimer.isSessionActive {
+                    if environment.focusTimer.wouldReplaceSession(withMemoryID: memory.id) {
+                        environment.focusTimer.endSession()
+                    }
+                    environment.focusTimer.beginSession(
+                        memoryID: memory.id,
+                        memoryTitle: memory.title,
+                        recipe: recipe
+                    )
+                }
+            }
+            activeTab = .focus
+            // Optional cover when coming from notification while another modal is up.
+            if editorRoute != nil {
+                focusSessionRoute = FocusSessionRoute()
+            }
+            return
+        }
+
+        guard environment.hasBootstrapped else { return }
+        environment.pendingFocusOpenRequest = nil
     }
 
     private func targetMindForCreation() -> Mind? {
@@ -464,6 +540,10 @@ private struct MindComposerRequest: Identifiable {
 private struct QuickMemoryRequest: Identifiable {
     let id = UUID()
     let mind: Mind?
+}
+
+private struct FocusSessionRoute: Identifiable {
+    let id = UUID()
 }
 
 extension View{

@@ -145,7 +145,7 @@ Start with:
 Check:
 
 - The Memory has an active primary trigger: schedule or location.
-- `reminderConfig.isActive` is true.
+- nested reminder is active on the owning schedule and/or location config (`reminderIsActive`).
 - For scheduled triggers, `ReminderTriggerExecutor` can derive `startedAt` from `scheduleConfig.fireDate`.
 - For location triggers, `LocationTriggerExecutor` called back into `MemoryService.markPrimaryTriggerFired(...)`.
 - Reminder start values were not reset by reactivating the Memory or changing the primary trigger.

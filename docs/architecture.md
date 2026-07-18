@@ -23,6 +23,7 @@ flowchart TD
     Coordinator --> Scheduled["ScheduledTriggerExecutor"]
     Coordinator --> Location["LocationTriggerExecutor"]
     Coordinator --> Reminder["ReminderTriggerExecutor"]
+    Environment --> FocusTimer["FocusTimer / FocusSettings"]
 
     Views["SwiftUI Views"] --> ViewModels["ViewModels"]
     Views --> MemoryService
@@ -68,7 +69,8 @@ The model layer lives under `sparky/Model/` and is split by domain:
 - `Mind`: hierarchical organization entity with virtual All and Limbo sentinels.
 - `Tag`: color-coded classification entity.
 - `CheckItemModel`: persisted checklist item.
-- `ScheduleConfig`, `LocationConfig`, `ReminderConfig`: active trigger configuration models.
+- `ScheduleConfig`, `LocationConfig`: active primary trigger models. Nested reminder policy fields live on each primary; `ScheduleConfig.focusEnabled` gates Focus.
+- `ReminderConfig`: legacy memory-level reminder retained only for SwiftData schema safety.
 - `MemoryTriggerModel` and `MemoryTriggerLocation`: legacy trigger models retained in the SwiftData schema for migration safety.
 - `SparkyExportFormat`: JSON backup/restore contract.
 - `ICalExportFormat`: iCalendar converter for scheduled memories.
@@ -79,9 +81,8 @@ UI editing flows use value-type drafts before writing to SwiftData:
 
 - `MemoryDraft`
 - `CheckItemDraft`
-- `ScheduleConfigDraft`
-- `LocationConfigDraft`
-- `ReminderConfigDraft`
+- `ScheduleConfigDraft` (includes nested reminder + focusEnabled)
+- `LocationConfigDraft` (includes nested reminder)
 
 This keeps editor state separate from persisted objects until create/update actions are submitted through services.
 
@@ -101,7 +102,8 @@ Trigger executors translate persisted trigger config into OS behavior:
 
 - `ScheduledTriggerExecutor` registers local notifications for one-time, recurring, weekday-mask, and interval schedules.
 - `LocationTriggerExecutor` monitors CoreLocation circular regions and emits local notifications on entry or exit.
-- `ReminderTriggerExecutor` schedules follow-up notifications after a primary schedule/location trigger starts.
+- `ReminderTriggerExecutor` schedules follow-up notifications from nested reminder policies on schedule and/or location configs.
+- Focus sessions are started from schedule notifications (`Start Focus` action) via `FocusTimer` / `FocusSessionView` using global `FocusSettings`.
 - `TriggerExecutorCoordinator` provides a single sync/unregister interface for the app.
 
 The location executor enforces `LocationTriggerExecutor.maxGeofences = 20`, matching the practical iOS region-monitoring constraint in the implementation.

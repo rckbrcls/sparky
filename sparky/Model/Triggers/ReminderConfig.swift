@@ -2,7 +2,9 @@
 //  ReminderConfig.swift
 //  sparky
 //
-//  Reminder policy that repeats after a primary trigger starts.
+//  LEGACY: Kept in SwiftData schema to avoid migration crashes.
+//  Active reminder policy now lives nested on ScheduleConfig / LocationConfig.
+//  Do not write new memory-level reminder configs.
 //
 
 import Foundation

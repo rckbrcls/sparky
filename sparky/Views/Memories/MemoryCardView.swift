@@ -180,9 +180,22 @@ struct MemoryCardView: View {
         return memory.scheduleConfig?.isActive == true ? memory.scheduleConfig : nil
     }
 
-    private var reminderTrigger: ReminderConfig? {
-        guard let memory = memory else { return nil }
-        return memory.reminderConfig?.isActive == true ? memory.reminderConfig : nil
+    private var scheduleReminder: NestedReminderPolicy? {
+        guard let memory = memory,
+              let schedule = memory.scheduleConfig,
+              schedule.hasActiveReminder else { return nil }
+        return schedule.reminder
+    }
+
+    private var locationReminder: NestedReminderPolicy? {
+        guard let memory = memory,
+              let location = memory.locationConfig,
+              location.hasActiveReminder else { return nil }
+        return location.reminder
+    }
+
+    private var hasFocus: Bool {
+        memory?.hasFocus == true
     }
 
     var body: some View {
@@ -217,12 +230,43 @@ struct MemoryCardView: View {
                 Divider()
             }
 
-            // Reminder policy
-            if let reminderConfig = reminderTrigger {
+            // Nested reminders
+            if let scheduleReminder {
                 MemoryCardReminderView(
-                    reminder: reminderConfig,
+                    policy: scheduleReminder,
+                    sourceLabel: "Schedule",
                     isCompletedForDisplay: isCompletedForDisplay
                 )
+
+                Divider()
+            }
+
+            if let locationReminder {
+                MemoryCardReminderView(
+                    policy: locationReminder,
+                    sourceLabel: "Location",
+                    isCompletedForDisplay: isCompletedForDisplay
+                )
+
+                Divider()
+            }
+
+            if hasFocus {
+                HStack(spacing: 6) {
+                    Image(systemName: "timer")
+                        .font(.caption)
+                        .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
+                        .frame(width: 20)
+                    Text("Focus")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
+                        .strikethrough(isCompletedForDisplay, color: .secondary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 12)
+                .padding(.trailing, 8)
+                .padding(.vertical, 10)
 
                 Divider()
             }

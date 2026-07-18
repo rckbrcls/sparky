@@ -23,7 +23,6 @@ final class MemoryEditorViewModel: ObservableObject {
     @Published var isPinned: Bool = false
     @Published var scheduleConfigDraft: ScheduleConfigDraft?
     @Published var locationConfigDraft: LocationConfigDraft?
-    @Published var reminderConfigDraft: ReminderConfigDraft?
     // Fixed content properties (replacing dynamic contentQueue)
     @Published var note: String = ""
     @Published var checkItems: [CheckItemDraft] = []
@@ -78,7 +77,7 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     var hasAnyTrigger: Bool {
-        scheduleConfigDraft != nil || locationConfigDraft != nil || reminderConfigDraft != nil
+        scheduleConfigDraft != nil || locationConfigDraft != nil
     }
 
     var hasScheduleTrigger: Bool {
@@ -89,8 +88,24 @@ final class MemoryEditorViewModel: ObservableObject {
         locationConfigDraft != nil
     }
 
-    var hasReminderTrigger: Bool {
-        reminderConfigDraft != nil
+    var hasScheduleReminder: Bool {
+        scheduleConfigDraft?.reminder.isActive == true
+    }
+
+    var hasLocationReminder: Bool {
+        locationConfigDraft?.reminder.isActive == true
+    }
+
+    var hasFocusEnabled: Bool {
+        scheduleConfigDraft?.focusEnabled == true
+    }
+
+    var focusRecipe: FocusRecipe? {
+        guard let scheduleConfigDraft else { return nil }
+        return FocusRecipe.resolve(
+            draft: scheduleConfigDraft,
+            settings: environment.focusSettings
+        )
     }
 
     var hasPrimaryTrigger: Bool {
@@ -105,11 +120,6 @@ final class MemoryEditorViewModel: ObservableObject {
     /// Returns the current location configuration as a draft for editing
     var locationConfig: LocationConfigDraft? {
         locationConfigDraft
-    }
-
-    /// Returns the current reminder configuration as a draft for editing
-    var reminderConfig: ReminderConfigDraft? {
-        reminderConfigDraft
     }
 
     var currentMemory: Memory? {
@@ -151,7 +161,7 @@ final class MemoryEditorViewModel: ObservableObject {
             }
         }
 
-        // Compare schedule config
+        // Compare schedule config (includes nested reminder + focus)
         let origSchedule = original.scheduleConfig
         if (scheduleConfigDraft == nil) != (origSchedule == nil) { return true }
         if let draft = scheduleConfigDraft, let orig = origSchedule {
@@ -160,10 +170,19 @@ final class MemoryEditorViewModel: ObservableObject {
                draft.weekdayMask != orig.weekdayMask ||
                draft.isActive != orig.isActive ||
                draft.isAllDay != orig.isAllDay ||
-               draft.recurrenceEndType != orig.recurrenceEndType { return true }
+               draft.recurrenceEndType != orig.recurrenceEndType ||
+               draft.focusEnabled != orig.focusEnabled ||
+               draft.focusWorkDurationMinutes != orig.focusWorkDurationMinutes ||
+               draft.focusShortBreakDurationMinutes != orig.focusShortBreakDurationMinutes ||
+               draft.focusLongBreakDurationMinutes != orig.focusLongBreakDurationMinutes ||
+               draft.focusPomodorosUntilLongBreak != orig.focusPomodorosUntilLongBreak ||
+               draft.focusAutoContinue != orig.focusAutoContinue ||
+               draft.reminder != orig.reminder {
+                return true
+            }
         }
 
-        // Compare location config
+        // Compare location config (includes nested reminder)
         let origLocation = original.locationConfig
         if (locationConfigDraft == nil) != (origLocation == nil) { return true }
         if let draft = locationConfigDraft, let orig = origLocation {
@@ -171,19 +190,8 @@ final class MemoryEditorViewModel: ObservableObject {
                draft.longitude != orig.longitude ||
                draft.radius != orig.radius ||
                draft.isActive != orig.isActive ||
-               draft.event != orig.event { return true }
-        }
-
-        // Compare reminder config
-        let origReminder = original.reminderConfig
-        if (reminderConfigDraft == nil) != (origReminder == nil) { return true }
-        if let draft = reminderConfigDraft, let orig = origReminder {
-            if draft.intervalValue != orig.intervalValue ||
-               draft.intervalUnit != orig.intervalUnit ||
-               draft.repeatCount != orig.repeatCount ||
-               draft.isActive != orig.isActive ||
-               draft.startedAt != orig.startedAt ||
-               draft.startedBy != orig.startedBy {
+               draft.event != orig.event ||
+               draft.reminder != orig.reminder {
                 return true
             }
         }
@@ -411,7 +419,6 @@ final class MemoryEditorViewModel: ObservableObject {
 
     func clearScheduleTriggers() {
         scheduleConfigDraft = nil
-        removeReminderIfPrimaryTriggerMissing()
     }
 
     /// Sets or updates the schedule configuration
@@ -429,12 +436,12 @@ final class MemoryEditorViewModel: ObservableObject {
 
         guard let fireDate = fireDate else {
             scheduleConfigDraft = nil
-            removeReminderIfPrimaryTriggerMissing()
             return
         }
 
+        let existing = scheduleConfigDraft
         scheduleConfigDraft = ScheduleConfigDraft(
-            id: scheduleConfigDraft?.id ?? UUID(),
+            id: existing?.id ?? UUID(),
             fireDate: fireDate,
             startDate: fireDate,
             recurrenceRule: recurrence,
@@ -442,56 +449,160 @@ final class MemoryEditorViewModel: ObservableObject {
             weekdayMask: mask,
             isActive: true,
             isAllDay: isAllDay,
-            recurrenceEndType: endType
+            recurrenceEndType: endType,
+            reminder: existing?.reminder ?? NestedReminderPolicy(),
+            focusEnabled: existing?.focusEnabled ?? false,
+            focusWorkDurationMinutes: existing?.focusWorkDurationMinutes ?? 0,
+            focusShortBreakDurationMinutes: existing?.focusShortBreakDurationMinutes ?? 0,
+            focusLongBreakDurationMinutes: existing?.focusLongBreakDurationMinutes ?? 0,
+            focusPomodorosUntilLongBreak: existing?.focusPomodorosUntilLongBreak ?? 0,
+            focusAutoContinue: existing?.focusAutoContinue ?? true
         )
     }
 
     /// Removes the schedule config
     func removeScheduleConfig() {
         scheduleConfigDraft = nil
-        removeReminderIfPrimaryTriggerMissing()
     }
 
     /// Sets or updates the location trigger configuration
     func setLocationConfig(name: String, latitude: Double, longitude: Double, radius: Double, event: LocationEvent) {
+        let existing = locationConfigDraft
         locationConfigDraft = LocationConfigDraft(
-            id: locationConfigDraft?.id ?? UUID(),
+            id: existing?.id ?? UUID(),
             latitude: latitude,
             longitude: longitude,
             radius: radius,
             name: name,
             event: event,
-            isActive: true
+            isActive: true,
+            reminder: existing?.reminder ?? NestedReminderPolicy()
         )
     }
 
     /// Removes the location trigger
     func removeLocationConfig() {
         locationConfigDraft = nil
-        removeReminderIfPrimaryTriggerMissing()
     }
 
-    /// Sets or updates the reminder policy configuration
-    func setReminderConfig(intervalValue: Int, intervalUnit: ReminderIntervalUnit, repeatCount: Int?) {
-        guard hasPrimaryTrigger else {
-            reminderConfigDraft = nil
-            return
-        }
-
-        reminderConfigDraft = ReminderConfigDraft(
-            id: reminderConfigDraft?.id ?? UUID(),
+    /// Sets nested reminder under the schedule primary
+    func setScheduleReminder(intervalValue: Int, intervalUnit: ReminderIntervalUnit, repeatCount: Int?) {
+        guard var schedule = scheduleConfigDraft else { return }
+        schedule.reminder = NestedReminderPolicy(
+            isActive: true,
             intervalValue: max(1, intervalValue),
             intervalUnit: intervalUnit,
             repeatCount: repeatCount,
-            isActive: true,
-            startedAt: reminderConfigDraft?.startedAt,
-            startedBy: reminderConfigDraft?.startedBy
+            startedAt: schedule.reminder.startedAt
         )
+        scheduleConfigDraft = schedule
     }
 
-    /// Removes the reminder policy
-    func removeReminderConfig() {
-        reminderConfigDraft = nil
+    func removeScheduleReminder() {
+        guard var schedule = scheduleConfigDraft else { return }
+        schedule.reminder = NestedReminderPolicy()
+        scheduleConfigDraft = schedule
+    }
+
+    /// Sets nested reminder under the location primary
+    func setLocationReminder(intervalValue: Int, intervalUnit: ReminderIntervalUnit, repeatCount: Int?) {
+        guard var location = locationConfigDraft else { return }
+        location.reminder = NestedReminderPolicy(
+            isActive: true,
+            intervalValue: max(1, intervalValue),
+            intervalUnit: intervalUnit,
+            repeatCount: repeatCount,
+            startedAt: location.reminder.startedAt
+        )
+        locationConfigDraft = location
+    }
+
+    func removeLocationReminder() {
+        guard var location = locationConfigDraft else { return }
+        location.reminder = NestedReminderPolicy()
+        locationConfigDraft = location
+    }
+
+    func setFocusEnabled(_ enabled: Bool) {
+        guard var schedule = scheduleConfigDraft else { return }
+        schedule.focusEnabled = enabled
+        if enabled && !schedule.hasConcreteFocusRecipe {
+            schedule.applyFocusRecipe(FocusRecipe.from(settings: environment.focusSettings))
+        }
+        scheduleConfigDraft = schedule
+    }
+
+    func setFocusWorkDurationMinutes(_ minutes: Int) {
+        updateFocusRecipe { recipe in
+            FocusRecipe(
+                workDurationMinutes: minutes,
+                shortBreakDurationMinutes: recipe.shortBreakDurationMinutes,
+                longBreakDurationMinutes: recipe.longBreakDurationMinutes,
+                pomodorosUntilLongBreak: recipe.pomodorosUntilLongBreak,
+                autoContinue: recipe.autoContinue
+            )
+        }
+    }
+
+    func setFocusShortBreakDurationMinutes(_ minutes: Int) {
+        updateFocusRecipe { recipe in
+            FocusRecipe(
+                workDurationMinutes: recipe.workDurationMinutes,
+                shortBreakDurationMinutes: minutes,
+                longBreakDurationMinutes: recipe.longBreakDurationMinutes,
+                pomodorosUntilLongBreak: recipe.pomodorosUntilLongBreak,
+                autoContinue: recipe.autoContinue
+            )
+        }
+    }
+
+    func setFocusLongBreakDurationMinutes(_ minutes: Int) {
+        updateFocusRecipe { recipe in
+            FocusRecipe(
+                workDurationMinutes: recipe.workDurationMinutes,
+                shortBreakDurationMinutes: recipe.shortBreakDurationMinutes,
+                longBreakDurationMinutes: minutes,
+                pomodorosUntilLongBreak: recipe.pomodorosUntilLongBreak,
+                autoContinue: recipe.autoContinue
+            )
+        }
+    }
+
+    func setFocusPomodorosUntilLongBreak(_ count: Int) {
+        updateFocusRecipe { recipe in
+            FocusRecipe(
+                workDurationMinutes: recipe.workDurationMinutes,
+                shortBreakDurationMinutes: recipe.shortBreakDurationMinutes,
+                longBreakDurationMinutes: recipe.longBreakDurationMinutes,
+                pomodorosUntilLongBreak: count,
+                autoContinue: recipe.autoContinue
+            )
+        }
+    }
+
+    func setFocusAutoContinue(_ enabled: Bool) {
+        updateFocusRecipe { recipe in
+            FocusRecipe(
+                workDurationMinutes: recipe.workDurationMinutes,
+                shortBreakDurationMinutes: recipe.shortBreakDurationMinutes,
+                longBreakDurationMinutes: recipe.longBreakDurationMinutes,
+                pomodorosUntilLongBreak: recipe.pomodorosUntilLongBreak,
+                autoContinue: enabled
+            )
+        }
+    }
+
+    private func updateFocusRecipe(_ update: (FocusRecipe) -> FocusRecipe) {
+        guard var schedule = scheduleConfigDraft,
+              schedule.focusEnabled,
+              let recipe = FocusRecipe.resolve(
+                draft: schedule,
+                settings: environment.focusSettings
+              ) else {
+            return
+        }
+        schedule.applyFocusRecipe(update(recipe))
+        scheduleConfigDraft = schedule
     }
 
     /// Returns true when the iOS geofence limit is reached and this memory doesn't already have a slot
@@ -527,7 +638,6 @@ final class MemoryEditorViewModel: ObservableObject {
             mindID: selectedMindID,
             scheduleConfig: scheduleConfigDraft,
             locationConfig: locationConfigDraft,
-            reminderConfig: effectiveReminderDraft,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
             photoAttachmentIDs: photoAttachments.map(\.id),
@@ -578,7 +688,6 @@ final class MemoryEditorViewModel: ObservableObject {
             mindID: selectedMindID,
             scheduleConfig: scheduleConfigDraft,
             locationConfig: locationConfigDraft,
-            reminderConfig: effectiveReminderDraft,
             note: trimmedNote.isEmpty ? nil : trimmedNote,
             checkItems: checkItems,
             photoAttachmentIDs: photoAttachments.map(\.id),
@@ -629,7 +738,6 @@ private extension MemoryEditorViewModel {
         isPinned = memory.isPinned
         scheduleConfigDraft = memory.scheduleConfig.map { ScheduleConfigDraft.from($0) }
         locationConfigDraft = memory.locationConfig.map { LocationConfigDraft.from($0) }
-        reminderConfigDraft = memory.reminderConfig.map { ReminderConfigDraft.from($0) }
         // Load fixed content fields
         note = memory.note ?? ""
         checkItems = memory.checkItems.sorted(by: { $0.sortOrder < $1.sortOrder }).map { item in
@@ -669,13 +777,4 @@ private extension MemoryEditorViewModel {
         }
     }
 
-    var effectiveReminderDraft: ReminderConfigDraft? {
-        guard hasPrimaryTrigger else { return nil }
-        return reminderConfigDraft
-    }
-
-    func removeReminderIfPrimaryTriggerMissing() {
-        guard !hasPrimaryTrigger else { return }
-        reminderConfigDraft = nil
-    }
 }

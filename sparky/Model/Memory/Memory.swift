@@ -65,6 +65,7 @@ final class Memory: Identifiable {
     var dueDate: Date?
     var createdAt: Date?
     var updatedAt: Date?
+    var completedAt: Date?
     var userOrder: Int
     var autoCompleteOnChecklistCompletion: Bool
 
@@ -79,12 +80,12 @@ final class Memory: Identifiable {
     @Relationship(deleteRule: .cascade, inverse: \LocationConfig.memory)
     var locationConfig: LocationConfig?
 
+    // MARK: - Legacy (schema-only, do not use)
+    // ReminderConfig / MemoryTriggerModel remain in the SwiftData schema to avoid migration crashes.
+    // Active reminder policy is nested on ScheduleConfig / LocationConfig.
+
     @Relationship(deleteRule: .cascade, inverse: \ReminderConfig.memory)
     var reminderConfig: ReminderConfig?
-
-    // MARK: - Legacy (schema-only, do not use)
-    // MemoryTriggerModel must remain in the SwiftData schema to avoid migration crashes.
-    // These triggers are no longer read or written by the app.
 
     @Relationship(deleteRule: .cascade, inverse: \MemoryTriggerModel.memory)
     var triggers: [MemoryTriggerModel] = []
@@ -113,12 +114,13 @@ final class Memory: Identifiable {
         dueDate: Date? = nil,
         createdAt: Date? = nil,
         updatedAt: Date? = nil,
+        completedAt: Date? = nil,
         userOrder: Int = 0,
         autoCompleteOnChecklistCompletion: Bool = false,
         checkItems: [CheckItemModel] = [],
         scheduleConfig: ScheduleConfig? = nil,
         locationConfig: LocationConfig? = nil,
-        reminderConfig: ReminderConfig? = nil,
+        reminderConfig: ReminderConfig? = nil, // legacy schema only
         attachmentReferences: [MemoryAttachmentReference] = [],
         completionDateEntries: [MemoryCompletionDate] = [],
         mind: Mind? = nil
@@ -132,6 +134,7 @@ final class Memory: Identifiable {
         self.dueDate = dueDate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.completedAt = completedAt
         self.userOrder = userOrder
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
         self.checkItems = checkItems
@@ -190,7 +193,16 @@ final class Memory: Identifiable {
     }
 
     var hasReminder: Bool {
-        reminderConfig?.isActive ?? false
+        (scheduleConfig?.hasActiveReminder ?? false) || (locationConfig?.hasActiveReminder ?? false)
+    }
+
+    var hasFocus: Bool {
+        scheduleConfig?.isActive == true && (scheduleConfig?.focusEnabled ?? false)
+    }
+
+    func focusRecipe(settings: FocusSettings) -> FocusRecipe? {
+        guard let schedule = scheduleConfig, schedule.isActive else { return nil }
+        return FocusRecipe.resolve(schedule: schedule, settings: settings)
     }
 
     var hasPrimaryTrigger: Bool {
@@ -199,6 +211,11 @@ final class Memory: Identifiable {
 
     var hasTriggers: Bool {
         hasSchedule || hasLocation || hasReminder
+    }
+
+    func clearNestedReminderStarts() {
+        scheduleConfig?.clearReminderStart()
+        locationConfig?.clearReminderStart()
     }
 
     var hasRecurringTriggers: Bool {

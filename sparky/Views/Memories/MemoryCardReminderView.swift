@@ -6,16 +6,17 @@
 import SwiftUI
 
 struct MemoryCardReminderView: View {
-    let reminder: ReminderConfig
+    let policy: NestedReminderPolicy
+    let sourceLabel: String
     let isCompletedForDisplay: Bool
 
     private var intervalText: String {
-        let value = max(1, reminder.intervalValue)
-        return "Every \(value) \(reminder.intervalUnit.unitLabel(for: value))"
+        let value = max(1, policy.intervalValue)
+        return "Every \(value) \(policy.intervalUnit.unitLabel(for: value))"
     }
 
     private var endText: String {
-        if let count = reminder.repeatCount {
+        if let count = policy.repeatCount {
             let suffix = count == 1 ? "reminder" : "reminders"
             return "After \(count) \(suffix)"
         }
@@ -30,7 +31,7 @@ struct MemoryCardReminderView: View {
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(intervalText)
+                Text("\(sourceLabel) · \(intervalText)")
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)

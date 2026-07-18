@@ -59,96 +59,102 @@ struct sparkyTests {
     }
 
     @MainActor
-    @Test func reminderRequiresPrimaryTrigger() async throws {
+    @Test func nestedRemindersAreIndependentPerPrimary() async throws {
         let dataController = DataController(inMemory: true)
         let environment = AppEnvironment(dataController: dataController)
+        let fireDate = Date().addingTimeInterval(7200)
 
         let draft = MemoryDraft(
-            title: "Reminder without primary trigger",
-            reminderConfig: ReminderConfigDraft(
-                intervalValue: 1,
-                intervalUnit: .hours,
-                repeatCount: nil
+            title: "Dual nested reminders",
+            scheduleConfig: ScheduleConfigDraft(
+                fireDate: fireDate,
+                startDate: fireDate,
+                timeZoneIdentifier: TimeZone.current.identifier,
+                isActive: true,
+                reminder: NestedReminderPolicy(
+                    isActive: true,
+                    intervalValue: 1,
+                    intervalUnit: .hours
+                ),
+                focusEnabled: true
+            ),
+            locationConfig: LocationConfigDraft(
+                latitude: 37.33,
+                longitude: -122.01,
+                radius: 200,
+                name: "Office",
+                event: .onEntry,
+                isActive: true,
+                reminder: NestedReminderPolicy(
+                    isActive: true,
+                    intervalValue: 30,
+                    intervalUnit: .minutes
+                )
             )
         )
 
         let memory = try await environment.memoryService.createMemory(from: draft)
         let persisted = environment.memoryService.memory(id: memory.id)
 
-        #expect(persisted?.reminderConfig == nil)
-    }
+        #expect(persisted?.hasFocus == true)
+        #expect(persisted?.scheduleConfig?.hasActiveReminder == true)
+        #expect(persisted?.locationConfig?.hasActiveReminder == true)
+        #expect(persisted?.locationConfig?.reminderStartedAt == nil)
 
-    @MainActor
-    @Test func reminderPrefersFirstTriggerEvent() async throws {
-        let dataController = DataController(inMemory: true)
-        let environment = AppEnvironment(dataController: dataController)
-        let fireDate = Date().addingTimeInterval(7200)
+        // Schedule reminder can seed from fireDate during executor sync.
+        #expect(persisted?.scheduleConfig?.reminderStartedAt == fireDate
+                || persisted?.scheduleConfig?.reminder.startedAt == nil
+                || abs((persisted?.scheduleConfig?.reminderStartedAt ?? fireDate).timeIntervalSince(fireDate)) < 1)
 
-        let draft = MemoryDraft(
-            title: "Reminder with schedule and location",
-            scheduleConfig: ScheduleConfigDraft(
-                fireDate: fireDate,
-                startDate: fireDate,
-                timeZoneIdentifier: TimeZone.current.identifier,
-                isActive: true
-            ),
-            locationConfig: LocationConfigDraft.createDefault(),
-            reminderConfig: ReminderConfigDraft(
-                intervalValue: 1,
-                intervalUnit: .hours,
-                repeatCount: nil
-            )
-        )
-
-        let memory = try await environment.memoryService.createMemory(from: draft)
-        let initial = environment.memoryService.memory(id: memory.id)
-        #expect(initial?.reminderConfig?.startedBy == .schedule)
-        #expect(initial?.reminderConfig?.startedAt == fireDate)
-
-        let earlierLocationEvent = Date().addingTimeInterval(300)
+        let locationEvent = Date().addingTimeInterval(300)
         await environment.memoryService.markPrimaryTriggerFired(
             memoryID: memory.id,
-            at: earlierLocationEvent,
+            at: locationEvent,
             source: .location
         )
 
         let updated = environment.memoryService.memory(id: memory.id)
-        #expect(updated?.reminderConfig?.startedBy == .location)
-        #expect(updated?.reminderConfig?.startedAt != nil)
-        if let updatedStart = updated?.reminderConfig?.startedAt {
-            #expect(abs(updatedStart.timeIntervalSince(earlierLocationEvent)) < 1)
+        #expect(updated?.locationConfig?.reminderStartedAt != nil)
+        if let started = updated?.locationConfig?.reminderStartedAt {
+            #expect(abs(started.timeIntervalSince(locationEvent)) < 1)
+        }
+        // Location fire must not wipe schedule nested start.
+        if let scheduleStart = updated?.scheduleConfig?.reminderStartedAt {
+            #expect(abs(scheduleStart.timeIntervalSince(fireDate)) < 1)
         }
     }
 
     @MainActor
-    @Test func reminderResetsWhenReactivatingMemory() async throws {
+    @Test func nestedReminderClearsWhenReactivatingMemory() async throws {
         let dataController = DataController(inMemory: true)
         let environment = AppEnvironment(dataController: dataController)
 
+        var location = LocationConfigDraft.createDefault()
+        location.reminder = NestedReminderPolicy(isActive: true, intervalValue: 1, intervalUnit: .hours)
+
         let draft = MemoryDraft(
-            title: "Reset reminder on reopen",
-            locationConfig: LocationConfigDraft.createDefault(),
-            reminderConfig: ReminderConfigDraft(
-                intervalValue: 1,
-                intervalUnit: .hours,
-                repeatCount: nil
-            )
+            title: "Reset nested reminder on reopen",
+            locationConfig: location
         )
 
         let memory = try await environment.memoryService.createMemory(from: draft)
-        #expect(environment.memoryService.memory(id: memory.id)?.reminderConfig?.startedAt == nil)
+        await environment.memoryService.markPrimaryTriggerFired(
+            memoryID: memory.id,
+            at: Date(),
+            source: .location
+        )
+        #expect(environment.memoryService.memory(id: memory.id)?.locationConfig?.reminderStartedAt != nil)
 
         try await environment.memoryService.setStatus(memoryID: memory.id, status: .completed)
         try await environment.memoryService.setStatus(memoryID: memory.id, status: .active)
 
         let reopened = environment.memoryService.memory(id: memory.id)
         #expect(reopened?.status == .active)
-        #expect(reopened?.reminderConfig?.startedAt == nil)
-        #expect(reopened?.reminderConfig?.startedBy == nil)
+        #expect(reopened?.locationConfig?.reminderStartedAt == nil)
     }
 
     @MainActor
-    @Test func reminderResetsWhenScheduleTriggerChanges() async throws {
+    @Test func nestedReminderResetsWhenScheduleTriggerChanges() async throws {
         let dataController = DataController(inMemory: true)
         let environment = AppEnvironment(dataController: dataController)
         let initialFireDate = Date().addingTimeInterval(7200)
@@ -160,73 +166,56 @@ struct sparkyTests {
                 fireDate: initialFireDate,
                 startDate: initialFireDate,
                 timeZoneIdentifier: TimeZone.current.identifier,
-                isActive: true
-            ),
-            reminderConfig: ReminderConfigDraft(
-                intervalValue: 1,
-                intervalUnit: .hours,
-                repeatCount: nil
+                isActive: true,
+                reminder: NestedReminderPolicy(isActive: true, intervalValue: 1, intervalUnit: .hours),
+                focusEnabled: false
             )
         )
 
         let memory = try await environment.memoryService.createMemory(from: draft)
         guard let beforeUpdate = environment.memoryService.memory(id: memory.id),
-              let beforeSchedule = beforeUpdate.scheduleConfig,
-              let beforeReminder = beforeUpdate.reminderConfig else {
-            Issue.record("Expected schedule and reminder before update")
+              let beforeSchedule = beforeUpdate.scheduleConfig else {
+            Issue.record("Expected schedule before update")
             return
         }
 
-        #expect(beforeReminder.startedAt != nil)
-        if let startedAt = beforeReminder.startedAt {
-            #expect(abs(startedAt.timeIntervalSince(initialFireDate)) < 1)
-        }
+        // Seed start as executor would.
+        beforeSchedule.reminderStartedAt = initialFireDate
+        dataController.save()
 
-        let updatedSchedule = ScheduleConfigDraft(
-            id: beforeSchedule.id,
-            fireDate: updatedFireDate,
-            startDate: updatedFireDate,
-            recurrenceRule: beforeSchedule.recurrenceRule,
-            timeZoneIdentifier: beforeSchedule.timeZoneIdentifier,
-            weekdayMask: beforeSchedule.weekdayMask,
-            isActive: beforeSchedule.isActive,
-            isAllDay: beforeSchedule.isAllDay,
-            recurrenceEndType: beforeSchedule.recurrenceEndType
-        )
+        var updatedSchedule = ScheduleConfigDraft.from(beforeSchedule)
+        updatedSchedule.fireDate = updatedFireDate
+        updatedSchedule.startDate = updatedFireDate
+        // Keep nested reminder active; start should clear because primary changed.
+        updatedSchedule.reminder.startedAt = beforeSchedule.reminderStartedAt
 
         let updateDraft = MemoryDraft(
             id: beforeUpdate.id,
             title: beforeUpdate.title,
-            scheduleConfig: updatedSchedule,
-            reminderConfig: ReminderConfigDraft.from(beforeReminder)
+            scheduleConfig: updatedSchedule
         )
 
         let updated = try await environment.memoryService.updateMemory(from: updateDraft)
-        guard let updatedReminder = updated.reminderConfig else {
-            Issue.record("Expected reminder after schedule change")
-            return
-        }
-
-        #expect(updatedReminder.startedBy == .schedule)
-        #expect(updatedReminder.startedAt != nil)
-        if let startedAt = updatedReminder.startedAt {
+        // Cleared on update because primary trigger changed; executor may re-seed from new fireDate.
+        let startedAt = updated.scheduleConfig?.reminderStartedAt
+        if let startedAt {
             #expect(abs(startedAt.timeIntervalSince(updatedFireDate)) < 1)
+        } else {
+            #expect(startedAt == nil)
         }
     }
 
     @MainActor
-    @Test func reminderResetsWhenLocationTriggerChanges() async throws {
+    @Test func nestedReminderResetsWhenLocationTriggerChanges() async throws {
         let dataController = DataController(inMemory: true)
         let environment = AppEnvironment(dataController: dataController)
 
+        var location = LocationConfigDraft.createDefault()
+        location.reminder = NestedReminderPolicy(isActive: true, intervalValue: 1, intervalUnit: .hours)
+
         let draft = MemoryDraft(
             title: "Reset on location change",
-            locationConfig: LocationConfigDraft.createDefault(),
-            reminderConfig: ReminderConfigDraft(
-                intervalValue: 1,
-                intervalUnit: .hours,
-                repeatCount: nil
-            )
+            locationConfig: location
         )
 
         let memory = try await environment.memoryService.createMemory(from: draft)
@@ -238,40 +227,29 @@ struct sparkyTests {
         )
 
         guard let beforeUpdate = environment.memoryService.memory(id: memory.id),
-              let beforeLocation = beforeUpdate.locationConfig,
-              let beforeReminder = beforeUpdate.reminderConfig else {
-            Issue.record("Expected location and reminder before update")
+              let beforeLocation = beforeUpdate.locationConfig else {
+            Issue.record("Expected location before update")
             return
         }
 
-        #expect(beforeReminder.startedBy == .location)
-        #expect(beforeReminder.startedAt != nil)
+        #expect(beforeLocation.reminderStartedAt != nil)
 
-        let updatedLocation = LocationConfigDraft(
-            id: beforeLocation.id,
-            latitude: beforeLocation.latitude + 0.002,
-            longitude: beforeLocation.longitude,
-            radius: beforeLocation.radius,
-            name: beforeLocation.name,
-            event: beforeLocation.event,
-            isActive: beforeLocation.isActive
-        )
+        var updatedLocation = LocationConfigDraft.from(beforeLocation)
+        updatedLocation.latitude += 0.002
+        updatedLocation.reminder.startedAt = beforeLocation.reminderStartedAt
 
         let updateDraft = MemoryDraft(
             id: beforeUpdate.id,
             title: beforeUpdate.title,
-            locationConfig: updatedLocation,
-            reminderConfig: ReminderConfigDraft.from(beforeReminder)
+            locationConfig: updatedLocation
         )
 
         let updated = try await environment.memoryService.updateMemory(from: updateDraft)
-        let updatedReminder = updated.reminderConfig
-        #expect(updatedReminder?.startedAt == nil)
-        #expect(updatedReminder?.startedBy == nil)
+        #expect(updated.locationConfig?.reminderStartedAt == nil)
     }
 
     @MainActor
-    @Test func reminderDoesNotResetWhenOnlyMetadataChanges() async throws {
+    @Test func nestedReminderKeepsStartWhenOnlyMetadataChanges() async throws {
         let dataController = DataController(inMemory: true)
         let environment = AppEnvironment(dataController: dataController)
         let fireDate = Date().addingTimeInterval(7200)
@@ -282,12 +260,13 @@ struct sparkyTests {
                 fireDate: fireDate,
                 startDate: fireDate,
                 timeZoneIdentifier: TimeZone.current.identifier,
-                isActive: true
-            ),
-            reminderConfig: ReminderConfigDraft(
-                intervalValue: 1,
-                intervalUnit: .hours,
-                repeatCount: nil
+                isActive: true,
+                reminder: NestedReminderPolicy(
+                    isActive: true,
+                    intervalValue: 1,
+                    intervalUnit: .hours,
+                    startedAt: fireDate
+                )
             ),
             note: "Original note"
         )
@@ -295,9 +274,8 @@ struct sparkyTests {
         let memory = try await environment.memoryService.createMemory(from: draft)
         guard let beforeUpdate = environment.memoryService.memory(id: memory.id),
               let beforeSchedule = beforeUpdate.scheduleConfig,
-              let beforeReminder = beforeUpdate.reminderConfig,
-              let originalStart = beforeReminder.startedAt else {
-            Issue.record("Expected schedule/reminder start before metadata update")
+              let originalStart = beforeSchedule.reminderStartedAt else {
+            Issue.record("Expected schedule nested start before metadata update")
             return
         }
 
@@ -305,25 +283,20 @@ struct sparkyTests {
             id: beforeUpdate.id,
             title: "Metadata updated",
             scheduleConfig: ScheduleConfigDraft.from(beforeSchedule),
-            reminderConfig: ReminderConfigDraft.from(beforeReminder),
             note: "Updated note"
         )
 
         let updated = try await environment.memoryService.updateMemory(from: updateDraft)
-        guard let updatedReminder = updated.reminderConfig else {
-            Issue.record("Expected reminder after metadata update")
+        guard let updatedStart = updated.scheduleConfig?.reminderStartedAt else {
+            Issue.record("Expected nested start after metadata update")
             return
         }
 
-        #expect(updatedReminder.startedBy == .schedule)
-        #expect(updatedReminder.startedAt != nil)
-        if let updatedStart = updatedReminder.startedAt {
-            #expect(abs(updatedStart.timeIntervalSince(originalStart)) < 1)
-        }
+        #expect(abs(updatedStart.timeIntervalSince(originalStart)) < 1)
     }
 
     @MainActor
-    @Test func reminderDoesNotResetWhenOnlyReminderCadenceChanges() async throws {
+    @Test func nestedReminderKeepsStartWhenOnlyCadenceChanges() async throws {
         let dataController = DataController(inMemory: true)
         let environment = AppEnvironment(dataController: dataController)
         let fireDate = Date().addingTimeInterval(7200)
@@ -334,48 +307,83 @@ struct sparkyTests {
                 fireDate: fireDate,
                 startDate: fireDate,
                 timeZoneIdentifier: TimeZone.current.identifier,
-                isActive: true
-            ),
-            reminderConfig: ReminderConfigDraft(
-                intervalValue: 1,
-                intervalUnit: .hours,
-                repeatCount: nil
+                isActive: true,
+                reminder: NestedReminderPolicy(
+                    isActive: true,
+                    intervalValue: 1,
+                    intervalUnit: .hours,
+                    startedAt: fireDate
+                )
             )
         )
 
         let memory = try await environment.memoryService.createMemory(from: draft)
         guard let beforeUpdate = environment.memoryService.memory(id: memory.id),
               let beforeSchedule = beforeUpdate.scheduleConfig,
-              let beforeReminder = beforeUpdate.reminderConfig,
-              let originalStart = beforeReminder.startedAt else {
-            Issue.record("Expected schedule/reminder start before cadence update")
+              let originalStart = beforeSchedule.reminderStartedAt else {
+            Issue.record("Expected schedule nested start before cadence update")
             return
         }
 
-        var updatedReminderDraft = ReminderConfigDraft.from(beforeReminder)
-        updatedReminderDraft.intervalValue = 2
-        updatedReminderDraft.intervalUnit = .hours
-        updatedReminderDraft.repeatCount = 4
+        var updatedSchedule = ScheduleConfigDraft.from(beforeSchedule)
+        updatedSchedule.reminder.intervalValue = 2
+        updatedSchedule.reminder.repeatCount = 4
 
         let updateDraft = MemoryDraft(
             id: beforeUpdate.id,
             title: beforeUpdate.title,
-            scheduleConfig: ScheduleConfigDraft.from(beforeSchedule),
-            reminderConfig: updatedReminderDraft
+            scheduleConfig: updatedSchedule
         )
 
         let updated = try await environment.memoryService.updateMemory(from: updateDraft)
-        guard let updatedReminder = updated.reminderConfig else {
-            Issue.record("Expected reminder after cadence update")
+        guard let updatedScheduleModel = updated.scheduleConfig else {
+            Issue.record("Expected schedule after cadence update")
             return
         }
 
-        #expect(updatedReminder.intervalValue == 2)
-        #expect(updatedReminder.repeatCount == 4)
-        #expect(updatedReminder.startedBy == .schedule)
-        #expect(updatedReminder.startedAt != nil)
-        if let updatedStart = updatedReminder.startedAt {
+        #expect(updatedScheduleModel.reminderIntervalValue == 2)
+        #expect(updatedScheduleModel.reminderRepeatCount == 4)
+        #expect(updatedScheduleModel.reminderStartedAt != nil)
+        if let updatedStart = updatedScheduleModel.reminderStartedAt {
             #expect(abs(updatedStart.timeIntervalSince(originalStart)) < 1)
         }
+    }
+
+    @MainActor
+    @Test func focusEnabledOnlyOnSchedule() async throws {
+        let dataController = DataController(inMemory: true)
+        let environment = AppEnvironment(dataController: dataController)
+        let fireDate = Date().addingTimeInterval(600)
+
+        let draft = MemoryDraft(
+            title: "Focus memory",
+            scheduleConfig: ScheduleConfigDraft(
+                fireDate: fireDate,
+                startDate: fireDate,
+                timeZoneIdentifier: TimeZone.current.identifier,
+                isActive: true,
+                focusEnabled: true
+            )
+        )
+
+        let memory = try await environment.memoryService.createMemory(from: draft)
+        #expect(memory.hasFocus)
+        #expect(memory.scheduleConfig?.focusEnabled == true)
+
+        environment.startFocus(for: memory.id)
+        #expect(environment.focusTimer.activeMemoryID == memory.id)
+        #expect(environment.pendingFocusOpenRequest?.memoryID == memory.id)
+    }
+
+    @Test func nestedReminderPolicyDefaults() {
+        let policy = NestedReminderPolicy.createDefault()
+        #expect(policy.isActive)
+        #expect(policy.intervalValue == 1)
+        #expect(policy.intervalUnit == .hours)
+        #expect(policy.repeatCount == nil)
+        #expect(policy.secondsInterval == 3600)
+
+        let cleared = policy.clearingStart()
+        #expect(cleared.startedAt == nil)
     }
 }

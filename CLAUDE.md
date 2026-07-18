@@ -49,8 +49,8 @@ sparkyApp (@main)
 | `Mind` | — (composed inline) | Hierarchical (self-referential `parent`/`children`). Two virtual sentinels: `Mind.allMinds`, `Mind.inbox` (not persisted) |
 | `Tag` | — | Simple name + colorHex |
 | `CheckItemModel` | `CheckItemDraft` | Belongs to Memory, has sortOrder |
-| `ScheduleConfig` | `ScheduleConfigDraft` | **New** 1:1 trigger config on Memory |
-| `LocationConfig` | `LocationConfigDraft` | **New** 1:1 trigger config on Memory |
+| `ScheduleConfig` | `ScheduleConfigDraft` | 1:1 schedule primary; nested reminder + `focusEnabled` |
+| `LocationConfig` | `LocationConfigDraft` | 1:1 location primary; nested reminder |
 | `MemoryTriggerModel` | `MemoryTriggerDraft` | **Legacy** trigger (kept for migration) |
 | `MemoryAttachmentReference` | — | Lightweight index into file-system store |
 | `MemoryCompletionDate` | — | Per-day completion tracking for recurring memories |
@@ -62,7 +62,8 @@ sparkyApp (@main)
 Two parallel trigger representations coexist:
 
 - **Legacy:** `Memory.triggers: [MemoryTriggerModel]` — array of triggers, each with `typeRaw` (`.scheduled`/`.location`). Still used by `MemoryEditorViewModel` and `LocationTriggerExecutor.sync()`.
-- **New:** `Memory.scheduleConfig: ScheduleConfig?` and `Memory.locationConfig: LocationConfig?` — 1:1 relationships.
+- **Active:** `Memory.scheduleConfig` / `Memory.locationConfig` — 1:1 primaries with nested reminder fields. Focus is schedule-only (`focusEnabled`).
+- **Legacy:** `Memory.reminderConfig` is schema-only; do not write it.
 
 `DataController.migrateTriggersIfNeeded()` runs once (version-gated via UserDefaults) to copy legacy triggers into new config models.
 

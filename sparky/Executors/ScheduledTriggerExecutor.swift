@@ -54,7 +54,7 @@ final class ScheduledTriggerExecutor: TriggerExecutorProtocol {
 
         await unregister(triggerID: config.id, for: memory.id)
 
-        let content = buildContent(for: memory)
+        let content = buildContent(for: memory, focusEnabled: config.focusEnabled)
 
         var requests: [UNNotificationRequest] = []
         scheduleFromConfig(
@@ -101,16 +101,21 @@ final class ScheduledTriggerExecutor: TriggerExecutorProtocol {
 
     // MARK: - Notification Content
 
-    private func buildContent(for memory: Memory) -> UNMutableNotificationContent {
+    private func buildContent(for memory: Memory, focusEnabled: Bool) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = memory.title
         if let body = memory.body, !body.isEmpty {
             content.body = body
         }
         content.sound = settings.notificationSoundEnabled ? .default : nil
-        content.categoryIdentifier = "REMINDER_ACTIONS"
+        content.categoryIdentifier = focusEnabled
+            ? NotificationCategoryID.scheduleFocusActions
+            : NotificationCategoryID.reminderActions
         content.threadIdentifier = memory.id.uuidString
-        content.userInfo = ["memoryID": memory.id.uuidString]
+        content.userInfo = [
+            NotificationUserInfoKey.memoryID: memory.id.uuidString,
+            NotificationUserInfoKey.focusEnabled: focusEnabled
+        ]
         return content
     }
 

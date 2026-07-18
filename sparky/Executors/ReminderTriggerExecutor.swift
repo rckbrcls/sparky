@@ -7,6 +7,11 @@ import Foundation
 import UserNotifications
 import os
 
+enum ReminderOwnerKind: String {
+    case schedule
+    case location
+}
+
 @MainActor
 final class ReminderTriggerExecutor: TriggerExecutorProtocol {
     private static let logger = Logger(subsystem: "sparky", category: "ReminderTriggerExecutor")
@@ -37,45 +42,10 @@ final class ReminderTriggerExecutor: TriggerExecutorProtocol {
         }
     }
 
-    func register(config: ReminderConfig, for memory: Memory) async {
-        await requestAuthorizationIfNeeded()
-
-        guard config.isActive,
-              memory.status == .active,
-              memory.hasPrimaryTrigger else {
-            await unregister(triggerID: config.id, for: memory.id)
-            return
-        }
-
-        await unregister(triggerID: config.id, for: memory.id)
-
-        guard let startedAt = resolveStartDate(for: memory, config: config) else {
-            return
-        }
-
-        let content = buildContent(for: memory)
-        var requests: [UNNotificationRequest] = []
-
-        scheduleRequests(
-            config: config,
-            memoryID: memory.id,
-            startedAt: startedAt,
-            content: content,
-            requests: &requests
-        )
-
-        guard !requests.isEmpty else { return }
-
-        do {
-            try await center.add(requests: requests)
-        } catch {
-            Self.logger.error("Failed to schedule reminder notifications: \(error.localizedDescription)")
-        }
-    }
-
     func unregister(triggerID: UUID, for memoryID: UUID) async {
-        let prefix = notificationIdentifier(memoryID: memoryID, triggerID: triggerID)
-        let identifiers = await pendingIdentifiers().filter { $0.hasPrefix(prefix) }
+        let identifiers = await pendingIdentifiers().filter {
+            $0.contains(memoryID.uuidString) && $0.contains(triggerID.uuidString) && $0.contains("-reminder-")
+        }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 
@@ -92,29 +62,76 @@ final class ReminderTriggerExecutor: TriggerExecutorProtocol {
         center.removePendingNotificationRequests(withIdentifiers: reminderPendingIDs)
 
         for memory in memories {
-            guard memory.status == .active,
-                  let config = memory.reminderConfig,
-                  config.isActive else {
-                continue
-            }
-            await register(config: config, for: memory)
+            guard memory.status == .active else { continue }
+            await registerNestedReminders(for: memory)
         }
     }
 
-    private func resolveStartDate(for memory: Memory, config: ReminderConfig) -> Date? {
-        if let startedAt = config.startedAt {
-            return startedAt
+    private func registerNestedReminders(for memory: Memory) async {
+        if let schedule = memory.scheduleConfig, schedule.hasActiveReminder {
+            await register(
+                owner: .schedule,
+                configID: schedule.id,
+                policy: schedule.reminder,
+                memory: memory,
+                resolveStart: {
+                    if let startedAt = schedule.reminderStartedAt {
+                        return startedAt
+                    }
+                    guard let fireDate = schedule.fireDate else { return nil }
+                    schedule.reminderStartedAt = fireDate
+                    return fireDate
+                }
+            )
         }
 
-        guard let schedule = memory.scheduleConfig,
-              schedule.isActive,
-              let fireDate = schedule.fireDate else {
-            return nil
+        if let location = memory.locationConfig, location.hasActiveReminder {
+            await register(
+                owner: .location,
+                configID: location.id,
+                policy: location.reminder,
+                memory: memory,
+                resolveStart: {
+                    // Location follow-ups only start after the geofence actually fires.
+                    location.reminderStartedAt
+                }
+            )
         }
+    }
 
-        config.startedAt = fireDate
-        config.startedBy = .schedule
-        return fireDate
+    private func register(
+        owner: ReminderOwnerKind,
+        configID: UUID,
+        policy: NestedReminderPolicy,
+        memory: Memory,
+        resolveStart: () -> Date?
+    ) async {
+        await requestAuthorizationIfNeeded()
+        await unregister(triggerID: configID, for: memory.id)
+
+        guard policy.isActive, memory.status == .active else { return }
+        guard let startedAt = resolveStart() else { return }
+
+        let content = buildContent(for: memory)
+        var requests: [UNNotificationRequest] = []
+
+        scheduleRequests(
+            owner: owner,
+            configID: configID,
+            policy: policy,
+            memoryID: memory.id,
+            startedAt: startedAt,
+            content: content,
+            requests: &requests
+        )
+
+        guard !requests.isEmpty else { return }
+
+        do {
+            try await center.add(requests: requests)
+        } catch {
+            Self.logger.error("Failed to schedule reminder notifications: \(error.localizedDescription)")
+        }
     }
 
     private func buildContent(for memory: Memory) -> UNMutableNotificationContent {
@@ -126,32 +143,34 @@ final class ReminderTriggerExecutor: TriggerExecutorProtocol {
             content.body = "This memory is still pending."
         }
         content.sound = settings.notificationSoundEnabled ? .default : nil
-        content.categoryIdentifier = "REMINDER_ACTIONS"
+        content.categoryIdentifier = NotificationCategoryID.reminderActions
         content.threadIdentifier = memory.id.uuidString
         content.userInfo = ["memoryID": memory.id.uuidString]
         return content
     }
 
     private func scheduleRequests(
-        config: ReminderConfig,
+        owner: ReminderOwnerKind,
+        configID: UUID,
+        policy: NestedReminderPolicy,
         memoryID: UUID,
         startedAt: Date,
         content: UNMutableNotificationContent,
         requests: inout [UNNotificationRequest]
     ) {
-        let interval = config.secondsInterval
+        let interval = policy.secondsInterval
         guard interval > 0 else { return }
 
         let now = Date()
         let elapsed = max(0, now.timeIntervalSince(startedAt))
         var nextOccurrenceIndex = max(1, Int(floor(elapsed / interval)) + 1)
 
-        if let repeatCount = config.repeatCount, repeatCount <= 0 {
+        if let repeatCount = policy.repeatCount, repeatCount <= 0 {
             return
         }
 
-        let maxIndex = config.repeatCount
-        let baseIdentifier = notificationIdentifier(memoryID: memoryID, triggerID: config.id)
+        let maxIndex = policy.repeatCount
+        let baseIdentifier = notificationIdentifier(memoryID: memoryID, owner: owner, configID: configID)
 
         var added = 0
         while added < maxFutureOccurrences {
@@ -184,8 +203,8 @@ final class ReminderTriggerExecutor: TriggerExecutorProtocol {
         }
     }
 
-    private func notificationIdentifier(memoryID: UUID, triggerID: UUID) -> String {
-        "memory-\(memoryID.uuidString)-reminder-\(triggerID.uuidString)"
+    private func notificationIdentifier(memoryID: UUID, owner: ReminderOwnerKind, configID: UUID) -> String {
+        "memory-\(memoryID.uuidString)-reminder-\(owner.rawValue)-\(configID.uuidString)"
     }
 }
 

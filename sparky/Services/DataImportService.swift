@@ -126,7 +126,7 @@ final class DataImportService {
                 // Convert triggers to config drafts
                 var scheduleDraft: ScheduleConfigDraft?
                 var locationDraft: LocationConfigDraft?
-                var reminderDraft: ReminderConfigDraft?
+                var legacyStandaloneReminder: NestedReminderPolicy?
 
                 for exported in exportedMemory.triggers {
                     if exported.type == "scheduled" {
@@ -143,6 +143,7 @@ final class DataImportService {
                             recurrenceRule = nil
                         }
 
+                        let nestedReminder = Self.nestedReminder(from: exported.reminder, isActive: exported.reminder != nil)
                         scheduleDraft = ScheduleConfigDraft(
                             fireDate: exported.fireDate,
                             startDate: exported.startDate,
@@ -150,29 +151,54 @@ final class DataImportService {
                             timeZoneIdentifier: exported.timeZoneIdentifier,
                             weekdayMask: exported.weekdayMask,
                             isActive: exported.isActive,
-                            isAllDay: exported.isAllDay
+                            isAllDay: exported.isAllDay,
+                            reminder: nestedReminder,
+                            focusEnabled: exported.focusEnabled ?? false,
+                            focusWorkDurationMinutes: exported.focusWorkDurationMinutes ?? 0,
+                            focusShortBreakDurationMinutes: exported.focusShortBreakDurationMinutes ?? 0,
+                            focusLongBreakDurationMinutes: exported.focusLongBreakDurationMinutes ?? 0,
+                            focusPomodorosUntilLongBreak: exported.focusPomodorosUntilLongBreak ?? 0,
+                            focusAutoContinue: exported.focusAutoContinue ?? true
                         )
                     } else if exported.type == "location",
                               let loc = exported.location,
                               let event = LocationEvent(rawValue: loc.event) {
+                        let nestedReminder = Self.nestedReminder(from: exported.reminder, isActive: exported.reminder != nil)
                         locationDraft = LocationConfigDraft(
                             latitude: loc.latitude,
                             longitude: loc.longitude,
                             radius: loc.radius,
                             name: loc.name,
                             event: event,
-                            isActive: exported.isActive
+                            isActive: exported.isActive,
+                            reminder: nestedReminder
                         )
                     } else if exported.type == "reminder",
-                              let reminder = exported.reminder {
-                        reminderDraft = ReminderConfigDraft(
+                              let reminder = exported.reminder,
+                              exported.isActive {
+                        // Legacy standalone reminder export — nest onto primaries below.
+                        legacyStandaloneReminder = NestedReminderPolicy(
+                            isActive: true,
                             intervalValue: max(1, reminder.intervalValue),
                             intervalUnit: ReminderIntervalUnit(rawValue: reminder.intervalUnit) ?? .hours,
                             repeatCount: reminder.repeatCount,
-                            isActive: exported.isActive,
-                            startedAt: reminder.startedAt,
-                            startedBy: reminder.startedBy.flatMap(ReminderStartSource.init(rawValue:))
+                            startedAt: reminder.startedAt
                         )
+                    }
+                }
+
+                if let legacy = legacyStandaloneReminder {
+                    if var schedule = scheduleDraft, schedule.isActive, !schedule.reminder.isActive {
+                        schedule.reminder = legacy
+                        scheduleDraft = schedule
+                    }
+                    if var location = locationDraft, location.isActive, !location.reminder.isActive {
+                        var locationLegacy = legacy
+                        if scheduleDraft?.isActive == true {
+                            locationLegacy.startedAt = nil
+                        }
+                        location.reminder = locationLegacy
+                        locationDraft = location
                     }
                 }
 
@@ -190,16 +216,16 @@ final class DataImportService {
                 }
 
                 // Create memory draft
+                let importedStatus = MemoryStatus(rawValue: exportedMemory.status) ?? .active
                 let draft = MemoryDraft(
                     id: UUID(),
                     title: exportedMemory.title,
-                    status: MemoryStatus(rawValue: exportedMemory.status) ?? .active,
+                    status: importedStatus,
                     isPinned: exportedMemory.isPinned,
                     dueDate: exportedMemory.dueDate,
                     mindID: newMindID,
                     scheduleConfig: scheduleDraft,
                     locationConfig: locationDraft,
-                    reminderConfig: reminderDraft,
                     note: exportedMemory.note,
                     checkItems: checkItems,
                     photoAttachmentIDs: [],
@@ -208,6 +234,8 @@ final class DataImportService {
                     fileAttachmentIDs: [],
                     attachments: [],
                     autoCompleteOnChecklistCompletion: exportedMemory.autoCompleteOnChecklistCompletion,
+                    completedAt: exportedMemory.completedAt
+                        ?? (importedStatus == .completed ? exportedMemory.updatedAt : nil),
                     completedDates: exportedMemory.completedDates
                 )
 
@@ -336,5 +364,18 @@ final class DataImportService {
         }
 
         return imported
+    }
+
+    private static func nestedReminder(from exported: ExportedReminderTrigger?, isActive: Bool) -> NestedReminderPolicy {
+        guard isActive, let exported else {
+            return NestedReminderPolicy()
+        }
+        return NestedReminderPolicy(
+            isActive: true,
+            intervalValue: max(1, exported.intervalValue),
+            intervalUnit: ReminderIntervalUnit(rawValue: exported.intervalUnit) ?? .hours,
+            repeatCount: exported.repeatCount,
+            startedAt: exported.startedAt
+        )
     }
 }

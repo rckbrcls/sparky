@@ -87,6 +87,7 @@ struct ExportedMemory: Codable, Identifiable {
     let dueDate: Date?
     let createdAt: Date
     let updatedAt: Date
+    let completedAt: Date?
     let userOrder: Int
     let autoCompleteOnChecklistCompletion: Bool
     let mindID: UUID?
@@ -107,6 +108,7 @@ struct ExportedMemory: Codable, Identifiable {
         dueDate: Date? = nil,
         createdAt: Date,
         updatedAt: Date,
+        completedAt: Date? = nil,
         userOrder: Int = 0,
         autoCompleteOnChecklistCompletion: Bool = false,
         mindID: UUID? = nil,
@@ -126,6 +128,7 @@ struct ExportedMemory: Codable, Identifiable {
         self.dueDate = dueDate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.completedAt = completedAt
         self.userOrder = userOrder
         self.autoCompleteOnChecklistCompletion = autoCompleteOnChecklistCompletion
         self.mindID = mindID
@@ -157,7 +160,13 @@ struct ExportedTrigger: Codable, Identifiable {
     let spacedStage: Int
     let lastReviewDate: Date?
     let ignoreCount: Int
-    
+    let focusEnabled: Bool?
+    let focusWorkDurationMinutes: Int?
+    let focusShortBreakDurationMinutes: Int?
+    let focusLongBreakDurationMinutes: Int?
+    let focusPomodorosUntilLongBreak: Int?
+    let focusAutoContinue: Bool?
+
     init(
         id: UUID,
         type: String,
@@ -173,7 +182,13 @@ struct ExportedTrigger: Codable, Identifiable {
         sequential: ExportedSequentialTrigger? = nil,
         spacedStage: Int = 0,
         lastReviewDate: Date? = nil,
-        ignoreCount: Int = 0
+        ignoreCount: Int = 0,
+        focusEnabled: Bool? = nil,
+        focusWorkDurationMinutes: Int? = nil,
+        focusShortBreakDurationMinutes: Int? = nil,
+        focusLongBreakDurationMinutes: Int? = nil,
+        focusPomodorosUntilLongBreak: Int? = nil,
+        focusAutoContinue: Bool? = nil
     ) {
         self.id = id
         self.type = type
@@ -190,6 +205,12 @@ struct ExportedTrigger: Codable, Identifiable {
         self.spacedStage = spacedStage
         self.lastReviewDate = lastReviewDate
         self.ignoreCount = ignoreCount
+        self.focusEnabled = focusEnabled
+        self.focusWorkDurationMinutes = focusWorkDurationMinutes
+        self.focusShortBreakDurationMinutes = focusShortBreakDurationMinutes
+        self.focusLongBreakDurationMinutes = focusLongBreakDurationMinutes
+        self.focusPomodorosUntilLongBreak = focusPomodorosUntilLongBreak
+        self.focusAutoContinue = focusAutoContinue
     }
 }
 
@@ -357,11 +378,6 @@ extension Memory {
             triggers.append(config.toExportedTrigger())
         }
 
-        // Convert reminderConfig to ExportedTrigger
-        if let config = reminderConfig, config.isActive {
-            triggers.append(config.toExportedTrigger())
-        }
-
         return ExportedMemory(
             id: id,
             title: title,
@@ -371,6 +387,7 @@ extension Memory {
             dueDate: dueDate,
             createdAt: createdAt ?? Date(),
             updatedAt: updatedAt ?? createdAt ?? Date(),
+            completedAt: completedAt,
             userOrder: userOrder,
             autoCompleteOnChecklistCompletion: autoCompleteOnChecklistCompletion,
             mindID: mind?.id,
@@ -398,11 +415,17 @@ extension ScheduleConfig {
             isActive: isActive,
             isAllDay: isAllDay,
             location: nil,
-            reminder: nil,
+            reminder: reminderIsActive ? reminder.toExported() : nil,
             sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,
-            ignoreCount: 0
+            ignoreCount: 0,
+            focusEnabled: focusEnabled,
+            focusWorkDurationMinutes: focusWorkDurationMinutes > 0 ? focusWorkDurationMinutes : nil,
+            focusShortBreakDurationMinutes: focusShortBreakDurationMinutes > 0 ? focusShortBreakDurationMinutes : nil,
+            focusLongBreakDurationMinutes: focusLongBreakDurationMinutes > 0 ? focusLongBreakDurationMinutes : nil,
+            focusPomodorosUntilLongBreak: focusPomodorosUntilLongBreak > 0 ? focusPomodorosUntilLongBreak : nil,
+            focusAutoContinue: focusEnabled ? focusAutoContinue : nil
         )
     }
 }
@@ -426,39 +449,24 @@ extension LocationConfig {
                 name: name,
                 event: event.rawValue
             ),
-            reminder: nil,
+            reminder: reminderIsActive ? reminder.toExported() : nil,
             sequential: nil,
             spacedStage: 0,
             lastReviewDate: nil,
-            ignoreCount: 0
+            ignoreCount: 0,
+            focusEnabled: false
         )
     }
 }
 
-extension ReminderConfig {
-    func toExportedTrigger() -> ExportedTrigger {
-        ExportedTrigger(
-            id: id,
-            type: "reminder",
-            fireDate: nil,
-            startDate: nil,
-            recurrenceRule: nil,
-            timeZoneIdentifier: nil,
-            weekdayMask: 0,
-            isActive: isActive,
-            isAllDay: false,
-            location: nil,
-            reminder: ExportedReminderTrigger(
-                intervalValue: intervalValue,
-                intervalUnit: intervalUnit.rawValue,
-                repeatCount: repeatCount,
-                startedAt: startedAt,
-                startedBy: startedBy?.rawValue
-            ),
-            sequential: nil,
-            spacedStage: 0,
-            lastReviewDate: nil,
-            ignoreCount: 0
+extension NestedReminderPolicy {
+    func toExported() -> ExportedReminderTrigger {
+        ExportedReminderTrigger(
+            intervalValue: intervalValue,
+            intervalUnit: intervalUnit.rawValue,
+            repeatCount: repeatCount,
+            startedAt: startedAt,
+            startedBy: nil
         )
     }
 }

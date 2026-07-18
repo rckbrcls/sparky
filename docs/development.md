@@ -67,7 +67,8 @@ Editor flows should use draft structs before persisting changes:
 - `CheckItemDraft`
 - `ScheduleConfigDraft`
 - `LocationConfigDraft`
-- `ReminderConfigDraft`
+- Nested reminder fields on `ScheduleConfigDraft` / `LocationConfigDraft` (`NestedReminderPolicy`)
+- `FocusSettings` / `FocusTimer` for schedule-gated Focus sessions
 
 The pattern keeps SwiftUI editing state separate from SwiftData model instances. Convert drafts to models only at service boundaries, and prefer existing `from(...)` and `toModel(...)` helpers when adding fields.
 

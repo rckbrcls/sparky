@@ -10,19 +10,26 @@ import SwiftUI
 struct SettingsView: View {
     @Binding private var navigationPath: NavigationPath
     private let embedsInNavigationStack: Bool
+    private let focusSettings: FocusSettings?
 
     private enum Route: Hashable {
         case appearance
         case appIcon
         case dataManagement
         case advanced
+        case focus
     }
 
     @StateObject private var appIconManager = AppIconManager()
 
-    init(navigationPath: Binding<NavigationPath>, embedsInNavigationStack: Bool = true) {
+    init(
+        navigationPath: Binding<NavigationPath>,
+        embedsInNavigationStack: Bool = true,
+        focusSettings: FocusSettings? = nil
+    ) {
         _navigationPath = navigationPath
         self.embedsInNavigationStack = embedsInNavigationStack
+        self.focusSettings = focusSettings
     }
 
     var body: some View {
@@ -99,6 +106,23 @@ private extension SettingsView {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
+                if focusSettings != nil {
+                    ZStack {
+                        NavigationLink(value: Route.focus) {
+                            EmptyView()
+                        }
+                        .opacity(0)
+
+                        SettingsRow(
+                            iconName: "timer",
+                            title: "Focus"
+                        )
+                    }
+                    .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+
                 ZStack {
                     NavigationLink(value: Route.advanced) {
                         EmptyView()
@@ -136,6 +160,12 @@ private extension SettingsView {
             DataManagementView()
         case .advanced:
             AdvancedSettingsView()
+        case .focus:
+            if let focusSettings {
+                FocusSettingsView(settings: focusSettings)
+            } else {
+                EmptyView()
+            }
         }
     }
 }

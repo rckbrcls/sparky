@@ -762,6 +762,18 @@ struct MemoryEditorView: View {
 
                     } else {
 
+                        if canStartFocusFromEditor {
+                            Button {
+                                feedbackGenerator.impactOccurred()
+                                if let memoryID = viewModel.editingMemoryID {
+                                    environment.startFocus(for: memoryID)
+                                }
+                            } label: {
+                                Label("Focus", systemImage: "timer")
+                            }
+                            .accessibilityLabel("Start Focus")
+                        }
+
                         // Pencil button: Switch to Edit
 
                         Button {
@@ -924,7 +936,18 @@ struct MemoryEditorView: View {
 
     }
 
-
+    /// Secondary Focus entry: schedule Focus enabled and fire time is due/past.
+    private var canStartFocusFromEditor: Bool {
+        guard viewModel.hasFocusEnabled,
+              let schedule = viewModel.scheduleConfig,
+              schedule.isActive else {
+            return false
+        }
+        if let fireDate = schedule.fireDate {
+            return fireDate <= Date()
+        }
+        return schedule.reminder.startedAt != nil
+    }
 
     private var notesCard: some View {
 
