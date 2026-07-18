@@ -27,12 +27,36 @@
 		2CDDFE1E2E9D39F600D608A2 /* sparky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sparky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CDDFE322E9D39F700D608A2 /* sparkyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sparkyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CDDFE3C2E9D39F700D608A2 /* sparkyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sparkyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sparkyMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A11DFE502E9D39F700D608A2 /* Exceptions for "sparky" folder in "sparkyMac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ContentView.swift,
+				sparkyApp.swift,
+				"Views/Shared/CustomTabBar.swift",
+				"Views/Memories/Editor/Components/MemoryEditorCameraCaptureView.swift",
+				"Views/Memories/Editor/QuickMemorySheet.swift",
+			);
+			target = A11DFE1D2E9D39F700D608A2 /* sparkyMac */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2CDDFE202E9D39F600D608A2 /* sparky */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A11DFE502E9D39F700D608A2 /* Exceptions for "sparky" folder in "sparkyMac" target */,
+			);
 			path = sparky;
+			sourceTree = "<group>";
+		};
+		A11DFE202E9D39F700D608A2 /* sparkyMac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = sparkyMac;
 			sourceTree = "<group>";
 		};
 		2CDDFE352E9D39F700D608A2 /* sparkyTests */ = {
@@ -69,6 +93,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A11DFE1B2E9D39F700D608A2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -76,6 +107,7 @@
 			isa = PBXGroup;
 			children = (
 				2CDDFE202E9D39F600D608A2 /* sparky */,
+				A11DFE202E9D39F700D608A2 /* sparkyMac */,
 				2CDDFE352E9D39F700D608A2 /* sparkyTests */,
 				2CDDFE3F2E9D39F700D608A2 /* sparkyUITests */,
 				2CDDFE1F2E9D39F600D608A2 /* Products */,
@@ -86,6 +118,7 @@
 			isa = PBXGroup;
 			children = (
 				2CDDFE1E2E9D39F600D608A2 /* sparky.app */,
+				A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */,
 				2CDDFE322E9D39F700D608A2 /* sparkyTests.xctest */,
 				2CDDFE3C2E9D39F700D608A2 /* sparkyUITests.xctest */,
 			);
@@ -163,6 +196,29 @@
 			productReference = 2CDDFE3C2E9D39F700D608A2 /* sparkyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		A11DFE1D2E9D39F700D608A2 /* sparkyMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A11DFE452E9D39F700D608A2 /* Build configuration list for PBXNativeTarget "sparkyMac" */;
+			buildPhases = (
+				A11DFE1A2E9D39F700D608A2 /* Sources */,
+				A11DFE1B2E9D39F700D608A2 /* Frameworks */,
+				A11DFE1C2E9D39F700D608A2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2CDDFE202E9D39F600D608A2 /* sparky */,
+				A11DFE202E9D39F700D608A2 /* sparkyMac */,
+			);
+			name = sparkyMac;
+			packageProductDependencies = (
+			);
+			productName = sparkyMac;
+			productReference = A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +240,9 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = 2CDDFE1D2E9D39F600D608A2;
 					};
+					A11DFE1D2E9D39F700D608A2 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 				};
 			};
 			buildConfigurationList = 2CDDFE192E9D39F600D608A2 /* Build configuration list for PBXProject "sparky" */;
@@ -201,6 +260,7 @@
 			projectRoot = "";
 			targets = (
 				2CDDFE1D2E9D39F600D608A2 /* sparky */,
+				A11DFE1D2E9D39F700D608A2 /* sparkyMac */,
 				2CDDFE312E9D39F700D608A2 /* sparkyTests */,
 				2CDDFE3B2E9D39F700D608A2 /* sparkyUITests */,
 			);
@@ -229,6 +289,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A11DFE1C2E9D39F700D608A2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -247,6 +314,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		2CDDFE382E9D39F700D608A2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A11DFE1A2E9D39F700D608A2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -560,6 +634,73 @@
 			};
 			name = Release;
 		};
+
+		A11DFE462E9D39F700D608A2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = sparky/sparky.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VCF3DS6BTV;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = sparky;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparky.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A11DFE472E9D39F700D608A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = sparky/sparky.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VCF3DS6BTV;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = sparky;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparky.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -595,6 +736,16 @@
 			buildConfigurations = (
 				2CDDFE4E2E9D39F700D608A2 /* Debug */,
 				2CDDFE4F2E9D39F700D608A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		A11DFE452E9D39F700D608A2 /* Build configuration list for PBXNativeTarget "sparkyMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A11DFE462E9D39F700D608A2 /* Debug */,
+				A11DFE472E9D39F700D608A2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

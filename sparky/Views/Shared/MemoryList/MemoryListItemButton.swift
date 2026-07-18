@@ -24,7 +24,7 @@ struct MemoryListItemButton: View {
     private var selectionOverlay: some View {
         if isMultiSelecting {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(isSelected ? Color.accent : Color.clear, lineWidth: 3)
+                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
                 .animation(.easeInOut(duration: 0.2), value: isSelected)
         }
     }

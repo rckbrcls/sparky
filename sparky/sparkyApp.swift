@@ -1,3 +1,4 @@
+#if os(iOS)
 //
 //  sparkyApp.swift
 //  sparky
@@ -42,3 +43,5 @@ struct sparkyApp: App {
         }
     }
 }
+
+#endif

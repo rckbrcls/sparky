@@ -1,14 +1,12 @@
 
 import SwiftUI
-import UIKit
 
 struct AddSynapseButton: View {
     let action: () -> Void
-    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         Button(action: {
-            feedbackGenerator.impactOccurred()
+            PlatformHaptics.impactMedium()
             action()
         }) {
             Image(systemName: "plus")

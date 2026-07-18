@@ -1,3 +1,4 @@
+#if os(iOS)
 import SwiftUI
 import UIKit
 
@@ -60,3 +61,5 @@ struct CameraCaptureView: UIViewControllerRepresentable {
         }
     }
 }
+
+#endif

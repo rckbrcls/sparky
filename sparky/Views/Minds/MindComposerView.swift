@@ -7,9 +7,12 @@ import SwiftUI
 
 extension View {
     func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        PlatformOpen.resignFirstResponder()
     }
 }
+
+#if os(iOS)
+import UIKit
 
 struct MindAutoFocusTextField: UIViewRepresentable {
     @Binding var text: String
@@ -62,6 +65,26 @@ struct MindAutoFocusTextField: UIViewRepresentable {
         }
     }
 }
+#else
+struct MindAutoFocusTextField: View {
+    @Binding var text: String
+    let placeholder: String
+    /// Ignored on Mac; kept for call-site compatibility.
+    let font: Font
+    let onSubmit: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .font(.title2.weight(.semibold))
+            .multilineTextAlignment(.center)
+            .textFieldStyle(.plain)
+            .focused($focused)
+            .onSubmit(onSubmit)
+            .onAppear { focused = true }
+    }
+}
+#endif
 
 // MARK: - Mind Composer View
 
@@ -87,6 +110,7 @@ struct MindComposerView: View {
         Color(hex: selectedColorHex) ?? .accentColor
     }
 
+    #if os(iOS)
     private var titleFont: UIFont {
         guard let font = UIFont(name: "Baskerville", size: 20) else {
             return .systemFont(ofSize: 20, weight: .bold)
@@ -94,6 +118,11 @@ struct MindComposerView: View {
         let descriptor = font.fontDescriptor.withSymbolicTraits(.traitBold)
         return UIFont(descriptor: descriptor ?? font.fontDescriptor, size: 20)
     }
+    #else
+    private var titleFont: Font {
+        .custom("Baskerville", size: 20).bold()
+    }
+    #endif
 
     private var canSave: Bool {
         !isSaving && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -150,7 +179,7 @@ struct MindComposerView: View {
             .scrollDismissesKeyboard(.interactively)
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
             .navigationTitle(mindToEdit != nil ? "Edit Mind" : "New Mind")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .cancel) {

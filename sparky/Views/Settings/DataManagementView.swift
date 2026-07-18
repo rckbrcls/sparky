@@ -34,12 +34,12 @@ struct DataManagementView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
-        .listSectionSpacing(.compact)
+        .compactPhoneListSections()
         .contentMargins(.top, 0, for: .scrollContent)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
+        .inlinePhoneNavigationTitle()
         .fileExporter(
             isPresented: $viewModel.showFileExporter,
             document: viewModel.exportDocument,

@@ -2,6 +2,9 @@
 import SwiftUI
 import Combine
 import os
+#if canImport(UIKit)
+import UIKit
+#endif
 
 enum AppIcon: String, CaseIterable, Identifiable {
     case primary = "AppIcon"
@@ -44,15 +47,20 @@ final class AppIconManager: ObservableObject {
     @Published var showError = false
 
     init() {
+        #if os(iOS)
         if let iconName = UIApplication.shared.alternateIconName,
            let icon = AppIcon(rawValue: iconName) {
             self.currentIcon = icon
         } else {
             self.currentIcon = .primary
         }
+        #else
+        self.currentIcon = .primary
+        #endif
     }
 
     func changeIcon(to icon: AppIcon) {
+        #if os(iOS)
         Self.logger.debug("Requesting change to: \(icon.rawValue), current: \(self.currentIcon.rawValue)")
 
         guard icon != currentIcon else {
@@ -73,5 +81,6 @@ final class AppIconManager: ObservableObject {
                 self.showError = true
             }
         }
+        #endif
     }
 }

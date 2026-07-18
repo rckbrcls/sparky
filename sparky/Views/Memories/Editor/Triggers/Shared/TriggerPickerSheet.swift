@@ -27,7 +27,7 @@ struct TriggerPickerSheet: View {
             }
             .listStyle(.plain)
             .navigationTitle("Add Trigger")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {

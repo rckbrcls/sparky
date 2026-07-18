@@ -22,7 +22,7 @@ struct MemoryEditorAddContentMenu: View {
                     HStack(alignment: .center, spacing: 14) {
                         Image(systemName: option.iconName)
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(.accent)
+                            .foregroundStyle(Color.accentColor)
                             .frame(width: 32, height: 32)
                             .background(
                                 Circle()

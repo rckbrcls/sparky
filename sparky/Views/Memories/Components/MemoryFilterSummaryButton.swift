@@ -26,7 +26,7 @@ struct MemoryFilterSummaryButton: View {
             Label(filterDescription, systemImage: activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 .labelStyle(.iconOnly)
                 .symbolEffect(.bounce, value: activeFilterCount)
-                .foregroundStyle(activeFilterCount > 0 ? Color.accent : .primary)
+                .foregroundStyle(activeFilterCount > 0 ? Color.accentColor : .primary)
             .animation(.easeInOut(duration: 0.2), value: activeFilterCount)
         }
         .disabled(isDisabled)

@@ -1,7 +1,9 @@
 import Combine
 import SwiftUI
 import LinkPresentation
+#if canImport(UIKit)
 import UIKit
+#endif
 
 struct LinkPreviewView: View {
     let url: URL
@@ -31,6 +33,7 @@ struct LinkPreviewView: View {
 
     @ViewBuilder
     private var content: some View {
+        #if os(iOS)
         if let metadata = loader.metadata {
             LinkPreviewRepresentable(metadata: metadata)
                 .accessibilityLabel(metadata.title ?? url.absoluteString)
@@ -48,6 +51,15 @@ struct LinkPreviewView: View {
         } else {
             fallbackView(icon: "link", message: urlDisplayText)
         }
+        #else
+        // Mac: simple link row (LPLinkView is UIKit-backed).
+        Button {
+            PlatformOpen.open(url)
+        } label: {
+            fallbackView(icon: "link", message: loader.metadata?.title ?? urlDisplayText)
+        }
+        .buttonStyle(.plain)
+        #endif
     }
 
     private func fallbackView(icon: String, message: String) -> some View {
@@ -72,6 +84,7 @@ struct LinkPreviewView: View {
     }
 }
 
+#if os(iOS)
 private struct LinkPreviewRepresentable: UIViewRepresentable {
     let metadata: LPLinkMetadata
 
@@ -83,6 +96,7 @@ private struct LinkPreviewRepresentable: UIViewRepresentable {
         uiView.metadata = metadata
     }
 }
+#endif
 
 @MainActor
 final class LinkPreviewLoader: ObservableObject {

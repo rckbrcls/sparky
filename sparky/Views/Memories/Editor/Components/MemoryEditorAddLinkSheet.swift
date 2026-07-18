@@ -13,8 +13,6 @@ struct MemoryEditorAddLinkSheet: View {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
                     TextField("https://example.com", text: $urlString, axis: .vertical)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .padding()
                         .glassEffect(in: .rect(cornerRadius: 12.0))
@@ -32,7 +30,7 @@ struct MemoryEditorAddLinkSheet: View {
             }
             .padding()
             .navigationTitle("Add Link")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {

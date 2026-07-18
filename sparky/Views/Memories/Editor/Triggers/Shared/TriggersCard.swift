@@ -1,16 +1,17 @@
 import SwiftUI
 import Contacts
-import UIKit
 import MapKit
 import CoreLocation
 import UniformTypeIdentifiers
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     var isEditable: Bool = true
 
     @State private var showGeofenceLimitAlert = false
-    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -51,32 +52,46 @@ struct TriggersCard: View {
 
     @ViewBuilder
     private var locationSection: some View {
-        if isEditable || viewModel.hasLocationTrigger {
-            VStack(spacing: 0) {
-                if isEditable {
-                    triggerToggleHeader(
-                        title: "Location",
-                        icon: "location.fill",
-                        isOn: locationToggleBinding
-                    )
-                }
-
-                if viewModel.hasLocationTrigger {
+        if PlatformCapabilities.current.supportsLocationExecution {
+            if isEditable || viewModel.hasLocationTrigger {
+                VStack(spacing: 0) {
                     if isEditable {
-                        Divider().padding(.horizontal, 16)
+                        triggerToggleHeader(
+                            title: "Location",
+                            icon: "location.fill",
+                            isOn: locationToggleBinding
+                        )
                     }
-                    LocationTriggerInlineForm(
-                        viewModel: viewModel,
-                        isEditable: isEditable
-                    )
+
+                    if viewModel.hasLocationTrigger {
+                        if isEditable {
+                            Divider().padding(.horizontal, 16)
+                        }
+                        LocationTriggerInlineForm(
+                            viewModel: viewModel,
+                            isEditable: isEditable
+                        )
+                    }
+                }
+                .cardStyle(cornerRadius: 24)
+                .alert("Geofence Limit Reached", isPresented: $showGeofenceLimitAlert) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text("You've reached the maximum of \(LocationGeofenceLimits.maxGeofences) location reminders. Remove a location reminder from another memory to add a new one.")
                 }
             }
-            .cardStyle(cornerRadius: 24)
-            .alert("Geofence Limit Reached", isPresented: $showGeofenceLimitAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("You've reached the maximum of \(LocationTriggerExecutor.maxGeofences) location reminders. Remove a location reminder from another memory to add a new one.")
+        } else if viewModel.hasLocationTrigger {
+            // Mac v1: preserve + disclose iPhone-only execution; never strip config.
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Location (iPhone only)", systemImage: "iphone")
+                    .font(.subheadline.weight(.semibold))
+                Text("This memory has a location reminder. It stays saved here but only runs on iPhone — not on Mac.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .cardStyle(cornerRadius: 24)
         }
     }
 
@@ -134,7 +149,7 @@ struct TriggersCard: View {
     // MARK: - Helper Functions
 
     private func createDefaultScheduleTrigger() {
-        feedbackGenerator.impactOccurred()
+        PlatformHaptics.impactMedium()
         let fireDate = Date().addingTimeInterval(3600) // 1 hour from now
         viewModel.setScheduleConfig(
             fireDate: fireDate,
@@ -146,7 +161,7 @@ struct TriggersCard: View {
     }
 
     private func createDefaultLocationTrigger() {
-        feedbackGenerator.impactOccurred()
+        PlatformHaptics.impactMedium()
         let fallback = CLLocationManager().location?.coordinate
             ?? CLLocationCoordinate2D(latitude: 37.3349, longitude: -122.00902)
         viewModel.setLocationConfig(
@@ -765,7 +780,7 @@ private struct LocationTriggerInlineForm: View {
         .onChange(of: event) { _, _ in
             applyChanges()
         }
-        .fullScreenCover(isPresented: $isMapExpanded) {
+        .platformCover(isPresented: $isMapExpanded) {
             expandedMapView
         }
         .onDisappear {

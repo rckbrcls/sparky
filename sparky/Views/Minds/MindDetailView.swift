@@ -160,7 +160,7 @@ struct MindDetailView: View {
                 .presentationCornerRadius(24)
                 .presentationDragIndicator(.visible)
             }
-            .fullScreenCover(item: $mindComposerPresentation) { presentation in
+            .platformCover(item: $mindComposerPresentation) { presentation in
                 switch presentation {
                 case .create:
                     MindComposerView(environment: environment, parentMind: resolvedMind)
@@ -273,7 +273,7 @@ struct MindDetailView: View {
                     onDone: { toggleMultiSelection() }
                 )
             } else {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigation) {
                     Button {
                         navigationPath.removeLast()
                     } label: {
@@ -281,7 +281,7 @@ struct MindDetailView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Section("Filter") {
                             ForEach(TriggerFilter.allCases) { triggerType in
@@ -335,7 +335,7 @@ struct MindDetailView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Section {
                             Button("Search", systemImage: "magnifyingglass") {

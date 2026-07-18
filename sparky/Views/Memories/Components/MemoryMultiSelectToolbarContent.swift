@@ -19,7 +19,7 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
     let onDone: () -> Void
 
     var body: some ToolbarContent {
-        ToolbarItemGroup(placement: .navigationBarTrailing) {
+        ToolbarItemGroup(placement: .primaryAction) {
             Button(role: .destructive, action: onDelete) {
                 Image(systemName: "trash")
             }

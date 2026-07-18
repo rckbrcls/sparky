@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct CalendarDayView: View {
     @ObservedObject var dataManager: CalendarDataManager
@@ -74,7 +73,7 @@ struct CalendarDayView: View {
                     .tag(day)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            .phonePageTabStyle()
         }
         .onAppear {
             ensureMonthDataLoaded(for: displayedDate)

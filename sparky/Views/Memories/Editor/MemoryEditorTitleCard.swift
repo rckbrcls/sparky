@@ -43,7 +43,7 @@ struct MemoryEditorTitleCard: View {
                             .frame(width: 36, height: 36)
                             .glassEffect(.regular.tint(selectedMindColor.opacity(0.15)))
                     }
-                    .fullScreenCover(isPresented: $showMindComposer) {
+                    .platformCover(isPresented: $showMindComposer) {
                         MindComposerView(environment: environment)
                     }
                 } else {
@@ -71,7 +71,7 @@ struct MemoryEditorTitleCard: View {
                                 viewModel.title = sanitized
                             }
                             DispatchQueue.main.async {
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                PlatformOpen.resignFirstResponder()
                                 isTitleFocused.wrappedValue = false
                             }
                         }

@@ -22,7 +22,6 @@ struct BoundedIntegerField: View {
 
     var body: some View {
         TextField("", text: $text)
-            .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
             .font(.body.weight(.semibold))
             .foregroundStyle(.primary)

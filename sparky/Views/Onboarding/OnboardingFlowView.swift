@@ -15,7 +15,28 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
     case welcome, notifications, location, microphone, camera
 
     var id: Int { rawValue }
-    var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
+
+    /// Platform-filtered onboarding path (Mac skips location/mic/camera).
+    static var activeSteps: [OnboardingStep] {
+        var steps: [OnboardingStep] = [.welcome, .notifications]
+        if PlatformCapabilities.current.supportsLocationExecution {
+            steps.append(.location)
+        }
+        if PlatformCapabilities.current.supportsMicrophoneRecord {
+            steps.append(.microphone)
+        }
+        if PlatformCapabilities.current.supportsCameraCapture {
+            steps.append(.camera)
+        }
+        return steps
+    }
+
+    var next: OnboardingStep? {
+        let steps = Self.activeSteps
+        guard let idx = steps.firstIndex(of: self), idx + 1 < steps.count else { return nil }
+        return steps[idx + 1]
+    }
+
     var isLast: Bool { next == nil }
 
     var icon: String? {
@@ -45,7 +66,11 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
     var message: String {
         switch self {
         case .welcome:
+            #if os(macOS)
+            return "Your personal memory companion on this Mac. Data stays on this computer — it does not sync automatically with iPhone."
+            #else
             return "Your personal memory companion. Let's set up a few things so Sparky can work its magic."
+            #endif
         case .notifications:
             return "Get gentle reminders for your memories exactly when they matter most."
         case .location:
@@ -174,7 +199,7 @@ struct OnboardingFlowView: View {
             .overlay {
                 VStack(spacing: 24) {
                     StepPageIndicator(
-                        steps: OnboardingStep.allCases,
+                        steps: OnboardingStep.activeSteps,
                         current: currentStep
                     )
                     .padding(.top, 24)
@@ -243,6 +268,7 @@ struct OnboardingFlowView: View {
     }
 
     private func requestLocationPermission() {
+        #if os(iOS)
         let location = environment.triggerExecutorCoordinator.location
         let currentStatus = location.authorizationStatus
 
@@ -264,6 +290,9 @@ struct OnboardingFlowView: View {
         } else {
             advance()
         }
+        #else
+        advance()
+        #endif
     }
 
     private func advance() {

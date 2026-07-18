@@ -52,7 +52,7 @@ struct MeView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button {
                         settingsNavigationPath.append(Route.settings)
                     } label: {
@@ -147,7 +147,6 @@ private extension MeView {
 
     var nameField: some View {
         TextField("Name", text: $draftName)
-            .textInputAutocapitalization(.words)
             .disableAutocorrection(true)
             .appLargeTitleStyle()
             .underline()

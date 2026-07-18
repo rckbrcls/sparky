@@ -13,7 +13,6 @@ struct MemoryCardChecklistView: View {
     let isCompletedForDisplay: Bool
 
     @State private var isExpanded = false
-    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     private var completedCount: Int {
         checkItems.filter(\.isCompleted).count
@@ -51,7 +50,7 @@ struct MemoryCardChecklistView: View {
                         Spacer()
 
                         Button {
-                            feedbackGenerator.impactOccurred()
+                            PlatformHaptics.impactMedium()
                             onToggleItem(item.id)
                         } label: {
                             Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -72,7 +71,7 @@ struct MemoryCardChecklistView: View {
             // Collapsed header
             Button {
                 isExpanded.toggle()
-                feedbackGenerator.impactOccurred()
+                PlatformHaptics.impactMedium()
             } label: {
                 HStack(spacing: 12) {
                     // Chevron icon

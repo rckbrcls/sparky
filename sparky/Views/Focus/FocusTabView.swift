@@ -52,7 +52,7 @@ struct FocusTabView: View {
             .tabBarSpacer()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
-            .toolbar(.hidden, for: .navigationBar)
+            .hidePhoneNavigationBar()
             .onAppear {
                 syncQuickRecipeWithDefaultsIfNeeded()
             }

@@ -76,20 +76,22 @@ private extension SettingsView {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-                ZStack {
-                    NavigationLink(value: Route.appIcon) {
-                        EmptyView()
-                    }
-                    .opacity(0)
+                if PlatformCapabilities.current.supportsAlternateAppIcon {
+                    ZStack {
+                        NavigationLink(value: Route.appIcon) {
+                            EmptyView()
+                        }
+                        .opacity(0)
 
-                    SettingsRow(
-                        iconName: "square.dashed",
-                        title: "App Icon"
-                    )
+                        SettingsRow(
+                            iconName: "square.dashed",
+                            title: "App Icon"
+                        )
+                    }
+                    .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
-                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
 
                 ZStack {
                     NavigationLink(value: Route.dataManagement) {
@@ -139,7 +141,7 @@ private extension SettingsView {
                 .listRowSeparator(.hidden)
             }
         }
-        .listSectionSpacing(.compact)
+        .compactPhoneListSections()
         .contentMargins(.top, 0, for: .scrollContent)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -222,12 +224,12 @@ private struct AppIconSettingsView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
-        .listSectionSpacing(.compact)
+        .compactPhoneListSections()
         .contentMargins(.top, 0, for: .scrollContent)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
+        .inlinePhoneNavigationTitle()
         .alert("Failed to Change Icon", isPresented: $appIconManager.showError) {
             Button("OK", role: .cancel) { }
         } message: {
