@@ -8,8 +8,11 @@
 import SwiftUI
 
 struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
+    @Environment(\.colorScheme) private var colorScheme
+
     var size: CGSize
     var activeTint: Color = Color.accent
+    var inactiveTint: Color = Color.Theme.textSecondary
     var barTint: Color = .gray.opacity(0.15)
     @Binding var activeTab: CustomTab
     @ViewBuilder var tabItemView: (CustomTab) -> TabItemView
@@ -24,15 +27,7 @@ struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
         let control = ReselectableSegmentedControl(items: items)
         control.selectedSegmentIndex = activeTab.index
 
-        for (index, tab) in CustomTab.allCases.enumerated() {
-            let rendered = ImageRenderer(content: tabItemView(tab))
-            rendered.scale = 2
-
-            let image = rendered.uiImage
-
-            control.setImage(image, forSegmentAt: index)
-        }
-
+        renderTabImages(for: control)
 
         DispatchQueue.main.async {
             for subview in control.subviews {
@@ -40,8 +35,10 @@ struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
                     subview.alpha = 0
                 }
             }
+            Self.removeShadows(from: control)
         }
 
+        control.backgroundColor = .clear
         control.selectedSegmentTintColor = UIColor(barTint)
         control.setTitleTextAttributes([.foregroundColor: UIColor(activeTint)], for: .selected)
 
@@ -57,12 +54,39 @@ struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
         if uiView.selectedSegmentIndex != activeTab.index {
             uiView.selectedSegmentIndex = activeTab.index
         }
+        renderTabImages(for: uiView)
+        uiView.backgroundColor = .clear
         uiView.selectedSegmentTintColor = UIColor(barTint)
         uiView.setTitleTextAttributes([.foregroundColor: UIColor(activeTint)], for: .selected)
+        Self.removeShadows(from: uiView)
+        DispatchQueue.main.async {
+            Self.removeShadows(from: uiView)
+        }
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UISegmentedControl, context: Context) -> CGSize? {
         return size
+    }
+
+    private func renderTabImages(for control: UISegmentedControl) {
+        for (index, tab) in CustomTab.allCases.enumerated() {
+            let tint = tab == activeTab ? activeTint : inactiveTint
+            let rendered = ImageRenderer(
+                content: tabItemView(tab)
+                    .foregroundStyle(tint)
+                    .environment(\.colorScheme, colorScheme)
+            )
+            rendered.scale = 2
+            control.setImage(rendered.uiImage?.withRenderingMode(.alwaysOriginal), forSegmentAt: index)
+        }
+    }
+
+    private static func removeShadows(from view: UIView) {
+        view.layer.shadowColor = UIColor.clear.cgColor
+        view.layer.shadowOpacity = 0
+        view.layer.shadowRadius = 0
+        view.layer.shadowOffset = .zero
+        view.subviews.forEach { removeShadows(from: $0) }
     }
 
     class Coordinator: NSObject {
