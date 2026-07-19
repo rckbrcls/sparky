@@ -28,9 +28,13 @@
 	<string></string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Sparky needs photo library access so you can attach images to your memories.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>SUFeedURL</key>
 	<string>https://rckbrcls.com/api/sparky/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>cZKYjm5Mnb+LT2K+PGZtkiN18yuV9dGQXCAZ0OV2v6o=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>
