@@ -31,7 +31,7 @@
 		2CDDFE1E2E9D39F600D608A2 /* sparky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sparky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CDDFE322E9D39F700D608A2 /* sparkyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sparkyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CDDFE3C2E9D39F700D608A2 /* sparkyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sparkyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sparkyMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A11DFE1E2E9D39F700D608A2 /* Sparky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = Sparky.app; path = Sparky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -137,7 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				2CDDFE1E2E9D39F600D608A2 /* sparky.app */,
-				A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */,
+				A11DFE1E2E9D39F700D608A2 /* Sparky.app */,
 				2CDDFE322E9D39F700D608A2 /* sparkyTests.xctest */,
 				2CDDFE3C2E9D39F700D608A2 /* sparkyUITests.xctest */,
 			);
@@ -230,7 +230,7 @@
 				1705DE2B04996E1225BDAE3D /* Sparkle */,
 			);
 			productName = sparkyMac;
-			productReference = A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */;
+			productReference = A11DFE1E2E9D39F700D608A2 /* Sparky.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -671,7 +671,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparky.mac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Sparky;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -702,7 +702,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = polterware.sparky.mac;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Sparky;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

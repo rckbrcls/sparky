@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A11DFE1D2E9D39F700D608A2"
-               BuildableName = "sparkyMac.app"
+               BuildableName = "Sparky.app"
                BlueprintName = "sparkyMac"
                ReferencedContainer = "container:sparky.xcodeproj">
             </BuildableReference>
@@ -44,7 +44,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A11DFE1D2E9D39F700D608A2"
-            BuildableName = "sparkyMac.app"
+            BuildableName = "Sparky.app"
             BlueprintName = "sparkyMac"
             ReferencedContainer = "container:sparky.xcodeproj">
          </BuildableReference>
@@ -61,7 +61,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A11DFE1D2E9D39F700D608A2"
-            BuildableName = "sparkyMac.app"
+            BuildableName = "Sparky.app"
             BlueprintName = "sparkyMac"
             ReferencedContainer = "container:sparky.xcodeproj">
          </BuildableReference>

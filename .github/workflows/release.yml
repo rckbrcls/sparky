@@ -19,7 +19,7 @@ jobs:
     env:
       PROJECT: sparky.xcodeproj
       SCHEME: sparkyMac
-      APP_BUNDLE_NAME: sparkyMac.app
+      APP_BUNDLE_NAME: Sparky.app
       APP_DISPLAY_NAME: Sparky
       REPO: rckbrcls/sparky
       APPCAST_PATH: appcast.xml
