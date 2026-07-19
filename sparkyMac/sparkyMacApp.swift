@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import Combine
 import Sparkle
 
 @main
