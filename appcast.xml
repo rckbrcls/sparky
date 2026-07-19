@@ -2,7 +2,7 @@
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
   <channel>
     <title>Sparky</title>
-    <link>https://github.com/polterware/sparky</link>
+    <link>https://github.com/rckbrcls/sparky</link>
     <description>Sparky Updates</description>
     <language>en</language>
   </channel>

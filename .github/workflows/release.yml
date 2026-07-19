@@ -21,9 +21,9 @@ jobs:
       SCHEME: sparkyMac
       APP_BUNDLE_NAME: sparkyMac.app
       APP_DISPLAY_NAME: Sparky
-      REPO: polterware/sparky
+      REPO: rckbrcls/sparky
       APPCAST_PATH: appcast.xml
-      APPCAST_URL: https://polterware.github.io/sparky/appcast.xml
+      APPCAST_URL: https://rckbrcls.github.io/sparky/appcast.xml
       SPARKLE_TOOLS_VERSION: 2.8.1
     steps:
       - name: Checkout
