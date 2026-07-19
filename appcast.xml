@@ -1,9 +1,16 @@
-<?xml version="1.0" standalone="yes"?>
+<?xml version='1.0' encoding='utf-8'?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-  <channel>
-    <title>Sparky</title>
-    <link>https://github.com/rckbrcls/sparky</link>
-    <description>Sparky Updates</description>
-    <language>en</language>
-  </channel>
+    <channel>
+        <title>Sparky</title>
+        <link>https://github.com/rckbrcls/sparky</link>
+        <description>Sparky - A local-first memory app</description>
+        <language>en</language>
+        <item>
+            <title>Version 0.0.1</title>
+            <pubDate>Sun, 19 Jul 2026 19:07:42 +0000</pubDate>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/rckbrcls/sparky/releases/download/v0.0.1/Sparky-macos-universal-v0.0.1.zip" sparkle:version="4" sparkle:shortVersionString="0.0.1" sparkle:edSignature="Fk96fpb/MTXLMbJLGXrYobyUspMwsBmQP6ZhyqWV5enSuvkUrTndAd7TZXODcL0lb6bqi8rDMh37BxGMHe3kCA==" sparkle:os="macos" length="8420204" type="application/zip" />
+            <description>Sparky 0.0.1 release.</description>
+        </item>
+    </channel>
 </rss>
