@@ -1,6 +1,6 @@
 # Sparky Documentation
 
-This directory documents the native iOS app in this repository. It intentionally avoids backend, web, API, and deployment assumptions that are not present in the codebase.
+Sparky is a native Apple app (iPhone + Mac) with local-first SwiftData storage. macOS desktop distribution uses Sparkle + GitHub; iOS uses App Store tooling.
 
 ## Start Here
 
@@ -16,10 +16,11 @@ This directory documents the native iOS app in this repository. It intentionally
 
 ## Release
 
-- [Deployment](deployment.md): App Store release inputs, signing requirements, metadata alignment, and release checklist.
+- [Deployment](deployment.md): **macOS** Sparkle/GitHub/curl install **and** iOS App Store checklist.
+- Shared macOS playbook: [`/Users/erickpatrickbarcelos/codes/docs/macos-desktop-distribution.md`](/Users/erickpatrickbarcelos/codes/docs/macos-desktop-distribution.md)
 - [`../AppStoreMetadata.md`](../AppStoreMetadata.md): App Store Connect copy and review notes.
 - [`../screenshots/README.md`](../screenshots/README.md): screenshot capture checklist tied to real app surfaces.
 
 ## Non-Goals
 
-No separate API, backend, Docker, CI/CD, Supabase, Firebase, or server documentation exists because those systems were not identified in the current repository.
+No custom backend/API product is documented here. macOS CI/CD for Sparkle releases **is** present (`.github/workflows/release.yml`).
