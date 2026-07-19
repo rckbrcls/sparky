@@ -262,7 +262,11 @@ jobs:
             exit 0
           fi
           git commit -m "Update appcast for v${SHORT_VERSION}"
-          git push
+
+          # Rebase onto latest remote tip before push (avoids races with other commits).
+          BRANCH="${GITHUB_REF_NAME}"
+          git pull --rebase origin "$BRANCH"
+          git push origin "HEAD:${BRANCH}"
 
       - name: Create GitHub Release
         env:
