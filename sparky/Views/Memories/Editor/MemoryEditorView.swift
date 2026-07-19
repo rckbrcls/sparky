@@ -9,9 +9,19 @@
 
 import PhotosUI
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 import UniformTypeIdentifiers
 import QuickLook
+
+private var editorSecondaryToolbarPlacement: ToolbarItemPlacement {
+    #if os(iOS)
+    .bottomBar
+    #else
+    .automatic
+    #endif
+}
 import Combine
 
 struct MemoryEditorView: View {
@@ -96,7 +106,6 @@ struct MemoryEditorView: View {
 
     @Namespace private var toolbarGlassNamespace
 
-    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
 
 
@@ -266,7 +275,7 @@ struct MemoryEditorView: View {
 
                 AudioRecorderSheet(onSave: { data, url in
 
-                    feedbackGenerator.impactOccurred()
+                    PlatformHaptics.impactMedium()
 
                     _ = viewModel.addAudioAttachment(data: data, sourceURL: url)
 
@@ -284,32 +293,25 @@ struct MemoryEditorView: View {
 
 
 
-        let attachmentConfigured = sheetConfigured
-
-            .fullScreenCover(isPresented: $isPresentingCamera) {
-
+        #if os(iOS)
+        let cameraConfigured = sheetConfigured
+            .platformCover(isPresented: $isPresentingCamera) {
                 CameraCaptureView(
-
                     onCapture: { image in
-
                         handleCapturedImage(image)
-
                         isPresentingCamera = false
-
                     },
-
                     onCancel: {
-
                         isPresentingCamera = false
-
                     }
-
                 )
-
                 .ignoresSafeArea(.all)
-
             }
+        #else
+        let cameraConfigured = sheetConfigured
+        #endif
 
+        let attachmentConfigured = cameraConfigured
             .photosPicker(isPresented: $isPresentingPhotoLibrary,
 
                           selection: $photoPickerItems,
@@ -344,13 +346,13 @@ struct MemoryEditorView: View {
 
             }
 
-            .fullScreenCover(isPresented: $isPhotoViewerPresented) {
+            .platformCover(isPresented: $isPhotoViewerPresented) {
 
                 photoViewerContent
 
             }
 
-            .fullScreenCover(isPresented: $isShowingFilePreview) {
+            .platformCover(isPresented: $isShowingFilePreview) {
 
                 if let item = filePreviewItem {
 
@@ -670,7 +672,7 @@ struct MemoryEditorView: View {
 
                                 await MainActor.run {
 
-                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                    PlatformOpen.resignFirstResponder()
 
                                     isTitleFocused = false
 
@@ -698,7 +700,7 @@ struct MemoryEditorView: View {
 
 
 
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .primaryAction) {
 
                 if case .edit = mode {
 
@@ -706,7 +708,7 @@ struct MemoryEditorView: View {
 
                     Button {
 
-                        feedbackGenerator.impactOccurred()
+                        PlatformHaptics.impactMedium()
 
                         viewModel.isPinned.toggle()
 
@@ -730,7 +732,7 @@ struct MemoryEditorView: View {
 
                         // Optimistic UI: Switch to View mode immediately
 
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        PlatformOpen.resignFirstResponder()
 
                         isTitleFocused = false
 
@@ -764,7 +766,7 @@ struct MemoryEditorView: View {
 
                         if canStartFocusFromEditor {
                             Button {
-                                feedbackGenerator.impactOccurred()
+                                PlatformHaptics.impactMedium()
                                 if let memoryID = viewModel.editingMemoryID {
                                     environment.startFocus(for: memoryID)
                                 }
@@ -804,7 +806,7 @@ struct MemoryEditorView: View {
 
             if case .edit = mode, isEditingEnabled {
 
-                ToolbarItemGroup(placement: .bottomBar) {
+                ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
 
                     Button(role: .destructive) {
 
@@ -822,7 +824,7 @@ struct MemoryEditorView: View {
 
                     Button {
 
-                        feedbackGenerator.impactOccurred()
+                        PlatformHaptics.impactMedium()
 
                         viewModel.toggleStatus()
 
@@ -840,13 +842,13 @@ struct MemoryEditorView: View {
 
             if case .edit = mode, !isEditingEnabled {
 
-                ToolbarItemGroup(placement: .bottomBar) {
+                ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
 
                     Spacer()
 
                     Button {
 
-                        feedbackGenerator.impactOccurred()
+                        PlatformHaptics.impactMedium()
 
                         viewModel.toggleStatus()
 
@@ -1085,7 +1087,10 @@ struct MemoryEditorView: View {
 
                     },
 
-                    onAddAudio: { isShowingAudioRecorder = true },
+                    onAddAudio: {
+                        guard PlatformCapabilities.current.supportsMicrophoneRecord else { return }
+                        isShowingAudioRecorder = true
+                    },
 
                     onAddFile: { beginFileImportFixed() },
 
@@ -1124,6 +1129,7 @@ struct MemoryEditorView: View {
 
 
     private func addPhotosFromCameraFixed() {
+        guard PlatformCapabilities.current.supportsCameraCapture else { return }
 
         pendingPhotoContentID = UUID()
 
@@ -1327,11 +1333,12 @@ struct MemoryEditorView: View {
 
     // Simplified for fixed model - photos go directly to viewModel.photoAttachments
 
+    #if os(iOS)
     private func handleCapturedImage(_ image: UIImage) {
 
         guard let data = image.jpegData(compressionQuality: 0.85) else { return }
 
-        feedbackGenerator.impactOccurred()
+        PlatformHaptics.impactMedium()
 
         let _ = viewModel.addPhotoAttachment(data: data)
 
@@ -1342,6 +1349,7 @@ struct MemoryEditorView: View {
         cleanupPendingContentTargets()
 
     }
+    #endif
 
 
 
@@ -1349,7 +1357,7 @@ struct MemoryEditorView: View {
 
     func handleLinkAdded(_ url: URL) {
 
-        feedbackGenerator.impactOccurred()
+        PlatformHaptics.impactMedium()
 
         let _ = viewModel.addLinkAttachment(url: url)
 
@@ -1423,7 +1431,7 @@ struct MemoryEditorView: View {
 
             await MainActor.run {
 
-                feedbackGenerator.impactOccurred()
+                PlatformHaptics.impactMedium()
 
                 let _ = viewModel.addFileAttachment(
 
@@ -1503,7 +1511,7 @@ struct MemoryEditorView: View {
 
                     await MainActor.run {
 
-                        feedbackGenerator.impactOccurred()
+                        PlatformHaptics.impactMedium()
 
                         let _ = viewModel.addPhotoAttachment(data: image.data)
 
@@ -1637,7 +1645,7 @@ struct MemoryEditorView: View {
 
             if let url = attachment.url {
 
-                 UIApplication.shared.open(url)
+                 PlatformOpen.open(url)
 
             }
 

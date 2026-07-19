@@ -15,7 +15,6 @@ struct MemoryEditorNotesCard: View {
         VStack(alignment: .leading) {
             if isEditingEnabled {
                 TextField("Write something memorable…", text: $viewModel.note, axis: .vertical)
-                    .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled(false)
                     .disabled(!isEditingEnabled)
             } else if !viewModel.note.isEmpty {

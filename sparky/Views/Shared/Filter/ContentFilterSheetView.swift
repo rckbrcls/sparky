@@ -17,7 +17,7 @@ struct ContentFilterSheetView: View {
                             Spacer()
                             Image(systemName: isContentTypeSelected(contentType) ? "checkmark.circle.fill" : "circle")
                                 .font(.title2)
-                                .foregroundStyle(isContentTypeSelected(contentType) ? .accent : .secondary)
+                                .foregroundStyle(isContentTypeSelected(contentType) ? Color.accentColor : Color.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
@@ -32,7 +32,7 @@ struct ContentFilterSheetView: View {
             .listStyle(.plain)
             .scrollIndicators(.hidden)
             .navigationTitle("Filter Content")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {

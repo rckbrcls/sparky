@@ -1,9 +1,14 @@
 import SwiftUI
 import LinkPresentation
 import QuickLookThumbnailing
-import PDFKit
 import UniformTypeIdentifiers
 import os
+#if canImport(UIKit)
+import UIKit
+#endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 private let attachmentLogger = Logger(subsystem: "sparky", category: "AttachmentPreviews")
 
@@ -11,19 +16,16 @@ private let attachmentLogger = Logger(subsystem: "sparky", category: "Attachment
 
 struct LinkPreviewCard: View {
     let url: URL
-    @State private var metadata: LPLinkMetadata?
-    @State private var previewImage: UIImage?
+    @State private var previewImage: Image?
     @State private var title: String?
-    @State private var isLoading = true
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                // Background
                 Color("ElementBackground")
 
-                if let image = previewImage {
-                    Image(uiImage: image)
+                if let previewImage {
+                    previewImage
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: proxy.size.width, height: proxy.size.height)
@@ -36,30 +38,21 @@ struct LinkPreviewCard: View {
                             )
                         }
                 } else {
-                    // Fallback for no image
                     VStack(spacing: 4) {
                         Image(systemName: "safari.fill")
                             .font(.system(size: 24))
                             .foregroundStyle(.secondary)
 
-                         if let title = title {
-                            Text(title)
-                                .font(.caption2)
-                                .lineLimit(2)
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 4)
-                        } else {
-                            Text(url.host ?? "Link")
-                                .font(.caption2)
-                                .lineLimit(1)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text(title ?? url.host ?? "Link")
+                            .font(.caption2)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 4)
                     }
                     .padding(8)
                 }
 
-                // Link Icon Overlay (Top Left) to indicate source
                 VStack {
                     HStack {
                         Image(systemName: "link")
@@ -73,14 +66,12 @@ struct LinkPreviewCard: View {
                 }
                 .padding(6)
 
-                // Title Overlay (Bottom) if we have an image
                 if previewImage != nil {
-                   VStack {
+                    VStack {
                         Spacer()
                         HStack {
                             Text(title ?? url.host ?? "Link")
-                                .font(.caption2)
-                                .fontWeight(.medium)
+                                .font(.caption2.weight(.medium))
                                 .lineLimit(1)
                                 .foregroundStyle(.white)
                             Spacer()
@@ -90,36 +81,33 @@ struct LinkPreviewCard: View {
                 }
             }
         }
-        .task {
-            await fetchMetadata()
-        }
+        .task { await fetchMetadata() }
     }
 
     private func fetchMetadata() async {
         let provider = LPMetadataProvider()
         do {
             let metadata = try await provider.startFetchingMetadata(for: url)
-            await MainActor.run {
-                self.metadata = metadata
-                self.title = metadata.title
-            }
+            title = metadata.title
 
-            if let imageProvider = metadata.imageProvider {
-                if let image = try? await imageProvider.loadItem(forTypeIdentifier: UTType.image.identifier) as? UIImage {
-                    await MainActor.run {
-                        self.previewImage = image
-                    }
-                } else if let data = try? await imageProvider.loadItem(forTypeIdentifier: UTType.image.identifier) as? Data,
-                          let image = UIImage(data: data) {
-                     await MainActor.run {
-                        self.previewImage = image
-                    }
-                }
+            guard let imageProvider = metadata.imageProvider else { return }
+            let loaded = try? await imageProvider.loadItem(forTypeIdentifier: UTType.image.identifier)
+
+            if let data = loaded as? Data {
+                previewImage = PlatformImageFactory.image(data: data)
+                return
             }
-            isLoading = false
+            #if os(iOS)
+            if let image = loaded as? UIImage {
+                previewImage = Image(uiImage: image)
+            }
+            #elseif os(macOS)
+            if let image = loaded as? NSImage {
+                previewImage = Image(nsImage: image)
+            }
+            #endif
         } catch {
             attachmentLogger.error("Failed to fetch metadata for \(url.absoluteString): \(error.localizedDescription)")
-            isLoading = false
         }
     }
 }
@@ -128,22 +116,20 @@ struct LinkPreviewCard: View {
 
 struct FilePreviewCard: View {
     let attachment: Memory.Attachment
-    @State private var thumbnail: UIImage?
-    @State private var isLoading = true
+    @State private var thumbnail: Image?
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 Color("ElementBackground")
 
-                if let thumbnail = thumbnail {
-                    Image(uiImage: thumbnail)
+                if let thumbnail {
+                    thumbnail
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .clipped()
                 } else {
-                    // Fallback
                     VStack(spacing: 4) {
                         Image(systemName: "doc.fill")
                             .font(.system(size: 28))
@@ -157,9 +143,8 @@ struct FilePreviewCard: View {
                     }
                 }
 
-                // Extension badge
                 if thumbnail != nil {
-                     VStack {
+                    VStack {
                         Spacer()
                         HStack {
                             Text((attachment.filename as NSString?)?.pathExtension.uppercased() ?? "FILE")
@@ -176,28 +161,20 @@ struct FilePreviewCard: View {
                 }
             }
         }
-        .task {
-            await generateThumbnail()
-        }
+        .task { await generateThumbnail() }
     }
 
     private func generateThumbnail() async {
-        // If we have data, we might need to write it to a temp file to generate a thumbnail properly
-        // or check if it's an image data directly.
-
-        // 1. Check if it's an image we can just show
-        if let image = UIImage(data: attachment.data) {
-            await MainActor.run {
-                self.thumbnail = image
-                self.isLoading = false
-            }
+        if let image = PlatformImageFactory.image(data: attachment.data) {
+            thumbnail = image
             return
         }
 
-        // 2. Write to temp file to use QLThumbnailGenerator
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(attachment.filename ?? "temp_file")
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(attachment.filename ?? "temp_file")
         do {
             try attachment.data.write(to: tempURL)
+            defer { try? FileManager.default.removeItem(at: tempURL) }
 
             let request = QLThumbnailGenerator.Request(
                 fileAt: tempURL,
@@ -205,24 +182,14 @@ struct FilePreviewCard: View {
                 scale: 3.0,
                 representationTypes: .thumbnail
             )
-
-            let generator = QLThumbnailGenerator.shared
-            // Generate the thumbnail directly
-            let thumbnail = try await generator.generateBestRepresentation(for: request)
-
-            await MainActor.run {
-                self.thumbnail = thumbnail.uiImage
-                self.isLoading = false
-            }
-
-            // Cleanup
-            try? FileManager.default.removeItem(at: tempURL)
-
+            let representation = try await QLThumbnailGenerator.shared.generateBestRepresentation(for: request)
+            #if os(iOS)
+            thumbnail = Image(uiImage: representation.uiImage)
+            #elseif os(macOS)
+            thumbnail = Image(nsImage: representation.nsImage)
+            #endif
         } catch {
             attachmentLogger.error("Thumbnail generation failed: \(error.localizedDescription)")
-            await MainActor.run {
-                self.isLoading = false
-            }
         }
     }
 }

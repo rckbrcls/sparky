@@ -1,14 +1,17 @@
 # Development
 
-This guide documents conventions that are visible in the current Sparky codebase. It is intended for engineers extending the native iOS app, not for backend, web, or package development.
+This guide documents conventions for Sparky's native Apple app family (iPhone + Mac), not backend, web, or package development.
 
 ## Project Shape
 
-Sparky is a single Xcode project with one app target and two test targets:
+Sparky is a single Xcode project with two native app targets sharing source code and two test targets:
 
-- `sparky`: native iOS app.
+- `sparky`: native iOS app (iOS 26).
+- `sparkyMac`: native macOS app (macOS 26).
 - `sparkyTests`: unit tests using Swift Testing.
 - `sparkyUITests`: generated UI tests using XCTest.
+
+Domain, SwiftData models, services, theme, Focus, and attachments are shared. iOS uses `ContentView` tabs; Mac uses `DesktopRootView` sidebar. Location execution, camera capture, microphone recording, and alternate icons remain iPhone-only in desktop v1.
 
 No third-party package manager, script runner, backend service, or CLI workflow was identified.
 

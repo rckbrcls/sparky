@@ -70,7 +70,9 @@ extension View {
     /// Use this for tab content views that need to reserve space for a custom tab bar.
     /// - Parameter edge: The edge where the spacer should be placed (default: .bottom).
     /// - Returns: A view with tab bar hidden and standard spacer reserved.
+    @ViewBuilder
     func tabBarSpacer(edge: VerticalEdge = .bottom) -> some View {
+        #if os(iOS)
         self
             .safeAreaBar(edge: .bottom, spacing: 0, content: {
                     Text (" ")
@@ -78,5 +80,9 @@ extension View {
                         .frame (height: 55)
                 })
             .toolbarVisibility(.hidden, for: .tabBar)
+        #else
+        // Mac uses sidebar shell — no iPhone tab bar offset.
+        self
+        #endif
     }
 }

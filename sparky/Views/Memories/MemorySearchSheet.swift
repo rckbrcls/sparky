@@ -221,9 +221,9 @@ struct MemorySearchSheet: View {
                     .scrollDismissesKeyboard(.interactively)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigation) {
                     Button {
                         dismiss()
                     } label: {

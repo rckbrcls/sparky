@@ -63,12 +63,12 @@ struct LocationPickerView: View {
             .padding(.horizontal, 24)
             Spacer()
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.Theme.groupedBackground.ignoresSafeArea())
         .navigationTitle("Location Trigger")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlinePhoneNavigationTitle()
         .toolbar {
             if showsCloseButton {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigation) {
                     Button(action: dismiss.callAsFunction) {
                         Image(systemName: "xmark")
                     }
@@ -94,7 +94,7 @@ struct LocationPickerView: View {
                 isSearching = value
             }
         }
-        .fullScreenCover(isPresented: $isMapExpanded) {
+        .platformCover(isPresented: $isMapExpanded) {
             expandedMapView
         }
         .onAppear {

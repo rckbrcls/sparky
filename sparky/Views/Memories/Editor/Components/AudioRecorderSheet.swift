@@ -1,3 +1,4 @@
+#if os(iOS)
 import SwiftUI
 import AVFoundation
 
@@ -75,7 +76,7 @@ struct AudioRecorderSheet: View {
                 .padding(.bottom, 48)
             }
             .navigationTitle("Record Audio")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -183,3 +184,30 @@ struct AudioRecorderSheet: View {
         ]
     }
 }
+
+#else
+
+import SwiftUI
+
+/// Mac v1 intentionally omits microphone recording. This fallback keeps shared
+/// editor presentation code compilable if invoked defensively.
+struct AudioRecorderSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let onSave: (Data, URL) -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "mic.slash")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text("Audio recording is available on iPhone.")
+                .multilineTextAlignment(.center)
+            Button("Done") { dismiss() }
+                .buttonStyle(.borderedProminent)
+        }
+        .padding(32)
+        .frame(minWidth: 360, minHeight: 240)
+    }
+}
+
+#endif

@@ -6,6 +6,11 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 extension Color {
     init?(hex: String) {
@@ -23,10 +28,20 @@ extension Color {
     }
 
     func toHex() -> String? {
+        #if canImport(UIKit)
         guard let components = UIColor(self).cgColor.components,
               components.count >= 3 else {
             return nil
         }
+        #elseif canImport(AppKit)
+        guard let converted = NSColor(self).usingColorSpace(.deviceRGB),
+              let components = converted.cgColor.components,
+              components.count >= 3 else {
+            return nil
+        }
+        #else
+        return nil
+        #endif
 
         let r = Int(components[0] * 255.0)
         let g = Int(components[1] * 255.0)

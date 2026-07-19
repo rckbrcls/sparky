@@ -54,7 +54,7 @@ struct FocusSettingsView: View {
             }
         }
         .navigationTitle("Focus")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlinePhoneNavigationTitle()
     }
 
     private func presetPicker(

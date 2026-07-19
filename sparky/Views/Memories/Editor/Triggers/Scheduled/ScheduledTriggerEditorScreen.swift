@@ -139,10 +139,10 @@ struct ScheduledTriggerEditorScreen: View {
             }
         }
         .navigationTitle("Date & Time")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlinePhoneNavigationTitle()
         .toolbar {
             if showsCloseButton {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigation) {
                     Button(action: dismiss.callAsFunction) {
                         Image(systemName: "xmark")
                     }
@@ -156,7 +156,7 @@ struct ScheduledTriggerEditorScreen: View {
                 .disabled(!isValid)
                 .accessibilityLabel(existingConfig == nil ? "Add" : "Save")
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .primaryAction) {
                 if existingConfig != nil {
                     Button(role: .destructive, action: removeConfig) {
                         Image(systemName: "trash")

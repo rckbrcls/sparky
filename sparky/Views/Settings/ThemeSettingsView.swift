@@ -27,12 +27,12 @@ struct ThemeSettingsView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
-        .listSectionSpacing(.compact)
+        .compactPhoneListSections()
         .contentMargins(.top, 0, for: .scrollContent)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
+        .inlinePhoneNavigationTitle()
     }
 
     private func themeRow(_ theme: AppTheme) -> some View {
@@ -59,7 +59,7 @@ struct ThemeSettingsView: View {
                 if themeManager.currentTheme == theme {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title3)
-                        .foregroundStyle(.accent)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

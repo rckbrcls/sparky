@@ -29,7 +29,7 @@ struct TriggerPickerRow: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(isActive ? Color.accentColor : Color(.tertiaryLabel))
+                    .foregroundStyle(isActive ? Color.accentColor : Color.Theme.textTertiary)
             }
             .padding(.vertical, 6)
         }
