@@ -655,12 +655,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = sparky;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
-				INFOPLIST_KEY_SUFeedURL = "https://rckbrcls.com/api/sparky/appcast.xml";
-				INFOPLIST_KEY_SUPublicEDKey = "cZKYjm5Mnb+LT2K+PGZtkiN18yuV9dGQXCAZ0OV2v6o=";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = sparkyMac/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -690,12 +686,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VCF3DS6BTV;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = sparky;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
-				INFOPLIST_KEY_SUFeedURL = "https://rckbrcls.com/api/sparky/appcast.xml";
-				INFOPLIST_KEY_SUPublicEDKey = "cZKYjm5Mnb+LT2K+PGZtkiN18yuV9dGQXCAZ0OV2v6o=";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = sparkyMac/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
