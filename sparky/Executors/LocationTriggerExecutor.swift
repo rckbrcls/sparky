@@ -1,3 +1,4 @@
+#if os(iOS)
 //
 //  LocationTriggerExecutor.swift
 //  sparky
@@ -216,3 +217,5 @@ extension LocationTriggerExecutor: CLLocationManagerDelegate {
         Self.logger.error("Geofence monitoring failed: \(error.localizedDescription)")
     }
 }
+
+#endif

@@ -545,13 +545,21 @@ final class MemoryEditorViewModel: ObservableObject {
         scheduleConfigDraft = schedule
     }
 
-    /// Returns true when the iOS geofence limit is reached and this memory doesn't already have a slot
+    /// Returns true when the iOS geofence limit is reached and this memory doesn't already have a slot.
+    /// Always false on platforms without location execution (Mac v1).
     func isGeofenceLimitReached() -> Bool {
+        guard PlatformCapabilities.current.supportsLocationExecution else {
+            return false
+        }
+        #if os(iOS)
         let executor = environment.triggerExecutorCoordinator.location
         if let memoryID = editingMemoryID, executor.isMonitoringMemory(memoryID) {
             return false
         }
         return executor.activeGeofenceCount >= LocationTriggerExecutor.maxGeofences
+        #else
+        return false
+        #endif
     }
 
 

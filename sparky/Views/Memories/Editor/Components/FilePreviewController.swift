@@ -1,7 +1,11 @@
 import Foundation
 import QuickLook
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
+#if os(iOS)
 final class FilePreviewItem: NSObject, QLPreviewItem {
     let url: URL
 
@@ -13,6 +17,18 @@ final class FilePreviewItem: NSObject, QLPreviewItem {
     var previewItemURL: URL? { url }
 }
 
+#else
+final class FilePreviewItem: NSObject {
+    let url: URL
+
+    init(url: URL) {
+        self.url = url
+        super.init()
+    }
+}
+#endif
+
+#if os(iOS)
 struct FilePreviewController: UIViewControllerRepresentable {
     let item: FilePreviewItem
     @Environment(\.dismiss) private var dismiss
@@ -57,3 +73,34 @@ struct FilePreviewController: UIViewControllerRepresentable {
         }
     }
 }
+#else
+struct FilePreviewController: View {
+    let item: FilePreviewItem
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Image(systemName: "doc.richtext")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.secondary)
+                Text(item.url.lastPathComponent)
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
+                Button("Open with Default App") {
+                    PlatformOpen.open(item.url)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle("Preview")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+#endif

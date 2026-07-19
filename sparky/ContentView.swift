@@ -1,3 +1,4 @@
+#if os(iOS)
 //
 //  ContentView.swift
 //  sparky
@@ -393,11 +394,11 @@ struct ContentView: View {
 
     private var addMemoryButton: some View {
         Image(systemName: "brain.fill")
-            .foregroundColor(.elementBorder)
+            .foregroundColor(Color.Theme.elementBorder)
             .font(.system(size: 22, weight: .medium))
             .frame(width: 60, height: 60)
             .contentShape(Rectangle())
-            .glassEffect(.regular.interactive().tint(Color.accent), in: .circle)
+            .glassEffect(.regular.interactive().tint(Color.accentColor), in: .circle)
             .accessibilityLabel("Create new memory")
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -521,33 +522,6 @@ struct ContentView: View {
     }
 }
 
-private struct MemoryEditorRoute: Identifiable {
-    enum Mode {
-        case create(mind: Mind?, template: MemoryEditorTemplate)
-        case preview(memory: Memory)
-        case edit(memory: Memory)
-    }
-
-    let id = UUID()
-    let mode: Mode
-    var initialTitle: String = ""
-    var startEditing: Bool = false
-}
-
-private struct MindComposerRequest: Identifiable {
-    let id = UUID()
-    let mindToEdit: Mind?
-}
-
-private struct QuickMemoryRequest: Identifiable {
-    let id = UUID()
-    let mind: Mind?
-}
-
-private struct FocusSessionRoute: Identifiable {
-    let id = UUID()
-}
-
 extension View{
     @ViewBuilder
     func blurFade(_ status: Bool ) -> some View {
@@ -564,3 +538,5 @@ extension View{
     return ContentView(environment: environment)
         .environmentObject(environment)
 }
+
+#endif

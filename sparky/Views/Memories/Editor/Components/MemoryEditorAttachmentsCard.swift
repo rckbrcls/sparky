@@ -1,11 +1,9 @@
 import SwiftUI
 import PhotosUI
-import UIKit
 
 struct MemoryEditorAttachmentsCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     var isEditable: Bool = true
-    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     // Callbacks for adding attachments
     var onAddPhoto: () -> Void
@@ -60,14 +58,18 @@ struct MemoryEditorAttachmentsCard: View {
             Button(action: onAddPhoto) {
                 Label("Library", systemImage: "photo")
             }
-             Button(action: onAddCamera) {
-                Label("Camera", systemImage: "camera")
+            if PlatformCapabilities.current.supportsCameraCapture {
+                Button(action: onAddCamera) {
+                    Label("Camera", systemImage: "camera")
+                }
             }
             Button(action: onAddLink) {
                 Label("Link", systemImage: "link")
             }
-            Button(action: onAddAudio) {
-                Label("Audio", systemImage: "mic")
+            if PlatformCapabilities.current.supportsMicrophoneRecord {
+                Button(action: onAddAudio) {
+                    Label("Audio", systemImage: "mic")
+                }
             }
             Button(action: onAddFile) {
                 Label("File", systemImage: "doc")
@@ -99,8 +101,8 @@ struct MemoryEditorAttachmentsCard: View {
                 // Content
                 switch attachment.kind {
                 case .photo:
-                    if let image = UIImage(data: attachment.data) {
-                        Image(uiImage: image)
+                    if let image = PlatformImageFactory.image(data: attachment.data) {
+                        image
                             .resizable()
                             .scaledToFill()
                             .frame(width: size, height: size)
@@ -183,7 +185,7 @@ struct MemoryEditorAttachmentsCard: View {
     }
 
     private func removeAttachment(_ attachment: Memory.Attachment) {
-        feedbackGenerator.impactOccurred()
+        PlatformHaptics.impactMedium()
         switch attachment.kind {
         case .photo:
             viewModel.removePhotoAttachment(id: attachment.id)

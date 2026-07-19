@@ -2,14 +2,15 @@
 
 ## Build & Run
 
-Pure Xcode project (no SPM, no Makefile). Three targets: `sparky`, `sparkyTests`, `sparkyUITests`. Bundle ID: `polterware.sparky`. Deployment target: **iOS 26.0**.
+Pure Xcode project (no SPM, no Makefile). Four targets: `sparky` (iOS), `sparkyMac` (macOS), `sparkyTests`, `sparkyUITests`. Bundle IDs: `polterware.sparky` / `polterware.sparky.mac`. Deployment targets: **iOS 26.0 + macOS 26.0**.
 
 ```bash
-# Build
+# iOS
 xcodebuild -scheme sparky -destination 'platform=iOS Simulator,name=iPhone 16' build
-
-# Test (uses Swift Testing framework, not XCTest)
 xcodebuild -scheme sparky -destination 'platform=iOS Simulator,name=iPhone 16' test
+
+# Mac
+xcodebuild -scheme sparkyMac -destination 'platform=macOS' build
 ```
 
 Or open `sparky.xcodeproj` in Xcode and Cmd+R.

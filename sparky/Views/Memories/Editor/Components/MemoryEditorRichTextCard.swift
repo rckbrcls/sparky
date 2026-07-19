@@ -8,7 +8,6 @@ struct MemoryEditorRichTextCard: View {
         MemoryEditorContentCard {
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $text)
-                    .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled(false)
                     .frame(minHeight: 160)
                     .padding(.top, 0)
@@ -19,7 +18,7 @@ struct MemoryEditorRichTextCard: View {
 
                 if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(isEditable ? "Write something memorable…" : "No notes captured for this memory.")
-                        .foregroundStyle(Color(uiColor: .placeholderText))
+                        .foregroundStyle(Color.Theme.textTertiary)
                         .padding(.top, 8)
                         .padding(.horizontal, 0)
                 }

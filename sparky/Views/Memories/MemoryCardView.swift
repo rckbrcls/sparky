@@ -6,13 +6,11 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct MemoryCardView: View {
     let memoryID: UUID
     @ObservedObject var memoryService: MemoryService
     @EnvironmentObject private var environment: AppEnvironment
-    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     /// Optional date context for date-aware completion display (used in CalendarDayView)
     var displayDate: Date?
@@ -280,7 +278,7 @@ struct MemoryCardView: View {
                 Spacer()
 
                 Button {
-                    feedbackGenerator.impactOccurred()
+                    PlatformHaptics.impactMedium()
                     if let onToggleCompletion {
                         onToggleCompletion()
                     } else {
@@ -345,7 +343,7 @@ struct MemoryCardView: View {
             if isContextMenuEnabled {
                 if let onEdit = onEdit {
                     Button {
-                        feedbackGenerator.impactOccurred()
+                        PlatformHaptics.impactMedium()
                         onEdit()
                     } label: {
                         Label("Edit", systemImage: "pencil")
@@ -396,7 +394,7 @@ struct MemoryCardView: View {
                     }
 
                     Button(role: .destructive) {
-                        feedbackGenerator.impactOccurred()
+                        PlatformHaptics.impactMedium()
                         onDelete()
                     } label: {
                         Label("Delete", systemImage: "trash")

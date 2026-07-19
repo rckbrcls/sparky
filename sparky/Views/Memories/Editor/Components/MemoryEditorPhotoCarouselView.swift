@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct MemoryEditorPhotoCarouselView: View {
     let attachments: [Memory.Attachment]
@@ -109,8 +108,8 @@ struct MemoryEditorPhotoCarouselView: View {
         ZStack {
             Color.black
                 .ignoresSafeArea()
-            if let image = UIImage(data: attachment.data) {
-                Image(uiImage: image)
+            if let image = PlatformImageFactory.image(data: attachment.data) {
+                image
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

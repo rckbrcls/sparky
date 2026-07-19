@@ -88,7 +88,7 @@ struct MemoryTimelineView: View {
     private var content: some View {
         currentView
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
-            .toolbarBackground(.clear, for: .navigationBar)
+            .clearPhoneNavigationBarBackground()
             .toolbar {
                 if isMultiSelecting {
                     MemoryMultiSelectToolbarContent(
@@ -103,7 +103,7 @@ struct MemoryTimelineView: View {
                         onDone: { toggleMultiSelection() }
                     )
                 } else {
-                    ToolbarItemGroup(placement: .navigationBarLeading) {
+                    ToolbarItemGroup(placement: .navigation) {
                         if case .day = viewMode {
                             Button {
                                 navigateBack()
@@ -113,7 +113,7 @@ struct MemoryTimelineView: View {
                         }
                     }
 
-                    ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    ToolbarItemGroup(placement: .primaryAction) {
                         if shouldShowTodayButton {
                             Button {
                                 navigateToToday()

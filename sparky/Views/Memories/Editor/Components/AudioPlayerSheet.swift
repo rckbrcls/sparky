@@ -21,7 +21,7 @@ struct AudioPlayerSheet: View {
                 VStack(spacing: 16) {
                     Image(systemName: isPlaying ? "waveform" : "waveform.circle.fill")
                         .font(.system(size: 56))
-                        .foregroundStyle(isPlaying ? .accent : .secondary)
+                        .foregroundStyle(isPlaying ? Color.accentColor : Color.secondary)
                         .symbolEffect(.variableColor.iterative, isActive: isPlaying)
 
                     Text(formattedTime(currentTime))
@@ -41,7 +41,7 @@ struct AudioPlayerSheet: View {
                             ),
                             in: 0...max(duration, 0.01)
                         )
-                        .tint(.accent)
+                        .tint(Color.accentColor)
 
                         HStack {
                             Text(formattedTime(currentTime))
@@ -82,7 +82,7 @@ struct AudioPlayerSheet: View {
                 .padding(.bottom, 48)
             }
             .navigationTitle("Audio")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -101,9 +101,11 @@ struct AudioPlayerSheet: View {
 
     private func preparePlayer() {
         do {
+            #if os(iOS)
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default)
             try session.setActive(true)
+            #endif
 
             let tempURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent("\(UUID().uuidString).m4a")
@@ -163,9 +165,11 @@ struct AudioPlayerSheet: View {
         stopTimer()
         player?.stop()
         player = nil
+        #if os(iOS)
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         } catch {}
+        #endif
     }
 
     private func formattedTime(_ time: TimeInterval) -> String {

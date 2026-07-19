@@ -45,7 +45,7 @@ struct IconColorPickerSheet: View {
             .scrollDismissesKeyboard(.interactively)
             .searchable(text: $searchText, prompt: "Search icons")
             .navigationTitle("Icon & Color")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlinePhoneNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {

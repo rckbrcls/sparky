@@ -1,3 +1,4 @@
+#if os(iOS)
 //
 //  QuickMemorySheet.swift
 //  sparky
@@ -259,3 +260,5 @@ struct QuickMemorySheet: View {
         onQuickCreate: { _, _, _ in }
     )
 }
+
+#endif

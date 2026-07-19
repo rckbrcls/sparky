@@ -49,7 +49,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
                                 ForEach(searchModel.suggestions, id: \.self) { suggestion in
                                     Button(action: {
                                         onSuggestionSelected(suggestion)
-                                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                        PlatformOpen.resignFirstResponder()
                                         presentationDetent = .height(120)
                                     }) {
                                         VStack(alignment: .leading) {
@@ -116,7 +116,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
                         .fontWeight(.semibold)
                         .buttonStyle(.glassProminent)
                 }
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .navigation) {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
                             .font(.title2)

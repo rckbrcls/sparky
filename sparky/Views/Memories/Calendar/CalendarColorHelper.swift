@@ -17,7 +17,7 @@ struct CalendarColorHelper {
         }
 
         // Fallback to default color
-        return .accent
+        return .accentColor
     }
 
     static func indicatorColor(for memories: [Memory]) -> Color {
@@ -31,6 +31,6 @@ struct CalendarColorHelper {
         }
 
         // Fallback to default color
-        return .accent
+        return .accentColor
     }
 }

@@ -26,7 +26,7 @@ struct LocationTriggerEditorScreen: View {
             dismiss()
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .primaryAction) {
                 if existingConfig != nil {
                     Button(role: .destructive, action: removeLocationConfig) {
                         Image(systemName: "trash")

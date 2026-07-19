@@ -106,20 +106,7 @@ struct MindGridItemView: View {
     }
 
     private func darkerBorderColor(for color: Color) -> Color {
-        // Cria uma versão mais escura da cor para a borda
-        let uiColor = UIColor(color)
-        var hue: CGFloat = 0
-        var saturation: CGFloat = 0
-        var brightness: CGFloat = 0
-        var alpha: CGFloat = 0
-        
-        if uiColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
-            // Reduz o brightness em 30% para criar uma borda mais escura
-            return Color(hue: hue, saturation: saturation, brightness: max(0, brightness * 0.7), opacity: alpha)
-        }
-        
-        // Fallback: usar a cor com opacity reduzida
-        return color.opacity(0.6)
+        color.opacity(0.65)
     }
 
     private var canEditMind: Bool {

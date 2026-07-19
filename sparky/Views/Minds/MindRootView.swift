@@ -31,7 +31,7 @@ struct MindRootView: View {
                 Color.clear.frame(height: 70)
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button {
                         onCreateMind()
                     } label: {

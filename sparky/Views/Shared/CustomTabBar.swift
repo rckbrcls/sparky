@@ -1,3 +1,4 @@
+#if os(iOS)
 //
 //  CustomTabBar.swift
 //  sparky
@@ -11,7 +12,7 @@ struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
     @Environment(\.colorScheme) private var colorScheme
 
     var size: CGSize
-    var activeTint: Color = Color.accent
+    var activeTint: Color = Color.accentColor
     var inactiveTint: Color = Color.Theme.textSecondary
     var barTint: Color = .gray.opacity(0.15)
     @Binding var activeTab: CustomTab
@@ -138,3 +139,5 @@ struct CustomTabBar<TabItemView: View>: UIViewRepresentable {
     environment.bootstrap()
     return ContentView(environment: environment)
 }
+
+#endif
