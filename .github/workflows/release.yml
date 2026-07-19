@@ -1,0 +1,304 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override CFBundleShortVersionString (ex: 1.0.1)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    env:
+      PROJECT: sparky.xcodeproj
+      SCHEME: sparkyMac
+      APP_BUNDLE_NAME: sparkyMac.app
+      APP_DISPLAY_NAME: Sparky
+      REPO: polterware/sparky
+      APPCAST_PATH: appcast.xml
+      APPCAST_URL: https://polterware.github.io/sparky/appcast.xml
+      SPARKLE_TOOLS_VERSION: 2.8.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Compute build number
+        run: |
+          set -euo pipefail
+          BUILD_VERSION="${GITHUB_RUN_NUMBER}"
+          echo "BUILD_VERSION_OVERRIDE=$BUILD_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build Release (unsigned)
+        env:
+          MARKETING_VERSION_OVERRIDE: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          DERIVED_DATA="$RUNNER_TEMP/DerivedData"
+          BUILD_SETTINGS=(
+            "CODE_SIGNING_ALLOWED=NO"
+            "CODE_SIGNING_REQUIRED=NO"
+            "CODE_SIGN_IDENTITY="
+            "CODE_SIGN_STYLE=Manual"
+          )
+
+          if [ -n "${MARKETING_VERSION_OVERRIDE:-}" ]; then
+            BUILD_SETTINGS+=("MARKETING_VERSION=$MARKETING_VERSION_OVERRIDE")
+          fi
+          if [ -n "${BUILD_VERSION_OVERRIDE:-}" ]; then
+            BUILD_SETTINGS+=("CURRENT_PROJECT_VERSION=$BUILD_VERSION_OVERRIDE")
+          fi
+
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -derivedDataPath "$DERIVED_DATA" \
+            "${BUILD_SETTINGS[@]}"
+
+          APP_PATH="$DERIVED_DATA/Build/Products/Release/$APP_BUNDLE_NAME"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "App not found at $APP_PATH"
+            exit 1
+          fi
+
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify Sparkle Info.plist keys
+        run: |
+          set -euo pipefail
+          INFO_PLIST="$APP_PATH/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$INFO_PLIST" > /dev/null
+          /usr/libexec/PlistBuddy -c "Print :SUFeedURL" "$INFO_PLIST" > /dev/null
+
+      - name: Re-sign app bundle (adhoc)
+        run: |
+          set -euo pipefail
+          # Remove existing code signatures
+          find "$APP_PATH" -name "_CodeSignature" -type d -exec rm -rf {} + 2>/dev/null || true
+
+          # Re-sign all frameworks, bundles and executables with adhoc signature
+          # Sign nested components first (inside-out)
+          find "$APP_PATH/Contents/Frameworks" -name "*.framework" -o -name "*.app" -o -name "*.xpc" | while read -r bundle; do
+            if [ -d "$bundle" ]; then
+              codesign --force --deep --sign - "$bundle" 2>/dev/null || true
+            fi
+          done
+
+          # Sign the main app bundle
+          codesign --force --deep --sign - "$APP_PATH"
+
+          # Verify the signature is valid
+          codesign --verify --deep --strict "$APP_PATH" || {
+            echo "Warning: Deep verification failed, trying without strict"
+            codesign --verify "$APP_PATH"
+          }
+
+      - name: Package ZIP
+        run: |
+          set -euo pipefail
+          INFO_PLIST="$APP_PATH/Contents/Info.plist"
+          SHORT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFO_PLIST")
+          BUILD_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$INFO_PLIST")
+
+          ZIP_NAME="${APP_DISPLAY_NAME}-macos-universal-v${SHORT_VERSION}.zip"
+          ZIP_PATH="$RUNNER_TEMP/$ZIP_NAME"
+
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
+
+          ZIP_LENGTH=$(stat -f%z "$ZIP_PATH")
+
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+          echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
+          echo "ZIP_LENGTH=$ZIP_LENGTH" >> "$GITHUB_ENV"
+          echo "SHORT_VERSION=$SHORT_VERSION" >> "$GITHUB_ENV"
+          echo "BUILD_VERSION=$BUILD_VERSION" >> "$GITHUB_ENV"
+
+      - name: Resolve minimum macOS version
+        run: |
+          set -euo pipefail
+          INFO_PLIST="$APP_PATH/Contents/Info.plist"
+          MIN_OS=$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$INFO_PLIST" 2>/dev/null || true)
+          if [ -z "$MIN_OS" ]; then
+            MIN_OS=$(xcodebuild -project "$PROJECT" -scheme "$SCHEME" -showBuildSettings | awk -F ' = ' '/MACOSX_DEPLOYMENT_TARGET/ {print $2; exit}')
+          fi
+          if [ -z "$MIN_OS" ]; then
+            echo "Could not determine minimum macOS version."
+            exit 1
+          fi
+          echo "MIN_OS=$MIN_OS" >> "$GITHUB_ENV"
+
+      - name: Download Sparkle tools
+        run: |
+          set -euo pipefail
+          SPARKLE_TAR="Sparkle-${SPARKLE_TOOLS_VERSION}.tar.xz"
+          SPARKLE_URL="https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_TOOLS_VERSION}/${SPARKLE_TAR}"
+          curl -fsSL "$SPARKLE_URL" -o "$RUNNER_TEMP/$SPARKLE_TAR"
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xJf "$RUNNER_TEMP/$SPARKLE_TAR" -C "$RUNNER_TEMP/sparkle" --strip-components=1
+          if [ ! -x "$RUNNER_TEMP/sparkle/bin/sign_update" ]; then
+            echo "Sparkle sign_update tool not found."
+            exit 1
+          fi
+          echo "SPARKLE_BIN=$RUNNER_TEMP/sparkle/bin" >> "$GITHUB_ENV"
+
+      - name: Sign update (EdDSA)
+        env:
+          SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SPARKLE_EDDSA_PRIVATE_KEY:-}" ]; then
+            echo "Missing SPARKLE_EDDSA_PRIVATE_KEY secret."
+            exit 1
+          fi
+          KEY_FILE="$RUNNER_TEMP/sparkle_ed25519.key"
+          printf "%s" "$SPARKLE_EDDSA_PRIVATE_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          SIGN_OUTPUT=$($SPARKLE_BIN/sign_update --ed-key-file "$KEY_FILE" "$ZIP_PATH")
+          SIGNATURE=$(echo "$SIGN_OUTPUT" | tr -d '\n' | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+          if [ -z "$SIGNATURE" ]; then
+            SIGNATURE=$(echo "$SIGN_OUTPUT" | tr -d '\n' | tr -d ' ')
+          fi
+          if [ -z "$SIGNATURE" ]; then
+            echo "Failed to extract Sparkle signature. Output: $SIGN_OUTPUT"
+            exit 1
+          fi
+          echo "ED_SIGNATURE=$SIGNATURE" >> "$GITHUB_ENV"
+
+      - name: Update appcast.xml
+        run: |
+          set -euo pipefail
+          PUB_DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
+          RELEASE_NOTES="Sparky ${SHORT_VERSION} release."
+
+          python3 scripts/update_appcast.py \
+            --appcast "$APPCAST_PATH" \
+            --title "${APP_DISPLAY_NAME}" \
+            --link "https://github.com/${REPO}" \
+            --description "Sparky - A local-first memory app" \
+            --language "en" \
+            --version "$BUILD_VERSION" \
+            --short-version "$SHORT_VERSION" \
+            --minimum-system-version "$MIN_OS" \
+            --pub-date "$PUB_DATE" \
+            --enclosure-url "https://github.com/${REPO}/releases/download/v${SHORT_VERSION}/${ZIP_NAME}" \
+            --enclosure-length "$ZIP_LENGTH" \
+            --ed-signature "$ED_SIGNATURE" \
+            --release-notes "$RELEASE_NOTES"
+
+      - name: Generate release notes
+        run: |
+          set -euo pipefail
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          VERSION="$SHORT_VERSION"
+
+          echo "## Sparky ${VERSION}" > "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+
+          NOTES=""
+          if [ -f CHANGELOG.md ]; then
+            NOTES=$(awk -v ver="$VERSION" '
+              $0 ~ "^## \\["ver"\\]" {found=1; next}
+              $0 ~ "^## " && found {exit}
+              found {print}
+            ' CHANGELOG.md)
+
+            if [ -z "$NOTES" ]; then
+              NOTES=$(awk -v ver="$VERSION" '
+                $0 ~ "^## "ver {found=1; next}
+                $0 ~ "^## " && found {exit}
+                found {print}
+              ' CHANGELOG.md)
+            fi
+          fi
+
+          if [ -n "$NOTES" ]; then
+            echo "### Changes" >> "$NOTES_FILE"
+            echo "" >> "$NOTES_FILE"
+            echo "$NOTES" >> "$NOTES_FILE"
+          else
+            echo "### Changes" >> "$NOTES_FILE"
+            echo "" >> "$NOTES_FILE"
+            PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+            if [ -n "$PREV_TAG" ]; then
+              git log --pretty="* %s (%h)" "$PREV_TAG"..HEAD >> "$NOTES_FILE"
+            else
+              git log -n 10 --pretty="* %s (%h)" >> "$NOTES_FILE"
+            fi
+          fi
+
+          echo "" >> "$NOTES_FILE"
+          echo "### Update" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo "Automatic updates are delivered via Sparkle." >> "$NOTES_FILE"
+
+          echo "NOTES_FILE=$NOTES_FILE" >> "$GITHUB_ENV"
+
+      - name: Commit appcast.xml
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$APPCAST_PATH"
+          if git diff --cached --quiet; then
+            echo "No appcast changes to commit."
+            exit 0
+          fi
+          git commit -m "Update appcast for v${SHORT_VERSION}"
+          git push
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="v${SHORT_VERSION}"
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release delete "$TAG" --repo "$REPO" --yes
+          fi
+
+          gh release create "$TAG" \
+            "$ZIP_PATH" \
+            --title "${APP_DISPLAY_NAME} ${SHORT_VERSION}" \
+            --notes-file "$NOTES_FILE" \
+            --repo "$REPO"
+
+      - name: Prepare Pages artifact
+        run: |
+          set -euo pipefail
+          mkdir -p public
+          if [ -f "$APPCAST_PATH" ]; then
+            cp "$APPCAST_PATH" public/appcast.xml
+          else
+            echo "appcast.xml not found!"
+            exit 1
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: release
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

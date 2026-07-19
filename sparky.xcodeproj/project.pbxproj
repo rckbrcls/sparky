@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8FB02115A03D779BD3DEC4C4 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1705DE2B04996E1225BDAE3D /* Sparkle */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		2CDDFE332E9D39F700D608A2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -30,16 +34,15 @@
 		A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sparkyMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		A11DFE502E9D39F700D608A2 /* Exceptions for "sparky" folder in "sparkyMac" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				ContentView.swift,
 				sparkyApp.swift,
-				"Views/Shared/CustomTabBar.swift",
-				"Views/Memories/Editor/Components/MemoryEditorCameraCaptureView.swift",
-				"Views/Memories/Editor/QuickMemorySheet.swift",
+				Views/Shared/CustomTabBar.swift,
+				Views/Memories/Editor/Components/MemoryEditorCameraCaptureView.swift,
+				Views/Memories/Editor/QuickMemorySheet.swift,
 			);
 			target = A11DFE1D2E9D39F700D608A2 /* sparkyMac */;
 		};
@@ -54,19 +57,25 @@
 			path = sparky;
 			sourceTree = "<group>";
 		};
-		A11DFE202E9D39F700D608A2 /* sparkyMac */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = sparkyMac;
-			sourceTree = "<group>";
-		};
 		2CDDFE352E9D39F700D608A2 /* sparkyTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = sparkyTests;
 			sourceTree = "<group>";
 		};
 		2CDDFE3F2E9D39F700D608A2 /* sparkyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = sparkyUITests;
+			sourceTree = "<group>";
+		};
+		A11DFE202E9D39F700D608A2 /* sparkyMac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = sparkyMac;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -97,6 +106,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FB02115A03D779BD3DEC4C4 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -144,8 +154,6 @@
 				2CDDFE202E9D39F600D608A2 /* sparky */,
 			);
 			name = sparky;
-			packageProductDependencies = (
-			);
 			productName = sparky;
 			productReference = 2CDDFE1E2E9D39F600D608A2 /* sparky.app */;
 			productType = "com.apple.product-type.application";
@@ -167,8 +175,6 @@
 				2CDDFE352E9D39F700D608A2 /* sparkyTests */,
 			);
 			name = sparkyTests;
-			packageProductDependencies = (
-			);
 			productName = sparkyTests;
 			productReference = 2CDDFE322E9D39F700D608A2 /* sparkyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -190,8 +196,6 @@
 				2CDDFE3F2E9D39F700D608A2 /* sparkyUITests */,
 			);
 			name = sparkyUITests;
-			packageProductDependencies = (
-			);
 			productName = sparkyUITests;
 			productReference = 2CDDFE3C2E9D39F700D608A2 /* sparkyUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -207,14 +211,13 @@
 			buildRules = (
 			);
 			dependencies = (
+				99B67D2FBDF47661C585D4D1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				2CDDFE202E9D39F600D608A2 /* sparky */,
 				A11DFE202E9D39F700D608A2 /* sparkyMac */,
 			);
 			name = sparkyMac;
-			packageProductDependencies = (
-			);
 			productName = sparkyMac;
 			productReference = A11DFE1E2E9D39F700D608A2 /* sparkyMac.app */;
 			productType = "com.apple.product-type.application";
@@ -254,6 +257,9 @@
 			);
 			mainGroup = 2CDDFE152E9D39F600D608A2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A3AA73087E6BDD851AC78BE0 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2CDDFE1F2E9D39F600D608A2 /* Products */;
 			projectDirPath = "";
@@ -339,6 +345,10 @@
 			isa = PBXTargetDependency;
 			target = 2CDDFE1D2E9D39F600D608A2 /* sparky */;
 			targetProxy = 2CDDFE3D2E9D39F700D608A2 /* PBXContainerItemProxy */;
+		};
+		99B67D2FBDF47661C585D4D1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = 1705DE2B04996E1225BDAE3D /* Sparkle */;
 		};
 /* End PBXTargetDependency section */
 
@@ -634,7 +644,6 @@
 			};
 			name = Release;
 		};
-
 		A11DFE462E9D39F700D608A2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -650,6 +659,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = sparky;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
+				INFOPLIST_KEY_SUFeedURL = "https://rckbrcls.com/api/sparky/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "cZKYjm5Mnb+LT2K+PGZtkiN18yuV9dGQXCAZ0OV2v6o=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -683,6 +694,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = sparky;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sparky needs photo library access so you can attach images to your memories.";
+				INFOPLIST_KEY_SUFeedURL = "https://rckbrcls.com/api/sparky/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "cZKYjm5Mnb+LT2K+PGZtkiN18yuV9dGQXCAZ0OV2v6o=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -740,7 +753,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-
 		A11DFE452E9D39F700D608A2 /* Build configuration list for PBXNativeTarget "sparkyMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -751,6 +763,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A3AA73087E6BDD851AC78BE0 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1705DE2B04996E1225BDAE3D /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3AA73087E6BDD851AC78BE0 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2CDDFE162E9D39F600D608A2 /* Project object */;
 }
