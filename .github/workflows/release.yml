@@ -290,6 +290,12 @@ jobs:
             echo "appcast.xml not found!"
             exit 1
           fi
+          if [ -f scripts/install.sh ]; then
+            cp scripts/install.sh public/install
+          else
+            echo "scripts/install.sh not found!"
+            exit 1
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
