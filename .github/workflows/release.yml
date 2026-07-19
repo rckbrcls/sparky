@@ -241,6 +241,10 @@ jobs:
           fi
 
           echo "" >> "$NOTES_FILE"
+          echo "### Install" >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
+          echo '\`curl -fsSL https://rckbrcls.com/api/sparky/install | bash\`' >> "$NOTES_FILE"
+          echo "" >> "$NOTES_FILE"
           echo "### Update" >> "$NOTES_FILE"
           echo "" >> "$NOTES_FILE"
           echo "Automatic updates are delivered via Sparkle." >> "$NOTES_FILE"
