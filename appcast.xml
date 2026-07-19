@@ -7,9 +7,9 @@
         <language>en</language>
         <item>
             <title>Version 0.0.1</title>
-            <pubDate>Sun, 19 Jul 2026 19:07:42 +0000</pubDate>
+            <pubDate>Sun, 19 Jul 2026 19:12:49 +0000</pubDate>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/rckbrcls/sparky/releases/download/v0.0.1/Sparky-macos-universal-v0.0.1.zip" sparkle:version="4" sparkle:shortVersionString="0.0.1" sparkle:edSignature="Fk96fpb/MTXLMbJLGXrYobyUspMwsBmQP6ZhyqWV5enSuvkUrTndAd7TZXODcL0lb6bqi8rDMh37BxGMHe3kCA==" sparkle:os="macos" length="8420204" type="application/zip" />
+            <enclosure url="https://github.com/rckbrcls/sparky/releases/download/v0.0.1/Sparky-macos-universal-v0.0.1.zip" sparkle:version="5" sparkle:shortVersionString="0.0.1" sparkle:edSignature="NCZVuzKwl8++T4U9RM5D7WcHQgNrMrpFGloFg2uOuyvrIm6xbpUFRIE34oojfUlsDXnpXkJpqmn38yA6Kk7CBA==" sparkle:os="macos" length="8420204" type="application/zip" />
             <description>Sparky 0.0.1 release.</description>
         </item>
     </channel>
