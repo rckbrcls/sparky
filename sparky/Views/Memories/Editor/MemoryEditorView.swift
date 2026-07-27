@@ -574,6 +574,21 @@ struct MemoryEditorView: View {
         }
     }
 
+    private func startEditingMemory() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            isEditingEnabled = true
+        }
+    }
+
+    private func toggleStatusAndSave() {
+        PlatformHaptics.impactMedium()
+        viewModel.toggleStatus()
+
+        Task {
+            _ = await viewModel.saveMetadataOnly()
+        }
+    }
+
     private func confirmMemoryChanges() {
         switch mode {
         case .create:
@@ -667,29 +682,46 @@ struct MemoryEditorView: View {
 
     private var showsDesktopPopoverActionBar: Bool {
         #if os(macOS)
-        guard presentationStyle == .desktopPopover else { return false }
-
-        switch mode {
-        case .create:
-            return true
-        case .edit:
-            return isEditingEnabled
-        }
+        presentationStyle == .desktopPopover
         #else
         false
         #endif
     }
 
     #if os(macOS)
+    @ViewBuilder
     private var desktopPopoverActionBar: some View {
-        DesktopPopoverActionBar(
-            confirmationAccessibilityLabel: saveButtonTitle,
-            isConfirmationDisabled: isSaveDisabled,
-            destructiveAccessibilityLabel: desktopDeleteAccessibilityLabel,
-            onCancel: dismiss.callAsFunction,
-            onConfirm: confirmMemoryChanges,
-            onDestructive: desktopDeleteAction
-        )
+        if case .edit = mode, !isEditingEnabled {
+            DesktopPopoverActionBar(
+                confirmationAccessibilityLabel: desktopStatusActionLabel,
+                confirmationSystemImage: desktopStatusActionSystemImage,
+                isConfirmationDisabled: viewModel.isSaving,
+                secondaryAccessibilityLabel: "Edit Memory",
+                secondarySystemImage: "pencil",
+                cancellationAccessibilityLabel: "Close",
+                onCancel: dismiss.callAsFunction,
+                onConfirm: toggleStatusAndSave,
+                onSecondary: startEditingMemory
+            )
+        } else {
+            DesktopPopoverActionBar(
+                confirmationAccessibilityLabel: saveButtonTitle,
+                isConfirmationDisabled: isSaveDisabled,
+                destructiveAccessibilityLabel: desktopDeleteAccessibilityLabel,
+                cancellationAccessibilityLabel: "Close",
+                onCancel: dismiss.callAsFunction,
+                onConfirm: confirmMemoryChanges,
+                onDestructive: desktopDeleteAction
+            )
+        }
+    }
+
+    private var desktopStatusActionLabel: String {
+        viewModel.status == .active ? "Complete Memory" : "Reopen Memory"
+    }
+
+    private var desktopStatusActionSystemImage: String {
+        viewModel.status == .active ? "checkmark" : "arrow.uturn.backward"
     }
 
     private var desktopDeleteAccessibilityLabel: String? {
@@ -762,7 +794,7 @@ struct MemoryEditorView: View {
 
             ToolbarItemGroup(placement: .primaryAction) {
 
-                if case .edit = mode {
+                if case .edit = mode, !showsDesktopPopoverActionBar {
 
                     if isEditingEnabled {
 
@@ -787,15 +819,13 @@ struct MemoryEditorView: View {
 
                     // Checkmark button: Save and switch to View
 
-                    if !showsDesktopPopoverActionBar {
-                        Button {
-                            saveEditedMemoryAndShowPreview()
-                        } label: {
-                            Label("Save", systemImage: "checkmark")
-                        }
-                        .confirmationToolbarItemStyle()
-                        .disabled(isSaveDisabled)
+                    Button {
+                        saveEditedMemoryAndShowPreview()
+                    } label: {
+                        Label("Save", systemImage: "checkmark")
                     }
+                    .confirmationToolbarItemStyle()
+                    .disabled(isSaveDisabled)
 
                     } else {
 
@@ -814,15 +844,7 @@ struct MemoryEditorView: View {
 
                         // Pencil button: Switch to Edit
 
-                        Button {
-
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-
-                                isEditingEnabled = true
-
-                            }
-
-                        } label: {
+                        Button(action: startEditingMemory) {
 
                             Label("Edit", systemImage: "pencil")
 
@@ -841,22 +863,20 @@ struct MemoryEditorView: View {
 
 
 
-            if case .edit = mode, isEditingEnabled {
+            if case .edit = mode, isEditingEnabled, !showsDesktopPopoverActionBar {
 
                 ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
 
-                    if !showsDesktopPopoverActionBar {
-                        Button(role: .destructive) {
+                    Button(role: .destructive) {
 
-                            showDeleteConfirmation = true
+                        showDeleteConfirmation = true
 
-                        } label: {
+                    } label: {
 
-                            Image(systemName: "trash")
+                        Image(systemName: "trash")
 
-                        }
-                        .neutralToolbarItemStyle()
                     }
+                    .neutralToolbarItemStyle()
 
                     Spacer()
 
@@ -879,25 +899,13 @@ struct MemoryEditorView: View {
 
             }
 
-            if case .edit = mode, !isEditingEnabled {
+            if case .edit = mode, !isEditingEnabled, !showsDesktopPopoverActionBar {
 
                 ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
 
                     Spacer()
 
-                    Button {
-
-                        PlatformHaptics.impactMedium()
-
-                        viewModel.toggleStatus()
-
-                        Task {
-
-                            await viewModel.saveMetadataOnly()
-
-                        }
-
-                    } label: {
+                    Button(action: toggleStatusAndSave) {
 
                         Label(viewModel.status.rawValue.capitalized, systemImage: viewModel.status == .active ? "circle" : "checkmark.circle.fill")
 
