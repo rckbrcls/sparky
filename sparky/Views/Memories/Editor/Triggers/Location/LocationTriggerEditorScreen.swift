@@ -15,7 +15,12 @@ struct LocationTriggerEditorScreen: View {
     }
 
     var body: some View {
-        LocationPickerView(showsCloseButton: showsCloseButton) { name, latitude, longitude, radius, event in
+        LocationPickerView(
+            showsCloseButton: showsCloseButton,
+            onRemove: existingConfig == nil ? nil : {
+                viewModel.removeLocationConfig()
+            }
+        ) { name, latitude, longitude, radius, event in
             viewModel.setLocationConfig(
                 name: name,
                 latitude: latitude,
@@ -23,17 +28,19 @@ struct LocationTriggerEditorScreen: View {
                 radius: radius,
                 event: event
             )
-            dismiss()
         }
         .toolbar {
+            #if os(iOS)
             ToolbarItem(placement: .primaryAction) {
                 if existingConfig != nil {
                     Button(role: .destructive, action: removeLocationConfig) {
                         Image(systemName: "trash")
                     }
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Remove location trigger")
                 }
             }
+            #endif
         }
     }
 

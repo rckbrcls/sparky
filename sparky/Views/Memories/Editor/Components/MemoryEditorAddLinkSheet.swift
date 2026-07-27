@@ -32,21 +32,37 @@ struct MemoryEditorAddLinkSheet: View {
             .padding()
             .navigationTitle("Add Link")
             .inlinePhoneNavigationTitle()
+            #if os(macOS)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                DesktopPopoverActionBar(
+                    confirmationAccessibilityLabel: "Add Link",
+                    isConfirmationDisabled: sanitizedURL == nil,
+                    onCancel: dismiss.callAsFunction,
+                    onConfirm: handleAddLink
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            #endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
                     }
+                    .neutralToolbarItemStyle()
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
                         handleAddLink()
                     }
+                    .confirmationToolbarItemStyle()
                     .disabled(sanitizedURL == nil)
                 }
+                #endif
             }
         }
     }

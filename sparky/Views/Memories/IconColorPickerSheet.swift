@@ -51,6 +51,7 @@ struct IconColorPickerSheet: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .confirmationToolbarItemStyle()
                 }
             }
         }

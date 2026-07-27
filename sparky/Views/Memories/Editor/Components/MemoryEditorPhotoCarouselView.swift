@@ -38,6 +38,7 @@ struct MemoryEditorPhotoCarouselView: View {
                     } label: {
                         Label("Close", systemImage: "xmark")
                     }
+                    .neutralToolbarItemStyle(.white)
                 }
             }
         }

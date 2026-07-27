@@ -141,12 +141,28 @@ struct ScheduledTriggerEditorScreen: View {
         }
         .navigationTitle("Date & Time")
         .inlinePhoneNavigationTitle()
+        #if os(macOS)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            DesktopPopoverActionBar(
+                confirmationAccessibilityLabel: existingConfig == nil ? "Add Date and Time Trigger" : "Save Date and Time Trigger",
+                isConfirmationDisabled: !isValid,
+                destructiveAccessibilityLabel: existingConfig == nil ? nil : "Remove Date and Time Trigger",
+                onCancel: dismiss.callAsFunction,
+                onConfirm: applyChanges,
+                onDestructive: removeConfigAction
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        #endif
         .toolbar {
+            #if os(iOS)
             if showsCloseButton {
                 ToolbarItem(placement: .navigation) {
                     Button(action: dismiss.callAsFunction) {
                         Image(systemName: "xmark")
                     }
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Close")
                 }
             }
@@ -154,6 +170,7 @@ struct ScheduledTriggerEditorScreen: View {
                 Button(role: .confirm, action: applyChanges) {
                     Image(systemName: "checkmark")
                 }
+                .confirmationToolbarItemStyle()
                 .disabled(!isValid)
                 .accessibilityLabel(existingConfig == nil ? "Add" : "Save")
             }
@@ -162,9 +179,11 @@ struct ScheduledTriggerEditorScreen: View {
                     Button(role: .destructive, action: removeConfig) {
                         Image(systemName: "trash")
                     }
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Remove date & time trigger")
                 }
             }
+            #endif
         }
     }
 
@@ -251,6 +270,11 @@ struct ScheduledTriggerEditorScreen: View {
     private func removeConfig() {
         viewModel.removeScheduleConfig()
         dismiss()
+    }
+
+    private var removeConfigAction: (() -> Void)? {
+        guard existingConfig != nil else { return nil }
+        return { removeConfig() }
     }
 
     // MARK: - Helper Methods

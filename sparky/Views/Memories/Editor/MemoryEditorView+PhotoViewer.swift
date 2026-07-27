@@ -67,6 +67,7 @@ extension MemoryEditorView {
                     } label: {
                         Label("Close", systemImage: "xmark")
                     }
+                    .neutralToolbarItemStyle(.white)
                 }
             }
         }

@@ -21,6 +21,10 @@ struct MemoryEditorAttachmentsCard: View {
 
     // Grid Setup
     private let gridSpacing: CGFloat = 8
+    #if os(macOS)
+    private let desktopAddAttachmentTileSize: CGFloat = 96
+    #endif
+
     private var gridColumns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: gridSpacing), count: 3)
     }
@@ -56,12 +60,24 @@ struct MemoryEditorAttachmentsCard: View {
     @ViewBuilder
     private var addAttachmentButton: some View {
         #if os(macOS)
-        squareCell { _ in
-            ZStack {
-                addAttachmentTile
-                addAttachmentMenuOverlay
-            }
+        ZStack {
+            addAttachmentTile
+            DesktopAttachmentMenuButton(
+                supportsCameraCapture: PlatformCapabilities.current.supportsCameraCapture,
+                supportsMicrophoneRecord: PlatformCapabilities.current.supportsMicrophoneRecord,
+                onAddPhoto: onAddPhoto,
+                onAddCamera: onAddCamera,
+                onAddLink: onAddLink,
+                onAddAudio: onAddAudio,
+                onAddFile: onAddFile
+            )
+            .frame(
+                width: desktopAddAttachmentTileSize,
+                height: desktopAddAttachmentTileSize
+            )
         }
+        .frame(width: desktopAddAttachmentTileSize, height: desktopAddAttachmentTileSize)
+        .frame(maxWidth: .infinity, alignment: .leading)
         #else
         Menu {
             attachmentMenuItems
@@ -86,24 +102,6 @@ struct MemoryEditorAttachmentsCard: View {
         .neutralButtonStyle(cornerRadius: 16, verticalPadding: 0)
         .foregroundStyle(.secondary)
     }
-
-    #if os(macOS)
-    private var addAttachmentMenuOverlay: some View {
-        Menu {
-            attachmentMenuItems
-        } label: {
-            Color.clear
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .accessibilityLabel("Add Media")
-    }
-    #endif
 
     @ViewBuilder
     private var attachmentMenuItems: some View {

@@ -51,6 +51,7 @@ struct MeView: View {
                         Label("Open settings", systemImage: "gearshape")
                             .labelStyle(.iconOnly)
                     }
+                    .neutralToolbarItemStyle()
                     .help("Settings")
                     .accessibilityLabel("Open settings")
                     #else
@@ -60,6 +61,7 @@ struct MeView: View {
                         Label("Open settings", systemImage: "gearshape")
                             .labelStyle(.iconOnly)
                     }
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Open settings")
                     #endif
                 }

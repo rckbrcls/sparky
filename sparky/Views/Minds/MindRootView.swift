@@ -39,6 +39,7 @@ struct MindRootView: View {
                         Image(systemName: "plus")
                             .foregroundStyle(Color.Theme.textPrimary)
                     }
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Add Mind")
                 }
             }

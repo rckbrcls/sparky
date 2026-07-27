@@ -20,10 +20,12 @@ struct LocationPickerView: View {
     @State private var cameraCooldownTask: Task<Void, Never>?
     @FocusState private var isSearchFieldFocused: Bool
     private let showsCloseButton: Bool
+    private let onRemove: (() -> Void)?
     let onAdd: (String, Double, Double, Double, LocationEvent) -> Void
 
     init(
         showsCloseButton: Bool = true,
+        onRemove: (() -> Void)? = nil,
         onAdd: @escaping (String, Double, Double, Double, LocationEvent) -> Void
     ) {
         let fallback = CLLocationManager().location?.coordinate
@@ -45,6 +47,7 @@ struct LocationPickerView: View {
         _geocodeTask = State(initialValue: nil)
         _cameraCooldownTask = State(initialValue: nil)
         self.showsCloseButton = showsCloseButton
+        self.onRemove = onRemove
         self.onAdd = onAdd
     }
 
@@ -66,28 +69,40 @@ struct LocationPickerView: View {
         .background(Color.Theme.groupedBackground.ignoresSafeArea())
         .navigationTitle("Location Trigger")
         .inlinePhoneNavigationTitle()
+        #if os(macOS)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            DesktopPopoverActionBar(
+                confirmationAccessibilityLabel: "Confirm Location Trigger",
+                isConfirmationDisabled: isLocationConfirmationDisabled,
+                destructiveAccessibilityLabel: onRemove == nil ? nil : "Remove Location Trigger",
+                onCancel: dismiss.callAsFunction,
+                onConfirm: confirmSelection,
+                onDestructive: removeAction
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        #endif
         .toolbar {
+            #if os(iOS)
             if showsCloseButton {
                 ToolbarItem(placement: .navigation) {
                     Button(action: dismiss.callAsFunction) {
                         Image(systemName: "xmark")
                     }
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Close")
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button(role: .confirm) {
-                    guard let coordinate = selectedCoordinate else { return }
-                    let name = resolvedLocationName
-                    onAdd(name, coordinate.latitude, coordinate.longitude, defaultRadius, event)
-                    dismiss()
-                }
-                label: {
+                Button(role: .confirm, action: confirmSelection) {
                     Image(systemName: "checkmark")
                 }
+                .confirmationToolbarItemStyle()
                 .accessibilityLabel("Confirm Location Trigger")
-                .disabled(isSearching || selectedCoordinate == nil)
+                .disabled(isLocationConfirmationDisabled)
             }
+            #endif
         }
         .onReceive(searchModel.$isSearching) { value in
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -137,9 +152,19 @@ private extension LocationPickerView {
         dismiss()
     }
 
+    var isLocationConfirmationDisabled: Bool {
+        isSearching || selectedCoordinate == nil
+    }
 
+    var removeAction: (() -> Void)? {
+        guard onRemove != nil else { return nil }
+        return { removeLocationTrigger() }
+    }
 
-
+    func removeLocationTrigger() {
+        onRemove?()
+        dismiss()
+    }
 
     func mapView(allowsSelection: Bool) -> some View {
         MapContainer(

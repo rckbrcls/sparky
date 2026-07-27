@@ -113,6 +113,7 @@ struct MemoryTimelineView: View {
                             } label: {
                                 Text(backButtonTitle)
                             }
+                            .neutralToolbarItemStyle()
                         }
                     }
 
@@ -123,12 +124,14 @@ struct MemoryTimelineView: View {
                             } label: {
                                 Text("Today")
                             }
+                            .neutralToolbarItemStyle()
                         }
                         Button {
                             toggleMultiSelection()
                         } label: {
                             Label("Select", systemImage: "checkmark.circle")
                         }
+                        .neutralToolbarItemStyle()
                         .disabled(isPerformingBulkAction)
                     }
                 }

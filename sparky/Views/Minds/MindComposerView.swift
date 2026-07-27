@@ -206,6 +206,7 @@ struct MindComposerView: View {
                     } label: {
                         Label("Cancel", systemImage: "xmark")
                     }
+                    .neutralToolbarItemStyle()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm) {
@@ -213,6 +214,7 @@ struct MindComposerView: View {
                     } label: {
                         Label("Save", systemImage: "checkmark")
                     }
+                    .confirmationToolbarItemStyle()
                     .disabled(!canSave)
                 }
             }
@@ -255,44 +257,15 @@ struct MindComposerView: View {
         composerScrollContent
             .background(Color.clear)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                desktopPopoverActions
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-            }
-    }
-
-    private var desktopPopoverActions: some View {
-        GlassEffectContainer(spacing: 8) {
-            HStack(spacing: 8) {
-                Button(role: .cancel) {
-                    dismiss()
-                } label: {
-                    Label("Cancel", systemImage: "xmark")
-                        .padding(.horizontal, 14)
-                        .frame(height: 34)
-                }
-                .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .capsule)
-
-                Spacer()
-
-                Button(role: .confirm) {
-                    saveMind()
-                } label: {
-                    Label("Save", systemImage: "checkmark")
-                        .padding(.horizontal, 14)
-                        .frame(height: 34)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.Theme.accentForeground)
-                .glassEffect(
-                    .regular.interactive().tint(Color.accentColor),
-                    in: .capsule
+                DesktopPopoverActionBar(
+                    confirmationAccessibilityLabel: "Save Mind",
+                    isConfirmationDisabled: !canSave,
+                    onCancel: dismiss.callAsFunction,
+                    onConfirm: saveMind
                 )
-                .disabled(!canSave)
-                .opacity(canSave ? 1 : 0.45)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-        }
     }
     #endif
 

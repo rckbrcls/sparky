@@ -49,6 +49,7 @@ struct FocusTabView: View {
                                 hasLocalQuickOverrides = true
                             }
                         )
+                        .neutralToolbarItemStyle()
                     }
                 }
             }

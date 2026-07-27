@@ -94,6 +94,7 @@ struct DesktopRootView: View {
                     .labelsHidden()
                     .pickerStyle(.segmented)
                     .fixedSize(horizontal: true, vertical: false)
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Calendar view")
                 }
             }
@@ -107,6 +108,7 @@ struct DesktopRootView: View {
                     } label: {
                         Label("Search", systemImage: "magnifyingglass")
                     }
+                    .neutralToolbarItemStyle()
                     .keyboardShortcut("f", modifiers: [.command])
                     .help("Search Memories")
                     .popover(
@@ -127,6 +129,7 @@ struct DesktopRootView: View {
                         Image(systemName: "plus")
                             .foregroundStyle(Color.Theme.textPrimary)
                     }
+                    .neutralToolbarItemStyle()
                     .help("Add Mind")
                     .accessibilityLabel("Add Mind")
                     .popover(

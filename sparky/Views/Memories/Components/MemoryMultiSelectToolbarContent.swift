@@ -23,16 +23,20 @@ struct MemoryMultiSelectToolbarContent: ToolbarContent {
             Button(role: .destructive, action: onDelete) {
                 Image(systemName: "trash")
             }
+            .neutralToolbarItemStyle()
             .disabled(!canPerformDeletion || isPerformingBulkAction)
             .accessibilityLabel("Delete selected memories")
 
             statusMenu
+                .neutralToolbarItemStyle()
             mindMenu
+                .neutralToolbarItemStyle()
 
             Button(action: onDone) {
                 Text("Done")
                     .fontWeight(.semibold)
             }
+            .confirmationToolbarItemStyle()
             .disabled(isPerformingBulkAction)
         }
     }

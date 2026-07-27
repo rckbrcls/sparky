@@ -550,9 +550,44 @@ struct MemoryEditorView: View {
 
     }
 
+    private func saveCreatedMemoryAndDismiss() {
+        Task {
+            let success = await viewModel.save()
+            if success {
+                await MainActor.run {
+                    resignEditorFocus()
+                    dismiss()
+                }
+            }
+        }
+    }
 
+    private func saveEditedMemoryAndShowPreview() {
+        resignEditorFocus()
 
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            isEditingEnabled = false
+        }
 
+        Task {
+            _ = await viewModel.save()
+        }
+    }
+
+    private func confirmMemoryChanges() {
+        switch mode {
+        case .create:
+            saveCreatedMemoryAndDismiss()
+        case .edit:
+            saveEditedMemoryAndShowPreview()
+        }
+    }
+
+    private func resignEditorFocus() {
+        PlatformOpen.resignFirstResponder()
+        isTitleFocused = false
+        focusedDraftID = nil
+    }
 
     private var baseEditorContainer: some View {
 
@@ -567,9 +602,17 @@ struct MemoryEditorView: View {
             editorContent
 
                 .safeAreaInset(edge: .bottom) {
-
+                    #if os(macOS)
+                    if showsDesktopPopoverActionBar {
+                        desktopPopoverActionBar
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                    } else {
+                        Color.clear.frame(height: 20)
+                    }
+                    #else
                     Color.clear.frame(height: 20)
-
+                    #endif
                 }
 
         }
@@ -622,6 +665,48 @@ struct MemoryEditorView: View {
 
     }
 
+    private var showsDesktopPopoverActionBar: Bool {
+        #if os(macOS)
+        guard presentationStyle == .desktopPopover else { return false }
+
+        switch mode {
+        case .create:
+            return true
+        case .edit:
+            return isEditingEnabled
+        }
+        #else
+        false
+        #endif
+    }
+
+    #if os(macOS)
+    private var desktopPopoverActionBar: some View {
+        DesktopPopoverActionBar(
+            confirmationAccessibilityLabel: saveButtonTitle,
+            isConfirmationDisabled: isSaveDisabled,
+            destructiveAccessibilityLabel: desktopDeleteAccessibilityLabel,
+            onCancel: dismiss.callAsFunction,
+            onConfirm: confirmMemoryChanges,
+            onDestructive: desktopDeleteAction
+        )
+    }
+
+    private var desktopDeleteAccessibilityLabel: String? {
+        if case .edit = mode {
+            return "Delete Memory"
+        }
+        return nil
+    }
+
+    private var desktopDeleteAction: (() -> Void)? {
+        if case .edit = mode {
+            return { showDeleteConfirmation = true }
+        }
+        return nil
+    }
+    #endif
+
 
 
     private var editorContent: some View {
@@ -636,14 +721,17 @@ struct MemoryEditorView: View {
 
             ToolbarItem(placement: .cancellationAction) {
 
-                Button(role: .cancel) {
+                if !showsDesktopPopoverActionBar {
+                    Button(role: .cancel) {
 
-                    dismiss()
+                        dismiss()
 
-                } label: {
+                    } label: {
 
-                    Label("Cancel", systemImage: "xmark")
+                        Label("Cancel", systemImage: "xmark")
 
+                    }
+                    .neutralToolbarItemStyle()
                 }
 
             }
@@ -652,37 +740,17 @@ struct MemoryEditorView: View {
 
             ToolbarItem(placement: .confirmationAction) {
 
-                if case .create = mode {
+                if case .create = mode, !showsDesktopPopoverActionBar {
 
                     Button(role: .confirm) {
-
-                        Task {
-
-                            let success = await viewModel.save()
-
-                            if success {
-
-                                await MainActor.run {
-
-                                    PlatformOpen.resignFirstResponder()
-
-                                    isTitleFocused = false
-
-                                    focusedDraftID = nil
-
-                                    dismiss()
-
-                                }
-
-                            }
-
-                        }
+                        saveCreatedMemoryAndDismiss()
 
                     } label: {
 
                         Label(saveButtonTitle, systemImage: "checkmark")
 
                     }
+                    .confirmationToolbarItemStyle()
 
                     .disabled(isSaveDisabled)
 
@@ -710,9 +778,8 @@ struct MemoryEditorView: View {
 
                               systemImage: viewModel.isPinned ? "pin.fill" : "pin")
 
-                        .foregroundStyle(viewModel.isPinned ? Color.accentColor : .primary)
-
                     }
+                    .neutralToolbarItemStyle()
 
                     .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
 
@@ -720,39 +787,15 @@ struct MemoryEditorView: View {
 
                     // Checkmark button: Save and switch to View
 
-                    Button {
-
-                        // Optimistic UI: Switch to View mode immediately
-
-                        PlatformOpen.resignFirstResponder()
-
-                        isTitleFocused = false
-
-                            focusedDraftID = nil
-
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-
-                                isEditingEnabled = false
-
-                            }
-
-
-
-                            // Perform save in background
-
-                            Task {
-
-                                _ = await viewModel.save()
-
-                            }
-
+                    if !showsDesktopPopoverActionBar {
+                        Button {
+                            saveEditedMemoryAndShowPreview()
                         } label: {
-
                             Label("Save", systemImage: "checkmark")
-
                         }
-
+                        .confirmationToolbarItemStyle()
                         .disabled(isSaveDisabled)
+                    }
 
                     } else {
 
@@ -765,6 +808,7 @@ struct MemoryEditorView: View {
                             } label: {
                                 Label("Focus", systemImage: "timer")
                             }
+                            .neutralToolbarItemStyle()
                             .accessibilityLabel("Start Focus")
                         }
 
@@ -783,6 +827,7 @@ struct MemoryEditorView: View {
                             Label("Edit", systemImage: "pencil")
 
                         }
+                        .neutralToolbarItemStyle()
 
                     }
 
@@ -800,16 +845,17 @@ struct MemoryEditorView: View {
 
                 ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
 
-                    Button(role: .destructive) {
+                    if !showsDesktopPopoverActionBar {
+                        Button(role: .destructive) {
 
-                        showDeleteConfirmation = true
+                            showDeleteConfirmation = true
 
-                    } label: {
+                        } label: {
 
-                        Image(systemName: "trash")
+                            Image(systemName: "trash")
 
-                            .foregroundStyle(.red)
-
+                        }
+                        .neutralToolbarItemStyle()
                     }
 
                     Spacer()
@@ -827,6 +873,7 @@ struct MemoryEditorView: View {
                             .labelStyle(.titleAndIcon)
 
                     }
+                    .neutralToolbarItemStyle()
 
                 }
 
@@ -857,6 +904,7 @@ struct MemoryEditorView: View {
                             .labelStyle(.titleAndIcon)
 
                     }
+                    .neutralToolbarItemStyle()
 
                 }
 

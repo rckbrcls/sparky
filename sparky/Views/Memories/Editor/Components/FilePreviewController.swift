@@ -98,6 +98,7 @@ struct FilePreviewController: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
+                        .neutralToolbarItemStyle()
                 }
             }
         }

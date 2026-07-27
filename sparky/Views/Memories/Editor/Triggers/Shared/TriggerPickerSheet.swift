@@ -37,6 +37,7 @@ struct TriggerPickerSheet: View {
                             .font(.body.weight(.semibold))
                             .foregroundColor(.secondary)
                     }
+                    .neutralToolbarItemStyle(Color.Theme.textSecondary)
                     .accessibilityLabel("Close")
                 }
             }

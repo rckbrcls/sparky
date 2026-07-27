@@ -40,6 +40,7 @@ struct ContentFilterSheetView: View {
                     } label: {
                         Label("Cancel", systemImage: "xmark")
                     }
+                    .neutralToolbarItemStyle()
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
@@ -47,6 +48,7 @@ struct ContentFilterSheetView: View {
                     } label: {
                         Label("Done", systemImage: "checkmark")
                     }
+                    .confirmationToolbarItemStyle()
                 }
             }
         }

@@ -29,6 +29,7 @@ struct FocusSessionView: View {
                     Button("Close") {
                         onClose()
                     }
+                    .neutralToolbarItemStyle()
                     .accessibilityLabel("Close Focus")
                 }
             }

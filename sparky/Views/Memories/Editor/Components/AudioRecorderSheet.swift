@@ -83,6 +83,7 @@ struct AudioRecorderSheet: View {
                         stopRecording(shouldSave: false)
                         dismiss()
                     }
+                    .neutralToolbarItemStyle()
                 }
             }
             .onDisappear {

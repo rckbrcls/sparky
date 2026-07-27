@@ -230,6 +230,7 @@ struct MemorySearchSheet: View {
                         Image(systemName: "xmark")
                             .fontWeight(.medium)
                     }
+                    .neutralToolbarItemStyle()
                 }
             }
             .background(Color.Theme.groupedBackground)

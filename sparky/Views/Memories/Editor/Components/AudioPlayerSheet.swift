@@ -88,6 +88,7 @@ struct AudioPlayerSheet: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .confirmationToolbarItemStyle()
                 }
             }
             .onAppear {

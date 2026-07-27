@@ -260,6 +260,7 @@ struct MindDetailView: View {
                     } label: {
                         Image(systemName: "chevron.left")
                     }
+                    .neutralToolbarItemStyle()
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -314,6 +315,7 @@ struct MindDetailView: View {
                     } label: {
                         Image(systemName: selectedTriggerTypes.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
                     }
+                    .neutralToolbarItemStyle()
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -341,6 +343,7 @@ struct MindDetailView: View {
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
+                    .neutralToolbarItemStyle()
                     .platformSheet(isPresented: $isSearching) {
                         MemorySearchSheet(
                             mind: resolvedMind,

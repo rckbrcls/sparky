@@ -8,16 +8,45 @@ struct ExpandedMapScreen<MapContent: View>: View {
     let onSuggestionSelected: (MKLocalSearchCompletion) -> Void
     let onConfirm: () -> Void
     let onDismiss: () -> Void
-    
+
+    @State private var pendingEvent: LocationEvent
     // This State property controls the presentation detent.
     // We start with a smaller detent so the map is visible.
     @State private var presentationDetent: PresentationDetent = .height(120)
     @FocusState private var isSearchFocused: Bool
-    
+
+    init(
+        searchModel: LocationSearchViewModel,
+        event: Binding<LocationEvent>,
+        @ViewBuilder mapContent: @escaping () -> MapContent,
+        onSuggestionSelected: @escaping (MKLocalSearchCompletion) -> Void,
+        onConfirm: @escaping () -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.searchModel = searchModel
+        _event = event
+        self.mapContent = mapContent
+        self.onSuggestionSelected = onSuggestionSelected
+        self.onConfirm = onConfirm
+        self.onDismiss = onDismiss
+        _pendingEvent = State(initialValue: event.wrappedValue)
+    }
+
     var body: some View {
         NavigationStack {
             mapContent()
                 .ignoresSafeArea()
+                #if os(macOS)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    DesktopPopoverActionBar(
+                        confirmationAccessibilityLabel: "Set Area",
+                        onCancel: onDismiss,
+                        onConfirm: commitArea
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                #endif
                 .platformSheet(isPresented: .constant(true))
             {
                 VStack(spacing: 20) {
@@ -42,7 +71,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
                     .padding(12)
                     .glassEffect()
                     .padding(.horizontal)
-                    
+
                     // Content switching based on search state
                     if isSearchFocused || !searchModel.query.isEmpty {
                         ScrollView {
@@ -72,7 +101,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
                             .padding(.horizontal)
                         }
                     }
-                    
+
                     Spacer()
                 }
                 .padding(.top)
@@ -92,7 +121,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Menu {
-                        Picker("Trigger", selection: $event) {
+                        Picker("Trigger", selection: $pendingEvent) {
                             Label(LocationEvent.onEntry.displayName, systemImage: "arrow.down.right.circle.fill")
                                 .tag(LocationEvent.onEntry)
                             Label(LocationEvent.onExit.displayName, systemImage: "arrow.up.right.circle.fill")
@@ -100,7 +129,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
                         }
                     } label: {
                         HStack(spacing: 6) {
-                            Text(event.displayName)
+                            Text(pendingEvent.displayName)
                                 .fontWeight(.semibold)
                             Image(systemName: "chevron.down")
                                 .font(.caption)
@@ -112,11 +141,14 @@ struct ExpandedMapScreen<MapContent: View>: View {
                         .padding(.vertical, 14)
                         .glassEffect()
                     }
+                    .neutralToolbarItemStyle()
                 }
+                #if os(iOS)
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Set Area", action: onConfirm)
+                    Button("Set Area", action: commitArea)
                         .fontWeight(.semibold)
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.glass)
+                        .confirmationToolbarItemStyle()
                 }
                 ToolbarItem(placement: .navigation) {
                     Button(action: onDismiss) {
@@ -125,8 +157,18 @@ struct ExpandedMapScreen<MapContent: View>: View {
                             .foregroundColor(.secondary)
                             .symbolRenderingMode(.hierarchical)
                     }
+                    .neutralToolbarItemStyle(Color.Theme.textSecondary)
                 }
+                #endif
             }
         }
+        .onAppear {
+            pendingEvent = event
+        }
+    }
+
+    private func commitArea() {
+        event = pendingEvent
+        onConfirm()
     }
 }
