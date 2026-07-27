@@ -26,6 +26,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundColor(.secondary)
                         TextField("Search for a place...", text: $searchModel.query)
+                            .textFieldStyle(.plain)
                             .focused($isSearchFocused)
                             .submitLabel(.search)
                         if !searchModel.query.isEmpty {

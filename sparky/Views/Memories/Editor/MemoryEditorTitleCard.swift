@@ -59,6 +59,7 @@ struct MemoryEditorTitleCard: View {
 
                 if isEditingEnabled {
                     TextField("Memory", text: $viewModel.title, axis: .vertical)
+                        .textFieldStyle(.plain)
                         .font(.custom("Baskerville", size: 20))
                         .multilineTextAlignment(.leading)
                         .submitLabel(.done)

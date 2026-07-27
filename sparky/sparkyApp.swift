@@ -27,6 +27,7 @@ struct sparkyApp: App {
                 .environmentObject(appEnvironment)
                 .environmentObject(themeManager)
                 .preferredColorScheme(themeManager.preferredColorScheme)
+                .tint(Color.accentColor)
                 .task {
                     appEnvironment.bootstrap()
                 }

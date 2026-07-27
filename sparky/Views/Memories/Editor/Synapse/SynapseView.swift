@@ -23,6 +23,7 @@ struct SynapseView: View {
                 .buttonStyle(.plain)
                 
                 TextField("Title", text: $item.title, axis: .vertical)
+                    .textFieldStyle(.plain)
                     .font(.callout)
                     .foregroundStyle(item.isCompleted ? .secondary : .primary)
                     .strikethrough(item.isCompleted, color: .secondary)
@@ -49,6 +50,7 @@ struct SynapseView: View {
 
             if isEditable || !item.detail.isEmpty {
                 TextField("Description", text: $item.detail, axis: .vertical)
+                    .textFieldStyle(.plain)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .strikethrough(item.isCompleted, color: .secondary)

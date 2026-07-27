@@ -38,6 +38,7 @@ struct sparkyMacApp: App {
                 .environmentObject(appEnvironment)
                 .environmentObject(themeManager)
                 .preferredColorScheme(themeManager.preferredColorScheme)
+                .textFieldStyle(.plain)
                 .task {
                     appEnvironment.bootstrap()
                 }
@@ -70,6 +71,7 @@ struct sparkyMacApp: App {
                 .environmentObject(appEnvironment)
                 .environmentObject(themeManager)
                 .preferredColorScheme(themeManager.preferredColorScheme)
+                .textFieldStyle(.plain)
         }
     }
 }

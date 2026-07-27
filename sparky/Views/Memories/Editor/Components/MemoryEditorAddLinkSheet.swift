@@ -13,6 +13,7 @@ struct MemoryEditorAddLinkSheet: View {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
                     TextField("https://example.com", text: $urlString, axis: .vertical)
+                        .textFieldStyle(.plain)
                         .autocorrectionDisabled()
                         .padding()
                         .glassEffect(in: .rect(cornerRadius: 12.0))
