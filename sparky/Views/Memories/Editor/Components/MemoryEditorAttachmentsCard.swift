@@ -56,51 +56,76 @@ struct MemoryEditorAttachmentsCard: View {
     @ViewBuilder
     private var addAttachmentButton: some View {
         #if os(macOS)
-        addAttachmentMenu
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .buttonStyle(.plain)
+        squareCell { _ in
+            ZStack {
+                addAttachmentTile
+                addAttachmentMenuOverlay
+            }
+        }
         #else
-        addAttachmentMenu
-            .menuIndicator(.hidden)
+        Menu {
+            attachmentMenuItems
+        } label: {
+            squareCell { _ in
+                addAttachmentTile
+            }
+        }
+        .foregroundStyle(.secondary)
         #endif
     }
 
-    private var addAttachmentMenu: some View {
-        Menu {
-            Button(action: onAddPhoto) {
-                Label("Library", systemImage: "photo")
-            }
-            if PlatformCapabilities.current.supportsCameraCapture {
-                Button(action: onAddCamera) {
-                    Label("Camera", systemImage: "camera")
-                }
-            }
-            Button(action: onAddLink) {
-                Label("Link", systemImage: "link")
-            }
-            if PlatformCapabilities.current.supportsMicrophoneRecord {
-                Button(action: onAddAudio) {
-                    Label("Audio", systemImage: "mic")
-                }
-            }
-            Button(action: onAddFile) {
-                Label("File", systemImage: "doc")
-            }
-        } label: {
-            VStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .semibold))
-                Text("Add Media")
-                    .font(.caption2.weight(.medium))
-                    .padding(.horizontal, 8)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .neutralButtonStyle(cornerRadius: 16, verticalPadding: 0)
+    private var addAttachmentTile: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .semibold))
+            Text("Add Media")
+                .font(.caption2.weight(.medium))
+                .padding(.horizontal, 8)
         }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .neutralButtonStyle(cornerRadius: 16, verticalPadding: 0)
         .foregroundStyle(.secondary)
+    }
+
+    #if os(macOS)
+    private var addAttachmentMenuOverlay: some View {
+        Menu {
+            attachmentMenuItems
+        } label: {
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .accessibilityLabel("Add Media")
+    }
+    #endif
+
+    @ViewBuilder
+    private var attachmentMenuItems: some View {
+        Button(action: onAddPhoto) {
+            Label("Library", systemImage: "photo")
+        }
+        if PlatformCapabilities.current.supportsCameraCapture {
+            Button(action: onAddCamera) {
+                Label("Camera", systemImage: "camera")
+            }
+        }
+        Button(action: onAddLink) {
+            Label("Link", systemImage: "link")
+        }
+        if PlatformCapabilities.current.supportsMicrophoneRecord {
+            Button(action: onAddAudio) {
+                Label("Audio", systemImage: "mic")
+            }
+        }
+        Button(action: onAddFile) {
+            Label("File", systemImage: "doc")
+        }
     }
 
     @ViewBuilder
