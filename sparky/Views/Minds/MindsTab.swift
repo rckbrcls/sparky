@@ -12,19 +12,42 @@ struct MindsTab: View {
     @ObservedObject var memoryService: MemoryService
 
     let onEditMind: ((Mind) -> Void)?
+    let onCreateMind: (() -> Void)?
 
+    #if os(macOS)
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+    #else
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
+    #endif
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Minds")
-                    .appLargeTitleStyle()
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
+                HStack(alignment: .center) {
+                    Text("Minds")
+                        .appLargeTitleStyle()
+
+                    Spacer()
+
+                    #if os(macOS)
+                    if let onCreateMind {
+                        Button(action: onCreateMind) {
+                            Label("New Mind", systemImage: "folder.badge.plus")
+                        }
+                        .buttonStyle(.bordered)
+                        .help("New Mind")
+                    }
+                    #endif
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
 
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(displayMinds, id: \.id) { mind in

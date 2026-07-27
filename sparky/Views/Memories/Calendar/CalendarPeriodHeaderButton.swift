@@ -13,9 +13,13 @@ struct CalendarPeriodHeaderButton: View {
     let isExpanded: Bool
     let onToggle: () -> Void
 
+    private var accessibilityCount: String {
+        count == 1 ? "1 memory" : "\(count) memories"
+    }
+
     var body: some View {
         Button(action: onToggle) {
-            HStack {
+            HStack(spacing: 6) {
                 Image(systemName: period.iconName)
                     .font(.caption2)
 
@@ -32,14 +36,14 @@ struct CalendarPeriodHeaderButton: View {
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
             }
             .foregroundStyle(Color.Theme.accentForeground)
-            .padding(6)
-            .background(Color.accentColor)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.accentColor.opacity(0.8), lineWidth: 1)
-            )
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(period.color, in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(period.title), \(accessibilityCount)")
+        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+        .accessibilityHint(isExpanded ? "Collapses this period" : "Expands this period")
     }
 }

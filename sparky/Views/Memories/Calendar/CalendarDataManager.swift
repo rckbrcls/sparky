@@ -20,6 +20,9 @@ final class CalendarDataManager: ObservableObject {
     /// Cache of memories grouped by day (start of day as key)
     private var memoriesByDay: [Date: [Memory]] = [:]
 
+    /// Cache of concrete occurrences grouped by day.
+    private var occurrencesByDay: [Date: [MemoryOccurrence]] = [:]
+
     /// Cache of months that have memories
     private var monthsWithMemories: Set<Date> = []
 
@@ -31,6 +34,7 @@ final class CalendarDataManager: ObservableObject {
 
     /// Flag to track if initial load is complete
     @Published private(set) var isInitialLoadComplete = false
+    @Published private(set) var revision = 0
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -48,6 +52,34 @@ final class CalendarDataManager: ObservableObject {
     func memoriesForDate(_ date: Date) -> [Memory] {
         let dayKey = calendar.startOfDay(for: date)
         return memoriesByDay[dayKey] ?? []
+    }
+
+    /// Get every concrete occurrence for a specific date.
+    func occurrencesForDate(_ date: Date) -> [MemoryOccurrence] {
+        let dayKey = calendar.startOfDay(for: date)
+        return occurrencesByDay[dayKey] ?? []
+    }
+
+    /// Get concrete occurrences within a half-open date range.
+    func occurrences(from startDate: Date, to endDate: Date) -> [MemoryOccurrence] {
+        guard startDate < endDate else { return [] }
+
+        var result: [MemoryOccurrence] = []
+        var day = calendar.startOfDay(for: startDate)
+
+        while day < endDate {
+            result.append(
+                contentsOf: (occurrencesByDay[day] ?? []).filter {
+                    $0.occurrenceDate >= startDate && $0.occurrenceDate < endDate
+                }
+            )
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: day) else {
+                break
+            }
+            day = nextDay
+        }
+
+        return result.sorted { $0.occurrenceDate < $1.occurrenceDate }
     }
 
     /// Get memories for a specific day number in a month
@@ -141,6 +173,7 @@ final class CalendarDataManager: ObservableObject {
     /// Clear the cache and reset loaded tracking
     func clearCache() {
         memoriesByDay.removeAll()
+        occurrencesByDay.removeAll()
         monthsWithMemories.removeAll()
         loadedYears.removeAll()
         loadedMonths.removeAll()
@@ -165,6 +198,7 @@ final class CalendarDataManager: ObservableObject {
         let months = loadedMonths
 
         memoriesByDay.removeAll()
+        occurrencesByDay.removeAll()
         monthsWithMemories.removeAll()
         loadedYears.removeAll()
         loadedMonths.removeAll()
@@ -178,12 +212,9 @@ final class CalendarDataManager: ObservableObject {
     }
 
     private func loadInitialData() {
-        // Load current year and adjacent months for initial view
+        // Load the current month only. Visible surfaces request any boundary months.
         let now = Date()
-        let currentYear = calendar.component(.year, from: now)
-
-        // Load current year
-        loadYear(currentYear)
+        ensureMonthLoaded(normalizeToMonth(now))
 
         isInitialLoadComplete = true
     }
@@ -228,13 +259,20 @@ final class CalendarDataManager: ObservableObject {
 
             for occurrence in occurrences {
                 let dayKey = calendar.startOfDay(for: occurrence)
+                let concreteOccurrence = MemoryOccurrence(
+                    memory: memory,
+                    occurrenceDate: occurrence
+                )
 
-                // Avoid duplicates
-                if memoriesByDay[dayKey]?.contains(where: { $0.id == memory.id }) == true {
-                    continue
+                if occurrencesByDay[dayKey]?.contains(where: {
+                    $0.id == concreteOccurrence.id
+                }) != true {
+                    occurrencesByDay[dayKey, default: []].append(concreteOccurrence)
                 }
 
-                memoriesByDay[dayKey, default: []].append(memory)
+                if memoriesByDay[dayKey]?.contains(where: { $0.id == memory.id }) != true {
+                    memoriesByDay[dayKey, default: []].append(memory)
+                }
 
                 let monthKey = normalizeToMonth(occurrence)
                 monthsWithMemories.insert(monthKey)
@@ -256,7 +294,12 @@ final class CalendarDataManager: ObservableObject {
                 let rhsDate = rhs.nextFireDate(referenceDate: dayKey) ?? .distantFuture
                 return lhsDate < rhsDate
             }
+            occurrencesByDay[dayKey]?.sort {
+                $0.occurrenceDate < $1.occurrenceDate
+            }
         }
+
+        revision &+= 1
     }
 
     private func normalizeToMonth(_ date: Date) -> Date {

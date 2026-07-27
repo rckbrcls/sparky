@@ -23,10 +23,12 @@ struct MindRootView: View {
             MindsTab(
                 mindService: mindService,
                 memoryService: memoryService,
-                onEditMind: onEditMind
+                onEditMind: onEditMind,
+                onCreateMind: onCreateMind
             )
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
             .toolbarTitleDisplayMode(.inline)
+            #if os(iOS)
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height: 70)
             }
@@ -41,6 +43,7 @@ struct MindRootView: View {
                     .accessibilityLabel("Add Mind")
                 }
             }
+            #endif
             .navigationDestination(for: Mind.self) { mind in
                 MindDetailView(
                     mind: mind,

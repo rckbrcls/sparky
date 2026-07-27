@@ -76,6 +76,7 @@ struct ScheduledTriggerEditorScreen: View {
             // Section 2: Repeat
             Section {
                 Toggle("Repeat", isOn: $isRepeating.animation(.easeInOut(duration: 0.2)))
+                    .toggleStyle(.switch)
 
                 if isRepeating {
                     // Frequency picker

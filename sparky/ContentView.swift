@@ -50,6 +50,7 @@ struct ContentView: View {
     @State private var isSearchActive = false
     @State private var currentMindContext: Mind?
     @State private var quickMemoryRequest: QuickMemoryRequest?
+    @State private var pendingEditorRoute: MemoryEditorRoute?
     @State private var longPressTimer: Timer?
     @State private var hasTriggeredLongPress = false
     @State private var unavailableMemoryAlertMessage: String?
@@ -70,6 +71,7 @@ struct ContentView: View {
                         onSelectMemory: handleMemorySelection,
                         onEditMemory: handleMemoryEdit,
                         onMultiSelectionChange: handleMultiSelectionChange,
+                        onCreateMemory: presentCalendarQuickMemory,
                         navigationPath: $calendarNavigationPath,
                         embedsInNavigationStack: true
                     )
@@ -104,7 +106,10 @@ struct ContentView: View {
                 }
 
                 Tab.init(value: .me){
-                    MeView(environment: environment, settingsNavigationPath: $meNavigationPath)
+                    MeView(
+                        environment: environment,
+                        settingsNavigationPath: $meNavigationPath
+                    )
                         .tabBarSpacer()
                 }
             }
@@ -131,7 +136,8 @@ struct ContentView: View {
                 MemoryEditorView(
                     environment: environment,
                     mode: .create(mind: mind, template: template),
-                    initialTitle: route.initialTitle
+                    initialTitle: route.initialTitle,
+                    initialScheduleConfig: route.initialScheduleConfig
                 )
             case let .preview(memory):
                 MemoryEditorView(
@@ -157,45 +163,27 @@ struct ContentView: View {
         }
         .sheet(item: $quickMemoryRequest, onDismiss: {
             quickMemoryRequest = nil
+            if let route = pendingEditorRoute {
+                editorRoute = route
+                pendingEditorRoute = nil
+            }
         }) { request in
             QuickMemorySheet(
                 environment: environment,
-                mind: request.mind,
-                onExpandToEditor: { mind, title in
-                    editorRoute = MemoryEditorRoute(
+                request: request,
+                onExpandToEditor: { mind, title, scheduleConfig in
+                    pendingEditorRoute = MemoryEditorRoute(
                         mode: .create(mind: mind, template: .blank),
-                        initialTitle: title
+                        initialTitle: title,
+                        initialScheduleConfig: scheduleConfig
                     )
                 },
-                onQuickCreate: { mind, title, reminderMinutes in
+                onQuickCreate: { mind, title, scheduleConfig in
                     Task {
-                        var scheduleDraft: ScheduleConfigDraft?
-                        if let minutes = reminderMinutes {
-                            let fireDate = Date().addingTimeInterval(TimeInterval(minutes * 60))
-                            scheduleDraft = ScheduleConfigDraft(
-                                fireDate: fireDate,
-                                startDate: fireDate,
-                                timeZoneIdentifier: TimeZone.current.identifier,
-                                isActive: true
-                            )
-                        }
-
                         let draft = MemoryDraft(
-                            id: UUID(),
                             title: title,
-                            status: .active,
-                            isPinned: false,
-                            dueDate: nil,
                             mindID: mind?.id,
-                            scheduleConfig: scheduleDraft,
-                            note: nil,
-                            checkItems: [],
-                            photoAttachmentIDs: [],
-                            linkAttachmentIDs: [],
-                            audioAttachmentIDs: [],
-                            fileAttachmentIDs: [],
-                            attachments: [],
-                            autoCompleteOnChecklistCompletion: false
+                            scheduleConfig: scheduleConfig
                         )
                         _ = try? await environment.memoryService.createMemory(from: draft)
                     }
@@ -336,6 +324,13 @@ struct ContentView: View {
         quickMemoryRequest = QuickMemoryRequest(mind: mind)
     }
 
+    private func presentCalendarQuickMemory(_ target: CalendarQuickMemoryTarget) {
+        quickMemoryRequest = QuickMemoryRequest(
+            mind: nil,
+            calendarTarget: target
+        )
+    }
+
     private func openMemoryEditorDirectly() {
         feedbackGenerator.impactOccurred()
         editorRoute = MemoryEditorRoute(
@@ -394,7 +389,7 @@ struct ContentView: View {
 
     private var addMemoryButton: some View {
         Image(systemName: "brain.fill")
-            .foregroundColor(Color.Theme.elementBorder)
+            .foregroundStyle(Color.Theme.accentForeground)
             .font(.system(size: 22, weight: .medium))
             .frame(width: 60, height: 60)
             .contentShape(Rectangle())
@@ -446,6 +441,7 @@ struct ContentView: View {
         showingOnboarding
             || mindComposerRequest != nil
             || quickMemoryRequest != nil
+            || pendingEditorRoute != nil
             || editorRoute != nil
             || focusSessionRoute != nil
     }

@@ -10,4 +10,8 @@ struct MemoryOccurrence: Identifiable {
     let occurrenceDate: Date
 
     var id: String { "\(memory.id.uuidString)-\(Int(occurrenceDate.timeIntervalSince1970))" }
+
+    var isAllDay: Bool {
+        memory.scheduleConfig?.isAllDay == true
+    }
 }

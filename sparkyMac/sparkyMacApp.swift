@@ -52,15 +52,24 @@ struct sparkyMacApp: App {
                 }
         }
         .defaultSize(width: 1100, height: 720)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(replacing: .newItem) {
-                // New Memory is handled in DesktopRootView toolbar (⌘N).
+                // New Memory is handled by the desktop bottom action (⌘N).
             }
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesView(updater: updaterController.updater) {
                     updaterController.checkForUpdates(nil)
                 }
             }
+        }
+
+        Settings {
+            DesktopSettingsView(environment: appEnvironment)
+                .modelContainer(appEnvironment.dataController.container)
+                .environmentObject(appEnvironment)
+                .environmentObject(themeManager)
+                .preferredColorScheme(themeManager.preferredColorScheme)
         }
     }
 }

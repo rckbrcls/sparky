@@ -3,7 +3,7 @@
 //  DesktopNavigationState.swift
 //  sparky
 //
-//  Mac sidebar navigation state (ephemeral).
+//  Mac navigation and presentation state (ephemeral).
 //
 
 import SwiftUI
@@ -26,37 +26,36 @@ enum DesktopSection: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    var systemImage: String {
+    var iconName: String {
         switch self {
         case .calendar: return "calendar"
-        case .mind: return "brain.head.profile"
+        case .mind: return "mind"
         case .focus: return "timer"
-        case .me: return "person.crop.circle"
+        case .me: return "me"
         }
+    }
+
+    var usesAssetIcon: Bool {
+        self == .mind || self == .me
     }
 }
 
 @MainActor
 final class DesktopNavigationState: ObservableObject {
     @Published var selectedSection: DesktopSection = .calendar
-    @Published var calendarPath = NavigationPath()
     @Published var mindsPath = NavigationPath()
     @Published var mePath = NavigationPath()
+    @Published var calendarMode: DesktopCalendarMode = .week
+    @Published var calendarAnchorDate = Date()
 
     @Published var editorRoute: MemoryEditorRoute?
     @Published var mindComposerRequest: MindComposerRequest?
-    @Published var quickMemoryRequest: QuickMemoryRequest?
+    @Published var isSearchPresented = false
     @Published var unavailableMemoryAlertMessage: String?
     @Published var currentMindContext: Mind?
 
     func openMemoryEditor(_ route: MemoryEditorRoute) {
         editorRoute = route
-    }
-
-    func presentMemoryCreate(mind: Mind? = nil) {
-        editorRoute = MemoryEditorRoute(
-            mode: .create(mind: mind ?? currentMindContext, template: .blank)
-        )
     }
 
     func presentMindCreation() {

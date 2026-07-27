@@ -1,4 +1,3 @@
-#if os(iOS)
 //
 //  QuickMemorySheet.swift
 //  sparky
@@ -7,85 +6,96 @@
 //
 
 import SwiftUI
-import UIKit
-
-// MARK: - Auto Focus TextField
-
-private struct AutoFocusTextField: UIViewRepresentable {
-    @Binding var text: String
-    let placeholder: String
-    let font: UIFont
-    let onSubmit: () -> Void
-
-    func makeUIView(context: Context) -> UITextField {
-        let textField = UITextField()
-        textField.placeholder = placeholder
-        textField.font = font
-        textField.delegate = context.coordinator
-        textField.returnKeyType = .done
-        textField.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        // Focus immediately
-        DispatchQueue.main.async {
-            textField.becomeFirstResponder()
-        }
-
-        return textField
-    }
-
-    func updateUIView(_ uiView: UITextField, context: Context) {
-        if uiView.text != text {
-            uiView.text = text
-        }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, UITextFieldDelegate {
-        var parent: AutoFocusTextField
-
-        init(_ parent: AutoFocusTextField) {
-            self.parent = parent
-        }
-
-        func textFieldDidChangeSelection(_ textField: UITextField) {
-            parent.text = textField.text ?? ""
-        }
-
-        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-            textField.resignFirstResponder()
-            parent.onSubmit()
-            return true
-        }
-    }
-}
-
-// MARK: - Quick Memory Sheet
 
 struct QuickMemorySheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var mindService: MindService
 
     @AppStorage("quickMemory.lastReminderMinutes") private var lastReminderMinutes: Int = -1
+    @FocusState private var isTitleFocused: Bool
 
     let environment: AppEnvironment
-    let mind: Mind?
-    let onExpandToEditor: (Mind?, String) -> Void
-    let onQuickCreate: (Mind?, String, Int?) -> Void // Added Int? for reminder minutes
+    let request: QuickMemoryRequest
+    let onExpandToEditor: (Mind?, String, ScheduleConfigDraft?) -> Void
+    let onQuickCreate: (Mind?, String, ScheduleConfigDraft?) -> Void
 
-    @State private var title: String = ""
+    @State private var title = ""
     @State private var selectedMindID: UUID?
-    @State private var selectedReminderMinutes: Int? = nil // nil means no reminder selected
+    @State private var selectedReminderMinutes: Int?
 
-    init(environment: AppEnvironment, mind: Mind?, onExpandToEditor: @escaping (Mind?, String) -> Void, onQuickCreate: @escaping (Mind?, String, Int?) -> Void) {
+    init(
+        environment: AppEnvironment,
+        request: QuickMemoryRequest,
+        onExpandToEditor: @escaping (Mind?, String, ScheduleConfigDraft?) -> Void,
+        onQuickCreate: @escaping (Mind?, String, ScheduleConfigDraft?) -> Void
+    ) {
         self.environment = environment
         self.mindService = environment.mindService
-        self.mind = mind
+        self.request = request
         self.onExpandToEditor = onExpandToEditor
         self.onQuickCreate = onQuickCreate
+    }
+
+    var body: some View {
+        Group {
+            #if os(iOS)
+            content
+                .presentationDetents([.height(118)])
+                .presentationBackground(.clear)
+            #else
+            content
+                .frame(width: 480, height: 150)
+            #endif
+        }
+        .onAppear {
+            configureInitialState()
+            DispatchQueue.main.async {
+                isTitleFocused = true
+            }
+        }
+    }
+
+    private var content: some View {
+        VStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                mindIconMenu
+
+                TextField("Memory", text: $title)
+                    .font(.custom("Baskerville", size: 20))
+                    .textFieldStyle(.plain)
+                    .focused($isTitleFocused)
+                    .onSubmit(submitQuickMemory)
+                    .lineLimit(1)
+                    .frame(height: 30)
+
+                Button(action: expandToEditor) {
+                    Image(systemName: "ellipsis")
+                        .rotationEffect(.degrees(90))
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 36, height: 36)
+                        .quickMemoryCircleControl(tint: Color.primary.opacity(0.1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("More options")
+                .contentShape(Rectangle())
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+
+            HStack(spacing: 8) {
+                if request.calendarTarget != nil {
+                    calendarContextRow
+                } else {
+                    reminderMenu
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 20)
+
+            Spacer(minLength: 0)
+        }
     }
 
     private var availableMinds: [Mind] {
@@ -105,75 +115,22 @@ struct QuickMemorySheet: View {
         return .gray
     }
 
-    private var titleFont: UIFont {
-        if let font = UIFont(name: "Baskerville", size: 20) {
-            return font
+    private var scheduleConfigDraft: ScheduleConfigDraft? {
+        if let target = request.calendarTarget {
+            return target.scheduleDraft()
         }
-        return .systemFont(ofSize: 20, weight: .regular)
-    }
 
-    private func setReminderSelection(_ minutes: Int?) {
-        selectedReminderMinutes = minutes
-        lastReminderMinutes = minutes ?? -1
-    }
-
-    private func loadPersistedReminderSelection() {
-        selectedReminderMinutes = lastReminderMinutes > 0 ? lastReminderMinutes : nil
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                mindIconMenu
-
-                AutoFocusTextField(
-                    text: $title,
-                    placeholder: "Memory",
-                    font: titleFont,
-                    onSubmit: {
-                        guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                        dismiss()
-                        onQuickCreate(selectedMind, title, selectedReminderMinutes)
-                    }
-                )
-                .frame(height: 30)
-
-                Button {
-                    dismiss()
-                    onExpandToEditor(selectedMind, title)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .rotationEffect(.degrees(90))
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 36, height: 36)
-                        .glassEffect(.regular.tint(Color.primary.opacity(0.1)))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("More options")
-                .contentShape(Rectangle())
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-
-            // Reminder row
-            HStack(spacing: 8) {
-                reminderMenu
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            Spacer()
+        guard let minutes = selectedReminderMinutes else {
+            return nil
         }
-        .presentationDetents([.height(110)])
-        .presentationBackground(.clear)
-        .onAppear {
-            if mind?.isAllMinds == true || mind?.isLimbo == true {
-                selectedMindID = nil
-            } else {
-                selectedMindID = mind?.id
-            }
-            loadPersistedReminderSelection()
-        }
+
+        let fireDate = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        return ScheduleConfigDraft(
+            fireDate: fireDate,
+            startDate: fireDate,
+            timeZoneIdentifier: TimeZone.current.identifier,
+            isActive: true
+        )
     }
 
     private var mindIconMenu: some View {
@@ -190,8 +147,49 @@ struct QuickMemorySheet: View {
         } label: {
             Image(systemName: selectedMind?.iconName ?? "brain.head.profile")
                 .foregroundStyle(mindColor)
-                    .frame(width: 36, height: 36)
-                    .glassEffect(.regular.tint(mindColor.opacity(0.15)))
+                .frame(width: 36, height: 36)
+                .quickMemoryCircleControl(tint: mindColor.opacity(0.15))
+        }
+        .accessibilityLabel("Mind")
+    }
+
+    @ViewBuilder
+    private var calendarContextRow: some View {
+        if let target = request.calendarTarget {
+            let period = target.period
+            let scheduledDate = target.suggestedDate()
+
+            HStack(spacing: 10) {
+                Image(systemName: period.iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(period.color)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(period.title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.Theme.textPrimary)
+
+                    Text(
+                        scheduledDate,
+                        format: .dateTime
+                            .weekday(.abbreviated)
+                            .month(.abbreviated)
+                            .day()
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(Color.Theme.textSecondary)
+                }
+
+                if target.period != .allDay {
+                    Text(scheduledDate, format: .dateTime.hour().minute())
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.Theme.textSecondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .quickMemoryCapsuleControl(tint: period.color.opacity(0.12))
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -209,7 +207,6 @@ struct QuickMemorySheet: View {
 
             Divider()
 
-            // Quick minute options
             ForEach([5, 10, 15, 30, 60], id: \.self) { minutes in
                 Button {
                     setReminderSelection(minutes)
@@ -241,24 +238,88 @@ struct QuickMemorySheet: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .glassEffect(.regular.tint(selectedReminderMinutes != nil ? Color.Theme.warning.opacity(0.15) : Color.primary.opacity(0.05)))
+            .quickMemoryCapsuleControl(
+                tint: selectedReminderMinutes != nil
+                    ? Color.Theme.warning.opacity(0.15)
+                    : Color.primary.opacity(0.05)
+            )
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Quick reminder")
     }
+
+    private func configureInitialState() {
+        let mind = request.mind
+        if mind?.isAllMinds == true || mind?.isLimbo == true {
+            selectedMindID = nil
+        } else {
+            selectedMindID = mind?.id
+        }
+
+        if request.calendarTarget == nil {
+            selectedReminderMinutes = lastReminderMinutes > 0
+                ? lastReminderMinutes
+                : nil
+        } else {
+            selectedReminderMinutes = nil
+        }
+    }
+
+    private func setReminderSelection(_ minutes: Int?) {
+        selectedReminderMinutes = minutes
+        lastReminderMinutes = minutes ?? -1
+    }
+
+    private func submitQuickMemory() {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        dismiss()
+        onQuickCreate(selectedMind, trimmedTitle, scheduleConfigDraft)
+    }
+
+    private func expandToEditor() {
+        onExpandToEditor(selectedMind, title, scheduleConfigDraft)
+        dismiss()
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func quickMemoryCircleControl(tint: Color) -> some View {
+        #if os(iOS)
+        glassEffect(.regular.tint(tint))
+        #else
+        background(Color.Theme.elementBackground, in: Circle())
+            .overlay {
+                Circle()
+                    .stroke(Color.Theme.elementBorder, lineWidth: 1)
+            }
+        #endif
+    }
+
+    @ViewBuilder
+    func quickMemoryCapsuleControl(tint: Color) -> some View {
+        #if os(iOS)
+        glassEffect(.regular.tint(tint))
+        #else
+        background(Color.Theme.elementBackground, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(Color.Theme.elementBorder, lineWidth: 1)
+            }
+        #endif
+    }
 }
 
 #Preview {
-    QuickMemorySheet(
-        environment: {
-            let env = AppEnvironment(dataController: DataController.preview)
-            env.bootstrap()
-            return env
-        }(),
-        mind: nil,
-        onExpandToEditor: { _, _ in },
+    let environment = AppEnvironment(dataController: DataController.preview)
+    environment.bootstrap()
+
+    return QuickMemorySheet(
+        environment: environment,
+        request: QuickMemoryRequest(mind: nil),
+        onExpandToEditor: { _, _, _ in },
         onQuickCreate: { _, _, _ in }
     )
 }
-
-#endif

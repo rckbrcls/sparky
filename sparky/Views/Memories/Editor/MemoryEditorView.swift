@@ -24,6 +24,11 @@ private var editorSecondaryToolbarPlacement: ToolbarItemPlacement {
 }
 import Combine
 
+enum MemoryEditorPresentationStyle {
+    case standard
+    case desktopPopover
+}
+
 struct MemoryEditorView: View {
 
     enum Mode {
@@ -117,11 +122,22 @@ struct MemoryEditorView: View {
 
     private let initialTitle: String
 
+    private let initialScheduleConfig: ScheduleConfigDraft?
+
     private let startEditing: Bool
 
+    private let presentationStyle: MemoryEditorPresentationStyle
 
 
-    init(environment: AppEnvironment, mode: Mode, initialTitle: String = "", startEditing: Bool = false) {
+
+    init(
+        environment: AppEnvironment,
+        mode: Mode,
+        initialTitle: String = "",
+        initialScheduleConfig: ScheduleConfigDraft? = nil,
+        startEditing: Bool = false,
+        presentationStyle: MemoryEditorPresentationStyle = .standard
+    ) {
 
         self.mode = mode
 
@@ -129,7 +145,11 @@ struct MemoryEditorView: View {
 
         self.initialTitle = initialTitle
 
+        self.initialScheduleConfig = initialScheduleConfig
+
         self.startEditing = startEditing
+
+        self.presentationStyle = presentationStyle
 
         switch mode {
 
@@ -147,7 +167,9 @@ struct MemoryEditorView: View {
 
                 template: template,
 
-                initialTitle: initialTitle
+                initialTitle: initialTitle,
+
+                initialScheduleConfig: initialScheduleConfig
 
             )
 
@@ -217,6 +239,12 @@ struct MemoryEditorView: View {
 
                     await viewModel.loadLatestDataIfNeeded()
 
+                }
+
+                if usesLiquidGlassSections {
+                    DispatchQueue.main.async {
+                        isTitleFocused = true
+                    }
                 }
 
             }
@@ -596,47 +624,7 @@ struct MemoryEditorView: View {
 
         ScrollView {
 
-            VStack(spacing: 12) {
-
-                titleSectionRow
-
-                if shouldShowNotesCard {
-
-                    notesCard
-
-                        .padding(.horizontal, 20)
-
-                }
-
-                if shouldShowChecklistCard {
-
-                    checklistCard
-
-                        .padding(.horizontal, 20)
-
-                }
-
-                if shouldShowMediaCard {
-
-                    mediaCard
-
-                        .padding(.horizontal, 20)
-
-                }
-
-                if shouldShowTriggersCard {
-
-                    triggersCard
-
-                        .padding(.horizontal, 20)
-
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-
-                }
-
-            }
-
-            .padding(.bottom, 20)
+            editorSections
 
         }
 
@@ -884,6 +872,49 @@ struct MemoryEditorView: View {
 
     }
 
+    @ViewBuilder
+    private var editorSections: some View {
+        #if os(macOS)
+        if usesLiquidGlassSections {
+            GlassEffectContainer(spacing: 12) {
+                editorSectionsContent
+            }
+        } else {
+            editorSectionsContent
+        }
+        #else
+        editorSectionsContent
+        #endif
+    }
+
+    private var editorSectionsContent: some View {
+        VStack(spacing: 12) {
+            titleSectionRow
+
+            if shouldShowNotesCard {
+                notesCard
+                    .padding(.horizontal, 20)
+            }
+
+            if shouldShowChecklistCard {
+                checklistCard
+                    .padding(.horizontal, 20)
+            }
+
+            if shouldShowMediaCard {
+                mediaCard
+                    .padding(.horizontal, 20)
+            }
+
+            if shouldShowTriggersCard {
+                triggersCard
+                    .padding(.horizontal, 20)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.bottom, 20)
+    }
+
 
 
     private var titleSectionRow: some View {
@@ -987,7 +1018,10 @@ struct MemoryEditorView: View {
 
         }
 
-        .cardStyle(cornerRadius: 24)
+        .memoryEditorSectionStyle(
+            usesLiquidGlass: usesLiquidGlassSections,
+            cornerRadius: 24
+        )
 
         .transition(.opacity.combined(with: .move(edge: .top)))
 
@@ -1035,7 +1069,10 @@ struct MemoryEditorView: View {
 
         }
 
-        .cardStyle(cornerRadius: 24)
+        .memoryEditorSectionStyle(
+            usesLiquidGlass: usesLiquidGlassSections,
+            cornerRadius: 24
+        )
 
         .transition(.opacity.combined(with: .move(edge: .top)))
 
@@ -1106,7 +1143,10 @@ struct MemoryEditorView: View {
 
         }
 
-        .cardStyle(cornerRadius: 24)
+        .memoryEditorSectionStyle(
+            usesLiquidGlass: usesLiquidGlassSections,
+            cornerRadius: 24
+        )
 
         .transition(.opacity.combined(with: .move(edge: .top)))
 
@@ -1167,7 +1207,9 @@ struct MemoryEditorView: View {
 
             viewModel: viewModel,
 
-            isEditable: isEditingEnabled
+            isEditable: isEditingEnabled,
+
+            usesLiquidGlassSections: usesLiquidGlassSections
 
         )
 
@@ -1218,6 +1260,8 @@ struct MemoryEditorView: View {
             Toggle("", isOn: isOn)
 
                 .labelsHidden()
+
+                .toggleStyle(.switch)
 
         }
 
@@ -1621,9 +1665,21 @@ struct MemoryEditorView: View {
 
 
 
+    private var usesLiquidGlassSections: Bool {
+        #if os(macOS)
+        presentationStyle == .desktopPopover
+        #else
+        false
+        #endif
+    }
+
+
+
     private var baseBackground: Color {
 
-        Color.Theme.secondaryBackground
+        usesLiquidGlassSections
+            ? Color.clear
+            : Color.Theme.secondaryBackground
 
     }
 

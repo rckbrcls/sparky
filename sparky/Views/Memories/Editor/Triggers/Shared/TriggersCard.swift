@@ -10,6 +10,7 @@ import UIKit
 struct TriggersCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
     var isEditable: Bool = true
+    var usesLiquidGlassSections = false
 
     @State private var showGeofenceLimitAlert = false
 
@@ -44,7 +45,10 @@ struct TriggersCard: View {
                     )
                 }
             }
-            .cardStyle(cornerRadius: 24)
+            .memoryEditorSectionStyle(
+                usesLiquidGlass: usesLiquidGlassSections,
+                cornerRadius: 24
+            )
         }
     }
 
@@ -73,7 +77,10 @@ struct TriggersCard: View {
                         )
                     }
                 }
-                .cardStyle(cornerRadius: 24)
+                .memoryEditorSectionStyle(
+                    usesLiquidGlass: usesLiquidGlassSections,
+                    cornerRadius: 24
+                )
                 .alert("Geofence Limit Reached", isPresented: $showGeofenceLimitAlert) {
                     Button("OK", role: .cancel) { }
                 } message: {
@@ -105,6 +112,7 @@ struct TriggersCard: View {
             Spacer()
             Toggle("", isOn: isOn)
                 .labelsHidden()
+                .toggleStyle(.switch)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -513,6 +521,7 @@ private struct ScheduledTriggerInlineForm: View {
                     set: { viewModel.setFocusAutoContinue($0) }
                 )
             )
+            .toggleStyle(.switch)
         }
         .accessibilityLabel("Auto-continue Focus phases")
     }
@@ -566,6 +575,7 @@ private struct ScheduledTriggerInlineForm: View {
             Spacer()
             Toggle("", isOn: isOn)
                 .labelsHidden()
+                .toggleStyle(.switch)
         }
         .padding(.vertical, 10)
     }

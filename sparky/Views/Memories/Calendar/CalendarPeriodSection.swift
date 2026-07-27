@@ -19,6 +19,7 @@ struct CalendarPeriodSection: View {
     let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
     let onToggleExpanded: () -> Void
+    let onCreateMemory: () -> Void
 
     var body: some View {
         Section {
@@ -33,6 +34,16 @@ struct CalendarPeriodSection: View {
             .listRowSeparator(.hidden)
 
             if isExpanded {
+                if occurrences.isEmpty && !isMultiSelecting {
+                    CalendarEmptyPeriodButton(
+                        period: period,
+                        action: onCreateMemory
+                    )
+                    .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+
                 ForEach(occurrences) { occurrence in
                     MemoryListItemButton(
                         memory: occurrence.memory,

@@ -3,7 +3,7 @@
 //  DesktopRootView.swift
 //  sparky
 //
-//  Mac root shell: NavigationSplitView sidebar + detail.
+//  Mac root shell with a unified toolbar and floating navigation.
 //
 
 import SwiftUI
@@ -11,20 +11,40 @@ import SwiftUI
 struct DesktopRootView: View {
     @ObservedObject private var environment: AppEnvironment
     @StateObject private var nav = DesktopNavigationState()
+    @State private var createMemoryRoute: MemoryEditorRoute?
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
     }
 
     var body: some View {
-        NavigationSplitView {
-            DesktopSidebar(selection: $nav.selectedSection)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
-        } detail: {
+        ZStack {
+            desktopSurfaceColor
+                .ignoresSafeArea()
+
             detailContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 980, minHeight: 680)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            DesktopFloatingNavigationBar(
+                selection: $nav.selectedSection,
+                createMemoryRoute: $createMemoryRoute,
+                makeCreateMemoryRoute: {
+                    MemoryEditorRoute(
+                        mode: .create(
+                            mind: nav.currentMindContext,
+                            template: .blank
+                        )
+                    )
+                }
+            )
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+        }
+        .containerBackground(desktopSurfaceColor, for: .window)
         .sheet(item: $nav.editorRoute) { route in
             editor(for: route)
                 .frame(minWidth: 520, minHeight: 560)
@@ -59,23 +79,48 @@ struct DesktopRootView: View {
             }
         )
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                if nav.selectedSection == .mind {
-                    Button {
-                        nav.presentMindCreation()
-                    } label: {
-                        Label("New Mind", systemImage: "folder.badge.plus")
+            if nav.selectedSection == .calendar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Calendar view", selection: $nav.calendarMode) {
+                        ForEach(DesktopCalendarMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
                     }
-                    .help("New Mind")
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .accessibilityLabel("Calendar view")
                 }
+            }
 
-                Button {
-                    nav.presentMemoryCreate()
-                } label: {
-                    Label("New Memory", systemImage: "plus")
+            ToolbarSpacer(.flexible)
+
+            if nav.selectedSection != .me {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        nav.isSearchPresented.toggle()
+                    } label: {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
+                    .keyboardShortcut("f", modifiers: [.command])
+                    .help("Search Memories")
+                    .popover(
+                        isPresented: $nav.isSearchPresented,
+                        arrowEdge: .top
+                    ) {
+                        DesktopMemorySearchPopover(
+                            memoryService: environment.memoryService,
+                            onSelect: handleSearchSelection
+                        )
+                    }
                 }
-                .keyboardShortcut("n", modifiers: [.command])
-                .help("New Memory")
+            }
+        }
+        .toolbar(removing: .title)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .onChange(of: nav.selectedSection) { _, section in
+            if section == .me {
+                nav.isSearchPresented = false
             }
         }
         .onChange(of: environment.pendingMemoryOpenRequest) { _, request in
@@ -92,17 +137,24 @@ struct DesktopRootView: View {
         }
     }
 
+    private var desktopSurfaceColor: Color {
+        switch nav.selectedSection {
+        case .calendar:
+            return Color.Theme.background
+        case .mind, .focus, .me:
+            return Color.Theme.secondaryBackground
+        }
+    }
+
     @ViewBuilder
     private var detailContent: some View {
         switch nav.selectedSection {
         case .calendar:
-            MemoryTimelineView(
+            DesktopCalendarView(
                 memoryService: environment.memoryService,
-                onSelectMemory: handleMemorySelection,
-                onEditMemory: handleMemoryEdit,
-                onMultiSelectionChange: { _ in },
-                navigationPath: $nav.calendarPath,
-                embedsInNavigationStack: true
+                mode: $nav.calendarMode,
+                anchorDate: $nav.calendarAnchorDate,
+                onSelect: handleMemorySelection
             )
         case .mind:
             MindRootView(
@@ -120,7 +172,10 @@ struct DesktopRootView: View {
         case .focus:
             FocusTabView(environment: environment)
         case .me:
-            MeView(environment: environment, settingsNavigationPath: $nav.mePath)
+            MeView(
+                environment: environment,
+                settingsNavigationPath: $nav.mePath
+            )
         }
     }
 
@@ -131,7 +186,8 @@ struct DesktopRootView: View {
             MemoryEditorView(
                 environment: environment,
                 mode: .create(mind: mind, template: template),
-                initialTitle: route.initialTitle
+                initialTitle: route.initialTitle,
+                initialScheduleConfig: route.initialScheduleConfig
             )
         case let .preview(memory):
             MemoryEditorView(
@@ -167,6 +223,12 @@ struct DesktopRootView: View {
 
     private func handleMemoryEdit(_ memory: Memory) {
         nav.editorRoute = MemoryEditorRoute(mode: .edit(memory: memory), startEditing: true)
+    }
+
+    private func handleSearchSelection(_ memory: Memory) {
+        nav.isSearchPresented = false
+        nav.selectedSection = .calendar
+        handleMemorySelection(memory)
     }
 
     private func handlePendingMemoryOpen(_ request: PendingMemoryOpenRequest?) {

@@ -54,6 +54,20 @@ extension Color {
     /// Foreground color for text/icons placed on accent-colored backgrounds
     static let themeAccentForeground = Color("AccentForeground")
 
+    // MARK: - Calendar Periods
+
+    /// Morning calendar period color
+    static let themeCalendarMorning = Color("CalendarMorning")
+
+    /// Afternoon calendar period color
+    static let themeCalendarAfternoon = Color("CalendarAfternoon")
+
+    /// Evening calendar period color
+    static let themeCalendarEvening = Color("CalendarEvening")
+
+    /// Night calendar period color
+    static let themeCalendarNight = Color("CalendarNight")
+
     // MARK: - Semantic Colors
 
     /// Success color for positive feedback
@@ -89,6 +103,12 @@ extension Color {
 
         // Accent
         static let accentForeground = Color.themeAccentForeground
+
+        // Calendar Periods
+        static let calendarMorning = Color.themeCalendarMorning
+        static let calendarAfternoon = Color.themeCalendarAfternoon
+        static let calendarEvening = Color.themeCalendarEvening
+        static let calendarNight = Color.themeCalendarNight
 
         // Semantic
         static let success = Color.themeSuccess

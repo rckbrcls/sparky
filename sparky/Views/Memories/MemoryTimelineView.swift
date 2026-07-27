@@ -12,6 +12,7 @@ struct MemoryTimelineView: View {
     let onSelectMemory: (Memory) -> Void
     let onEditMemory: ((Memory) -> Void)?
     let onMultiSelectionChange: (Bool) -> Void
+    let onCreateMemory: (CalendarQuickMemoryTarget) -> Void
     @Binding var navigationPath: NavigationPath
     var embedsInNavigationStack: Bool = true
 
@@ -32,6 +33,7 @@ struct MemoryTimelineView: View {
         onSelectMemory: @escaping (Memory) -> Void,
         onEditMemory: ((Memory) -> Void)? = nil,
         onMultiSelectionChange: @escaping (Bool) -> Void,
+        onCreateMemory: @escaping (CalendarQuickMemoryTarget) -> Void,
         navigationPath: Binding<NavigationPath>,
         embedsInNavigationStack: Bool = true
     ) {
@@ -39,6 +41,7 @@ struct MemoryTimelineView: View {
         self.onSelectMemory = onSelectMemory
         self.onEditMemory = onEditMemory
         self.onMultiSelectionChange = onMultiSelectionChange
+        self.onCreateMemory = onCreateMemory
         self._navigationPath = navigationPath
         self.embedsInNavigationStack = embedsInNavigationStack
         self._calendarDataManager = StateObject(wrappedValue: CalendarDataManager(memoryService: memoryService))
@@ -168,6 +171,7 @@ struct MemoryTimelineView: View {
             }
             .onReceive(memoryService.$lastRefreshed) { _ in
                 calendarDataManager.clearCache()
+                calendarDataManager.ensureMonthLoaded(selectedDate)
             }
     }
 
@@ -205,7 +209,8 @@ struct MemoryTimelineView: View {
             isPerformingBulkAction: isPerformingBulkAction,
             onSelectMemory: onSelectMemory,
             onEditMemory: onEditMemory,
-            onToggleSelection: toggleMemorySelection(_:)
+            onToggleSelection: toggleMemorySelection(_:),
+            onCreateMemory: onCreateMemory
         )
     }
 
@@ -370,6 +375,7 @@ struct MemoryTimelineView: View {
         memoryService: environment.memoryService,
         onSelectMemory: { _ in },
         onMultiSelectionChange: { _ in },
+        onCreateMemory: { _ in },
         navigationPath: .constant(NavigationPath())
     )
     .environmentObject(environment)

@@ -16,6 +16,7 @@ struct CalendarDayView: View {
     let onSelectMemory: (Memory) -> Void
     let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
+    let onCreateMemory: (CalendarQuickMemoryTarget) -> Void
 
     @State private var displayedDate: Date
     @State private var dayAnchor: Date
@@ -35,7 +36,8 @@ struct CalendarDayView: View {
         isPerformingBulkAction: Bool,
         onSelectMemory: @escaping (Memory) -> Void,
         onEditMemory: ((Memory) -> Void)? = nil,
-        onToggleSelection: @escaping (Memory) -> Void
+        onToggleSelection: @escaping (Memory) -> Void,
+        onCreateMemory: @escaping (CalendarQuickMemoryTarget) -> Void
     ) {
         self.dataManager = dataManager
         self._currentDate = currentDate
@@ -45,6 +47,7 @@ struct CalendarDayView: View {
         self.onSelectMemory = onSelectMemory
         self.onEditMemory = onEditMemory
         self.onToggleSelection = onToggleSelection
+        self.onCreateMemory = onCreateMemory
 
         let startOfDay = Calendar.current.startOfDay(for: currentDate.wrappedValue)
         self._displayedDate = State(initialValue: startOfDay)
@@ -64,6 +67,7 @@ struct CalendarDayView: View {
                         onSelectMemory: onSelectMemory,
                         onEditMemory: onEditMemory,
                         onToggleSelection: onToggleSelection,
+                        onCreateMemory: onCreateMemory,
                         expandedPeriods: $expandedPeriods,
                         onEnsureMonthDataLoaded: { date in
                             ensureMonthDataLoaded(for: date)
@@ -131,7 +135,8 @@ struct CalendarDayView: View {
         isPerformingBulkAction: false,
         onSelectMemory: { _ in },
         onEditMemory: nil,
-        onToggleSelection: { _ in }
+        onToggleSelection: { _ in },
+        onCreateMemory: { _ in }
     )
     .environmentObject(environment)
 }

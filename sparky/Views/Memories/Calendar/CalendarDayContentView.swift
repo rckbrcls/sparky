@@ -16,6 +16,7 @@ struct CalendarDayContentView: View {
     let onSelectMemory: (Memory) -> Void
     let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
+    let onCreateMemory: (CalendarQuickMemoryTarget) -> Void
     @Binding var expandedPeriods: Set<CalendarTimePeriod>
     let onEnsureMonthDataLoaded: (Date) -> Void
 
@@ -95,6 +96,9 @@ struct CalendarDayContentView: View {
                         expandedPeriods.insert(.allDay)
                     }
                 }
+            },
+            onCreateMemory: {
+                onCreateMemory(CalendarQuickMemoryTarget(date: day, period: .allDay))
             }
         )
     }
@@ -122,6 +126,9 @@ struct CalendarDayContentView: View {
                         expandedPeriods.insert(period)
                     }
                 }
+            },
+            onCreateMemory: {
+                onCreateMemory(CalendarQuickMemoryTarget(date: day, period: period))
             }
         )
     }

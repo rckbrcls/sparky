@@ -17,6 +17,7 @@ struct MemoryEditorRoute: Identifiable {
     let id = UUID()
     let mode: Mode
     var initialTitle: String = ""
+    var initialScheduleConfig: ScheduleConfigDraft? = nil
     var startEditing: Bool = false
 }
 
@@ -28,6 +29,15 @@ struct MindComposerRequest: Identifiable {
 struct QuickMemoryRequest: Identifiable {
     let id = UUID()
     let mind: Mind?
+    let calendarTarget: CalendarQuickMemoryTarget?
+
+    init(
+        mind: Mind?,
+        calendarTarget: CalendarQuickMemoryTarget? = nil
+    ) {
+        self.mind = mind
+        self.calendarTarget = calendarTarget
+    }
 }
 
 struct FocusSessionRoute: Identifiable {

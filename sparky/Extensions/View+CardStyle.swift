@@ -12,6 +12,29 @@ extension View {
             .contentShape(Rectangle())
     }
 
+    @ViewBuilder
+    func memoryEditorSectionStyle(
+        usesLiquidGlass: Bool,
+        cornerRadius: CGFloat = 24
+    ) -> some View {
+        #if os(macOS)
+        if usesLiquidGlass {
+            self
+                .glassEffect(
+                    .regular.interactive(),
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+                .contentShape(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+        } else {
+            cardStyle(cornerRadius: cornerRadius)
+        }
+        #else
+        cardStyle(cornerRadius: cornerRadius)
+        #endif
+    }
+
     func neutralButtonStyle(cornerRadius: CGFloat = 24, verticalPadding: CGFloat = 12) -> some View {
         self
             .foregroundStyle(.secondary)

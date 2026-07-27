@@ -39,18 +39,21 @@ final class MemoryEditorViewModel: ObservableObject {
     private var persistedMemoryID: UUID?
     private let template: MemoryEditorTemplate
     private let defaultMind: Mind?
+    private let initialScheduleConfig: ScheduleConfigDraft?
 
     init(environment: AppEnvironment,
          attachmentStore: MemoryAttachmentStore,
          memory: Memory?,
          defaultMind: Mind?,
          template: MemoryEditorTemplate,
-         initialTitle: String = "") {
+         initialTitle: String = "",
+         initialScheduleConfig: ScheduleConfigDraft? = nil) {
         self.environment = environment
         self.attachmentStore = attachmentStore
         self.existingMemory = memory
         self.template = template
         self.defaultMind = defaultMind
+        self.initialScheduleConfig = initialScheduleConfig
         self.persistedMemoryID = memory?.id
         self.title = initialTitle
         configureInitialState()
@@ -677,6 +680,9 @@ private extension MemoryEditorViewModel {
                 selectedMindID = defaultMind?.id
             }
             applyTemplate(template)
+            if let initialScheduleConfig {
+                scheduleConfigDraft = initialScheduleConfig
+            }
         }
     }
 

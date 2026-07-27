@@ -31,7 +31,7 @@
 		2CDDFE1E2E9D39F600D608A2 /* sparky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = sparky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CDDFE322E9D39F700D608A2 /* sparkyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sparkyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CDDFE3C2E9D39F700D608A2 /* sparkyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sparkyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A11DFE1E2E9D39F700D608A2 /* Sparky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = Sparky.app; path = Sparky.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A11DFE1E2E9D39F700D608A2 /* Sparky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sparky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -40,9 +40,8 @@
 			membershipExceptions = (
 				ContentView.swift,
 				sparkyApp.swift,
-				Views/Shared/CustomTabBar.swift,
 				Views/Memories/Editor/Components/MemoryEditorCameraCaptureView.swift,
-				Views/Memories/Editor/QuickMemorySheet.swift,
+				Views/Shared/CustomTabBar.swift,
 			);
 			target = A11DFE1D2E9D39F700D608A2 /* sparkyMac */;
 		};
@@ -50,7 +49,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				sparkyMac.entitlements,
 			);
 			target = A11DFE1D2E9D39F700D608A2 /* sparkyMac */;
 		};
@@ -67,15 +65,11 @@
 		};
 		2CDDFE352E9D39F700D608A2 /* sparkyTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = sparkyTests;
 			sourceTree = "<group>";
 		};
 		2CDDFE3F2E9D39F700D608A2 /* sparkyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = sparkyUITests;
 			sourceTree = "<group>";
 		};
@@ -241,7 +235,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2610;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					2CDDFE1D2E9D39F600D608A2 = {
 						CreatedOnToolsVersion = 26.0.1;
