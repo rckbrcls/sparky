@@ -53,7 +53,20 @@ struct MemoryEditorAttachmentsCard: View {
         .padding(20)
     }
 
+    @ViewBuilder
     private var addAttachmentButton: some View {
+        #if os(macOS)
+        addAttachmentMenu
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .buttonStyle(.plain)
+        #else
+        addAttachmentMenu
+            .menuIndicator(.hidden)
+        #endif
+    }
+
+    private var addAttachmentMenu: some View {
         Menu {
             Button(action: onAddPhoto) {
                 Label("Library", systemImage: "photo")
@@ -75,18 +88,18 @@ struct MemoryEditorAttachmentsCard: View {
                 Label("File", systemImage: "doc")
             }
         } label: {
-            squareCell { _ in
-                VStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .semibold))
-                    Text("Add Media")
-                        .font(.caption2.weight(.medium))
-                        .padding(.horizontal, 8)
-                }
-                .frame(maxHeight: .infinity)
-                .neutralButtonStyle(cornerRadius: 16, verticalPadding: 0)
+            VStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 24, weight: .semibold))
+                Text("Add Media")
+                    .font(.caption2.weight(.medium))
+                    .padding(.horizontal, 8)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .neutralButtonStyle(cornerRadius: 16, verticalPadding: 0)
         }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(1, contentMode: .fit)
         .foregroundStyle(.secondary)
     }
 
