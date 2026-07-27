@@ -19,23 +19,23 @@ struct DesktopPopoverActionBar: View {
         GlassEffectContainer(spacing: 8) {
             HStack(spacing: 8) {
                 Button(role: .cancel, action: onCancel) {
-                    Image(systemName: "xmark")
-                        .frame(width: 34, height: 34)
+                    actionLabel(systemImage: "xmark")
                 }
                 .buttonStyle(.plain)
                 .neutralToolbarItemStyle()
                 .glassEffect(.regular.interactive(), in: .circle)
+                .contentShape(Circle())
                 .accessibilityLabel(cancellationAccessibilityLabel)
                 .help(cancellationAccessibilityLabel)
 
                 if let destructiveAccessibilityLabel, let onDestructive {
                     Button(role: .destructive, action: onDestructive) {
-                        Image(systemName: "trash")
-                            .frame(width: 34, height: 34)
+                        actionLabel(systemImage: "trash")
                     }
                     .buttonStyle(.plain)
                     .neutralToolbarItemStyle()
                     .glassEffect(.regular.interactive(), in: .circle)
+                    .contentShape(Circle())
                     .accessibilityLabel(destructiveAccessibilityLabel)
                     .help(destructiveAccessibilityLabel)
                 }
@@ -46,19 +46,18 @@ struct DesktopPopoverActionBar: View {
                    let secondarySystemImage,
                    let onSecondary {
                     Button(action: onSecondary) {
-                        Image(systemName: secondarySystemImage)
-                            .frame(width: 34, height: 34)
+                        actionLabel(systemImage: secondarySystemImage)
                     }
                     .buttonStyle(.plain)
                     .neutralToolbarItemStyle()
                     .glassEffect(.regular.interactive(), in: .circle)
+                    .contentShape(Circle())
                     .accessibilityLabel(secondaryAccessibilityLabel)
                     .help(secondaryAccessibilityLabel)
                 }
 
                 Button(role: .confirm, action: onConfirm) {
-                    Image(systemName: confirmationSystemImage)
-                        .frame(width: 34, height: 34)
+                    actionLabel(systemImage: confirmationSystemImage)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.Theme.accentForeground)
@@ -66,12 +65,19 @@ struct DesktopPopoverActionBar: View {
                     .regular.interactive().tint(Color.accentColor),
                     in: .circle
                 )
+                .contentShape(Circle())
                 .disabled(isConfirmationDisabled)
                 .opacity(isConfirmationDisabled ? 0.45 : 1)
                 .accessibilityLabel(confirmationAccessibilityLabel)
                 .help(confirmationAccessibilityLabel)
             }
         }
+    }
+
+    private func actionLabel(systemImage: String) -> some View {
+        Image(systemName: systemImage)
+            .frame(width: 44, height: 44)
+            .contentShape(Circle())
     }
 }
 

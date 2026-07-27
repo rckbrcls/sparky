@@ -21,6 +21,7 @@ struct CalendarDayContentView: View {
     let onEnsureMonthDataLoaded: (Date) -> Void
     var showsDayHeader = true
     var bottomContentInset: CGFloat = 70
+    var scrollIndicatorVisibility: ScrollIndicatorVisibility = .hidden
 
     private let calendar = Calendar.current
 
@@ -44,7 +45,7 @@ struct CalendarDayContentView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .scrollIndicators(.hidden)
+        .scrollIndicators(scrollIndicatorVisibility)
         .environment(\.defaultMinListRowHeight, 0)
         .safeAreaInset(edge: .bottom) {
             if bottomContentInset > 0 {

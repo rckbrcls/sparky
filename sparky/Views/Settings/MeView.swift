@@ -38,10 +38,15 @@ struct MeView: View {
                     WeeklySparkCard(metrics: viewModel.metrics)
                     insightSections
                 }
-                .frame(maxWidth: 880, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 120)
+                #if os(macOS)
+                .frame(
+                    maxWidth: DesktopLayoutMetrics.primaryContentMaxWidth,
+                    alignment: .leading
+                )
+                #endif
                 .frame(maxWidth: .infinity)
             }
             .toolbar {
@@ -72,7 +77,8 @@ struct MeView: View {
                     SettingsView(
                         navigationPath: $settingsNavigationPath,
                         embedsInNavigationStack: false,
-                        focusSettings: environment.focusSettings
+                        focusSettings: environment.focusSettings,
+                        focusFeedback: environment.focusFeedbackService
                     )
                 }
             }
@@ -83,15 +89,8 @@ struct MeView: View {
 
 private extension MeView {
     var header: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("Your week")
-                .appLargeTitleStyle()
-
-            Text("Here’s your recent rhythm")
-                .font(.body)
-                .foregroundStyle(Color.Theme.textSecondary)
-        }
-        .accessibilityElement(children: .combine)
+        Text("Your week")
+            .appLargeTitleStyle()
     }
 
     var insightSections: some View {
@@ -103,9 +102,7 @@ private extension MeView {
                 .frame(minWidth: 360)
 
                 WeeklyRhythmCard(
-                    rhythm: viewModel.metrics.rhythm,
-                    completionRate: viewModel.metrics.completionRate,
-                    insight: viewModel.metrics.insight
+                    rhythm: viewModel.metrics.rhythm
                 )
                 .frame(minWidth: 300)
             }
@@ -116,9 +113,7 @@ private extension MeView {
                 )
 
                 WeeklyRhythmCard(
-                    rhythm: viewModel.metrics.rhythm,
-                    completionRate: viewModel.metrics.completionRate,
-                    insight: viewModel.metrics.insight
+                    rhythm: viewModel.metrics.rhythm
                 )
             }
         }
@@ -169,9 +164,72 @@ private extension MeView {
     .environmentObject(environment)
 }
 
-#Preview("Waiting for Completion") {
+#Preview("Active Only") {
     let controller = DataController(inMemory: true)
     controller.modelContext.insert(Memory(title: "Plan the next release"))
+    controller.save()
+
+    let environment = AppEnvironment(dataController: controller)
+    environment.bootstrap()
+    return MeView(
+        environment: environment,
+        settingsNavigationPath: .constant(NavigationPath())
+    )
+    .environmentObject(environment)
+}
+
+#Preview("Unavailable Scheduled Rate") {
+    let controller = DataController(inMemory: true)
+    let completedAt = Date().addingTimeInterval(-3_600)
+    controller.modelContext.insert(
+        Memory(
+            title: "Unscheduled completion",
+            statusRaw: MemoryStatus.completed.rawValue,
+            createdAt: completedAt.addingTimeInterval(-3_600),
+            updatedAt: completedAt,
+            completedAt: completedAt
+        )
+    )
+    controller.save()
+
+    let environment = AppEnvironment(dataController: controller)
+    environment.bootstrap()
+    return MeView(
+        environment: environment,
+        settingsNavigationPath: .constant(NavigationPath())
+    )
+    .environmentObject(environment)
+}
+
+#Preview("Tied Rhythm") {
+    let controller = DataController(inMemory: true)
+    let calendar = Calendar.current
+    let hours = [9, 13, 9, 13]
+
+    for index in hours.indices {
+        guard let day = calendar.date(
+            byAdding: .day,
+            value: -(index + 1),
+            to: Date()
+        ), let completedAt = calendar.date(
+            bySettingHour: hours[index],
+            minute: 0,
+            second: 0,
+            of: day
+        ) else {
+            continue
+        }
+
+        controller.modelContext.insert(
+            Memory(
+                title: "Balanced completion \(index + 1)",
+                statusRaw: MemoryStatus.completed.rawValue,
+                createdAt: completedAt.addingTimeInterval(-3_600),
+                updatedAt: completedAt,
+                completedAt: completedAt
+            )
+        )
+    }
     controller.save()
 
     let environment = AppEnvironment(dataController: controller)

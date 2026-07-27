@@ -17,6 +17,8 @@ enum MemoryEditorTemplate {
 
 @MainActor
 final class MemoryEditorViewModel: ObservableObject {
+    typealias MetadataSaveOperation = (MemoryDraft) async throws -> Memory
+
     @Published var title: String = ""
     @Published var selectedMindID: UUID?
     @Published var status: MemoryStatus = .active
@@ -40,6 +42,7 @@ final class MemoryEditorViewModel: ObservableObject {
     private let template: MemoryEditorTemplate
     private let defaultMind: Mind?
     private let initialScheduleConfig: ScheduleConfigDraft?
+    private let metadataSaveOperation: MetadataSaveOperation?
 
     init(environment: AppEnvironment,
          attachmentStore: MemoryAttachmentStore,
@@ -47,13 +50,15 @@ final class MemoryEditorViewModel: ObservableObject {
          defaultMind: Mind?,
          template: MemoryEditorTemplate,
          initialTitle: String = "",
-         initialScheduleConfig: ScheduleConfigDraft? = nil) {
+         initialScheduleConfig: ScheduleConfigDraft? = nil,
+         metadataSaveOperation: MetadataSaveOperation? = nil) {
         self.environment = environment
         self.attachmentStore = attachmentStore
         self.existingMemory = memory
         self.template = template
         self.defaultMind = defaultMind
         self.initialScheduleConfig = initialScheduleConfig
+        self.metadataSaveOperation = metadataSaveOperation
         self.persistedMemoryID = memory?.id
         self.title = initialTitle
         configureInitialState()
@@ -621,6 +626,37 @@ final class MemoryEditorViewModel: ObservableObject {
     }
 
     func saveMetadataOnly() async -> Bool {
+        guard !isSaving else { return false }
+
+        isSaving = true
+        defer { isSaving = false }
+
+        return await performMetadataSave()
+    }
+
+    func toggleStatusAndSave() async -> Bool {
+        guard !isSaving else { return false }
+
+        let previousStatus = status
+        let previousCheckItems = checkItems
+
+        isSaving = true
+        defer { isSaving = false }
+
+        toggleStatus()
+
+        guard await performMetadataSave() else {
+            await restoreAuthoritativeStatus(
+                fallbackStatus: previousStatus,
+                fallbackCheckItems: previousCheckItems
+            )
+            return false
+        }
+
+        return true
+    }
+
+    private func performMetadataSave() async -> Bool {
         guard let memoryID = editingMemoryID else {
             return false
         }
@@ -652,18 +688,40 @@ final class MemoryEditorViewModel: ObservableObject {
             completedDates: existingMemory.completedDates
         )
 
-        isSaving = true
-        defer { isSaving = false }
-
         do {
-            let savedMemory = try await environment.memoryService.updateMemory(from: draft)
+            let savedMemory: Memory
+            if let metadataSaveOperation {
+                savedMemory = try await metadataSaveOperation(draft)
+            } else {
+                savedMemory = try await environment.memoryService.updateMemory(
+                    from: draft
+                )
+            }
             self.existingMemory = savedMemory
             persistedMemoryID = savedMemory.id
+            apply(memory: savedMemory)
             return true
         } catch {
             errorMessage = "Unable to save memory."
             return false
         }
+    }
+
+    private func restoreAuthoritativeStatus(
+        fallbackStatus: MemoryStatus,
+        fallbackCheckItems: [CheckItemDraft]
+    ) async {
+        if let memoryID = editingMemoryID {
+            _ = await environment.memoryService.refresh(force: true)
+            if let memory = environment.memoryService.memory(id: memoryID) {
+                existingMemory = memory
+                apply(memory: memory)
+                return
+            }
+        }
+
+        status = fallbackStatus
+        checkItems = fallbackCheckItems
     }
 }
 

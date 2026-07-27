@@ -44,6 +44,45 @@ struct DesktopNavigationStateTests {
         #expect(state.calendarMode == .month)
         #expect(state.calendarAnchorDate == now)
     }
+
+    @Test("Reselecting Mind and Me returns their navigation to the root")
+    func reselectingNestedSectionsReturnsToRoot() {
+        let state = DesktopNavigationState()
+        state.mindsPath.append("parent mind")
+        state.mindsPath.append("nested mind")
+        state.currentMindContext = Mind(name: "Work")
+        state.isSearchPresented = true
+
+        state.returnToRoot(of: .mind)
+        state.returnToRoot(of: .mind)
+
+        #expect(state.mindsPath.isEmpty)
+        #expect(state.currentMindContext == nil)
+        #expect(!state.isSearchPresented)
+
+        state.mePath.append("settings")
+        state.mePath.append("focus settings")
+        state.returnToRoot(of: .me)
+        state.returnToRoot(of: .me)
+
+        #expect(state.mePath.isEmpty)
+    }
+
+    @Test("Reselecting Calendar and Focus preserves active state")
+    func reselectingSessionSectionsIsANoOp() {
+        let state = DesktopNavigationState()
+        let anchor = Date(timeIntervalSince1970: 1_785_105_600)
+        state.calendarMode = .month
+        state.calendarAnchorDate = anchor
+        state.isSearchPresented = true
+
+        state.returnToRoot(of: .calendar)
+        state.returnToRoot(of: .focus)
+
+        #expect(state.calendarMode == .month)
+        #expect(state.calendarAnchorDate == anchor)
+        #expect(state.isSearchPresented)
+    }
 }
 
 #endif

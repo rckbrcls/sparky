@@ -13,7 +13,6 @@ struct DesktopDayCalendarView: View {
 
     private let calendar = Calendar.current
     private let weekdayHeaderHeight: CGFloat = 54
-    private let contentMaxWidth: CGFloat = 880
 
     private var days: [Date] {
         DesktopCalendarLayout.weekDates(
@@ -52,9 +51,13 @@ struct DesktopDayCalendarView: View {
                         dataManager.ensureMonthLoaded($0)
                     },
                     showsDayHeader: false,
-                    bottomContentInset: 0
+                    bottomContentInset: 0,
+                    scrollIndicatorVisibility: .never
                 )
-                .frame(maxWidth: contentMaxWidth, maxHeight: .infinity)
+                .frame(
+                    maxWidth: DesktopLayoutMetrics.primaryContentMaxWidth,
+                    maxHeight: .infinity
+                )
 
                 Spacer(minLength: 0)
             }

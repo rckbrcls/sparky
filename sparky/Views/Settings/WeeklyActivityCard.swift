@@ -8,13 +8,9 @@ struct WeeklyActivityCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Activity")
-                    .font(.title3)
-                    .bold()
-
-                selectedDaySummary
-            }
+            Text("Activity")
+                .font(.title3)
+                .bold()
 
             periodLegend
 
@@ -48,36 +44,6 @@ private extension WeeklyActivityCard {
 
     var maximumDailyCount: Int {
         max(activityDays.map(\.completionCount).max() ?? 0, 1)
-    }
-
-    @ViewBuilder
-    var selectedDaySummary: some View {
-        if let selectedDay {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(Self.fullWeekdayFormatter.string(from: selectedDay.date))
-                        .font(.subheadline)
-                        .bold()
-
-                    Text("·")
-                        .foregroundStyle(Color.Theme.textTertiary)
-
-                    Text(summary(for: selectedDay))
-                        .font(.subheadline)
-                        .foregroundStyle(Color.Theme.textSecondary)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(Self.fullWeekdayFormatter.string(from: selectedDay.date))
-                        .font(.subheadline)
-                        .bold()
-                    Text(summary(for: selectedDay))
-                        .font(.subheadline)
-                        .foregroundStyle(Color.Theme.textSecondary)
-                }
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        }
     }
 
     var periodLegend: some View {
@@ -198,14 +164,6 @@ private extension WeeklyActivityCard {
         let proportion = CGFloat(day.completionCount(for: period))
             / CGFloat(day.completionCount)
         return max(5, fullBarHeight * proportion)
-    }
-
-    func summary(for day: MeMetrics.ActivityDay) -> String {
-        guard day.completionCount > 0 else { return "No completions" }
-        if let period = day.dominantPeriod {
-            return "\(day.completionCount) completed · \(period.title) peak"
-        }
-        return "\(day.completionCount) completed"
     }
 
     func accessibilityValue(for day: MeMetrics.ActivityDay) -> String {

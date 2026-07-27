@@ -19,7 +19,7 @@ struct FocusQuickDurationTests {
         settings.longBreakDurationMinutes = 15
         settings.pomodorosUntilLongBreak = 4
         settings.autoContinue = true
-        return FocusTimer(settings: settings, notifications: FocusNotificationService(settings: SettingsStore()))
+        return FocusTimer(settings: settings, feedback: FocusFeedbackSpy())
     }
 
     @Test func beginQuickSessionNilUsesGlobalWork() {

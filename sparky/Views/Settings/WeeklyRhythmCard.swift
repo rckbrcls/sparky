@@ -2,8 +2,6 @@ import SwiftUI
 
 struct WeeklyRhythmCard: View {
     let rhythm: MeMetrics.RhythmSummary
-    let completionRate: MeMetrics.CompletionRate
-    let insight: MeMetrics.Insight
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -11,27 +9,7 @@ struct WeeklyRhythmCard: View {
                 .font(.title3)
                 .bold()
 
-            if rhythm.hasReliablePattern {
-                rhythmRows
-            } else {
-                Text(learningMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if completionRate.isAvailable {
-                Divider()
-                metricRow(
-                    title: "Scheduled completion",
-                    value: completionRateText
-                )
-            }
-
-            if shouldShowInsight {
-                Divider()
-                insightSummary
-            }
+            rhythmRows
         }
         .padding(20)
         .cardStyle(cornerRadius: 20)
@@ -39,43 +17,35 @@ struct WeeklyRhythmCard: View {
 }
 
 private extension WeeklyRhythmCard {
-    @ViewBuilder
     var rhythmRows: some View {
-        if let period = rhythm.mostActivePeriod {
+        VStack(spacing: 16) {
+            let periodText = MeMetrics.activityPeriodText(
+                for: rhythm.mostActivePeriod
+            )
             metricRow(
                 title: "Most active period",
-                value: period.title
+                value: periodText,
+                accessibilityValue: MeMetrics.accessibilityText(
+                    for: periodText
+                )
             )
-        }
-
-        if rhythm.mostActivePeriod != nil, rhythm.bestWeekday != nil {
             Divider()
-        }
-
-        if let weekday = rhythm.bestWeekday {
+            let weekdayText = MeMetrics.weekdayText(for: rhythm.bestWeekday)
             metricRow(
                 title: "Best completion day",
-                value: MeMetrics.englishWeekdayName(for: weekday)
+                value: weekdayText,
+                accessibilityValue: MeMetrics.accessibilityText(
+                    for: weekdayText
+                )
             )
         }
     }
 
-    var insightSummary: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(insight.title)
-                .font(.subheadline)
-                .bold()
-
-            Text(insight.message)
-                .font(.subheadline)
-                .foregroundStyle(Color.Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-    }
-
-    func metricRow(title: String, value: String) -> some View {
+    func metricRow(
+        title: String,
+        value: String,
+        accessibilityValue: String
+    ) -> some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(title)
@@ -94,29 +64,44 @@ private extension WeeklyRhythmCard {
             }
         }
         .font(.subheadline)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(accessibilityValue)
     }
+}
 
-    var learningMessage: String {
-        let remaining = max(
-            MeMetrics.minimumRhythmSampleCount - rhythm.sampleCount,
-            0
+#Preview("Measured Rhythm") {
+    WeeklyRhythmCard(
+        rhythm: MeMetrics.RhythmSummary(
+            sampleCount: 5,
+            mostActivePeriod: .morning,
+            bestWeekday: 2
         )
-        guard remaining > 0 else {
-            return "Your recent activity is balanced. Keep going and a clearer pattern will emerge."
-        }
-        let memoryLabel = remaining == 1 ? "memory" : "memories"
-        if rhythm.sampleCount == 0 {
-            return "Complete \(remaining) \(memoryLabel) to reveal your rhythm."
-        }
-        return "Complete \(remaining) more \(memoryLabel) to reveal your rhythm."
-    }
+    )
+    .padding()
+    .background(Color.Theme.secondaryBackground)
+}
 
-    var shouldShowInsight: Bool {
-        insight != .buildingPattern
-    }
+#Preview("Unavailable Rhythm") {
+    WeeklyRhythmCard(
+        rhythm: MeMetrics.RhythmSummary(
+            sampleCount: 0,
+            mostActivePeriod: nil,
+            bestWeekday: nil
+        )
+    )
+    .padding()
+    .background(Color.Theme.secondaryBackground)
+}
 
-    var completionRateText: String {
-        "\(Int((completionRate.value * 100).rounded()))%"
-    }
+#Preview("Tied Rhythm") {
+    WeeklyRhythmCard(
+        rhythm: MeMetrics.RhythmSummary(
+            sampleCount: 4,
+            mostActivePeriod: nil,
+            bestWeekday: nil
+        )
+    )
+    .padding()
+    .background(Color.Theme.secondaryBackground)
 }

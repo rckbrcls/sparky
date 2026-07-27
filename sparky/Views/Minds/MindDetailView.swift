@@ -234,6 +234,13 @@ struct MindDetailView: View {
                         )
                     }
             }
+            #if os(macOS)
+            .frame(
+                maxWidth: DesktopLayoutMetrics.primaryContentMaxWidth,
+                alignment: .leading
+            )
+            #endif
+            .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())

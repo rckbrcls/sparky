@@ -53,6 +53,13 @@ struct MindsTab: View {
                 .padding(.bottom, 100) // Extra padding for bottom inset
             }
             .padding(.top, 16)
+            #if os(macOS)
+            .frame(
+                maxWidth: DesktopLayoutMetrics.primaryContentMaxWidth,
+                alignment: .leading
+            )
+            #endif
+            .frame(maxWidth: .infinity)
         }
         .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)

@@ -38,7 +38,8 @@ struct DesktopRootView: View {
                             template: .blank
                         )
                     )
-                }
+                },
+                onReselect: nav.returnToRoot
             )
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)

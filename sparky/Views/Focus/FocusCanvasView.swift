@@ -55,6 +55,9 @@ struct FocusCanvasView: View {
 
                 Spacer(minLength: 32)
             }
+            #if os(macOS)
+            .frame(maxWidth: DesktopLayoutMetrics.primaryContentMaxWidth)
+            #endif
             .frame(maxWidth: .infinity)
             .padding(.bottom, 32)
         }
@@ -159,10 +162,9 @@ private func makeFocusCanvasPreviewTimer(suite: String) -> FocusTimer {
     let defaults = UserDefaults(suiteName: suite)!
     defaults.removePersistentDomain(forName: suite)
     let settings = FocusSettings(defaults: defaults)
-    let appSettings = SettingsStore(defaults: defaults)
     return FocusTimer(
         settings: settings,
-        notifications: FocusNotificationService(settings: appSettings)
+        feedback: NoOpFocusFeedbackHandler()
     )
 }
 

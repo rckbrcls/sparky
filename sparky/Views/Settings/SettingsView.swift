@@ -11,6 +11,7 @@ struct SettingsView: View {
     @Binding private var navigationPath: NavigationPath
     private let embedsInNavigationStack: Bool
     private let focusSettings: FocusSettings?
+    private let focusFeedback: FocusFeedbackHandling?
 
     private enum Route: Hashable {
         case appearance
@@ -25,11 +26,13 @@ struct SettingsView: View {
     init(
         navigationPath: Binding<NavigationPath>,
         embedsInNavigationStack: Bool = true,
-        focusSettings: FocusSettings? = nil
+        focusSettings: FocusSettings? = nil,
+        focusFeedback: FocusFeedbackHandling? = nil
     ) {
         _navigationPath = navigationPath
         self.embedsInNavigationStack = embedsInNavigationStack
         self.focusSettings = focusSettings
+        self.focusFeedback = focusFeedback
     }
 
     var body: some View {
@@ -108,7 +111,7 @@ private extension SettingsView {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-                if focusSettings != nil {
+                if focusSettings != nil, focusFeedback != nil {
                     ZStack {
                         NavigationLink(value: Route.focus) {
                             EmptyView()
@@ -163,8 +166,11 @@ private extension SettingsView {
         case .advanced:
             AdvancedSettingsView()
         case .focus:
-            if let focusSettings {
-                FocusSettingsView(settings: focusSettings)
+            if let focusSettings, let focusFeedback {
+                FocusSettingsView(
+                    settings: focusSettings,
+                    feedback: focusFeedback
+                )
             } else {
                 EmptyView()
             }

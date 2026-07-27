@@ -15,7 +15,7 @@ struct FocusSessionReplaceTests {
         defaults.removePersistentDomain(forName: suite)
         let settings = FocusSettings(defaults: defaults)
         settings.resetToDefaults()
-        return FocusTimer(settings: settings, notifications: FocusNotificationService(settings: SettingsStore()))
+        return FocusTimer(settings: settings, feedback: FocusFeedbackSpy())
     }
 
     @Test func wouldReplaceQuickVsMemory() {

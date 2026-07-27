@@ -11,11 +11,8 @@ struct WeeklySparkCard: View {
             weeklySummary
             Divider()
             metricSummary
-
-            if metrics.completionRate.isAvailable {
-                Divider()
-                scheduledProgress
-            }
+            Divider()
+            scheduledProgress
         }
         .padding(20)
         .cardStyle(cornerRadius: 20)
@@ -31,16 +28,11 @@ private extension WeeklySparkCard {
             Text("Weekly Spark")
                 .font(.headline)
 
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    completionCount
-                    completionDescription
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    completionCount
-                    completionDescription
-                }
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                completionCount
+                Text("completed")
+                    .font(.body)
+                    .foregroundStyle(Color.Theme.textSecondary)
             }
         }
     }
@@ -50,12 +42,6 @@ private extension WeeklySparkCard {
             .font(.custom("Baskerville", size: 48, relativeTo: .largeTitle))
             .bold()
             .contentTransition(.numericText())
-    }
-
-    var completionDescription: some View {
-        Text(completionLabel)
-            .font(.body)
-            .foregroundStyle(Color.Theme.textSecondary)
     }
 
     var scheduledProgress: some View {
@@ -74,11 +60,13 @@ private extension WeeklySparkCard {
                     Capsule()
                         .fill(Color.Theme.border)
 
-                    Capsule()
-                        .fill(Color.accentColor)
-                        .frame(
-                            width: geometry.size.width * metrics.completionRate.value
-                        )
+                    if metrics.completionRate.isAvailable {
+                        Capsule()
+                            .fill(Color.accentColor)
+                            .frame(
+                                width: geometry.size.width * metrics.completionRate.value
+                            )
+                    }
                 }
             }
             .frame(height: 7)
@@ -152,18 +140,12 @@ private extension WeeklySparkCard {
         .font(.body)
     }
 
-    var completionLabel: String {
-        metrics.completionCountLast7Days == 1
-            ? "memory completed"
-            : "memories completed"
-    }
-
     func dayCount(_ count: Int) -> String {
         "\(count) \(count == 1 ? "day" : "days")"
     }
 
     var completionRateText: String {
-        "\(Int((metrics.completionRate.value * 100).rounded()))%"
+        MeMetrics.percentageText(for: metrics.completionRate)
     }
 
     var accessibilityValue: String {
@@ -173,9 +155,9 @@ private extension WeeklySparkCard {
             "current streak \(dayCount(metrics.streakDays))",
             "\(metrics.totalCompletionCount) completed all time"
         ]
-        if metrics.completionRate.isAvailable {
-            parts.append("scheduled completion \(completionRateText)")
-        }
+        parts.append(
+            "scheduled completion \(MeMetrics.accessibilityText(for: completionRateText))"
+        )
         return parts.joined(separator: ", ")
     }
 }
@@ -202,6 +184,29 @@ private extension WeeklySparkCard {
                 bestWeekday: 2
             ),
             insight: .activePeriod(.morning)
+        )
+    )
+    .padding()
+    .background(Color.Theme.secondaryBackground)
+}
+
+#Preview("Unavailable Scheduled Progress") {
+    WeeklySparkCard(
+        metrics: MeMetrics(
+            memoryCount: 0,
+            activityDays: [],
+            completionRate: MeMetrics.CompletionRate(
+                completedOccurrences: 0,
+                scheduledOccurrences: 0
+            ),
+            streakDays: 0,
+            totalCompletionCount: 0,
+            rhythm: MeMetrics.RhythmSummary(
+                sampleCount: 0,
+                mostActivePeriod: nil,
+                bestWeekday: nil
+            ),
+            insight: .buildingPattern
         )
     )
     .padding()

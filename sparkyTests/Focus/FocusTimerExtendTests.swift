@@ -19,7 +19,7 @@ struct FocusTimerExtendTests {
         settings.longBreakDurationMinutes = 15
         settings.pomodorosUntilLongBreak = 2
         settings.autoContinue = autoContinue
-        return FocusTimer(settings: settings, notifications: FocusNotificationService(settings: SettingsStore()))
+        return FocusTimer(settings: settings, feedback: FocusFeedbackSpy())
     }
 
     @Test func extendWhileRunningAddsSixtySeconds() {

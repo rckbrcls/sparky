@@ -16,6 +16,10 @@ final class FocusSettings: ObservableObject {
         static let longBreakDurationMinutes = "focus.longBreakDurationMinutes"
         static let pomodorosUntilLongBreak = "focus.pomodorosUntilLongBreak"
         static let autoContinue = "focus.autoContinue"
+        static let notificationsEnabled = "focus.notificationsEnabled"
+        static let soundsEnabled = "focus.soundsEnabled"
+        static let focusCompletionSound = "focus.focusCompletionSound"
+        static let breakCompletionSound = "focus.breakCompletionSound"
     }
 
     private static let defaultWorkDurationMinutes = 25
@@ -23,6 +27,10 @@ final class FocusSettings: ObservableObject {
     private static let defaultLongBreakDurationMinutes = 15
     private static let defaultPomodorosUntilLongBreak = 4
     private static let defaultAutoContinue = true
+    private static let defaultNotificationsEnabled = true
+    private static let defaultSoundsEnabled = true
+    private static let defaultFocusCompletionSound = FocusSoundChoice.glass
+    private static let defaultBreakCompletionSound = FocusSoundChoice.bell
 
     private let defaults: UserDefaults
 
@@ -56,6 +64,32 @@ final class FocusSettings: ObservableObject {
         didSet { defaults.set(autoContinue, forKey: Keys.autoContinue) }
     }
 
+    @Published var notificationsEnabled: Bool {
+        didSet { defaults.set(notificationsEnabled, forKey: Keys.notificationsEnabled) }
+    }
+
+    @Published var soundsEnabled: Bool {
+        didSet { defaults.set(soundsEnabled, forKey: Keys.soundsEnabled) }
+    }
+
+    @Published var focusCompletionSound: FocusSoundChoice {
+        didSet {
+            defaults.set(
+                focusCompletionSound.rawValue,
+                forKey: Keys.focusCompletionSound
+            )
+        }
+    }
+
+    @Published var breakCompletionSound: FocusSoundChoice {
+        didSet {
+            defaults.set(
+                breakCompletionSound.rawValue,
+                forKey: Keys.breakCompletionSound
+            )
+        }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
@@ -80,6 +114,25 @@ final class FocusSettings: ObservableObject {
         } else {
             autoContinue = Self.defaultAutoContinue
         }
+
+        if defaults.object(forKey: Keys.notificationsEnabled) != nil {
+            notificationsEnabled = defaults.bool(forKey: Keys.notificationsEnabled)
+        } else {
+            notificationsEnabled = Self.defaultNotificationsEnabled
+        }
+
+        if defaults.object(forKey: Keys.soundsEnabled) != nil {
+            soundsEnabled = defaults.bool(forKey: Keys.soundsEnabled)
+        } else {
+            soundsEnabled = Self.defaultSoundsEnabled
+        }
+
+        focusCompletionSound = FocusSoundChoice(
+            rawValue: defaults.string(forKey: Keys.focusCompletionSound) ?? ""
+        ) ?? Self.defaultFocusCompletionSound
+        breakCompletionSound = FocusSoundChoice(
+            rawValue: defaults.string(forKey: Keys.breakCompletionSound) ?? ""
+        ) ?? Self.defaultBreakCompletionSound
     }
 
     var workDurationSeconds: Int { workDurationMinutes * 60 }
@@ -92,5 +145,9 @@ final class FocusSettings: ObservableObject {
         longBreakDurationMinutes = Self.defaultLongBreakDurationMinutes
         pomodorosUntilLongBreak = Self.defaultPomodorosUntilLongBreak
         autoContinue = Self.defaultAutoContinue
+        notificationsEnabled = Self.defaultNotificationsEnabled
+        soundsEnabled = Self.defaultSoundsEnabled
+        focusCompletionSound = Self.defaultFocusCompletionSound
+        breakCompletionSound = Self.defaultBreakCompletionSound
     }
 }

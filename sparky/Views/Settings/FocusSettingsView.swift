@@ -7,6 +7,7 @@ import SwiftUI
 
 struct FocusSettingsView: View {
     @ObservedObject var settings: FocusSettings
+    let feedback: FocusFeedbackHandling
 
     var body: some View {
         List {
@@ -37,14 +38,23 @@ struct FocusSettingsView: View {
                 )
             } header: {
                 Text("Durations")
-            } footer: {
-                Text("Defaults for new Quick Focus sessions and newly enabled Memory Focus recipes. Local changes do not modify these defaults.")
             }
 
             Section {
                 Toggle("Auto-continue phases", isOn: $settings.autoContinue)
-            } footer: {
-                Text("When off, Focus pauses between work and break so you can start the next phase manually.")
+            }
+
+            Section("Feedback") {
+                Toggle("Notifications", isOn: $settings.notificationsEnabled)
+                Toggle("Sounds", isOn: $settings.soundsEnabled)
+                soundPicker(
+                    title: "Focus complete",
+                    selection: $settings.focusCompletionSound
+                )
+                soundPicker(
+                    title: "Break complete",
+                    selection: $settings.breakCompletionSound
+                )
             }
 
             Section {
@@ -72,5 +82,25 @@ struct FocusSettingsView: View {
             }
         }
         .pickerStyle(.menu)
+    }
+
+    private func soundPicker(
+        title: String,
+        selection: Binding<FocusSoundChoice>
+    ) -> some View {
+        HStack(spacing: 12) {
+            Picker(title, selection: selection) {
+                ForEach(FocusSoundChoice.allCases) { sound in
+                    Text(sound.title)
+                        .tag(sound)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Button("Test") {
+                feedback.preview(selection.wrappedValue)
+            }
+        }
+        .disabled(!settings.soundsEnabled)
     }
 }

@@ -69,6 +69,19 @@ final class DesktopNavigationState: ObservableObject {
     func handleMissingMemory() {
         unavailableMemoryAlertMessage = "This memory is no longer available."
     }
+
+    func returnToRoot(of section: DesktopSection) {
+        switch section {
+        case .mind:
+            mindsPath = NavigationPath()
+            currentMindContext = nil
+            isSearchPresented = false
+        case .me:
+            mePath = NavigationPath()
+        case .calendar, .focus:
+            break
+        }
+    }
 }
 
 #endif

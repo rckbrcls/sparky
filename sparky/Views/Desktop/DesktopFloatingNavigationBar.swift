@@ -7,6 +7,7 @@ struct DesktopFloatingNavigationBar: View {
     @Binding var createMemoryRoute: MemoryEditorRoute?
 
     let makeCreateMemoryRoute: () -> MemoryEditorRoute
+    let onReselect: (DesktopSection) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hoveredSection: DesktopSection?
@@ -31,6 +32,11 @@ struct DesktopFloatingNavigationBar: View {
         HStack(spacing: 0) {
             ForEach(DesktopSection.allCases) { section in
                 Button {
+                    guard selection != section else {
+                        onReselect(section)
+                        return
+                    }
+
                     if reduceMotion {
                         selection = section
                     } else {

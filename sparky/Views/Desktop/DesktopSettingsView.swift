@@ -12,7 +12,10 @@ struct DesktopSettingsView: View {
                     Label("Appearance", systemImage: "circle.lefthalf.filled")
                 }
 
-            FocusSettingsView(settings: environment.focusSettings)
+            FocusSettingsView(
+                settings: environment.focusSettings,
+                feedback: environment.focusFeedbackService
+            )
                 .tabItem {
                     Label("Focus", systemImage: "timer")
                 }

@@ -28,11 +28,12 @@ final class FocusTimer: ObservableObject {
     @Published private(set) var phaseEndsAt: Date?
 
     let settings: FocusSettings
-    private let notifications: FocusNotificationService
+    private let feedback: FocusFeedbackHandling
 
     private var currentPhaseTotalSeconds: Int = 0
     private var timerCancellable: AnyCancellable?
     private var settingsCancellable: AnyCancellable?
+    private var suppressNextStartFeedback = false
 
     var formattedTime: String {
         let m = remainingSeconds / 60
@@ -91,9 +92,9 @@ final class FocusTimer: ObservableObject {
         return Date().addingTimeInterval(TimeInterval(remainingSeconds))
     }
 
-    init(settings: FocusSettings, notifications: FocusNotificationService) {
+    init(settings: FocusSettings, feedback: FocusFeedbackHandling) {
         self.settings = settings
-        self.notifications = notifications
+        self.feedback = feedback
         let initial = FocusRecipe.from(settings: settings).workDurationSeconds
         self.remainingSeconds = initial
         self.currentPhaseTotalSeconds = initial
@@ -132,7 +133,7 @@ final class FocusTimer: ObservableObject {
         }
         guard !isSessionActive else { return }
 
-        reset()
+        resetSilently()
         activeRecipe = recipe
         activeMemoryID = nil
         activeMemoryTitle = "Quick Focus"
@@ -147,7 +148,7 @@ final class FocusTimer: ObservableObject {
         }
         guard !isSessionActive || activeMemoryID == memoryID else { return }
 
-        reset()
+        resetSilently()
         activeRecipe = recipe
         activeMemoryID = memoryID
         activeMemoryTitle = memoryTitle
@@ -172,34 +173,33 @@ final class FocusTimer: ObservableObject {
         }
 
         startTicking()
+        if suppressNextStartFeedback {
+            suppressNextStartFeedback = false
+        } else {
+            feedback.handle(.startOrResume)
+        }
     }
 
     func pause() {
         guard isRunning else { return }
-        syncRemainingFromWallClock()
-        isRunning = false
-        phaseEndsAt = nil
-        timerCancellable?.cancel()
-        timerCancellable = nil
+        stopRunningSilently()
+        feedback.handle(.pause)
     }
 
     func reset() {
-        pause()
-        phase = .idle
-        let seconds = FocusRecipe.from(settings: settings).workDurationSeconds
-        remainingSeconds = seconds
-        currentPhaseTotalSeconds = seconds
-        completedPomodoros = 0
-        isWaitingForManualStart = false
-        activeMemoryID = nil
-        activeMemoryTitle = nil
-        activeRecipe = nil
-        phaseEndsAt = nil
-        phaseStartedAt = nil
+        resetSilently()
     }
 
     func endSession() {
-        reset()
+        guard isSessionActive else { return }
+        resetSilently()
+        feedback.handle(.end)
+    }
+
+    func discardSessionForReplacement() {
+        guard isSessionActive else { return }
+        resetSilently()
+        suppressNextStartFeedback = true
     }
 
     /// Resets counters while keeping memory binding and recipe.
@@ -207,7 +207,7 @@ final class FocusTimer: ObservableObject {
         let memoryID = activeMemoryID
         let title = activeMemoryTitle
         let recipe = activeRecipe
-        pause()
+        stopRunningSilently()
         phase = .idle
         let seconds = (recipe ?? FocusRecipe.from(settings: settings)).workDurationSeconds
         remainingSeconds = seconds
@@ -308,14 +308,14 @@ final class FocusTimer: ObservableObject {
 
         switch phase {
         case .work:
-            notifications.sendWorkComplete()
+            feedback.handle(.focusComplete)
             completedPomodoros += 1
             let isLong = completedPomodoros % recipe.pomodorosUntilLongBreak == 0
             let seconds = isLong ? recipe.longBreakDurationSeconds : recipe.shortBreakDurationSeconds
             configurePhase(.break, totalSeconds: seconds)
 
         case .break:
-            notifications.sendBreakComplete()
+            feedback.handle(.breakComplete)
             configurePhase(.work, totalSeconds: recipe.workDurationSeconds)
 
         case .idle:
@@ -329,8 +329,32 @@ final class FocusTimer: ObservableObject {
                 startTicking()
             }
         } else {
-            pause()
+            stopRunningSilently()
             isWaitingForManualStart = true
         }
+    }
+
+    private func stopRunningSilently() {
+        guard isRunning else { return }
+        syncRemainingFromWallClock()
+        isRunning = false
+        phaseEndsAt = nil
+        timerCancellable?.cancel()
+        timerCancellable = nil
+    }
+
+    private func resetSilently() {
+        stopRunningSilently()
+        phase = .idle
+        let seconds = FocusRecipe.from(settings: settings).workDurationSeconds
+        remainingSeconds = seconds
+        currentPhaseTotalSeconds = seconds
+        completedPomodoros = 0
+        isWaitingForManualStart = false
+        activeMemoryID = nil
+        activeMemoryTitle = nil
+        activeRecipe = nil
+        phaseEndsAt = nil
+        phaseStartedAt = nil
     }
 }

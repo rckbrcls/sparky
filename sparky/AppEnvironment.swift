@@ -36,6 +36,9 @@ final class AppEnvironment: ObservableObject {
     let settings: SettingsStore
     let attachmentStore: MemoryAttachmentStore
     let focusSettings: FocusSettings
+    let focusSoundService: FocusSoundService
+    let focusNotificationService: FocusNotificationService
+    let focusFeedbackService: FocusFeedbackService
     let focusTimer: FocusTimer
 
     @Published var isBootstrapping = true
@@ -54,8 +57,19 @@ final class AppEnvironment: ObservableObject {
         self.settings = SettingsStore()
         self.attachmentStore = MemoryAttachmentStore()
         self.focusSettings = focusSettings ?? FocusSettings()
-        let focusNotifications = FocusNotificationService(settings: settings)
-        self.focusTimer = FocusTimer(settings: self.focusSettings, notifications: focusNotifications)
+        self.focusSoundService = FocusSoundService()
+        self.focusNotificationService = FocusNotificationService(
+            settings: self.focusSettings
+        )
+        self.focusFeedbackService = FocusFeedbackService(
+            settings: self.focusSettings,
+            soundPlayer: self.focusSoundService,
+            notificationSender: self.focusNotificationService
+        )
+        self.focusTimer = FocusTimer(
+            settings: self.focusSettings,
+            feedback: self.focusFeedbackService
+        )
 
         // Initialize services - they will load data synchronously in their init
         self.mindService = MindService(dataController: dataController)
@@ -128,7 +142,7 @@ final class AppEnvironment: ObservableObject {
 
         // Deep-link / editor intent is explicit: replace any other active target.
         if focusTimer.wouldReplaceSession(withMemoryID: memory.id) {
-            focusTimer.endSession()
+            focusTimer.discardSessionForReplacement()
         }
 
         focusTimer.beginSession(memoryID: memory.id, memoryTitle: memory.title, recipe: recipe)
@@ -137,14 +151,14 @@ final class AppEnvironment: ObservableObject {
 
     func startQuickFocus(workDurationMinutes: Int? = nil) {
         if focusTimer.wouldReplaceSession(withMemoryID: nil) {
-            focusTimer.endSession()
+            focusTimer.discardSessionForReplacement()
         }
         focusTimer.beginQuickSession(workDurationMinutes: workDurationMinutes)
     }
 
     func startQuickFocus(recipe: FocusRecipe) {
         if focusTimer.wouldReplaceSession(withMemoryID: nil) {
-            focusTimer.endSession()
+            focusTimer.discardSessionForReplacement()
         }
         focusTimer.beginQuickSession(recipe: recipe)
     }

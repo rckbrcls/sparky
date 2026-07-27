@@ -352,6 +352,56 @@ struct MeMetricsTests {
         #expect(metrics.completionRate.scheduledOccurrences == 0)
         #expect(metrics.completionRate.value == 0)
     }
+
+    @MainActor
+    @Test func presentationDistinguishesMeasuredZeroFromUnavailableValues() {
+        let measuredZero = MeMetrics.CompletionRate(
+            completedOccurrences: 0,
+            scheduledOccurrences: 4
+        )
+        let unavailable = MeMetrics.CompletionRate(
+            completedOccurrences: 0,
+            scheduledOccurrences: 0
+        )
+
+        #expect(MeMetrics.percentageText(for: measuredZero) == "0%")
+        #expect(MeMetrics.percentageText(for: unavailable) == "—")
+        #expect(
+            MeMetrics.accessibilityText(
+                for: MeMetrics.percentageText(for: unavailable)
+            ) == "Not available"
+        )
+    }
+
+    @MainActor
+    @Test func presentationUsesDashesForInsufficientAndTiedRhythm() {
+        let insufficient = MeMetrics.RhythmSummary(
+            sampleCount: 2,
+            mostActivePeriod: nil,
+            bestWeekday: nil
+        )
+        let tied = MeMetrics.RhythmSummary(
+            sampleCount: 4,
+            mostActivePeriod: nil,
+            bestWeekday: nil
+        )
+
+        #expect(
+            MeMetrics.activityPeriodText(
+                for: insufficient.mostActivePeriod
+            ) == "—"
+        )
+        #expect(MeMetrics.weekdayText(for: insufficient.bestWeekday) == "—")
+        #expect(MeMetrics.activityPeriodText(for: tied.mostActivePeriod) == "—")
+        #expect(MeMetrics.weekdayText(for: tied.bestWeekday) == "—")
+    }
+
+    @MainActor
+    @Test func presentationFormatsMeasuredPeriodAndWeekday() {
+        #expect(MeMetrics.activityPeriodText(for: .evening) == "Evening")
+        #expect(MeMetrics.weekdayText(for: 2) == "Monday")
+        #expect(MeMetrics.accessibilityText(for: "Evening") == "Evening")
+    }
 }
 
 private extension MeMetricsTests {

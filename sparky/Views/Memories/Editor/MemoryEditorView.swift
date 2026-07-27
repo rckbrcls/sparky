@@ -581,11 +581,11 @@ struct MemoryEditorView: View {
     }
 
     private func toggleStatusAndSave() {
+        guard !viewModel.isSaving else { return }
         PlatformHaptics.impactMedium()
-        viewModel.toggleStatus()
 
         Task {
-            _ = await viewModel.saveMetadataOnly()
+            _ = await viewModel.toggleStatusAndSave()
         }
     }
 
@@ -717,11 +717,11 @@ struct MemoryEditorView: View {
     }
 
     private var desktopStatusActionLabel: String {
-        viewModel.status == .active ? "Complete Memory" : "Reopen Memory"
+        viewModel.status.desktopPreviewActionLabel
     }
 
     private var desktopStatusActionSystemImage: String {
-        viewModel.status == .active ? "checkmark" : "arrow.uturn.backward"
+        viewModel.status.desktopPreviewSystemImage
     }
 
     private var desktopDeleteAccessibilityLabel: String? {
@@ -1826,6 +1826,28 @@ private struct EditingSwipeActionModifier: ViewModifier {
     }
 
 }
+
+#if os(macOS)
+extension MemoryStatus {
+    var desktopPreviewActionLabel: String {
+        switch self {
+        case .active:
+            return "Complete Memory"
+        case .completed:
+            return "Reopen Memory"
+        }
+    }
+
+    var desktopPreviewSystemImage: String {
+        switch self {
+        case .active:
+            return "circle"
+        case .completed:
+            return "checkmark.circle.fill"
+        }
+    }
+}
+#endif
 
 
 

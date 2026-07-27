@@ -28,42 +28,34 @@ extension MeMetrics.ActivityPeriod {
     }
 }
 
-extension MeMetrics.Insight {
-    var title: String {
-        switch self {
-        case .improvedWeek:
-            return "Your pace is building"
-        case .activePeriod:
-            return "Your rhythm is taking shape"
-        case .bestWeekday:
-            return "A strong day is emerging"
-        case .buildingPattern:
-            return "Patterns are forming"
-        case .restart:
-            return "Ready when you are"
-        }
-    }
-
-    var message: String {
-        switch self {
-        case let .improvedWeek(delta):
-            let memoryLabel = delta == 1 ? "memory" : "memories"
-            return "You completed \(delta) more \(memoryLabel) than in the previous seven days."
-        case let .activePeriod(period):
-            return "\(period.title) has been your most active period over the last 30 days."
-        case let .bestWeekday(weekday):
-            return "\(MeMetrics.englishWeekdayName(for: weekday)) has been your strongest completion day."
-        case .buildingPattern:
-            return "As you complete memories, Sparky will reveal more of your rhythm."
-        case .restart:
-            return "One completed memory will bring your weekly spark back to life."
-        }
-    }
-}
-
 extension MeMetrics {
+    static let unavailableDisplayText = "—"
+    static let unavailableAccessibilityText = "Not available"
+
+    static func percentageText(for rate: CompletionRate) -> String {
+        guard rate.isAvailable else { return unavailableDisplayText }
+        return "\(Int((rate.value * 100).rounded()))%"
+    }
+
+    static func activityPeriodText(for period: ActivityPeriod?) -> String {
+        period?.title ?? unavailableDisplayText
+    }
+
+    static func weekdayText(for weekday: Int?) -> String {
+        guard let weekday else { return unavailableDisplayText }
+        return englishWeekdayName(for: weekday)
+    }
+
+    static func accessibilityText(for displayText: String) -> String {
+        displayText == unavailableDisplayText
+            ? unavailableAccessibilityText
+            : displayText
+    }
+
     static func englishWeekdayName(for weekday: Int) -> String {
-        guard (1...7).contains(weekday) else { return "This day" }
+        guard (1...7).contains(weekday) else {
+            return unavailableDisplayText
+        }
         return englishWeekdayFormatter.weekdaySymbols[weekday - 1]
     }
 
