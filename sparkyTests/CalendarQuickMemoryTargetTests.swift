@@ -86,8 +86,8 @@ struct CalendarQuickMemoryTargetTests {
         #expect(draft.startDate == draft.fireDate)
     }
 
-    @Test("Desktop all-day target retains the selected day")
-    func exactAllDayTarget() {
+    @Test("Month all-day target retains the selected day")
+    func monthAllDayTarget() {
         let target = CalendarQuickMemoryTarget(
             allDay: makeDate(year: 2026, month: 7, day: 27, hour: 18),
             calendar: calendar
@@ -98,28 +98,6 @@ struct CalendarQuickMemoryTargetTests {
         #expect(target.period == .allDay)
         #expect(draft.fireDate == makeDate(year: 2026, month: 7, day: 27))
         #expect(draft.isAllDay)
-    }
-
-    @Test("Desktop timed target retains its exact hour and minute")
-    func exactTimedTarget() {
-        let scheduledDate = makeDate(
-            year: 2026,
-            month: 7,
-            day: 27,
-            hour: 10,
-            minute: 35
-        )
-        let target = CalendarQuickMemoryTarget(
-            scheduledDate: scheduledDate,
-            calendar: calendar
-        )
-        let draft = target.scheduleDraft(calendar: calendar)
-
-        #expect(!target.isAllDay)
-        #expect(target.period == .morning)
-        #expect(target.suggestedDate(calendar: calendar) == scheduledDate)
-        #expect(draft.fireDate == scheduledDate)
-        #expect(!draft.isAllDay)
     }
 
     @Test("Initial calendar schedule overrides the editor template")
@@ -150,16 +128,14 @@ struct CalendarQuickMemoryTargetTests {
         year: Int,
         month: Int,
         day: Int,
-        hour: Int = 0,
-        minute: Int = 0
+        hour: Int = 0
     ) -> Date {
         calendar.date(
             from: DateComponents(
                 year: year,
                 month: month,
                 day: day,
-                hour: hour,
-                minute: minute
+                hour: hour
             )
         )!
     }

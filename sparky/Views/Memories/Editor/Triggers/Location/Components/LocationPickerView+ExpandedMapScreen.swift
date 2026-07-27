@@ -18,7 +18,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
         NavigationStack {
             mapContent()
                 .ignoresSafeArea()
-                .sheet(isPresented: .constant(true))
+                .platformSheet(isPresented: .constant(true))
             {
                 VStack(spacing: 20) {
                     // Search Bar
@@ -86,6 +86,7 @@ struct ExpandedMapScreen<MapContent: View>: View {
                         presentationDetent = .height(120)
                     }
                 }
+                .macPopoverFrame(width: 420, height: 360)
             }
             .toolbar {
                 ToolbarItem(placement: .principal) {

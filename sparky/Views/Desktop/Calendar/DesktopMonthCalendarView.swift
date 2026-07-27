@@ -6,8 +6,7 @@ struct DesktopMonthCalendarView: View {
     @ObservedObject var dataManager: CalendarDataManager
 
     let anchorDate: Date
-    let onSelect: (Memory) -> Void
-    let onOpenWeek: (Date) -> Void
+    let onOpenDay: (Date) -> Void
 
     private let calendar = Calendar.current
     private let weekdayHeaderHeight: CGFloat = 40
@@ -38,15 +37,14 @@ struct DesktopMonthCalendarView: View {
                             date: day,
                             isInDisplayedMonth: calendar.isDate(day, equalTo: anchorDate, toGranularity: .month),
                             occurrences: dataManager.occurrencesForDate(day),
-                            onSelect: onSelect,
-                            onOpenWeek: onOpenWeek
+                            onOpenDay: onOpenDay
                         )
                         .frame(height: rowHeight)
                     }
                 }
             }
         }
-        .background(Color.Theme.background)
+        .background(Color.Theme.secondaryBackground)
     }
 
     private var weekdayHeader: some View {

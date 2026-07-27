@@ -101,10 +101,7 @@ struct DesktopFloatingNavigationBar: View {
         .keyboardShortcut("n", modifiers: [.command])
         .help("New Memory")
         .accessibilityLabel("Create new memory")
-        .desktopMemoryEditorPopover(
-            item: $createMemoryRoute,
-            arrowEdge: .bottom
-        )
+        .desktopMemoryEditorPopover(item: $createMemoryRoute)
         .onHover { isCreateHovered = $0 }
         .animation(
             reduceMotion ? nil : .easeOut(duration: 0.14),

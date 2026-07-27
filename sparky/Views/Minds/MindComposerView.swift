@@ -88,6 +88,19 @@ struct MindAutoFocusTextField: View {
 
 // MARK: - Mind Composer View
 
+enum MindComposerPresentationStyle: Equatable {
+    case standard
+    case desktopPopover
+
+    static var platformPopover: Self {
+        #if os(macOS)
+        .desktopPopover
+        #else
+        .standard
+        #endif
+    }
+}
+
 struct MindComposerView: View {
     let environment: AppEnvironment
     @Environment(\.dismiss) private var dismiss
@@ -99,11 +112,18 @@ struct MindComposerView: View {
     @State private var iconSearchText: String = ""
     private let mindToEdit: Mind?
     private let parentMind: Mind?
+    private let presentationStyle: MindComposerPresentationStyle
 
-    init(environment: AppEnvironment, mindToEdit: Mind? = nil, parentMind: Mind? = nil) {
+    init(
+        environment: AppEnvironment,
+        mindToEdit: Mind? = nil,
+        parentMind: Mind? = nil,
+        presentationStyle: MindComposerPresentationStyle = .platformPopover
+    ) {
         self.environment = environment
         self.mindToEdit = mindToEdit
         self.parentMind = parentMind
+        self.presentationStyle = presentationStyle
     }
 
     private var selectedMindColor: Color {
@@ -149,34 +169,33 @@ struct MindComposerView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    previewCircle
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 16)
-
-                    MindAutoFocusTextField(
-                        text: $name,
-                        placeholder: "Mind",
-                        font: titleFont,
-                        onSubmit: {
-                            guard canSave else { return }
-                            saveMind()
-                        }
-                    )
-                    .frame(height: 30)
-                    .padding(.horizontal, 20)
-
-                    colorSelector
-
-                    iconSearchBar
-
-                    iconGrid
+        presentationContent
+            .interactiveDismissDisabled(isSaving)
+            .onAppear {
+                if let mindToEdit = mindToEdit {
+                    name = mindToEdit.name
+                    selectedIcon = mindToEdit.iconName ?? "brain.head.profile"
+                    selectedColorHex = mindToEdit.colorHex ?? Color.PresetColors.all.first?.hex ?? "#6366F1"
                 }
-                .padding(.vertical, 16)
             }
-            .scrollDismissesKeyboard(.interactively)
+    }
+
+    @ViewBuilder
+    private var presentationContent: some View {
+        #if os(macOS)
+        if presentationStyle == .desktopPopover {
+            desktopPopoverContent
+        } else {
+            standardContent
+        }
+        #else
+        standardContent
+        #endif
+    }
+
+    private var standardContent: some View {
+        NavigationStack {
+            composerScrollContent
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
             .navigationTitle(mindToEdit != nil ? "Edit Mind" : "New Mind")
             .inlinePhoneNavigationTitle()
@@ -198,15 +217,84 @@ struct MindComposerView: View {
                 }
             }
         }
-        .interactiveDismissDisabled(isSaving)
-        .onAppear {
-            if let mindToEdit = mindToEdit {
-                name = mindToEdit.name
-                selectedIcon = mindToEdit.iconName ?? "brain.head.profile"
-                selectedColorHex = mindToEdit.colorHex ?? Color.PresetColors.all.first?.hex ?? "#6366F1"
+    }
+
+    private var composerScrollContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                previewCircle
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 16)
+
+                MindAutoFocusTextField(
+                    text: $name,
+                    placeholder: "Mind",
+                    font: titleFont,
+                    onSubmit: {
+                        guard canSave else { return }
+                        saveMind()
+                    }
+                )
+                .frame(height: 30)
+                .padding(.horizontal, 20)
+
+                colorSelector
+
+                iconSearchBar
+
+                iconGrid
+            }
+            .padding(.vertical, 16)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .scrollIndicators(.hidden)
+    }
+
+    #if os(macOS)
+    private var desktopPopoverContent: some View {
+        composerScrollContent
+            .background(Color.clear)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                desktopPopoverActions
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            }
+    }
+
+    private var desktopPopoverActions: some View {
+        GlassEffectContainer(spacing: 8) {
+            HStack(spacing: 8) {
+                Button(role: .cancel) {
+                    dismiss()
+                } label: {
+                    Label("Cancel", systemImage: "xmark")
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .capsule)
+
+                Spacer()
+
+                Button(role: .confirm) {
+                    saveMind()
+                } label: {
+                    Label("Save", systemImage: "checkmark")
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.Theme.accentForeground)
+                .glassEffect(
+                    .regular.interactive().tint(Color.accentColor),
+                    in: .capsule
+                )
+                .disabled(!canSave)
+                .opacity(canSave ? 1 : 0.45)
             }
         }
     }
+    #endif
 
     // MARK: - Preview Circle
 

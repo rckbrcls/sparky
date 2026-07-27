@@ -1,15 +1,15 @@
 import Foundation
 
 enum DesktopCalendarMode: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case week
+    case day
     case month
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .week:
-            return "Week"
+        case .day:
+            return "Day"
         case .month:
             return "Month"
         }

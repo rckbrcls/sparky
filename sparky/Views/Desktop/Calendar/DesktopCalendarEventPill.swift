@@ -11,7 +11,19 @@ struct DesktopCalendarEventPill: View {
 
     let occurrence: MemoryOccurrence
     let style: Style
-    let onSelect: (Memory) -> Void
+    let onSelect: ((Memory) -> Void)?
+
+    @State private var editorRoute: MemoryEditorRoute?
+
+    init(
+        occurrence: MemoryOccurrence,
+        style: Style,
+        onSelect: ((Memory) -> Void)? = nil
+    ) {
+        self.occurrence = occurrence
+        self.style = style
+        self.onSelect = onSelect
+    }
 
     private var color: Color {
         CalendarColorHelper.color(for: occurrence.memory)
@@ -23,7 +35,13 @@ struct DesktopCalendarEventPill: View {
 
     var body: some View {
         Button {
-            onSelect(occurrence.memory)
+            if let onSelect {
+                onSelect(occurrence.memory)
+            } else {
+                editorRoute = MemoryEditorRoute(
+                    mode: .preview(memory: occurrence.memory)
+                )
+            }
         } label: {
             HStack(spacing: 6) {
                 indicator
@@ -54,6 +72,7 @@ struct DesktopCalendarEventPill: View {
         .buttonStyle(.plain)
         .help(occurrence.memory.title)
         .accessibilityLabel(accessibilityLabel)
+        .desktopMemoryEditorPopover(item: $editorRoute)
     }
 
     @ViewBuilder

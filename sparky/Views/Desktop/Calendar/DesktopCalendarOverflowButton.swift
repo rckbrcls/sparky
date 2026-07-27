@@ -4,9 +4,9 @@ import SwiftUI
 
 struct DesktopCalendarOverflowButton: View {
     let occurrences: [MemoryOccurrence]
-    let onSelect: (Memory) -> Void
 
     @State private var isPresented = false
+    @State private var editorRoute: MemoryEditorRoute?
 
     var body: some View {
         Button("+\(occurrences.count) more") {
@@ -25,7 +25,12 @@ struct DesktopCalendarOverflowButton: View {
                             style: occurrence.isAllDay ? .allDay : .timed,
                             onSelect: { memory in
                                 isPresented = false
-                                onSelect(memory)
+                                Task { @MainActor in
+                                    await Task.yield()
+                                    editorRoute = MemoryEditorRoute(
+                                        mode: .preview(memory: memory)
+                                    )
+                                }
                             }
                         )
                     }
@@ -35,6 +40,7 @@ struct DesktopCalendarOverflowButton: View {
             .frame(width: 300, height: min(360, CGFloat(occurrences.count * 34 + 24)))
             .background(Color.Theme.secondaryBackground)
         }
+        .desktopMemoryEditorPopover(item: $editorRoute)
         .accessibilityLabel("\(occurrences.count) more memories")
     }
 }

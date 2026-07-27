@@ -45,18 +45,22 @@ struct DesktopRootView: View {
             .padding(.bottom, 16)
         }
         .containerBackground(desktopSurfaceColor, for: .window)
-        .sheet(item: $nav.editorRoute) { route in
-            editor(for: route)
-                .frame(minWidth: 520, minHeight: 560)
-        }
-        .sheet(item: $nav.mindComposerRequest) { request in
+        .desktopMemoryEditorPopover(item: $nav.editorRoute)
+        .popover(
+            item: $nav.mindComposerRequest,
+            attachmentAnchor: .rect(.bounds)
+        ) { request in
             MindComposerView(
                 environment: environment,
-                mindToEdit: request.mindToEdit
+                mindToEdit: request.mindToEdit,
+                presentationStyle: .desktopPopover
             )
-            .frame(minWidth: 420, minHeight: 360)
+            .frame(width: 440, height: 560)
         }
-        .sheet(isPresented: onboardingBinding) {
+        .popover(
+            isPresented: onboardingBinding,
+            attachmentAnchor: .rect(.bounds)
+        ) {
             OnboardingFlowView(environment: environment) {
                 environment.completeOnboarding()
             }
@@ -95,7 +99,7 @@ struct DesktopRootView: View {
 
             ToolbarSpacer(.flexible)
 
-            if nav.selectedSection != .me {
+            if nav.selectedSection == .calendar || nav.selectedSection == .mind {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         nav.isSearchPresented.toggle()
@@ -119,7 +123,7 @@ struct DesktopRootView: View {
         .toolbar(removing: .title)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onChange(of: nav.selectedSection) { _, section in
-            if section == .me {
+            if section != .calendar && section != .mind {
                 nav.isSearchPresented = false
             }
         }
@@ -138,12 +142,7 @@ struct DesktopRootView: View {
     }
 
     private var desktopSurfaceColor: Color {
-        switch nav.selectedSection {
-        case .calendar:
-            return Color.Theme.background
-        case .mind, .focus, .me:
-            return Color.Theme.secondaryBackground
-        }
+        Color.Theme.secondaryBackground
     }
 
     @ViewBuilder
@@ -154,7 +153,8 @@ struct DesktopRootView: View {
                 memoryService: environment.memoryService,
                 mode: $nav.calendarMode,
                 anchorDate: $nav.calendarAnchorDate,
-                onSelect: handleMemorySelection
+                onSelect: handleMemorySelection,
+                onEdit: handleMemoryEdit
             )
         case .mind:
             MindRootView(
@@ -175,31 +175,6 @@ struct DesktopRootView: View {
             MeView(
                 environment: environment,
                 settingsNavigationPath: $nav.mePath
-            )
-        }
-    }
-
-    @ViewBuilder
-    private func editor(for route: MemoryEditorRoute) -> some View {
-        switch route.mode {
-        case let .create(mind, template):
-            MemoryEditorView(
-                environment: environment,
-                mode: .create(mind: mind, template: template),
-                initialTitle: route.initialTitle,
-                initialScheduleConfig: route.initialScheduleConfig
-            )
-        case let .preview(memory):
-            MemoryEditorView(
-                environment: environment,
-                mode: .edit(memory: memory),
-                startEditing: false
-            )
-        case let .edit(memory):
-            MemoryEditorView(
-                environment: environment,
-                mode: .edit(memory: memory),
-                startEditing: route.startEditing
             )
         }
     }

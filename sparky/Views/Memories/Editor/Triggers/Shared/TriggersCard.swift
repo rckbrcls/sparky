@@ -792,6 +792,7 @@ private struct LocationTriggerInlineForm: View {
         }
         .platformCover(isPresented: $isMapExpanded) {
             expandedMapView
+                .macPopoverFrame(width: 640, height: 560)
         }
         .onDisappear {
             geocodeTask?.cancel()

@@ -67,7 +67,7 @@ struct CalendarDayView: View {
                         onSelectMemory: onSelectMemory,
                         onEditMemory: onEditMemory,
                         onToggleSelection: onToggleSelection,
-                        onCreateMemory: onCreateMemory,
+                        creationBehavior: .action(onCreateMemory),
                         expandedPeriods: $expandedPeriods,
                         onEnsureMonthDataLoaded: { date in
                             ensureMonthDataLoaded(for: date)

@@ -16,18 +16,22 @@ struct CalendarDayContentView: View {
     let onSelectMemory: (Memory) -> Void
     let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
-    let onCreateMemory: (CalendarQuickMemoryTarget) -> Void
+    let creationBehavior: CalendarMemoryCreationBehavior
     @Binding var expandedPeriods: Set<CalendarTimePeriod>
     let onEnsureMonthDataLoaded: (Date) -> Void
+    var showsDayHeader = true
+    var bottomContentInset: CGFloat = 70
 
     private let calendar = Calendar.current
 
     var body: some View {
         List {
-            dayHeader
-                .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+            if showsDayHeader {
+                dayHeader
+                    .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
 
             let memories = dataManager.memoriesForDate(day)
             let allDayItems = allDayOccurrences(from: memories, date: day)
@@ -43,7 +47,9 @@ struct CalendarDayContentView: View {
         .scrollIndicators(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
         .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 70)
+            if bottomContentInset > 0 {
+                Color.clear.frame(height: bottomContentInset)
+            }
         }
         .onAppear {
             onEnsureMonthDataLoaded(day)
@@ -77,6 +83,8 @@ struct CalendarDayContentView: View {
 
     @ViewBuilder
     private func allDaySection(occurrences: [MemoryOccurrence]) -> some View {
+        let target = CalendarQuickMemoryTarget(date: day, period: .allDay)
+
         CalendarPeriodSection(
             period: .allDay,
             occurrences: occurrences,
@@ -97,15 +105,15 @@ struct CalendarDayContentView: View {
                     }
                 }
             },
-            onCreateMemory: {
-                onCreateMemory(CalendarQuickMemoryTarget(date: day, period: .allDay))
-            }
+            creationTarget: target,
+            creationBehavior: creationBehavior
         )
     }
 
     @ViewBuilder
     private func periodSection(period: CalendarTimePeriod, memories: [Memory]) -> some View {
         let periodOccurrences = occurrencesForPeriod(period, from: memories, date: day)
+        let target = CalendarQuickMemoryTarget(date: day, period: period)
 
         CalendarPeriodSection(
             period: period,
@@ -127,9 +135,8 @@ struct CalendarDayContentView: View {
                     }
                 }
             },
-            onCreateMemory: {
-                onCreateMemory(CalendarQuickMemoryTarget(date: day, period: period))
-            }
+            creationTarget: target,
+            creationBehavior: creationBehavior
         )
     }
 

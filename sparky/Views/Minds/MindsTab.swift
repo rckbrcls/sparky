@@ -12,9 +12,11 @@ struct MindsTab: View {
     @ObservedObject var memoryService: MemoryService
 
     let onEditMind: ((Mind) -> Void)?
-    let onCreateMind: (() -> Void)?
 
     #if os(macOS)
+    @EnvironmentObject private var environment: AppEnvironment
+    @State private var createMindRequest: MindComposerRequest?
+
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12),
@@ -37,12 +39,26 @@ struct MindsTab: View {
                     Spacer()
 
                     #if os(macOS)
-                    if let onCreateMind {
-                        Button(action: onCreateMind) {
-                            Label("New Mind", systemImage: "folder.badge.plus")
-                        }
-                        .buttonStyle(.bordered)
-                        .help("New Mind")
+                    Button {
+                        createMindRequest = MindComposerRequest(
+                            mindToEdit: nil
+                        )
+                    } label: {
+                        Label("New Mind", systemImage: "folder.badge.plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .help("New Mind")
+                    .popover(
+                        item: $createMindRequest,
+                        attachmentAnchor: .rect(.bounds),
+                        arrowEdge: .trailing
+                    ) { request in
+                        MindComposerView(
+                            environment: environment,
+                            mindToEdit: request.mindToEdit,
+                            presentationStyle: .desktopPopover
+                        )
+                        .frame(width: 440, height: 560)
                     }
                     #endif
                 }

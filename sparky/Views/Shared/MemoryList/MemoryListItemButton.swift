@@ -15,9 +15,13 @@ struct MemoryListItemButton: View {
 
     @EnvironmentObject private var environment: AppEnvironment
     @State private var showRecurringCompletionAlert = false
+    #if os(macOS)
+    @State private var editorRoute: MemoryEditorRoute?
+    #endif
 
     var body: some View {
         listButton
+            .memoryListEditorPopover(item: memoryEditorRouteBinding)
     }
 
     @ViewBuilder
@@ -34,7 +38,7 @@ struct MemoryListItemButton: View {
             if isMultiSelecting, let toggleSelection = onToggleSelection {
                 toggleSelection(memory)
             } else {
-                onSelect(memory)
+                presentMemory()
             }
         } label: {
             // Pass context menu callbacks only when not in multi-selecting or disabled mode
@@ -53,7 +57,7 @@ struct MemoryListItemButton: View {
                     onDelete: { Task { await deleteMemory() } },
                     onMoveToMind: { mindID in Task { await moveMemory(to: mindID) } },
                     onUpdateStatus: { status in Task { await setMemoryStatus(status) } },
-                    onEdit: onEditMemory != nil ? { onEditMemory?(memory) } : nil
+                    onEdit: onEditMemory != nil ? { presentMemoryForEditing() } : nil
                 )
             }
         }
@@ -67,6 +71,33 @@ struct MemoryListItemButton: View {
         } message: {
             Text("This memory repeats. Completing it will end the recurrence and remove future triggers.")
         }
+    }
+
+    private var memoryEditorRouteBinding: Binding<MemoryEditorRoute?> {
+        #if os(macOS)
+        $editorRoute
+        #else
+        .constant(nil)
+        #endif
+    }
+
+    private func presentMemory() {
+        #if os(macOS)
+        editorRoute = MemoryEditorRoute(mode: .preview(memory: memory))
+        #else
+        onSelect(memory)
+        #endif
+    }
+
+    private func presentMemoryForEditing() {
+        #if os(macOS)
+        editorRoute = MemoryEditorRoute(
+            mode: .edit(memory: memory),
+            startEditing: true
+        )
+        #else
+        onEditMemory?(memory)
+        #endif
     }
 
     private func toggleMemoryCompletion() async {
@@ -122,5 +153,18 @@ struct MemoryListItemButton: View {
         } catch {
             // Handle error silently for now
         }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func memoryListEditorPopover(
+        item: Binding<MemoryEditorRoute?>
+    ) -> some View {
+        #if os(macOS)
+        desktopMemoryEditorPopover(item: item)
+        #else
+        self
+        #endif
     }
 }

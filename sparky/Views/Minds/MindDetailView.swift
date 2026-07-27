@@ -149,25 +149,6 @@ struct MindDetailView: View {
 
     var body: some View {
         baseView
-            .sheet(isPresented: $isSearching) {
-                MemorySearchSheet(
-                    mind: resolvedMind,
-                    memoryService: memoryService,
-                    mindService: mindService,
-                    onSelectMemory: onSelectMemory
-                )
-                .presentationDetents([.large])
-                .presentationCornerRadius(24)
-                .presentationDragIndicator(.visible)
-            }
-            .platformCover(item: $mindComposerPresentation) { presentation in
-                switch presentation {
-                case .create:
-                    MindComposerView(environment: environment, parentMind: resolvedMind)
-                case .edit(let mind):
-                    MindComposerView(environment: environment, mindToEdit: mind, parentMind: resolvedMind)
-                }
-            }
             .onAppear {
                 onMultiSelectionChange(false)
                 onMindContextChange?(resolvedMind)
@@ -337,11 +318,13 @@ struct MindDetailView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
+                        #if os(iOS)
                         Section {
                             Button("Search", systemImage: "magnifyingglass") {
                                 isSearching = true
                             }
                         }
+                        #endif
 
                         Section {
                             Button("Select", systemImage: "checkmark.circle") {
@@ -357,6 +340,37 @@ struct MindDetailView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
+                    }
+                    .platformSheet(isPresented: $isSearching) {
+                        MemorySearchSheet(
+                            mind: resolvedMind,
+                            memoryService: memoryService,
+                            mindService: mindService,
+                            onSelectMemory: onSelectMemory
+                        )
+                        .presentationDetents([.large])
+                        .presentationCornerRadius(24)
+                        .presentationDragIndicator(.visible)
+                        .macPopoverFrame(width: 480, height: 560)
+                    }
+                    .platformCover(item: $mindComposerPresentation) { presentation in
+                        switch presentation {
+                        case .create:
+                            MindComposerView(
+                                environment: environment,
+                                parentMind: resolvedMind,
+                                presentationStyle: .platformPopover
+                            )
+                            .macPopoverFrame(width: 440, height: 560)
+                        case let .edit(mind):
+                            MindComposerView(
+                                environment: environment,
+                                mindToEdit: mind,
+                                parentMind: resolvedMind,
+                                presentationStyle: .platformPopover
+                            )
+                            .macPopoverFrame(width: 440, height: 560)
+                        }
                     }
                 }
             }

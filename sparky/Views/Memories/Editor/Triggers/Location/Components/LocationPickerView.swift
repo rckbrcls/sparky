@@ -96,6 +96,7 @@ struct LocationPickerView: View {
         }
         .platformCover(isPresented: $isMapExpanded) {
             expandedMapView
+                .macPopoverFrame(width: 640, height: 560)
         }
         .onAppear {
             if selectedCoordinate == nil {

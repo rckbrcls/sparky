@@ -16,6 +16,7 @@ extension MemoryEditorView {
             handleLinkAdded(url)
         }
         .presentationDetents([.height(200)])
+        .macPopoverFrame(width: 420, height: 200)
     }
 
 }

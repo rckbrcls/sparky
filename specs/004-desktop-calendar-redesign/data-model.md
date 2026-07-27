@@ -19,9 +19,9 @@ popover content instance.
 
 Represents the Calendar source context:
 
-- exact scheduled date/time for a Week hour cell;
+- selected date and suggested time for a Day period;
 - all-day date for a Month-day creation affordance;
-- existing period-based compatibility initialization where still used.
+- the same period-based initialization used by iPhone quick creation.
 
 `scheduleDraft()` remains the single conversion into editor input.
 

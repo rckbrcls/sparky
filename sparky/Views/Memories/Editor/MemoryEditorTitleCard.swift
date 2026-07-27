@@ -44,7 +44,11 @@ struct MemoryEditorTitleCard: View {
                             .glassEffect(.regular.tint(selectedMindColor.opacity(0.15)))
                     }
                     .platformCover(isPresented: $showMindComposer) {
-                        MindComposerView(environment: environment)
+                        MindComposerView(
+                            environment: environment,
+                            presentationStyle: .platformPopover
+                        )
+                        .macPopoverFrame(width: 440, height: 560)
                     }
                 } else {
                     Image(systemName: viewModel.selectedMind?.iconName ?? "brain.head.profile")

@@ -2,7 +2,7 @@
 
 ## Decision 1 — Use native SwiftUI popovers at the source anchor
 
-**Decision**: Attach SwiftUI `.popover` to the actual `brain.fill`, Week-hour,
+**Decision**: Attach SwiftUI `.popover` to the actual `brain.fill`, Day-period,
 or Month-day creation control.
 
 **Rationale**: This preserves the native arrow, placement, dismissal, keyboard,
@@ -24,7 +24,7 @@ and optional arrow edges.
 **Decision**: Introduce one Mac-specific popover wrapper around the existing
 `MemoryEditorView`, driven by `MemoryEditorRoute`.
 
-**Rationale**: Both entry points require the same fields, switches, validation,
+**Rationale**: Every entry point requires the same fields, switches, validation,
 draft lifecycle, and save behavior. A wrapper keeps presentation-specific size
 and material out of the domain/editor logic.
 
@@ -40,8 +40,8 @@ and material out of the domain/editor logic.
 **Decision**: Continue using `CalendarQuickMemoryTarget.scheduleDraft()` to
 seed Calendar-originated creation.
 
-**Rationale**: It already distinguishes exact scheduled timestamps from all-day
-dates and produces the existing `ScheduleConfigDraft` consumed by
+**Rationale**: It already distinguishes period-based suggested times from
+all-day dates and produces the existing `ScheduleConfigDraft` consumed by
 `MemoryEditorViewModel`.
 
 **Alternatives considered**:
@@ -83,5 +83,5 @@ accident.
 
 - Convert every Memory editor to a popover: rejected because previews and edits
   can be long-lived workflows and were not requested.
-- Apply the glass modifier globally: rejected because iPhone and standard sheets
+- Apply the glass modifier globally: rejected because iPhone presentation surfaces
   have separate established visual contracts.

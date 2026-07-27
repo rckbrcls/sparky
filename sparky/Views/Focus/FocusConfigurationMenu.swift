@@ -15,21 +15,9 @@ struct FocusConfigurationMenu: View {
         Button {
             isPresented.toggle()
         } label: {
-            Image(systemName: "gearshape")
-                .font(.title3.weight(.medium))
+            Image(systemName: "slider.horizontal.3")
                 .foregroundStyle(Color.Theme.textPrimary)
-                .frame(width: 44, height: 44)
-                .background(
-                    Circle()
-                        .fill(Color.Theme.secondaryBackground)
-                )
-                .overlay {
-                    Circle()
-                        .stroke(Color.Theme.border.opacity(0.45), lineWidth: 1)
-                }
-                .contentShape(Circle())
         }
-        .buttonStyle(.plain)
         .accessibilityLabel("Quick Focus settings")
         .accessibilityHint("Opens settings for the next Quick Focus session")
         .popover(isPresented: $isPresented) {

@@ -17,8 +17,8 @@ struct DesktopCalendarLayoutTests {
         return calendar
     }
 
-    @Test("Week contains seven locale-aligned days across month boundaries")
-    func weekBoundary() {
+    @Test("Day selector contains seven locale-aligned dates across month boundaries")
+    func daySelectorMonthBoundary() {
         let anchor = makeDate(year: 2026, month: 7, day: 27)
         let dates = DesktopCalendarLayout.weekDates(
             containing: anchor,
@@ -30,8 +30,22 @@ struct DesktopCalendarLayoutTests {
         #expect(dates.last == makeDate(year: 2026, month: 8, day: 1))
     }
 
-    @Test("Week remains seven local calendar days across daylight saving time")
-    func daylightSavingBoundary() {
+    @Test("Day selector honors a Monday-first locale")
+    func mondayFirstDaySelector() {
+        var mondayFirstCalendar = calendar
+        mondayFirstCalendar.firstWeekday = 2
+
+        let dates = DesktopCalendarLayout.weekDates(
+            containing: makeDate(year: 2026, month: 7, day: 29),
+            calendar: mondayFirstCalendar
+        )
+
+        #expect(dates.first == makeDate(year: 2026, month: 7, day: 27))
+        #expect(dates.last == makeDate(year: 2026, month: 8, day: 2))
+    }
+
+    @Test("Day selector remains seven local dates across daylight saving time")
+    func daySelectorDaylightSavingBoundary() {
         var daylightCalendar = calendar
         daylightCalendar.timeZone = TimeZone(identifier: "America/New_York")!
         let anchor = daylightCalendar.date(
@@ -47,8 +61,8 @@ struct DesktopCalendarLayoutTests {
         #expect(daylightCalendar.component(.day, from: dates.last!) == 14)
     }
 
-    @Test("Week remains aligned when the year changes")
-    func yearBoundary() {
+    @Test("Day selector remains aligned when the year changes")
+    func daySelectorYearBoundary() {
         let dates = DesktopCalendarLayout.weekDates(
             containing: makeDate(year: 2027, month: 1, day: 1),
             calendar: calendar
@@ -77,10 +91,10 @@ struct DesktopCalendarLayoutTests {
         #expect(
             DesktopCalendarLayout.shiftedAnchor(
                 anchor,
-                mode: .week,
+                mode: .day,
                 direction: 1,
                 calendar: calendar
-            ) == makeDate(year: 2026, month: 8, day: 3)
+            ) == makeDate(year: 2026, month: 7, day: 28)
         )
         #expect(
             DesktopCalendarLayout.shiftedAnchor(
@@ -92,17 +106,40 @@ struct DesktopCalendarLayoutTests {
         )
     }
 
+    @Test("Day navigation preserves local time across daylight saving changes")
+    func dayNavigationAcrossDaylightSaving() {
+        var daylightCalendar = calendar
+        daylightCalendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let anchor = daylightCalendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 3,
+                day: 7,
+                hour: 12
+            )
+        )!
+
+        let shifted = DesktopCalendarLayout.shiftedAnchor(
+            anchor,
+            mode: .day,
+            direction: 1,
+            calendar: daylightCalendar
+        )
+
+        #expect(daylightCalendar.component(.day, from: shifted) == 8)
+        #expect(daylightCalendar.component(.hour, from: shifted) == 12)
+    }
+
     @Test("Visible ranges expose every required month once")
     func requiredMonths() {
         let months = DesktopCalendarLayout.monthsNeeded(
             for: makeDate(year: 2026, month: 7, day: 27),
-            mode: .week,
+            mode: .day,
             calendar: calendar
         )
 
         #expect(months == [
-            makeDate(year: 2026, month: 7, day: 1),
-            makeDate(year: 2026, month: 8, day: 1)
+            makeDate(year: 2026, month: 7, day: 1)
         ])
 
         #expect(

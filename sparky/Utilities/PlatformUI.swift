@@ -107,7 +107,11 @@ extension View {
         #if os(iOS)
         self.fullScreenCover(isPresented: isPresented, onDismiss: onDismiss, content: content)
         #else
-        self.sheet(isPresented: isPresented, onDismiss: onDismiss, content: content)
+        self.popover(
+            isPresented: isPresented,
+            attachmentAnchor: .rect(.bounds),
+            content: content
+        )
         #endif
     }
 
@@ -120,7 +124,54 @@ extension View {
         #if os(iOS)
         self.fullScreenCover(item: item, onDismiss: onDismiss, content: content)
         #else
+        self.popover(
+            item: item,
+            attachmentAnchor: .rect(.bounds),
+            content: content
+        )
+        #endif
+    }
+
+    @ViewBuilder
+    func platformSheet<Content: View>(
+        isPresented: Binding<Bool>,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        #if os(iOS)
+        self.sheet(isPresented: isPresented, onDismiss: onDismiss, content: content)
+        #else
+        self.popover(
+            isPresented: isPresented,
+            attachmentAnchor: .rect(.bounds),
+            content: content
+        )
+        #endif
+    }
+
+    @ViewBuilder
+    func platformSheet<Item: Identifiable, Content: View>(
+        item: Binding<Item?>,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping (Item) -> Content
+    ) -> some View {
+        #if os(iOS)
         self.sheet(item: item, onDismiss: onDismiss, content: content)
+        #else
+        self.popover(
+            item: item,
+            attachmentAnchor: .rect(.bounds),
+            content: content
+        )
+        #endif
+    }
+
+    @ViewBuilder
+    func macPopoverFrame(width: CGFloat, height: CGFloat) -> some View {
+        #if os(macOS)
+        self.frame(width: width, height: height)
+        #else
+        self
         #endif
     }
 

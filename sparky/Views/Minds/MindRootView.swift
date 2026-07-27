@@ -23,8 +23,7 @@ struct MindRootView: View {
             MindsTab(
                 mindService: mindService,
                 memoryService: memoryService,
-                onEditMind: onEditMind,
-                onCreateMind: onCreateMind
+                onEditMind: onEditMind
             )
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
             .toolbarTitleDisplayMode(.inline)
@@ -38,7 +37,7 @@ struct MindRootView: View {
                         onCreateMind()
                     } label: {
                         Image(systemName: "plus")
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.Theme.textPrimary)
                     }
                     .accessibilityLabel("Add Mind")
                 }
@@ -90,4 +89,5 @@ struct MindRootView: View {
         onMindContextChange: nil,
         onSearchActiveChange: { _ in }
     )
+    .environmentObject(environment)
 }

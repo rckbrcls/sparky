@@ -2,18 +2,16 @@
 
 **Branch**: `master` | **Date**: 2026-07-27 | **Spec**: [spec.md](spec.md)
 
-**Input**: Extend the implemented desktop shell so global and Calendar New
-Memory creation share one native popover modeled on Apple Reminders and
-Calendar.
+**Input**: Align the desktop Calendar with the mobile Day experience while
+preserving the implemented native Memory editor popover and removing remaining
+sheet presentations from the macOS target.
 
 ## Summary
 
-Keep the existing shared `MemoryEditorView`, drafts, services, Calendar target,
-and desktop shell. Add one Mac-specific New Memory popover presentation that
-can be attached to either the bottom `brain.fill` action or a Calendar
-date/time creation anchor. Introduce a desktop-popover visual mode in the
-shared editor: the native popover provides the root material, while editable
-toggle sections use grouped interactive Liquid Glass instead of opaque cards.
+Replace the desktop Week grid with a Day surface that reuses the shared mobile
+period sections. Keep Month unchanged, retain one shared anchor date, and
+continue presenting the implemented `DesktopMemoryEditorPopover` from the
+global `brain.fill`, each empty Day period, and each Month-day add control.
 
 ## Technical Context
 
@@ -23,12 +21,12 @@ toggle sections use grouped interactive Liquid Glass instead of opaque cards.
 **Testing**: Swift Testing plus manual macOS presentation acceptance  
 **Target Platform**: macOS 26 for this presentation edge; shared iPhone code unchanged  
 **Project Type**: Native multiplatform Apple app in one Xcode project  
-**Performance Goals**: Popover opens immediately; editor scrolling and Calendar
-interaction remain responsive  
+**Performance Goals**: Day switching and popover presentation remain immediate;
+daily list scrolling and Month interaction remain responsive
 **Constraints**: Native `.popover`, existing `MemoryEditorRoute`,
 `CalendarQuickMemoryTarget`, semantic theme, draft/service save path, no AppKit bridge  
-**Scale/Scope**: One reusable popover surface, two source families (global and
-Calendar), existing editor sections and schedule draft
+**Scale/Scope**: Two desktop Calendar modes, one shared daily content surface,
+one reusable popover, and existing editor sections and schedule draft
 
 ## Constitution Check
 
@@ -39,62 +37,66 @@ Calendar), existing editor sections and schedule draft
 - [x] **III. Modern SwiftUI**: source controls emit a create route; the shared
       editor retains draft ownership and service-mediated save.
 - [x] **IV. Performance**: popover content is created only while presented;
-      Calendar occurrence loading is unchanged.
+      Day loads one selected month and Month retains its existing range.
 - [x] **V. Local-first architecture**: no model, service, executor, backend, or
       persistence change.
 - [x] **VI. One code, two builds**: presentation divergence is Mac-only;
       editor logic remains shared and iPhone behavior is explicitly preserved.
 - [x] **Complexity**: no constitutional violation or waiver required.
 
-Post-design check: passed. The design uses the existing editor, route, schedule
-draft, and service path, with one justified Mac presentation wrapper.
+Post-design check: passed. The design reuses the mobile daily sections and the
+existing desktop popover without an AppKit bridge or duplicated Calendar data.
 
 ## Existing Architecture Preserved
 
 - `DesktopRootView` remains the desktop presentation coordinator.
 - `DesktopFloatingNavigationBar` remains the anchor for the global action.
-- `DesktopCalendarView` keeps Week/Month state and `CalendarDataManager`.
+- `DesktopCalendarView` keeps Day/Month state and `CalendarDataManager`.
 - `CalendarQuickMemoryTarget.scheduleDraft()` remains the only conversion from
   a clicked Calendar location to an initial schedule draft.
 - `MemoryEditorViewModel` and `MemoryService` remain the only durable save path.
-- Memory preview/edit remains on `nav.editorRoute` sheets.
+- Memory preview/edit remains on `nav.editorRoute`, presented through the
+  shared desktop popover wrapper.
 - iPhone continues using its current quick-add and editor presentation.
 
-## Planned Presentation Architecture
+## Implementation Architecture
 
-### 1. One popover content implementation
+### 1. Shared mobile daily content
 
-Add a focused Mac-only `DesktopMemoryEditorPopover` view (or equivalently
-scoped presentation modifier) that accepts:
+`DesktopDayCalendarView` keeps the desktop month/year header and renders a
+seven-date selector aligned to the active Calendar's `firstWeekday`. Beneath
+it, `CalendarDayContentView` reuses the mobile All Day, Morning, Afternoon,
+Evening, and Night sections with its duplicate mobile date header and bottom
+inset disabled.
 
-- `AppEnvironment`
-- an existing `MemoryEditorRoute` in create mode
-- the preferred native arrow behavior for its source
+The daily list is centered at a maximum width of 880 pt. Day selection updates
+the shared `anchorDate`; previous/next advance one day and Today updates the
+anchor without changing mode.
 
-It embeds `MemoryEditorView` with a desktop-popover presentation style and owns
-only presentation chrome. It must not duplicate editor fields, validation, or
-save logic.
+### 2. Platform-specific creation behavior
 
-### 2. Two anchor families, one editor
+Shared period sections receive an explicit creation behavior:
+
+- iPhone invokes its existing callback and continues presenting
+  `QuickMemorySheet`;
+- macOS creates a local `MemoryEditorRoute` and presents
+  `DesktopMemoryEditorPopover`.
+
+The route state and popover modifier live on the empty period button so the
+native arrow remains attached to the clicked source.
+
+### 3. Three anchor families, one editor
 
 | Source | Initial route | Native anchor behavior |
 |---|---|---|
 | Bottom `brain.fill` / Command-N | Blank create route with current Mind context | Attached to the bottom action; opens above when space allows |
-| Week hour cell | Create route with exact `scheduleDraft()` timestamp | Attached to the clicked hour cell; system selects the viable side |
-| Month day add | Create route with all-day `scheduleDraft()` | Attached to the clicked day affordance; system selects the viable side |
+| Day period action | Create route with the period `scheduleDraft()` | Attached to the clicked period button with the shared bottom-arrow preference |
+| Month day add | Create route with all-day `scheduleDraft()` | Attached to the clicked day affordance with the shared bottom-arrow preference |
 
 Each source holds only the minimal ephemeral route needed for its own anchor.
 All sources render the same `DesktopMemoryEditorPopover`.
 
-### 3. Calendar flow replacement
-
-Replace the desktop path:
-
-```text
-Calendar anchor -> DesktopRootView -> QuickMemorySheet -> optional editor
-```
-
-with:
+### 4. Calendar creation flow
 
 ```text
 Calendar anchor -> create MemoryEditorRoute with CalendarQuickMemoryTarget
@@ -104,10 +106,10 @@ Calendar anchor -> create MemoryEditorRoute with CalendarQuickMemoryTarget
 
 The iPhone `QuickMemorySheet` remains available and unchanged.
 
-### 4. Popover-specific editor surface
+### 5. Popover-specific editor surface
 
-Add an explicit presentation-style input to `MemoryEditorView`, defaulting to
-the current standard behavior. In the Mac popover style:
+The implemented presentation-style input to `MemoryEditorView` defaults to the
+current standard behavior. In the Mac popover style:
 
 - do not paint `Color.Theme.secondaryBackground` across the popover root;
 - keep the native popover material visible between sections;
@@ -123,7 +125,7 @@ the current standard behavior. In the Mac popover style:
 Non-toggle disclosure blocks, including a Mac location capability disclosure,
 do not automatically become glass.
 
-### 5. Size and interaction
+### 6. Size and interaction
 
 - Use a dense inspector-like width near 480 pt.
 - Bound vertical size for the supported desktop window range and keep the
@@ -134,6 +136,18 @@ do not automatically become glass.
 - Create dismisses only after the existing save succeeds.
 - Command-N opens the global anchor; Calendar clicks open only their own anchor.
 
+### 7. Popover-only desktop presentation
+
+- `DesktopRootView` presents Memory routes, Mind composition, and onboarding
+  with native popovers.
+- Shared `platformCover` and `platformSheet` helpers keep their existing iPhone
+  semantics but resolve to popovers on macOS.
+- Desktop Memory list items own their local preview/edit route so the popover
+  arrow remains attached to the clicked card.
+- Auxiliary editor popovers use explicit sizes appropriate to link, audio,
+  trigger, map, photo, file-preview, search, and composer content.
+- Direct `.sheet` calls remain only in iPhone-compiled source.
+
 ## Project Structure
 
 ```text
@@ -143,11 +157,13 @@ sparky/
 ├── Views/
 │   ├── Desktop/
 │   │   ├── DesktopFloatingNavigationBar.swift
-│   │   ├── DesktopMemoryEditorPopover.swift       # planned
+│   │   ├── DesktopMemoryEditorPopover.swift
 │   │   ├── DesktopRootView.swift
 │   │   └── Calendar/
-│   │       ├── DesktopCalendarHourCell.swift
+│   │       ├── DesktopDayCalendarView.swift
 │   │       └── DesktopMonthDayCell.swift
+│   ├── Memories/Calendar/
+│   │   └── CalendarMemoryCreationBehavior.swift
 │   └── Memories/Editor/
 │       ├── MemoryEditorView.swift
 │       └── Triggers/Shared/TriggersCard.swift
@@ -159,23 +175,26 @@ sparkyTests/
 
 ## Implementation Phases
 
-1. **Shared presenter**
-   - Add the reusable Mac popover content/presentation wrapper.
-   - Define the editor presentation style with the current behavior as default.
-2. **Global source**
-   - Anchor the popover to `brain.fill`.
-   - Preserve current Mind context, tooltip, accessibility label, and Command-N.
-3. **Calendar sources**
-   - Route Week-hour and Month-day creation directly to the shared popover.
-   - Seed the schedule from `CalendarQuickMemoryTarget.scheduleDraft()`.
-   - Remove only the desktop Calendar dependency on `QuickMemorySheet`.
-4. **Liquid Glass sections**
-   - Remove opaque section fills only in the Mac popover mode.
-   - Group interactive glass surfaces in one `GlassEffectContainer`.
+1. **Day mode**
+   - Replace Week with Day and add the interactive seven-date selector.
+   - Reuse the mobile daily sections without duplicated desktop headers.
+2. **Creation behavior**
+   - Keep the iPhone callback path unchanged.
+   - Anchor the existing desktop popover to each empty Day period.
+3. **Month integration**
+   - Preserve the 42-cell Month presentation and all-day popover.
+   - Open Day when the user selects a Month date.
+4. **Cleanup**
+   - Remove Week-grid-only views, exact timestamp target handling, and tests.
+   - Update the specification and acceptance matrix.
 5. **Validation**
    - Add focused route/schedule tests where logic changes.
    - Perform static parse/reference/diff checks in-agent.
    - Leave build, tests, launch, and visual acceptance to Erick per repository rules.
+6. **Popover-only Mac cleanup**
+   - Replace root and shared Mac sheet presentations with popovers.
+   - Move Memory item preview/edit presentation state to the clicked item.
+   - Verify no direct Mac sheet presentation remains.
 
 ## Validation Boundary
 
@@ -186,6 +205,6 @@ in [quickstart.md](quickstart.md).
 
 ## Complexity Tracking
 
-No violations. A single Mac presentation wrapper is smaller and safer than
-duplicating the editor for the global and Calendar sources or introducing an
-AppKit panel.
+No violations. One creation-behavior boundary is smaller and safer than
+duplicating the mobile daily sections or attaching one inaccurate popover to
+the Calendar container.

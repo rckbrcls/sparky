@@ -15,11 +15,14 @@ struct DesktopNavigationStateTests {
         #expect(DesktopSection.me.usesAssetIcon)
     }
 
-    @Test("Calendar starts in Week and desktop destinations remain selectable")
+    @Test("Calendar starts in Day and desktop destinations remain selectable")
     func defaultsAndDeepLinkDestination() {
         let state = DesktopNavigationState()
 
-        #expect(state.calendarMode == .week)
+        #expect(DesktopCalendarMode.allCases == [.day, .month])
+        #expect(DesktopCalendarMode.day.title == "Day")
+        #expect(DesktopCalendarMode.month.title == "Month")
+        #expect(state.calendarMode == .day)
         state.selectedSection = .focus
         #expect(state.selectedSection == .focus)
         state.selectedSection = .me

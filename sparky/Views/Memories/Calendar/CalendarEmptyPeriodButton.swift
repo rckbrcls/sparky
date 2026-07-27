@@ -9,12 +9,16 @@ import SwiftUI
 
 struct CalendarEmptyPeriodButton: View {
     let period: CalendarTimePeriod
-    let action: () -> Void
+    let target: CalendarQuickMemoryTarget
+    let creationBehavior: CalendarMemoryCreationBehavior
 
     @State private var isHovering = false
+    #if os(macOS)
+    @State private var createMemoryRoute: MemoryEditorRoute?
+    #endif
 
     var body: some View {
-        Button(action: action) {
+        Button(action: presentCreation) {
             HStack(spacing: 12) {
                 Text(period.emptyStateTitle)
                     .font(.subheadline)
@@ -41,12 +45,54 @@ struct CalendarEmptyPeriodButton: View {
         }
         .buttonStyle(CalendarEmptyPeriodButtonStyle())
         .accessibilityLabel(period.emptyStateTitle)
-        .accessibilityHint("Opens Quick Memory for \(period.title)")
+        .accessibilityHint(accessibilityHint)
+        .calendarEmptyPeriodPopover(
+            item: calendarCreateMemoryRoute
+        )
         .calendarEmptyPeriodHover { isHovering = $0 }
+    }
+
+    private var accessibilityHint: String {
+        #if os(macOS)
+        "Opens New Memory for \(period.title)"
+        #else
+        "Opens Quick Memory for \(period.title)"
+        #endif
+    }
+
+    private func presentCreation() {
+        switch creationBehavior {
+        case let .action(action):
+            action(target)
+
+        #if os(macOS)
+        case let .desktopPopover(makeRoute):
+            createMemoryRoute = makeRoute(target)
+        #endif
+        }
+    }
+
+    private var calendarCreateMemoryRoute: Binding<MemoryEditorRoute?> {
+        #if os(macOS)
+        $createMemoryRoute
+        #else
+        .constant(nil)
+        #endif
     }
 }
 
 private extension View {
+    @ViewBuilder
+    func calendarEmptyPeriodPopover(
+        item: Binding<MemoryEditorRoute?>
+    ) -> some View {
+        #if os(macOS)
+        desktopMemoryEditorPopover(item: item)
+        #else
+        self
+        #endif
+    }
+
     @ViewBuilder
     func calendarEmptyPeriodHover(_ action: @escaping (Bool) -> Void) -> some View {
         #if os(macOS)

@@ -295,11 +295,11 @@ struct MemoryEditorView: View {
 
 
 
-        let sheetConfigured = lifecycleConfigured
+        let modalConfigured = lifecycleConfigured
 
-            .sheet(isPresented: $showAddLinkSheet, content: linkSheet)
+            .platformSheet(isPresented: $showAddLinkSheet, content: linkSheet)
 
-            .sheet(isPresented: $isShowingAudioRecorder) {
+            .platformSheet(isPresented: $isShowingAudioRecorder) {
 
                 AudioRecorderSheet(onSave: { data, url in
 
@@ -308,12 +308,14 @@ struct MemoryEditorView: View {
                     _ = viewModel.addAudioAttachment(data: data, sourceURL: url)
 
                 })
+                .macPopoverFrame(width: 420, height: 320)
 
             }
 
-            .sheet(item: $audioAttachmentToPlay) { attachment in
+            .platformSheet(item: $audioAttachmentToPlay) { attachment in
 
                 AudioPlayerSheet(audioData: attachment.data)
+                    .macPopoverFrame(width: 460, height: 480)
 
             }
 
@@ -322,7 +324,7 @@ struct MemoryEditorView: View {
 
 
         #if os(iOS)
-        let cameraConfigured = sheetConfigured
+        let cameraConfigured = modalConfigured
             .platformCover(isPresented: $isPresentingCamera) {
                 CameraCaptureView(
                     onCapture: { image in
@@ -336,7 +338,7 @@ struct MemoryEditorView: View {
                 .ignoresSafeArea(.all)
             }
         #else
-        let cameraConfigured = sheetConfigured
+        let cameraConfigured = modalConfigured
         #endif
 
         let attachmentConfigured = cameraConfigured
@@ -377,6 +379,7 @@ struct MemoryEditorView: View {
             .platformCover(isPresented: $isPhotoViewerPresented) {
 
                 photoViewerContent
+                    .macPopoverFrame(width: 720, height: 600)
 
             }
 
@@ -387,6 +390,7 @@ struct MemoryEditorView: View {
                     FilePreviewController(item: item)
 
                         .ignoresSafeArea()
+                        .macPopoverFrame(width: 720, height: 600)
 
                 }
 

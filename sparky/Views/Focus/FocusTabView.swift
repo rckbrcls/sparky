@@ -26,33 +26,32 @@ struct FocusTabView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .topTrailing) {
-                FocusCanvasView(
-                    timer: timer,
-                    selectedWorkMinutes: quickWorkDurationBinding,
-                    onStartQuick: {
-                        environment.startQuickFocus(recipe: quickRecipe)
-                    },
-                    onEnd: {
-                        timer.endSession()
-                    }
-                )
-
-                if !timer.isSessionActive {
-                    FocusConfigurationMenu(
-                        recipe: $quickRecipe,
-                        onChange: {
-                            hasLocalQuickOverrides = true
-                        }
-                    )
-                    .padding(.top, 16)
-                    .padding(.trailing, 20)
+            FocusCanvasView(
+                timer: timer,
+                selectedWorkMinutes: quickWorkDurationBinding,
+                onStartQuick: {
+                    environment.startQuickFocus(recipe: quickRecipe)
+                },
+                onEnd: {
+                    timer.endSession()
                 }
-            }
+            )
             .tabBarSpacer()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
-            .hidePhoneNavigationBar()
+            .toolbarTitleDisplayMode(.inline)
+            .toolbar {
+                if !timer.isSessionActive {
+                    ToolbarItem(placement: .primaryAction) {
+                        FocusConfigurationMenu(
+                            recipe: $quickRecipe,
+                            onChange: {
+                                hasLocalQuickOverrides = true
+                            }
+                        )
+                    }
+                }
+            }
             .onAppear {
                 syncQuickRecipeWithDefaultsIfNeeded()
             }

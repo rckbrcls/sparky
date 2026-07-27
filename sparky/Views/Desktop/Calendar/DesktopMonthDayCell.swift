@@ -6,8 +6,7 @@ struct DesktopMonthDayCell: View {
     let date: Date
     let isInDisplayedMonth: Bool
     let occurrences: [MemoryOccurrence]
-    let onSelect: (Memory) -> Void
-    let onOpenWeek: (Date) -> Void
+    let onOpenDay: (Date) -> Void
 
     @State private var isHovered = false
     @State private var createMemoryRoute: MemoryEditorRoute?
@@ -16,7 +15,7 @@ struct DesktopMonthDayCell: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Color.Theme.background
+            Color.Theme.secondaryBackground
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
@@ -42,7 +41,7 @@ struct DesktopMonthDayCell: View {
                     Spacer(minLength: 0)
 
                     Button {
-                        onOpenWeek(date)
+                        onOpenDay(date)
                     } label: {
                         Text(dayLabel)
                             .font(.system(size: 15, weight: .semibold))
@@ -55,7 +54,7 @@ struct DesktopMonthDayCell: View {
                             }
                     }
                     .buttonStyle(.plain)
-                    .help("Open week")
+                    .help("Open day")
                     .accessibilityLabel(
                         date.formatted(.dateTime.weekday(.wide).month(.wide).day().year())
                     )
@@ -64,15 +63,13 @@ struct DesktopMonthDayCell: View {
                 if let first = occurrences.first {
                     DesktopCalendarEventPill(
                         occurrence: first,
-                        style: .month,
-                        onSelect: onSelect
+                        style: .month
                     )
                 }
 
                 if occurrences.count > 1 {
                     DesktopCalendarOverflowButton(
-                        occurrences: Array(occurrences.dropFirst()),
-                        onSelect: onSelect
+                        occurrences: Array(occurrences.dropFirst())
                     )
                 }
 

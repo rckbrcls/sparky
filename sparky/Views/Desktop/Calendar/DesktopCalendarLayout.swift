@@ -43,7 +43,7 @@ struct DesktopCalendarLayout {
         direction: Int,
         calendar: Calendar = .current
     ) -> Date {
-        let component: Calendar.Component = mode == .week ? .weekOfYear : .month
+        let component: Calendar.Component = mode == .day ? .day : .month
         return calendar.date(byAdding: component, value: direction, to: date) ?? date
     }
 
@@ -67,8 +67,8 @@ struct DesktopCalendarLayout {
     ) -> [Date] {
         let visibleDates: [Date]
         switch mode {
-        case .week:
-            visibleDates = weekDates(containing: anchorDate, calendar: calendar)
+        case .day:
+            visibleDates = [anchorDate]
         case .month:
             visibleDates = monthDates(containing: anchorDate, calendar: calendar)
         }

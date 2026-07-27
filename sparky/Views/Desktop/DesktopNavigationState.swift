@@ -45,7 +45,7 @@ final class DesktopNavigationState: ObservableObject {
     @Published var selectedSection: DesktopSection = .calendar
     @Published var mindsPath = NavigationPath()
     @Published var mePath = NavigationPath()
-    @Published var calendarMode: DesktopCalendarMode = .week
+    @Published var calendarMode: DesktopCalendarMode = .day
     @Published var calendarAnchorDate = Date()
 
     @Published var editorRoute: MemoryEditorRoute?

@@ -40,15 +40,17 @@ struct TriggerPickerSheet: View {
                     .accessibilityLabel("Close")
                 }
             }
-            .sheet(isPresented: $showDateAndTimeSheet) {
+            .platformSheet(isPresented: $showDateAndTimeSheet) {
                 NavigationStack {
                     ScheduledTriggerEditorScreen(viewModel: viewModel)
                 }
+                .macPopoverFrame(width: 520, height: 560)
             }
-            .sheet(isPresented: $showLocationSheet) {
+            .platformSheet(isPresented: $showLocationSheet) {
                 NavigationStack {
                     LocationTriggerEditorScreen(viewModel: viewModel)
                 }
+                .macPopoverFrame(width: 520, height: 560)
             }
         }
         .presentationDetents([.medium])
