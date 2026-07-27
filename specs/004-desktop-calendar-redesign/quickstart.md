@@ -71,8 +71,8 @@ xcodebuild -scheme sparky -destination 'platform=iOS Simulator,name=iPhone 16' t
 32. Exercise Mind search/composer, link entry, audio playback, schedule,
     location, photo, file preview, and onboarding on Mac; confirm none presents
     a sheet.
-33. Click the desktop `New Mind` button and confirm the composer popover arrow
-    points to that button rather than the center of the window.
+33. In the Mind overview, click the toolbar `plus` button and confirm it matches
+    the iPhone symbol and the composer popover arrow points to that button.
 34. Confirm the New Mind composer exposes the native Liquid Glass popover
     material, has no `New Mind` title bar, and keeps visible glass Cancel and
     Save actions.

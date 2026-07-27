@@ -12,6 +12,7 @@ struct DesktopRootView: View {
     @ObservedObject private var environment: AppEnvironment
     @StateObject private var nav = DesktopNavigationState()
     @State private var createMemoryRoute: MemoryEditorRoute?
+    @State private var createMindRequest: MindComposerRequest?
 
     init(environment: AppEnvironment) {
         _environment = ObservedObject(wrappedValue: environment)
@@ -99,8 +100,8 @@ struct DesktopRootView: View {
 
             ToolbarSpacer(.flexible)
 
-            if nav.selectedSection == .calendar || nav.selectedSection == .mind {
-                ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if nav.selectedSection == .calendar || nav.selectedSection == .mind {
                     Button {
                         nav.isSearchPresented.toggle()
                     } label: {
@@ -116,6 +117,29 @@ struct DesktopRootView: View {
                             memoryService: environment.memoryService,
                             onSelect: handleSearchSelection
                         )
+                    }
+                }
+
+                if nav.selectedSection == .mind && nav.mindsPath.isEmpty {
+                    Button {
+                        createMindRequest = MindComposerRequest(mindToEdit: nil)
+                    } label: {
+                        Image(systemName: "plus")
+                            .foregroundStyle(Color.Theme.textPrimary)
+                    }
+                    .help("Add Mind")
+                    .accessibilityLabel("Add Mind")
+                    .popover(
+                        item: $createMindRequest,
+                        attachmentAnchor: .rect(.bounds),
+                        arrowEdge: .top
+                    ) { request in
+                        MindComposerView(
+                            environment: environment,
+                            mindToEdit: request.mindToEdit,
+                            presentationStyle: .desktopPopover
+                        )
+                        .frame(width: 440, height: 560)
                     }
                 }
             }
@@ -163,7 +187,9 @@ struct DesktopRootView: View {
                 navigationPath: $nav.mindsPath,
                 onSelectMemory: handleMemorySelection,
                 onEditMemory: handleMemoryEdit,
-                onCreateMind: { nav.presentMindCreation() },
+                onCreateMind: {
+                    createMindRequest = MindComposerRequest(mindToEdit: nil)
+                },
                 onEditMind: { nav.presentMindEdit(for: $0) },
                 onMultiSelectionChange: { _ in },
                 onMindContextChange: { nav.currentMindContext = $0 },

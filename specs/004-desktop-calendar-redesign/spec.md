@@ -121,7 +121,7 @@ workflow uses a native popover, preferably attached to the initiating control.
   anchor preview or edit to that item. Toolbar-menu presentations SHOULD anchor
   to that toolbar control when the source is available.
 - **FR-035**: The desktop New Mind popover MUST be owned by and anchored to the
-  visible `New Mind` button.
+  Mind overview toolbar add button, using the same `plus` symbol as iPhone.
 - **FR-036**: Desktop popovers MUST preserve the native Liquid Glass root
   material instead of covering it with an app-owned opaque background. The
   desktop Mind composer MUST omit its navigation title bar while keeping

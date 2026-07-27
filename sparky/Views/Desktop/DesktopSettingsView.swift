@@ -28,6 +28,10 @@ struct DesktopSettingsView: View {
                 }
         }
         .frame(width: 640, height: 520)
+        .background(Color.Theme.secondaryBackground)
+        .containerBackground(Color.Theme.secondaryBackground, for: .window)
+        .toolbarBackground(Color.Theme.secondaryBackground, for: .windowToolbar)
+        .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
         .environmentObject(environment)
     }
 }

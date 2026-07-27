@@ -53,6 +53,8 @@ struct FocusSettingsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.Theme.secondaryBackground.ignoresSafeArea())
         .navigationTitle("Focus")
         .inlinePhoneNavigationTitle()
     }

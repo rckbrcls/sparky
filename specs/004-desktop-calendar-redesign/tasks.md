@@ -81,6 +81,8 @@ iPhone presentation behavior.
   so its popover arrow uses the initiating control as its anchor.
 - [x] T043 [US6] Remove the desktop Mind composer navigation title bar and use
   the native Liquid Glass popover material with internal glass actions.
+- [x] T044 [US6] Move New Mind to a `plus` toolbar item matching iPhone and keep
+  its composer popover anchored to that toolbar button.
 
 ## Dependencies
 

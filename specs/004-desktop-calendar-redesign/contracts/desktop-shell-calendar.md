@@ -101,6 +101,8 @@ Contract rules:
 - No app-owned opaque background covers the root material.
 - The desktop Mind composer omits its navigation title bar and keeps Cancel and
   Save as visible glass actions inside the native popover surface.
+- Mind creation is exposed by a toolbar `plus` matching iPhone, and the composer
+  popover is attached directly to that toolbar button.
 - Editable switch-bearing sections use interactive Liquid Glass and share one
   `GlassEffectContainer`.
 - No opaque `.cardStyle()` fill sits behind those glass sections in the desktop
