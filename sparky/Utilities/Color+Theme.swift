@@ -49,6 +49,9 @@ extension Color {
     /// Border color for interactive elements
     static let themeElementBorder = Color("ElementBorder")
 
+    /// Background color for the selected top-level navigation tab
+    static let themeTabSelectionBackground = Color("TabSelectionBackground")
+
     // MARK: - Accent
 
     /// Foreground color for text/icons placed on accent-colored backgrounds
@@ -100,6 +103,7 @@ extension Color {
         static let border = Color.themeBorder
         static let elementBackground = Color.themeElementBackground
         static let elementBorder = Color.themeElementBorder
+        static let tabSelectionBackground = Color.themeTabSelectionBackground
 
         // Accent
         static let accentForeground = Color.themeAccentForeground

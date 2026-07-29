@@ -279,7 +279,7 @@ struct ContentView: View {
                         size: $0.size,
                         activeTint: Color.Theme.accentForeground,
                         inactiveTint: Color.Theme.textSecondary,
-                        barTint: Color.accentColor,
+                        barTint: Color.Theme.tabSelectionBackground,
                         activeTab: $activeTab,
                         tabItemView: { tab in
                         VStack(spacing: 3){

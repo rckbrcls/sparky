@@ -57,7 +57,7 @@ struct DesktopFloatingNavigationBar: View {
                     .background {
                         if selection == section {
                             Capsule()
-                                .fill(Color.accentColor)
+                                .fill(Color.Theme.tabSelectionBackground)
                                 .padding(2)
                         }
                     }
