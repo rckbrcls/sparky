@@ -6,6 +6,13 @@
         <description>Sparky - A local-first memory app</description>
         <language>en</language>
         <item>
+            <title>Version 0.0.10</title>
+            <pubDate>Wed, 29 Jul 2026 19:40:56 +0000</pubDate>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/rckbrcls/sparky/releases/download/v0.0.10/Sparky-macos-universal-v0.0.10.zip" sparkle:version="15" sparkle:shortVersionString="0.0.10" sparkle:edSignature="dkXQEFZP4/fH4YLUCuhD6OQexIHeP19XsYMN7KksMHoOUUhmQQ23i720B7ovRNaWwZmsteDXJRUMMSC+UHGqBw==" sparkle:os="macos" length="9396784" type="application/zip" />
+            <description>Sparky 0.0.10 release.</description>
+        </item>
+        <item>
             <title>Version 0.0.9</title>
             <pubDate>Mon, 27 Jul 2026 18:09:30 +0000</pubDate>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
