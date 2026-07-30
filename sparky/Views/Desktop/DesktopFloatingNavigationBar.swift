@@ -131,7 +131,7 @@ struct DesktopFloatingNavigationBar: View {
 
     private func tint(for section: DesktopSection) -> Color {
         if selection == section {
-            return Color.Theme.accentForeground
+            return Color.Theme.textPrimary
         }
 
         return hoveredSection == section

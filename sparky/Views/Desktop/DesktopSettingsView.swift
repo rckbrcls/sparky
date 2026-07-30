@@ -20,11 +20,6 @@ struct DesktopSettingsView: View {
                     Label("Focus", systemImage: "timer")
                 }
 
-            DataManagementView()
-                .tabItem {
-                    Label("Data", systemImage: "externaldrive")
-                }
-
             AdvancedSettingsView()
                 .tabItem {
                     Label("Advanced", systemImage: "gearshape.2")

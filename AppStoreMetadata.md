@@ -147,11 +147,6 @@ HOW TO TEST:
    - The app uses CLLocationManager region monitoring.
    - In Simulator, use Debug > Location to test location changes.
 
-7. Test Import/Export.
-   - Go to Me > Settings > Data Management.
-   - Export data to JSON.
-   - Import a previously exported Sparky JSON file.
-
 BACKGROUND LOCATION:
 
 Sparky requests Always location permission for user-created geofence reminders. The app uses region monitoring for selected reminder areas. It does not upload location data to a custom Sparky backend.

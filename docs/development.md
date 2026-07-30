@@ -121,7 +121,7 @@ Major view areas:
 
 - `Views/Memories/`: timeline, calendar, cards, map, search, filters, and editor.
 - `Views/Minds/`: Mind hierarchy, detail, sections, composer, and Limbo view.
-- `Views/Settings/`: Me, settings, theme, app icon, data management, and advanced screens.
+- `Views/Settings/`: Me, settings, theme, app icon, and advanced screens.
 - `Views/Onboarding/`: permission setup flow.
 - `Views/Shared/`: reusable components.
 

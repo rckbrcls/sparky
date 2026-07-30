@@ -277,7 +277,7 @@ struct ContentView: View {
                 GeometryReader{
                     CustomTabBar(
                         size: $0.size,
-                        activeTint: Color.Theme.accentForeground,
+                        activeTint: Color.Theme.textPrimary,
                         inactiveTint: Color.Theme.textSecondary,
                         barTint: Color.Theme.tabSelectionBackground,
                         activeTab: $activeTab,

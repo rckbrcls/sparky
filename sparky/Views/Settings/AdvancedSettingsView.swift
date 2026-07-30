@@ -10,8 +10,8 @@ import SwiftUI
 struct AdvancedSettingsView: View {
     @EnvironmentObject private var environment: AppEnvironment
 
-    @State private var cacheSize: String = "Calculating..."
     @State private var showClearCacheConfirmation = false
+    @State private var showCacheClearErrorAlert = false
     @State private var showResetOnboardingConfirmation = false
     @State private var showCacheClearedAlert = false
     @State private var showOnboardingResetAlert = false
@@ -19,22 +19,23 @@ struct AdvancedSettingsView: View {
 
     var body: some View {
         List {
-            Text("Advanced")
-                .appLargeTitleStyle()
-                .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
             Section {
-                onboardingRow
-                cacheRow
-            }
-            .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+                VStack(spacing: 0) {
+                    onboardingRow
 
-            Section {
-                debugInfoCard
+                    Divider()
+                        .padding(.leading, 52)
+                        .padding(.trailing, 12)
+
+                    cacheRow
+
+                    Divider()
+                        .padding(.leading, 52)
+                        .padding(.trailing, 12)
+
+                    debugInfoRow
+                }
+                .cardStyle()
             }
             .listRowInsets(.init(top: 6, leading: 20, bottom: 0, trailing: 20))
             .listRowBackground(Color.clear)
@@ -45,10 +46,8 @@ struct AdvancedSettingsView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())
+        .navigationTitle("Advanced")
         .inlinePhoneNavigationTitle()
-        .task {
-            await loadCacheSize()
-        }
         .alert("Clear Cache", isPresented: $showClearCacheConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Clear", role: .destructive) {
@@ -70,6 +69,11 @@ struct AdvancedSettingsView: View {
         } message: {
             Text("All attachment files have been removed.")
         }
+        .alert("Failed to Clear Cache", isPresented: $showCacheClearErrorAlert) {
+            Button("OK") { }
+        } message: {
+            Text("The attachment files could not be removed.")
+        }
         .alert("Onboarding Reset", isPresented: $showOnboardingResetAlert) {
             Button("OK") { }
         } message: {
@@ -90,19 +94,14 @@ private extension AdvancedSettingsView {
                     .font(.system(size: 20, weight: .semibold))
                     .frame(width: 24, height: 24, alignment: .center)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Reset Onboarding")
-                        .foregroundStyle(.primary)
-                    Text("Re-watch the setup tutorial")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Reset Onboarding")
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .cardStyle()
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -116,31 +115,26 @@ private extension AdvancedSettingsView {
                     .font(.system(size: 20, weight: .semibold))
                     .frame(width: 24, height: 24, alignment: .center)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Clear Attachments Cache")
-                        .foregroundStyle(.primary)
+                Text("Clear Attachments Cache")
+                    .foregroundStyle(.primary)
 
-                    if isClearingCache {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                    } else {
-                        Text(cacheSize)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                if isClearingCache {
+                    Spacer()
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Spacer()
                 }
-
-                Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .cardStyle()
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isClearingCache)
     }
 
-    var debugInfoCard: some View {
+    var debugInfoRow: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 16) {
                 Image(systemName: "info.circle")
@@ -161,7 +155,6 @@ private extension AdvancedSettingsView {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .cardStyle()
     }
 
     func debugRow(label: String, value: String) -> some View {
@@ -180,19 +173,13 @@ private extension AdvancedSettingsView {
 // MARK: - Actions
 
 private extension AdvancedSettingsView {
-    func loadCacheSize() async {
-        let bytes = await environment.attachmentStore.totalStorageSize()
-        cacheSize = formattedSize(bytes)
-    }
-
     func clearCache() async {
         isClearingCache = true
         do {
             try await environment.attachmentStore.deleteAllAttachments()
-            await loadCacheSize()
             showCacheClearedAlert = true
         } catch {
-            cacheSize = "Error clearing cache"
+            showCacheClearErrorAlert = true
         }
         isClearingCache = false
     }
@@ -200,13 +187,6 @@ private extension AdvancedSettingsView {
     func resetOnboarding() {
         environment.settings.hasCompletedOnboarding = false
         showOnboardingResetAlert = true
-    }
-
-    func formattedSize(_ bytes: Int64) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useKB, .useMB, .useGB]
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: bytes)
     }
 }
 

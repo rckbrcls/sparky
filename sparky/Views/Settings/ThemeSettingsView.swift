@@ -12,16 +12,19 @@ struct ThemeSettingsView: View {
 
     var body: some View {
         List {
-            Text("Appearance")
-                .appLargeTitleStyle()
-                .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
             Section {
-                ForEach(AppTheme.allCases) { theme in
-                    themeRow(theme)
+                VStack(spacing: 0) {
+                    ForEach(AppTheme.allCases) { theme in
+                        themeRow(theme)
+
+                        if theme != AppTheme.allCases.last {
+                            Divider()
+                                .padding(.leading, 52)
+                                .padding(.trailing, 12)
+                        }
+                    }
                 }
+                .cardStyle()
             }
             .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
             .listRowBackground(Color.clear)
@@ -32,6 +35,7 @@ struct ThemeSettingsView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())
+        .navigationTitle("Appearance")
         .inlinePhoneNavigationTitle()
     }
 
@@ -46,13 +50,8 @@ struct ThemeSettingsView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .frame(width: 24, height: 24, alignment: .center)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(theme.displayName)
-                        .foregroundStyle(.primary)
-                    Text(themeDescription(for: theme))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(theme.displayName)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -64,20 +63,9 @@ struct ThemeSettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .cardStyle()
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    private func themeDescription(for theme: AppTheme) -> String {
-        switch theme {
-        case .system:
-            return "Follows your device settings"
-        case .light:
-            return "Always use light appearance"
-        case .dark:
-            return "Always use dark appearance"
-        }
     }
 }
 

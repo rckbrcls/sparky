@@ -21,7 +21,6 @@ Recommended App Store / README screenshots:
 - Location trigger editor with map and arrival/departure setting.
 - Memory card with attachment previews.
 - Search and filter surface.
-- Data Management screen showing export/import actions.
 - Advanced settings with cache and app info.
 - Theme or app icon settings if visual customization is part of the release story.
 

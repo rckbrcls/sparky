@@ -16,7 +16,6 @@ struct SettingsView: View {
     private enum Route: Hashable {
         case appearance
         case appIcon
-        case dataManagement
         case advanced
         case focus
     }
@@ -57,12 +56,6 @@ struct SettingsView: View {
 private extension SettingsView {
     var settingsList: some View {
         List {
-            Text("Settings")
-                .appLargeTitleStyle()
-                .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
             Section {
                 ZStack {
                     NavigationLink(value: Route.appearance) {
@@ -95,21 +88,6 @@ private extension SettingsView {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
-
-                ZStack {
-                    NavigationLink(value: Route.dataManagement) {
-                        EmptyView()
-                    }
-                    .opacity(0)
-
-                    SettingsRow(
-                        iconName: "arrow.up.arrow.down",
-                        title: "Data Management"
-                    )
-                }
-                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
 
                 if focusSettings != nil, focusFeedback != nil {
                     ZStack {
@@ -149,6 +127,8 @@ private extension SettingsView {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())
+        .navigationTitle("Settings")
+        .inlinePhoneNavigationTitle()
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 70)
         }
@@ -161,8 +141,6 @@ private extension SettingsView {
             ThemeSettingsView()
         case .appIcon:
             AppIconSettingsView(appIconManager: appIconManager)
-        case .dataManagement:
-            DataManagementView()
         case .advanced:
             AdvancedSettingsView()
         case .focus:
@@ -180,6 +158,7 @@ private extension SettingsView {
 
 private struct AppIconSettingsView: View {
     @ObservedObject var appIconManager: AppIconManager
+    @Environment(\.colorScheme) private var colorScheme
 
     let columns = [
         GridItem(.adaptive(minimum: 80))
@@ -187,12 +166,6 @@ private struct AppIconSettingsView: View {
 
     var body: some View {
         List {
-            Text("App Icon")
-                .appLargeTitleStyle()
-                .listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
             Section {
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(AppIcon.allCases) { icon in
@@ -205,11 +178,15 @@ private struct AppIconSettingsView: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 80, height: 80)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    .clipShape(
+                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    )
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
+                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
                                             .stroke(
-                                                appIconManager.currentIcon == icon ? Color.blue : Color.Theme.border,
+                                                appIconManager.currentIcon == icon
+                                                    ? Color.Theme.textPrimary
+                                                    : Color.Theme.elementBorder,
                                                 lineWidth: appIconManager.currentIcon == icon ? 3 : 1
                                             )
                                     )
@@ -221,10 +198,23 @@ private struct AppIconSettingsView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(
+                            appIconManager.currentIcon == icon ? .isSelected : []
+                        )
                     }
                 }
                 .padding(12)
-                .cardStyle()
+                .background {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(iconListBackground)
+                        .stroke(Color.Theme.elementBorder, lineWidth: 1)
+                        .shadow(
+                            color: .black.opacity(0.06),
+                            radius: 24,
+                            x: 3,
+                            y: 3
+                        )
+                }
             }
             .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
             .listRowBackground(Color.clear)
@@ -235,6 +225,7 @@ private struct AppIconSettingsView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.Theme.secondaryBackground.ignoresSafeArea())
+        .navigationTitle("App Icon")
         .inlinePhoneNavigationTitle()
         .alert("Failed to Change Icon", isPresented: $appIconManager.showError) {
             Button("OK", role: .cancel) { }
@@ -243,6 +234,12 @@ private struct AppIconSettingsView: View {
                 Text(error.localizedDescription)
             }
         }
+    }
+
+    private var iconListBackground: Color {
+        colorScheme == .dark
+            ? Color.Theme.background
+            : Color.Theme.tertiaryBackground
     }
 }
 

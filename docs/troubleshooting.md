@@ -67,7 +67,6 @@ Attachment payloads are stored outside SwiftData under `Application Support/Memo
 Start with:
 
 - `sparky/Services/DataExportService.swift`
-- `sparky/Views/Settings/DataManagementView.swift`
 - `sparky/Model/Export/SparkyExportFormat.swift`
 
 Likely causes:
@@ -83,7 +82,6 @@ Try exporting without attachments to isolate attachment payload issues.
 Start with:
 
 - `sparky/Services/DataImportService.swift`
-- `sparky/Views/Settings/DataManagementView.swift`
 
 Likely causes:
 

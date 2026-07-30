@@ -7,11 +7,7 @@ struct WeeklyActivityCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Activity")
-                .font(.title3)
-                .bold()
-
+        VStack(alignment: .leading, spacing: 14) {
             periodLegend
 
             HStack(alignment: .bottom, spacing: 2) {

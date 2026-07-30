@@ -4,7 +4,7 @@ import Testing
 
 struct MeMetricsTests {
     @MainActor
-    @Test func activityGroupsCompletionsByDayAndPeriod() throws {
+    @Test func annualHistoryAggregatesCompletionsByDayAndPeriod() throws {
         let now = try testDate(day: 18, hour: 12)
         let memories = [
             completedMemory(title: "Morning one", at: try testDate(day: 18, hour: 6)),
@@ -18,16 +18,22 @@ struct MeMetricsTests {
             now: now,
             calendar: testCalendar
         )
+        let firstDay = try #require(metrics.activityDays.first)
         let today = try #require(metrics.activityDays.last)
+        let expectedFirstDay = try testDate(
+            year: 2025,
+            month: 8,
+            day: 1,
+            hour: 0
+        )
+        let expectedToday = try testDate(day: 18, hour: 0)
 
-        #expect(metrics.activityDays.count == 30)
+        #expect(firstDay.date == expectedFirstDay)
+        #expect(today.date == expectedToday)
         #expect(today.completionCount == 2)
         #expect(today.completionCount(for: .morning) == 2)
-        #expect(today.dominantPeriod == .morning)
         #expect(metrics.streakDays == 3)
         #expect(metrics.totalCompletionCount == 4)
-        #expect(metrics.completionCountLast7Days == 4)
-        #expect(metrics.activeDaysLast7Days == 3)
     }
 
     @MainActor
@@ -61,180 +67,87 @@ struct MeMetricsTests {
     }
 
     @MainActor
-    @Test func weeklySummariesUseAdjacentRollingWindows() throws {
+    @Test func streakMayContinueFromYesterday() throws {
         let now = try testDate(day: 18, hour: 12)
-        let memories = [
-            completedMemory(title: "Today", at: try testDate(day: 18, hour: 9)),
-            completedMemory(title: "Current boundary", at: try testDate(day: 12, hour: 9)),
-            completedMemory(title: "Previous start", at: try testDate(day: 11, hour: 9)),
-            completedMemory(title: "Previous end", at: try testDate(day: 5, hour: 9)),
-            completedMemory(title: "Older", at: try testDate(day: 4, hour: 9))
+        let metrics = MeMetrics.calculate(
+            memories: [
+                completedMemory(title: "Yesterday", at: try testDate(day: 17, hour: 9)),
+                completedMemory(title: "Two days ago", at: try testDate(day: 16, hour: 9)),
+                completedMemory(title: "Three days ago", at: try testDate(day: 15, hour: 9)),
+                completedMemory(title: "Before gap", at: try testDate(day: 13, hour: 9))
+            ],
+            now: now,
+            calendar: testCalendar
+        )
+
+        #expect(metrics.streakDays == 3)
+    }
+
+    @MainActor
+    @Test func recurringAndNonRecurringCompletionsContributeToAllTime() throws {
+        let now = try testDate(day: 18, hour: 12)
+        let recurring = Memory(title: "Daily reflection")
+        recurring.scheduleConfig = ScheduleConfig(
+            fireDate: try testDate(day: 16, hour: 9),
+            startDate: try testDate(day: 16, hour: 9),
+            recurrenceRule: RecurrenceRule(frequency: .daily, interval: 1),
+            timeZoneIdentifier: "UTC",
+            isActive: true,
+            memory: recurring
+        )
+        recurring.completionDateEntries = [
+            MemoryCompletionDate(
+                date: try testDate(day: 16, hour: 9),
+                memory: recurring
+            ),
+            MemoryCompletionDate(
+                date: try testDate(day: 17, hour: 9),
+                memory: recurring
+            ),
+            MemoryCompletionDate(
+                date: try testDate(day: 18, hour: 15),
+                memory: recurring
+            )
         ]
 
         let metrics = MeMetrics.calculate(
-            memories: memories,
-            now: now,
-            calendar: testCalendar
-        )
-
-        #expect(metrics.weeklyActivityDays.count == 7)
-        #expect(metrics.completionCountLast7Days == 2)
-        #expect(metrics.completionCountPrevious7Days == 2)
-        #expect(metrics.totalCompletionCount == 5)
-    }
-
-    @MainActor
-    @Test func rhythmFindsUniquePeriodAndWeekdayWithEnoughData() throws {
-        let now = try testDate(day: 18, hour: 12)
-        let completionDate = try testDate(day: 14, hour: 19)
-        let memories = [
-            completedMemory(title: "One", at: completionDate),
-            completedMemory(title: "Two", at: try testDate(day: 14, hour: 20)),
-            completedMemory(title: "Three", at: try testDate(day: 14, hour: 9))
-        ]
-
-        let metrics = MeMetrics.calculate(
-            memories: memories,
-            now: now,
-            calendar: testCalendar
-        )
-
-        #expect(metrics.rhythm.sampleCount == 3)
-        #expect(metrics.rhythm.mostActivePeriod == .evening)
-        #expect(
-            metrics.rhythm.bestWeekday
-                == testCalendar.component(.weekday, from: completionDate)
-        )
-        #expect(metrics.rhythm.hasReliablePattern)
-    }
-
-    @MainActor
-    @Test func rhythmSuppressesTiesAndSmallSamples() throws {
-        let now = try testDate(day: 18, hour: 12)
-        let tied = MeMetrics.calculate(
             memories: [
-                completedMemory(title: "Day one morning", at: try testDate(day: 14, hour: 9)),
-                completedMemory(title: "Day one afternoon", at: try testDate(day: 14, hour: 13)),
-                completedMemory(title: "Day two evening", at: try testDate(day: 15, hour: 19)),
-                completedMemory(title: "Day two night", at: try testDate(day: 15, hour: 23))
-            ],
-            now: now,
-            calendar: testCalendar
-        )
-        let smallSample = MeMetrics.calculate(
-            memories: [
-                completedMemory(title: "One", at: try testDate(day: 14, hour: 19)),
-                completedMemory(title: "Two", at: try testDate(day: 14, hour: 20))
-            ],
-            now: now,
-            calendar: testCalendar
-        )
-
-        #expect(tied.rhythm.mostActivePeriod == nil)
-        #expect(tied.rhythm.bestWeekday == nil)
-        #expect(!tied.rhythm.hasReliablePattern)
-        #expect(smallSample.rhythm.sampleCount == 2)
-        #expect(smallSample.rhythm.mostActivePeriod == nil)
-        #expect(smallSample.rhythm.bestWeekday == nil)
-    }
-
-    @MainActor
-    @Test func insightPrioritizesWeekOverWeekImprovement() throws {
-        let now = try testDate(day: 18, hour: 12)
-        let metrics = MeMetrics.calculate(
-            memories: [
-                completedMemory(title: "Current one", at: try testDate(day: 18, hour: 19)),
-                completedMemory(title: "Current two", at: try testDate(day: 17, hour: 19)),
-                completedMemory(title: "Previous", at: try testDate(day: 11, hour: 19))
-            ],
-            now: now,
-            calendar: testCalendar
-        )
-
-        #expect(metrics.insight == .improvedWeek(delta: 1))
-    }
-
-    @MainActor
-    @Test func insightFallsBackThroughRhythmBuildingAndRestart() throws {
-        let now = try testDate(day: 18, hour: 12)
-        let activePeriod = MeMetrics.calculate(
-            memories: [
-                completedMemory(title: "Current evening one", at: try testDate(day: 18, hour: 19)),
-                completedMemory(title: "Current evening two", at: try testDate(day: 17, hour: 20)),
-                completedMemory(title: "Previous evening", at: try testDate(day: 11, hour: 19)),
-                completedMemory(title: "Previous morning", at: try testDate(day: 10, hour: 9))
-            ],
-            now: now,
-            calendar: testCalendar
-        )
-        let bestWeekdayDate = try testDate(day: 1, hour: 6)
-        let bestWeekday = MeMetrics.calculate(
-            memories: [
-                completedMemory(title: "Morning", at: bestWeekdayDate),
-                completedMemory(title: "Afternoon", at: try testDate(day: 1, hour: 12)),
-                completedMemory(title: "Evening", at: try testDate(day: 1, hour: 18)),
-                completedMemory(title: "Night", at: try testDate(day: 1, hour: 22))
-            ],
-            now: now,
-            calendar: testCalendar
-        )
-        let building = MeMetrics.calculate(
-            memories: [
-                completedMemory(title: "Current", at: try testDate(day: 18, hour: 9)),
-                completedMemory(title: "Previous", at: try testDate(day: 11, hour: 9))
-            ],
-            now: now,
-            calendar: testCalendar
-        )
-        let restart = MeMetrics.calculate(
-            memories: [
+                recurring,
                 completedMemory(
-                    title: "Old",
-                    at: try testDate(month: 5, day: 1, hour: 9)
+                    title: "One-off completion",
+                    at: try testDate(day: 18, hour: 10)
                 )
             ],
             now: now,
             calendar: testCalendar
         )
 
-        #expect(activePeriod.insight == .activePeriod(.evening))
-        #expect(
-            bestWeekday.insight
-                == .bestWeekday(testCalendar.component(.weekday, from: bestWeekdayDate))
-        )
-        #expect(building.insight == .buildingPattern)
-        #expect(restart.insight == .restart)
+        #expect(metrics.totalCompletionCount == 3)
+        #expect(metrics.streakDays == 3)
     }
 
     @MainActor
-    @Test func zeroMetricsRemainValidWithAndWithoutMemories() throws {
+    @Test func allTimeIncludesCompletionsOutsideAnnualHistory() throws {
         let now = try testDate(day: 18, hour: 12)
-        let noMemories = MeMetrics.calculate(
-            memories: [],
-            now: now,
-            calendar: testCalendar
-        )
-        let waiting = MeMetrics.calculate(
-            memories: [Memory(title: "Ready to complete")],
+        let metrics = MeMetrics.calculate(
+            memories: [
+                completedMemory(
+                    title: "Older completion",
+                    at: try testDate(
+                        year: 2024,
+                        month: 1,
+                        day: 10,
+                        hour: 9
+                    )
+                )
+            ],
             now: now,
             calendar: testCalendar
         )
 
-        #expect(noMemories.memoryCount == 0)
-        #expect(noMemories.activityDays.count == 30)
-        #expect(noMemories.weeklyActivityDays.count == 7)
-        #expect(noMemories.completionCountLast7Days == 0)
-        #expect(noMemories.activeDaysLast7Days == 0)
-        #expect(noMemories.streakDays == 0)
-        #expect(noMemories.totalCompletionCount == 0)
-        #expect(noMemories.rhythm.sampleCount == 0)
-        #expect(noMemories.insight == .buildingPattern)
-        #expect(!noMemories.completionRate.isAvailable)
-
-        #expect(waiting.memoryCount == 1)
-        #expect(waiting.completionCountLast7Days == 0)
-        #expect(waiting.totalCompletionCount == 0)
-        #expect(waiting.insight == .buildingPattern)
+        #expect(metrics.totalCompletionCount == 1)
+        #expect(metrics.activityDays.allSatisfy { $0.completionCount == 0 })
+        #expect(metrics.streakDays == 0)
     }
 
     @MainActor
@@ -252,155 +165,24 @@ struct MeMetricsTests {
         )
 
         #expect(metrics.totalCompletionCount == 0)
-        #expect(metrics.completionCountLast7Days == 0)
         #expect(metrics.streakDays == 0)
-        #expect(metrics.rhythm.sampleCount == 0)
-        #expect(metrics.insight == .buildingPattern)
+        #expect(metrics.activityDays.last?.completionCount == 0)
     }
 
     @MainActor
-    @Test func completionRateCountsOnlyElapsedScheduledOccurrences() throws {
-        let calendar = testCalendar
+    @Test func zeroMetricsKeepTheCompleteLayout() throws {
         let now = try testDate(day: 18, hour: 12)
-        let daily = Memory(title: "Daily rhythm")
-        let dailySchedule = ScheduleConfig(
-            fireDate: try testDate(day: 12, hour: 9),
-            startDate: try testDate(day: 12, hour: 9),
-            recurrenceRule: RecurrenceRule(frequency: .daily, interval: 1),
-            timeZoneIdentifier: "UTC",
-            isActive: true,
-            memory: daily
-        )
-        daily.scheduleConfig = dailySchedule
-        daily.completionDateEntries = [
-            MemoryCompletionDate(date: try testDate(day: 12, hour: 9), memory: daily),
-            MemoryCompletionDate(date: try testDate(day: 18, hour: 9), memory: daily)
-        ]
-
-        let futureToday = Memory(title: "Future today")
-        futureToday.scheduleConfig = ScheduleConfig(
-            fireDate: try testDate(day: 18, hour: 15),
-            startDate: try testDate(day: 18, hour: 15),
-            timeZoneIdentifier: "UTC",
-            isActive: true,
-            memory: futureToday
-        )
-
-        let locationOnly = Memory(title: "Location only")
-        locationOnly.locationConfig = LocationConfig(
-            latitude: 0,
-            longitude: 0,
-            name: "Somewhere",
-            event: .onEntry,
-            memory: locationOnly
-        )
-
         let metrics = MeMetrics.calculate(
-            memories: [daily, futureToday, locationOnly],
-            now: now,
-            calendar: calendar
-        )
-
-        #expect(metrics.completionRate.isAvailable)
-        #expect(metrics.completionRate.scheduledOccurrences == 7)
-        #expect(metrics.completionRate.completedOccurrences == 2)
-        #expect(metrics.completionRate.value == 2.0 / 7.0)
-    }
-
-    @MainActor
-    @Test func intraDayRateMatchesTheSpecificHourAndMinute() throws {
-        let now = try testDate(day: 18, hour: 12)
-        let memory = Memory(title: "Hourly")
-        memory.scheduleConfig = ScheduleConfig(
-            fireDate: try testDate(day: 18, hour: 9),
-            startDate: try testDate(day: 18, hour: 9),
-            recurrenceRule: RecurrenceRule(frequency: .hourly, interval: 1),
-            timeZoneIdentifier: "UTC",
-            isActive: true,
-            memory: memory
-        )
-        memory.completionDateEntries = [
-            MemoryCompletionDate(date: try testDate(day: 18, hour: 9), memory: memory),
-            MemoryCompletionDate(date: try testDate(day: 18, hour: 11), memory: memory)
-        ]
-
-        let metrics = MeMetrics.calculate(
-            memories: [memory],
+            memories: [],
             now: now,
             calendar: testCalendar
         )
 
-        #expect(metrics.completionRate.scheduledOccurrences == 4)
-        #expect(metrics.completionRate.completedOccurrences == 2)
-        #expect(metrics.completionRate.value == 0.5)
-    }
-
-    @MainActor
-    @Test func completionRateIsUnavailableWithoutScheduledOccurrences() throws {
-        let metrics = MeMetrics.calculate(
-            memories: [
-                completedMemory(
-                    title: "Unscheduled",
-                    at: try testDate(day: 18, hour: 9)
-                )
-            ],
-            now: try testDate(day: 18, hour: 12),
-            calendar: testCalendar
-        )
-
-        #expect(!metrics.completionRate.isAvailable)
-        #expect(metrics.completionRate.scheduledOccurrences == 0)
-        #expect(metrics.completionRate.value == 0)
-    }
-
-    @MainActor
-    @Test func presentationDistinguishesMeasuredZeroFromUnavailableValues() {
-        let measuredZero = MeMetrics.CompletionRate(
-            completedOccurrences: 0,
-            scheduledOccurrences: 4
-        )
-        let unavailable = MeMetrics.CompletionRate(
-            completedOccurrences: 0,
-            scheduledOccurrences: 0
-        )
-
-        #expect(MeMetrics.percentageText(for: measuredZero) == "0%")
-        #expect(MeMetrics.percentageText(for: unavailable) == "—")
-        #expect(
-            MeMetrics.accessibilityText(
-                for: MeMetrics.percentageText(for: unavailable)
-            ) == "Not available"
-        )
-    }
-
-    @MainActor
-    @Test func presentationUsesDashesForInsufficientAndTiedRhythm() {
-        let insufficient = MeMetrics.RhythmSummary(
-            sampleCount: 2,
-            mostActivePeriod: nil,
-            bestWeekday: nil
-        )
-        let tied = MeMetrics.RhythmSummary(
-            sampleCount: 4,
-            mostActivePeriod: nil,
-            bestWeekday: nil
-        )
-
-        #expect(
-            MeMetrics.activityPeriodText(
-                for: insufficient.mostActivePeriod
-            ) == "—"
-        )
-        #expect(MeMetrics.weekdayText(for: insufficient.bestWeekday) == "—")
-        #expect(MeMetrics.activityPeriodText(for: tied.mostActivePeriod) == "—")
-        #expect(MeMetrics.weekdayText(for: tied.bestWeekday) == "—")
-    }
-
-    @MainActor
-    @Test func presentationFormatsMeasuredPeriodAndWeekday() {
-        #expect(MeMetrics.activityPeriodText(for: .evening) == "Evening")
-        #expect(MeMetrics.weekdayText(for: 2) == "Monday")
-        #expect(MeMetrics.accessibilityText(for: "Evening") == "Evening")
+        #expect(!metrics.activityDays.isEmpty)
+        #expect(metrics.weeklyActivityDays.count == 7)
+        #expect(metrics.activityDays.allSatisfy { $0.completionCount == 0 })
+        #expect(metrics.streakDays == 0)
+        #expect(metrics.totalCompletionCount == 0)
     }
 }
 
@@ -408,17 +190,19 @@ private extension MeMetricsTests {
     var testCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.firstWeekday = 1
         return calendar
     }
 
     func testDate(
+        year: Int = 2026,
         month: Int = 7,
         day: Int,
         hour: Int,
         minute: Int = 0
     ) throws -> Date {
         try #require(testCalendar.date(from: DateComponents(
-            year: 2026,
+            year: year,
             month: month,
             day: day,
             hour: hour,
