@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "me-streak-hands.png",
+      "filename" : "me-completed-euphoric.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "me-streak-hands@2x.png",
+      "filename" : "me-completed-euphoric@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "me-streak-hands@3x.png",
+      "filename" : "me-completed-euphoric@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

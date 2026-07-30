@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "me-streak-character.png",
+      "filename" : "me-completed-sad.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "me-streak-character@2x.png",
+      "filename" : "me-completed-sad@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "me-streak-character@3x.png",
+      "filename" : "me-completed-sad@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
