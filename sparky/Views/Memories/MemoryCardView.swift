@@ -148,7 +148,7 @@ struct MemoryCardView: View {
 
     private var mindForDisplay: Mind? {
         guard let mind = memory?.mind else { return nil }
-        guard !mind.isAllMinds, !mind.isLimbo else { return nil }
+        guard !mind.isAllMinds else { return nil }
         return mind
     }
 

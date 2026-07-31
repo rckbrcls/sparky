@@ -65,7 +65,7 @@ flowchart TD
 The model layer lives under `sparky/Model/` and is split by domain:
 
 - `Memory`: core persisted entity with status, checklist, attachments, trigger configs, completion history, and optional Mind relationship.
-- `Mind`: hierarchical organization entity with virtual All and Limbo sentinels.
+- `Mind`: hierarchical organization entity with a virtual All sentinel.
 - `Tag`: color-coded classification entity.
 - `CheckItemModel`: persisted checklist item.
 - `ScheduleConfig`, `LocationConfig`: primary trigger models; `ScheduleConfig.focusEnabled` gates Focus.

@@ -66,7 +66,7 @@ struct MindsTab: View {
     }
 
     private var displayMinds: [Mind] {
-        let virtualMinds = [Mind.allMinds, Mind.limbo]
+        let virtualMinds = [Mind.allMinds]
         let persistedMinds = mindService.minds
             .filter { $0.parent == nil }
             .sorted { lhs, rhs in
@@ -86,8 +86,6 @@ struct MindsTab: View {
         let memories: [Memory]
         if mind.isAllMinds {
             memories = memoryService.memories
-        } else if mind.isLimbo {
-            memories = memoryService.memories.filter { $0.mind == nil }
         } else {
             let descendantIDs = mind.allDescendantIDs
             memories = memoryService.memories.filter { memory in

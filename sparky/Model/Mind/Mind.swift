@@ -45,36 +45,20 @@ final class Mind: Identifiable {
 
 extension Mind {
     static let allMindsIdentifier = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
-    static let limboIdentifier = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
 
     static var allMinds: Mind {
         Mind(
             id: allMindsIdentifier,
             name: "All",
             colorHex: nil,
-            iconName: "tray.full.fill",
+            iconName: "square.grid.2x2.fill",
             sortOrder: Int.min,
             isDefault: true
         )
     }
 
-    static var limbo: Mind {
-        Mind(
-            id: limboIdentifier,
-            name: "Limbo",
-            colorHex: nil,
-            iconName: "questionmark.folder.fill",
-            sortOrder: Int.min + 1,
-            isDefault: false
-        )
-    }
-
     var isAllMinds: Bool {
         id == Mind.allMindsIdentifier
-    }
-
-    var isLimbo: Bool {
-        id == Mind.limboIdentifier
     }
 
     var allDescendantIDs: Set<UUID> {

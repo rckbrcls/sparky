@@ -14,6 +14,7 @@ struct MindRootView: View {
     let onEditMemory: ((Memory) -> Void)?
     let onCreateMind: () -> Void
     let onEditMind: ((Mind) -> Void)?
+    let onCreateMemory: (Mind?) -> Void
     let onMultiSelectionChange: (Bool) -> Void
     let onMindContextChange: ((Mind?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
@@ -53,6 +54,7 @@ struct MindRootView: View {
                     onSelectMemory: onSelectMemory,
                     onEditMemory: onEditMemory,
                     onEditMind: onEditMind,
+                    onCreateMemory: onCreateMemory,
                     onMultiSelectionChange: onMultiSelectionChange,
                     onMindContextChange: onMindContextChange,
                     onSearchActiveChange: onSearchActiveChange
@@ -86,6 +88,7 @@ struct MindRootView: View {
         onEditMemory: nil,
         onCreateMind: { },
         onEditMind: nil,
+        onCreateMemory: { _ in },
         onMultiSelectionChange: { _ in },
         onMindContextChange: nil,
         onSearchActiveChange: { _ in }

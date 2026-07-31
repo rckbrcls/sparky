@@ -43,7 +43,7 @@ Notes:
 
 - `MindService` maintains cached arrays and indexes.
 - Refresh is TTL-based unless forced.
-- Virtual Minds (`All`, `Limbo`) should not be persisted as normal Minds.
+- The virtual `All` Mind should not be persisted as a normal Mind.
 
 ## Attachments Are Missing
 

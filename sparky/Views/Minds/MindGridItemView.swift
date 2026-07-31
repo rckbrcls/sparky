@@ -110,19 +110,19 @@ struct MindGridItemView: View {
     }
 
     private var canEditMind: Bool {
-        guard !mind.isAllMinds, !mind.isLimbo else { return false }
+        guard !mind.isAllMinds else { return false }
         return true
     }
 
     private var canDeleteMind: Bool {
         guard mindService != nil else { return false }
-        guard !mind.isAllMinds, !mind.isLimbo else { return false }
+        guard !mind.isAllMinds else { return false }
         return !mind.isDefault
     }
 
     private func deleteMind() {
         guard let service = mindService else { return }
-        guard !mind.isAllMinds, !mind.isLimbo,
+        guard !mind.isAllMinds,
               !mind.isDefault else { return }
 
         Task { @MainActor in

@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct MemoryEditorTitleCard: View {
     @ObservedObject var viewModel: MemoryEditorViewModel
@@ -21,11 +24,19 @@ struct MemoryEditorTitleCard: View {
                 if isEditingEnabled {
                     Menu {
                         Picker("Mind", selection: $viewModel.selectedMindID) {
-                            Label("No Mind", systemImage: "brain.head.profile")
+                            mindPickerLabel(
+                                title: "No Mind",
+                                systemImage: "brain.head.profile",
+                                color: Color.Theme.textSecondary
+                            )
                                 .tag(nil as UUID?)
 
                             ForEach(viewModel.availableMinds) { mind in
-                                Label(mind.name, systemImage: mind.iconName ?? "brain.head.profile")
+                                mindPickerLabel(
+                                    title: mind.name,
+                                    systemImage: mind.iconName ?? "brain.head.profile",
+                                    color: mindColor(for: mind)
+                                )
                                     .tag(Optional(mind.id))
                             }
                         }
@@ -38,11 +49,13 @@ struct MemoryEditorTitleCard: View {
                             Label("Create New Mind", systemImage: "plus.circle")
                         }
                     } label: {
-                        Image(systemName: viewModel.selectedMind?.iconName ?? "brain.head.profile")
-                            .foregroundStyle(selectedMindColor)
-                            .frame(width: 36, height: 36)
-                            .glassEffect(.regular.tint(selectedMindColor.opacity(0.15)))
+                        selectedMindIcon(isInteractive: true)
+                            .mindSelectorHitTarget()
                     }
+                    .buttonStyle(.plain)
+                    .menuIndicator(.hidden)
+                    .accessibilityLabel("Mind")
+                    .accessibilityValue(viewModel.selectedMind?.name ?? "No Mind")
                     .platformCover(isPresented: $showMindComposer) {
                         MindComposerView(
                             environment: environment,
@@ -51,10 +64,7 @@ struct MemoryEditorTitleCard: View {
                         .macPopoverFrame(width: 440, height: 560)
                     }
                 } else {
-                    Image(systemName: viewModel.selectedMind?.iconName ?? "brain.head.profile")
-                        .foregroundStyle(selectedMindColor)
-                        .frame(width: 36, height: 36)
-                        .glassEffect(.regular.tint(selectedMindColor.opacity(0.15)))
+                    selectedMindIcon(isInteractive: false)
                 }
 
                 if isEditingEnabled {
@@ -96,10 +106,76 @@ struct MemoryEditorTitleCard: View {
     }
 
     private var selectedMindColor: Color {
-        if let hex = viewModel.selectedMind?.colorHex,
+        mindColor(for: viewModel.selectedMind)
+    }
+
+    private func mindColor(for mind: Mind?) -> Color {
+        if let hex = mind?.colorHex,
            let color = Color(hex: hex) {
             return color
         }
-        return .gray
+        return Color.Theme.textSecondary
+    }
+
+    private func mindPickerLabel(
+        title: String,
+        systemImage: String,
+        color: Color
+    ) -> some View {
+        #if os(iOS)
+        Label {
+            Text(title)
+        } icon: {
+            if let image = UIImage(systemName: systemImage)?.withTintColor(
+                UIColor(color),
+                renderingMode: .alwaysOriginal
+            ) {
+                Image(uiImage: image)
+            } else {
+                Image(systemName: systemImage)
+                    .foregroundStyle(color)
+            }
+        }
+        #else
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(color)
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private func selectedMindIcon(isInteractive: Bool) -> some View {
+        let icon = Image(systemName: viewModel.selectedMind?.iconName ?? "brain.head.profile")
+            .foregroundStyle(selectedMindColor)
+            .frame(width: 36, height: 36)
+
+        if isInteractive {
+            icon
+                .glassEffect(
+                    .regular.interactive().tint(selectedMindColor.opacity(0.15)),
+                    in: .circle
+                )
+        } else {
+            icon
+                .glassEffect(
+                    .regular.tint(selectedMindColor.opacity(0.15)),
+                    in: .circle
+                )
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func mindSelectorHitTarget() -> some View {
+        #if os(iOS)
+        frame(minWidth: 44, minHeight: 44)
+            .contentShape(Circle())
+        #else
+        contentShape(Circle())
+        #endif
     }
 }

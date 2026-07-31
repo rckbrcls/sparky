@@ -732,7 +732,7 @@ private extension MemoryEditorViewModel {
         if let memory = existingMemory {
             apply(memory: memory)
         } else {
-            if defaultMind?.isAllMinds == true || defaultMind?.isLimbo == true {
+            if defaultMind?.isAllMinds == true {
                 selectedMindID = nil
             } else {
                 selectedMindID = defaultMind?.id

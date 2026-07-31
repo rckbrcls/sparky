@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct QuickMemorySheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -108,11 +111,15 @@ struct QuickMemorySheet: View {
     }
 
     private var mindColor: Color {
-        if let hex = selectedMind?.colorHex,
+        mindColor(for: selectedMind)
+    }
+
+    private func mindColor(for mind: Mind?) -> Color {
+        if let hex = mind?.colorHex,
            let color = Color(hex: hex) {
             return color
         }
-        return .gray
+        return Color.Theme.textSecondary
     }
 
     private var scheduleConfigDraft: ScheduleConfigDraft? {
@@ -136,11 +143,19 @@ struct QuickMemorySheet: View {
     private var mindIconMenu: some View {
         Menu {
             Picker("Mind", selection: $selectedMindID) {
-                Label("No Mind", systemImage: "brain.head.profile")
+                mindPickerLabel(
+                    title: "No Mind",
+                    systemImage: "brain.head.profile",
+                    color: Color.Theme.textSecondary
+                )
                     .tag(nil as UUID?)
 
                 ForEach(availableMinds) { mind in
-                    Label(mind.name, systemImage: mind.iconName ?? "brain.head.profile")
+                    mindPickerLabel(
+                        title: mind.name,
+                        systemImage: mind.iconName ?? "brain.head.profile",
+                        color: mindColor(for: mind)
+                    )
                         .tag(Optional(mind.id))
                 }
             }
@@ -149,8 +164,39 @@ struct QuickMemorySheet: View {
                 .foregroundStyle(mindColor)
                 .frame(width: 36, height: 36)
                 .quickMemoryCircleControl(tint: mindColor.opacity(0.15))
+                .quickMemoryTapTarget()
         }
         .accessibilityLabel("Mind")
+        .accessibilityValue(selectedMind?.name ?? "No Mind")
+    }
+
+    private func mindPickerLabel(
+        title: String,
+        systemImage: String,
+        color: Color
+    ) -> some View {
+        #if os(iOS)
+        Label {
+            Text(title)
+        } icon: {
+            if let image = UIImage(systemName: systemImage)?.withTintColor(
+                UIColor(color),
+                renderingMode: .alwaysOriginal
+            ) {
+                Image(uiImage: image)
+            } else {
+                Image(systemName: systemImage)
+                    .foregroundStyle(color)
+            }
+        }
+        #else
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(color)
+        }
+        #endif
     }
 
     @ViewBuilder
@@ -250,7 +296,7 @@ struct QuickMemorySheet: View {
 
     private func configureInitialState() {
         let mind = request.mind
-        if mind?.isAllMinds == true || mind?.isLimbo == true {
+        if mind?.isAllMinds == true {
             selectedMindID = nil
         } else {
             selectedMindID = mind?.id
@@ -295,6 +341,16 @@ private extension View {
                 Circle()
                     .stroke(Color.Theme.elementBorder, lineWidth: 1)
             }
+        #endif
+    }
+
+    @ViewBuilder
+    func quickMemoryTapTarget() -> some View {
+        #if os(iOS)
+        frame(minWidth: 44, minHeight: 44)
+            .contentShape(Circle())
+        #else
+        contentShape(Circle())
         #endif
     }
 

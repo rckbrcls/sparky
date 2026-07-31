@@ -66,7 +66,7 @@ The current schema has no compatibility migration. Existing installations must r
 - A `Memory` has many `MemoryAttachmentReference` records.
 - A `Memory` has many `MemoryCompletionDate` records.
 
-`Mind.allMinds` and `Mind.limbo` are virtual sentinels. They are created through static factory properties and should not be persisted as normal Mind records.
+`Mind.allMinds` is a virtual sentinel. It is created through a static factory property and should not be persisted as a normal Mind record.
 
 ## Memory Data Model
 

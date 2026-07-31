@@ -155,8 +155,6 @@ final class MemoryService: ObservableObject {
         if let mind = mind {
             if mind.isAllMinds {
                 filtered = memories
-            } else if mind.isLimbo {
-                filtered = memories.filter { $0.mind == nil }
             } else {
                 let mindID = mind.id
                 filtered = memories.filter { $0.mind?.id == mindID }

@@ -37,6 +37,13 @@ final class MindService: ObservableObject {
     private var refreshTask: Task<Void, Never>?
     private var mindIndex: [UUID: Mind] = [:]
     private let logger = Logger(subsystem: "sparky", category: "MindService")
+    private static let legacyLimboIdentifier = UUID(
+        uuidString: "11111111-1111-1111-1111-111111111111"
+    )!
+    private static let sentinelMindIDs: Set<UUID> = [
+        Mind.allMindsIdentifier,
+        legacyLimboIdentifier
+    ]
 
     init(dataController: DataController, cacheTTL: TimeInterval = 30) {
         self.dataController = dataController
@@ -62,7 +69,7 @@ final class MindService: ObservableObject {
             removeSentinelMinds(fetched, context: context)
 
             let mindResults = fetched
-                .filter { !$0.isAllMinds && !$0.isLimbo }
+                .filter { !Self.sentinelMindIDs.contains($0.id) }
                 .sorted { lhs, rhs in
                     if lhs.sortOrder != rhs.sortOrder {
                         return lhs.sortOrder < rhs.sortOrder
@@ -107,7 +114,7 @@ final class MindService: ObservableObject {
             removeSentinelMinds(fetched, context: context)
 
             let mindResults = fetched
-                .filter { !$0.isAllMinds && !$0.isLimbo }
+                .filter { !Self.sentinelMindIDs.contains($0.id) }
                 .sorted { lhs, rhs in
                     if lhs.sortOrder != rhs.sortOrder {
                         return lhs.sortOrder < rhs.sortOrder
@@ -309,8 +316,7 @@ final class MindService: ObservableObject {
     }
 
     private func removeSentinelMinds(_ minds: [Mind], context: ModelContext) {
-        let sentinelIDs: Set<UUID> = [Mind.allMindsIdentifier, Mind.limboIdentifier]
-        for mind in minds where sentinelIDs.contains(mind.id) {
+        for mind in minds where Self.sentinelMindIDs.contains(mind.id) {
             logger.warning("Removing accidentally persisted sentinel mind: \(mind.id)")
             context.delete(mind)
         }

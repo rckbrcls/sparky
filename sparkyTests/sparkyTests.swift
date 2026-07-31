@@ -23,17 +23,47 @@ struct SparkyTests {
     @MainActor
     @Test func memoryTimelineFiltering() async throws {
         let environment = AppEnvironment(dataController: DataController(inMemory: true))
+        let referenceDate = Date(timeIntervalSince1970: 1_000)
 
-        _ = try await environment.memoryService.createMemory(from: MemoryDraft(title: "Active Memory"))
-        _ = try await environment.memoryService.createMemory(
+        let activeMemory = try await environment.memoryService.createMemory(from: MemoryDraft(title: "Active Memory"))
+        let completedMemory = try await environment.memoryService.createMemory(
             from: MemoryDraft(title: "Completed Memory", status: .completed)
         )
 
+        activeMemory.createdAt = referenceDate
+        activeMemory.updatedAt = referenceDate.addingTimeInterval(120)
+        completedMemory.createdAt = referenceDate.addingTimeInterval(60)
+        completedMemory.updatedAt = referenceDate.addingTimeInterval(30)
+
         let activeMemories = environment.memoryService.memories(in: nil, statuses: [.active])
         let completedMemories = environment.memoryService.memories(in: nil, statuses: [.completed])
+        let allOldestFirst = environment.memoryService.memories(
+            in: nil,
+            statuses: MemoryStatus.allCases,
+            sort: .createdAtAscending
+        )
+        let allNewestFirst = environment.memoryService.memories(
+            in: nil,
+            statuses: MemoryStatus.allCases,
+            sort: .createdAtDescending
+        )
+        let updatedOldestFirst = environment.memoryService.memories(
+            in: nil,
+            statuses: MemoryStatus.allCases,
+            sort: .updatedAtAscending
+        )
+        let updatedNewestFirst = environment.memoryService.memories(
+            in: nil,
+            statuses: MemoryStatus.allCases,
+            sort: .updatedAtDescending
+        )
 
         #expect(activeMemories.map(\.title) == ["Active Memory"])
         #expect(completedMemories.map(\.title) == ["Completed Memory"])
+        #expect(allOldestFirst.map(\.title) == ["Active Memory", "Completed Memory"])
+        #expect(allNewestFirst.map(\.title) == ["Completed Memory", "Active Memory"])
+        #expect(updatedOldestFirst.map(\.title) == ["Completed Memory", "Active Memory"])
+        #expect(updatedNewestFirst.map(\.title) == ["Active Memory", "Completed Memory"])
     }
 
     @MainActor

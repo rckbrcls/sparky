@@ -101,6 +101,8 @@ struct FocusConfigurationMenu: View {
                     set: setAutoContinue
                 )
             )
+            .toggleStyle(.switch)
+            .tint(Color.accentColor)
             .padding(.vertical, 10)
             .accessibilityLabel("Auto-continue Quick Focus phases")
         }

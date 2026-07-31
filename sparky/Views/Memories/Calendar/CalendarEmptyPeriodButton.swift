@@ -28,7 +28,7 @@ struct CalendarEmptyPeriodButton: View {
 
                 Spacer(minLength: 12)
 
-                Image(systemName: "plus.circle.fill")
+                Image(systemName: "plus")
                     .font(.title3)
                     .foregroundStyle(Color.Theme.textTertiary)
             }
@@ -37,7 +37,7 @@ struct CalendarEmptyPeriodButton: View {
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(
-                        Color.Theme.textTertiary.opacity(isHovering ? 0.9 : 0.55),
+                        Color.Theme.border.opacity(isHovering ? 0.9 : 0.7),
                         style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])
                     )
             }

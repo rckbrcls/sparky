@@ -13,7 +13,7 @@ Sparky is organized around four primary areas:
 | Area | Purpose |
 | --- | --- |
 | Calendar | Browse scheduled Memories in Day and Month views, move through time, and create Memories from a specific day or time period. |
-| Mind | Organize Memories into nested Minds with custom names, icons, colors, and All/Limbo views. |
+| Mind | Organize Memories into nested Minds with custom names, icons, colors, and a unified All view. |
 | Focus | Run configurable Pomodoro sessions as Quick Focus or from a scheduled Memory with a dedicated Focus recipe. |
 | Me | Review weekly completion activity, rhythm, streaks, and scheduled completion insights, then open Settings. |
 
@@ -24,7 +24,7 @@ Sparky is organized around four primary areas:
 - One-time and recurring schedules with hourly, daily, weekly, monthly, yearly, weekday, interval, end-date, and occurrence-count options.
 - Arrival and departure geofences on iPhone, with a maximum of 20 monitored location Memories.
 - Photos, links, audio, and files stored locally outside SwiftData in the app's Application Support directory.
-- Text search, content and trigger filters, pinned/active/completed sections, duplication, and bulk move/status/delete actions.
+- Text search, status, Mind association, and trigger filters, pinned emphasis, duplication, and bulk move/status/delete actions.
 - Per-Memory and global Focus recipes with work, short-break, long-break, cycle, auto-continue, pause, reset, and extend controls.
 - Local JSON backup and restore through `SparkyExportFormat` version `2.0`, with optional attachment and active-only export modes.
 - System, light, and dark themes; iPhone also supports alternate app icons.

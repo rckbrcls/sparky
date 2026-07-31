@@ -195,6 +195,9 @@ struct DesktopRootView: View {
                     createMindRequest = MindComposerRequest(mindToEdit: nil)
                 },
                 onEditMind: { nav.presentMindEdit(for: $0) },
+                onCreateMemory: { targetMind in
+                    nav.editorRoute = MemoryEditorRoute(mode: .create(mind: targetMind, template: .blank))
+                },
                 onMultiSelectionChange: { _ in },
                 onMindContextChange: { nav.currentMindContext = $0 },
                 onSearchActiveChange: { _ in }

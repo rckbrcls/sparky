@@ -16,6 +16,7 @@ struct MindDetailView: View {
     let onSelectMemory: (Memory) -> Void
     let onEditMemory: ((Memory) -> Void)?
     let onEditMind: ((Mind) -> Void)?
+    let onCreateMemory: (Mind?) -> Void
     let onMultiSelectionChange: (Bool) -> Void
     let onMindContextChange: ((Mind?) -> Void)?
     let onSearchActiveChange: (Bool) -> Void
@@ -26,8 +27,70 @@ struct MindDetailView: View {
     @State private var isPerformingBulkAction = false
     @State private var showingDeleteConfirmation = false
     @State private var bulkActionErrorMessage: String?
-    @State private var expandedSections: Set<MindSectionType> = Set(MindSectionType.allCases.filter { $0 != .complete })
-    private let animatedMindsSectionItemLimit = 20
+
+    private enum StatusFilter: String, CaseIterable, Identifiable {
+        case all
+        case active
+        case completed
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .all: return "All"
+            case .active: return "Active"
+            case .completed: return "Completed"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .all: return "square.grid.2x2"
+            case .active: return "circle"
+            case .completed: return "checkmark.circle"
+            }
+        }
+
+        var statuses: [MemoryStatus] {
+            switch self {
+            case .all: return MemoryStatus.allCases
+            case .active: return [.active]
+            case .completed: return [.completed]
+            }
+        }
+    }
+
+    private enum MindAssignmentFilter: String, CaseIterable, Identifiable {
+        case all
+        case withMind
+        case noMind
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .all: return "All"
+            case .withMind: return "With Mind"
+            case .noMind: return "No Mind"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .all: return "square.grid.2x2"
+            case .withMind: return "folder"
+            case .noMind: return "tray"
+            }
+        }
+    }
+
+    private struct MindFilterOption: Identifiable {
+        let mind: Mind
+        let depth: Int
+
+        var id: Mind.ID { mind.id }
+    }
+
     enum TriggerFilter: String, CaseIterable, Identifiable {
         case scheduled
         case location
@@ -49,6 +112,9 @@ struct MindDetailView: View {
         }
     }
 
+    @State private var statusFilter: StatusFilter = .all
+    @State private var mindAssignmentFilter: MindAssignmentFilter = .all
+    @State private var selectedMindIDs: Set<Mind.ID> = []
     @State private var selectedTriggerTypes: Set<TriggerFilter> = []
     @State private var sortStrategy: MemoryService.SortStrategy = .createdAtDescending
     private enum MindComposerPresentation: Identifiable {
@@ -73,6 +139,7 @@ struct MindDetailView: View {
         onSelectMemory: @escaping (Memory) -> Void,
         onEditMemory: ((Memory) -> Void)? = nil,
         onEditMind: ((Mind) -> Void)? = nil,
+        onCreateMemory: @escaping (Mind?) -> Void,
         onMultiSelectionChange: @escaping (Bool) -> Void,
         onMindContextChange: ((Mind?) -> Void)?,
         onSearchActiveChange: @escaping (Bool) -> Void
@@ -84,6 +151,7 @@ struct MindDetailView: View {
         self.onSelectMemory = onSelectMemory
         self.onEditMemory = onEditMemory
         self.onEditMind = onEditMind
+        self.onCreateMemory = onCreateMemory
         self.onMultiSelectionChange = onMultiSelectionChange
         self.onMindContextChange = onMindContextChange
         self.onSearchActiveChange = onSearchActiveChange
@@ -93,42 +161,73 @@ struct MindDetailView: View {
         mindService.mind(id: mind.id) ?? mind
     }
 
-    private var isAllMinds: Bool {
-        resolvedMind.isAllMinds
-    }
-
     private var childMinds: [Mind] {
         return resolvedMind.children ?? []
     }
 
-    private var memories: [Memory] {
-        memoryService.memories(in: resolvedMind, includeCompleted: true)
+    private var unfilteredMemories: [Memory] {
+        memoryService.memories(
+            in: resolvedMind,
+            includeCompleted: true
+        )
+    }
+
+    private var shouldShowEmptyState: Bool {
+        MindDetailView.shouldShowEmptyState(
+            childMindsCount: childMinds.count,
+            unfilteredMemoriesCount: unfilteredMemories.count
+        )
+    }
+
+    private var emptyStateTargetMind: Mind? {
+        MindDetailView.targetMind(for: resolvedMind)
+    }
+
+    private var emptyStateAccessibilityLabel: String {
+        guard let targetMind = emptyStateTargetMind else {
+            return "Add Memory"
+        }
+        return "Add Memory to \(targetMind.name)"
     }
 
     private var filteredMemories: [Memory] {
         memoryService.memories(
             in: resolvedMind,
-            statuses: [.active, .completed],
+            statuses: statusFilter.statuses,
             includeCompleted: true,
             sort: sortStrategy
         ).filter { memory in
-            guard !selectedTriggerTypes.isEmpty else { return true }
-            if selectedTriggerTypes.contains(.scheduled) && memory.hasSchedule { return true }
-            if selectedTriggerTypes.contains(.location) && memory.hasLocation { return true }
-            return false
+            matchesTriggerFilter(memory) && matchesMindAssignmentFilter(memory)
         }
     }
 
-    private var pinnedMemories: [Memory] {
-        filteredMemories.filter { $0.isPinned && $0.status == .active }
+    private var hasActiveFilters: Bool {
+        statusFilter != .all
+            || !selectedTriggerTypes.isEmpty
+            || (resolvedMind.isAllMinds && mindAssignmentFilter != .all)
     }
 
-    private var activeMemories: [Memory] {
-        filteredMemories.filter { !$0.isPinned && $0.status == .active }
-    }
+    private var mindFilterOptions: [MindFilterOption] {
+        var options: [MindFilterOption] = []
+        var visitedMindIDs: Set<Mind.ID> = []
+        let rootMinds = mindService.minds.filter { $0.parent == nil }
 
-    private var completedMemories: [Memory] {
-        filteredMemories.filter { $0.status == .completed }
+        appendMindFilterOptions(
+            from: rootMinds,
+            depth: 0,
+            visitedMindIDs: &visitedMindIDs,
+            options: &options
+        )
+
+        let remainingMinds = mindService.minds.filter { !visitedMindIDs.contains($0.id) }
+        appendMindFilterOptions(
+            from: remainingMinds,
+            depth: 0,
+            visitedMindIDs: &visitedMindIDs,
+            options: &options
+        )
+
+        return options
     }
 
     private var bulkActionMinds: [Mind] {
@@ -159,9 +258,8 @@ struct MindDetailView: View {
     }
 
     private var baseView: some View {
-        let isMindsSectionExpanded = expandedSections.contains(.minds)
-        let activeMemoryCountsByMindID = isMindsSectionExpanded ? makeActiveMemoryCountsByMindID() : [:]
-        let shouldAnimateMindsSection = childMinds.count <= animatedMindsSectionItemLimit
+        let activeMemoryCountsByMindID = childMinds.isEmpty ? [:] : makeActiveMemoryCountsByMindID()
+        let displayContent = MindMemoryDisplayContent(memories: filteredMemories)
 
         return ScrollView {
             VStack(spacing: 0) {
@@ -172,67 +270,50 @@ struct MindDetailView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 10)
 
-                    VStack(spacing: 0) {
-                        if !childMinds.isEmpty {
-                            MindMindsSection(
-                                childMinds: childMinds,
-                                isExpanded: isMindsSectionExpanded,
-                                mindService: mindService,
-                                activeMemoryCounts: activeMemoryCountsByMindID,
-                                onEditMind: { mind in
-                                    mindComposerPresentation = .edit(mind)
-                                },
-                                onToggleExpanded: {
-                                    toggleSection(.minds, animated: shouldAnimateMindsSection)
-                                }
-                            )
-                        }
-
-                        MindMemorySection(
-                            sectionType: .pinned,
-                            memories: pinnedMemories,
-                            isExpanded: expandedSections.contains(.pinned),
-                            isMultiSelecting: isMultiSelecting,
-                            selectedMemoryIDs: selectedMemoryIDs,
-                            isPerformingBulkAction: isPerformingBulkAction,
-                            onSelectMemory: onSelectMemory,
-                            onEditMemory: onEditMemory,
-                            onToggleSelection: toggleMemorySelection,
-                            onToggleExpanded: {
-                                toggleSection(.pinned)
-                            }
-                        )
-
-                        MindMemorySection(
-                            sectionType: .active,
-                            memories: activeMemories,
-                            isExpanded: expandedSections.contains(.active),
-                            isMultiSelecting: isMultiSelecting,
-                            selectedMemoryIDs: selectedMemoryIDs,
-                            isPerformingBulkAction: isPerformingBulkAction,
-                            onSelectMemory: onSelectMemory,
-                            onEditMemory: onEditMemory,
-                            onToggleSelection: toggleMemorySelection,
-                            onToggleExpanded: {
-                                toggleSection(.active)
-                            }
-                        )
-
-                        MindMemorySection(
-                            sectionType: .complete,
-                            memories: completedMemories,
-                            isExpanded: expandedSections.contains(.complete),
-                            isMultiSelecting: isMultiSelecting,
-                            selectedMemoryIDs: selectedMemoryIDs,
-                            isPerformingBulkAction: isPerformingBulkAction,
-                            onSelectMemory: onSelectMemory,
-                            onEditMemory: onEditMemory,
-                            onToggleSelection: toggleMemorySelection,
-                            onToggleExpanded: {
-                                toggleSection(.complete)
+                VStack(spacing: 0) {
+                    if !childMinds.isEmpty {
+                        MindMindsGrid(
+                            childMinds: childMinds,
+                            mindService: mindService,
+                            activeMemoryCounts: activeMemoryCountsByMindID,
+                            onEditMind: { mind in
+                                mindComposerPresentation = .edit(mind)
                             }
                         )
                     }
+
+                    if shouldShowEmptyState {
+                        MindEmptyStateView(
+                            accessibilityLabel: emptyStateAccessibilityLabel,
+                            onCreateMemory: {
+                                onCreateMemory(emptyStateTargetMind)
+                            }
+                        )
+                        .padding(.top, 40)
+                    } else {
+                        if !displayContent.pinnedMemories.isEmpty {
+                            MindPinnedSection(
+                                memories: displayContent.pinnedMemories,
+                                isMultiSelecting: isMultiSelecting,
+                                selectedMemoryIDs: selectedMemoryIDs,
+                                isPerformingBulkAction: isPerformingBulkAction,
+                                onSelectMemory: onSelectMemory,
+                                onEditMemory: onEditMemory,
+                                onToggleSelection: toggleMemorySelection
+                            )
+                        }
+
+                        MindMemoryList(
+                            memories: displayContent.remainingMemories,
+                            isMultiSelecting: isMultiSelecting,
+                            selectedMemoryIDs: selectedMemoryIDs,
+                            isPerformingBulkAction: isPerformingBulkAction,
+                            onSelectMemory: onSelectMemory,
+                            onEditMemory: onEditMemory,
+                            onToggleSelection: toggleMemorySelection
+                        )
+                    }
+                }
             }
             #if os(macOS)
             .frame(
@@ -272,7 +353,61 @@ struct MindDetailView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
-                        Section("Filter") {
+                        Section("Status") {
+                            ForEach(StatusFilter.allCases) { filter in
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        statusFilter = filter
+                                    }
+                                } label: {
+                                    Label(
+                                        filter.label,
+                                        systemImage: statusFilter == filter ? "checkmark" : filter.systemImage
+                                    )
+                                }
+                            }
+                        }
+
+                        if resolvedMind.isAllMinds {
+                            Section("Mind") {
+                                ForEach(MindAssignmentFilter.allCases) { filter in
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            setMindAssignmentFilter(filter)
+                                        }
+                                    } label: {
+                                        Label(
+                                            filter.label,
+                                            systemImage: mindAssignmentFilter == filter
+                                                ? "checkmark"
+                                                : filter.systemImage
+                                        )
+                                    }
+                                }
+                            }
+
+                            if mindAssignmentFilter == .withMind && !mindFilterOptions.isEmpty {
+                                Section("Minds") {
+                                    ForEach(mindFilterOptions) { option in
+                                        Toggle(
+                                            isOn: Binding(
+                                                get: { selectedMindIDs.contains(option.id) },
+                                                set: { isSelected in
+                                                    setMind(option.id, isSelected: isSelected)
+                                                }
+                                            )
+                                        ) {
+                                            Label(
+                                                mindFilterLabel(for: option),
+                                                systemImage: option.mind.iconName ?? "brain.head.profile"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Section("Triggers") {
                             ForEach(TriggerFilter.allCases) { triggerType in
                                 Button {
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -286,10 +421,17 @@ struct MindDetailView: View {
                                     }
                                 }
                             }
+                        }
 
-                            if !selectedTriggerTypes.isEmpty {
+                        if hasActiveFilters {
+                            Section {
                                 Button("Clear Filters", systemImage: "xmark.circle") {
-                                    withAnimation { selectedTriggerTypes = [] }
+                                    withAnimation {
+                                        statusFilter = .all
+                                        mindAssignmentFilter = .all
+                                        selectedMindIDs = []
+                                        selectedTriggerTypes = []
+                                    }
                                 }
                             }
                         }
@@ -320,9 +462,10 @@ struct MindDetailView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: selectedTriggerTypes.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                        Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                     }
                     .neutralToolbarItemStyle()
+                    .accessibilityLabel("Filter memories")
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -413,24 +556,6 @@ struct MindDetailView: View {
         .navigationBarBackButtonHidden(true)
     }
 
-    private func toggleSection(_ section: MindSectionType, animated: Bool = true) {
-        let toggleAction = {
-            if expandedSections.contains(section) {
-                expandedSections.remove(section)
-            } else {
-                expandedSections.insert(section)
-            }
-        }
-
-        if animated {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                toggleAction()
-            }
-        } else {
-            toggleAction()
-        }
-    }
-
     private func makeActiveMemoryCountsByMindID() -> [Mind.ID: Int] {
         var counts: [Mind.ID: Int] = [:]
 
@@ -448,10 +573,6 @@ struct MindDetailView: View {
         return counts
     }
 
-    private func isTriggerTypeActive(_ type: TriggerFilter) -> Bool {
-        selectedTriggerTypes.isEmpty || selectedTriggerTypes.contains(type)
-    }
-
     private func toggleTriggerType(_ type: TriggerFilter) {
         if selectedTriggerTypes.isEmpty {
             selectedTriggerTypes = [type]
@@ -459,6 +580,73 @@ struct MindDetailView: View {
             selectedTriggerTypes.remove(type)
         } else {
             selectedTriggerTypes.insert(type)
+        }
+    }
+
+    private func matchesTriggerFilter(_ memory: Memory) -> Bool {
+        guard !selectedTriggerTypes.isEmpty else { return true }
+        if selectedTriggerTypes.contains(.scheduled) && memory.hasSchedule { return true }
+        if selectedTriggerTypes.contains(.location) && memory.hasLocation { return true }
+        return false
+    }
+
+    private func matchesMindAssignmentFilter(_ memory: Memory) -> Bool {
+        guard resolvedMind.isAllMinds else { return true }
+
+        switch mindAssignmentFilter {
+        case .all:
+            return true
+        case .withMind:
+            guard let mindID = memory.mind?.id else { return false }
+            return selectedMindIDs.isEmpty || selectedMindIDs.contains(mindID)
+        case .noMind:
+            return memory.mind == nil
+        }
+    }
+
+    private func setMindAssignmentFilter(_ filter: MindAssignmentFilter) {
+        mindAssignmentFilter = filter
+        if filter != .withMind {
+            selectedMindIDs.removeAll()
+        }
+    }
+
+    private func setMind(_ mindID: Mind.ID, isSelected: Bool) {
+        if isSelected {
+            selectedMindIDs.insert(mindID)
+        } else {
+            selectedMindIDs.remove(mindID)
+        }
+    }
+
+    private func mindFilterLabel(for option: MindFilterOption) -> String {
+        String(repeating: "› ", count: option.depth) + option.mind.name
+    }
+
+    private func appendMindFilterOptions(
+        from minds: [Mind],
+        depth: Int,
+        visitedMindIDs: inout Set<Mind.ID>,
+        options: inout [MindFilterOption]
+    ) {
+        for mind in sortedMinds(minds) {
+            guard visitedMindIDs.insert(mind.id).inserted else { continue }
+            options.append(MindFilterOption(mind: mind, depth: depth))
+            appendMindFilterOptions(
+                from: mind.children ?? [],
+                depth: depth + 1,
+                visitedMindIDs: &visitedMindIDs,
+                options: &options
+            )
+        }
+    }
+
+    private func sortedMinds(_ minds: [Mind]) -> [Mind] {
+        minds.sorted { lhs, rhs in
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
     }
 
@@ -560,5 +748,22 @@ struct MindDetailView: View {
                 // Silently ignore failures for now.
             }
         }
+    }
+}
+
+// MARK: - Testable Pure Helpers
+extension MindDetailView {
+    nonisolated static func shouldShowEmptyState(
+        childMindsCount: Int,
+        unfilteredMemoriesCount: Int
+    ) -> Bool {
+        childMindsCount == 0 && unfilteredMemoriesCount == 0
+    }
+
+    static func targetMind(for mind: Mind) -> Mind? {
+        if mind.isAllMinds {
+            return nil
+        }
+        return mind
     }
 }

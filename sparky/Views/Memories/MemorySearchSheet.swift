@@ -24,10 +24,6 @@ struct MemorySearchSheet: View {
         mind.isAllMinds
     }
 
-    private var isLimbo: Bool {
-        mind.isLimbo
-    }
-
     // MARK: - Context Menu Actions
 
     private func togglePin(for memory: Memory) async {
@@ -106,11 +102,6 @@ struct MemorySearchSheet: View {
                 includeCompleted: false,
                 sort: .createdAtDescending
             )
-        } else if isLimbo {
-            let unsorted = memoryService.memories.filter { memory in
-                memory.mind == nil && memory.status == .active
-            }
-            allInMind = memoryService.sortedMemories(unsorted, using: .createdAtDescending)
         } else {
             let descendantIDs = mind.allDescendantIDs
             let unsorted = memoryService.memories.filter { memory in
@@ -135,11 +126,6 @@ struct MemorySearchSheet: View {
                 includeCompleted: true,
                 sort: .updatedAtDescending
             )
-        } else if isLimbo {
-            let unsorted = memoryService.memories.filter { memory in
-                memory.mind == nil
-            }
-            allInMind = memoryService.sortedMemories(unsorted, using: .updatedAtDescending)
         } else {
             let descendantIDs = mind.allDescendantIDs
             let unsorted = memoryService.memories.filter { memory in

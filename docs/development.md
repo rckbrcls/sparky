@@ -120,7 +120,7 @@ Root navigation lives in `ContentView`.
 Major view areas:
 
 - `Views/Memories/`: timeline, calendar, cards, map, search, filters, and editor.
-- `Views/Minds/`: Mind hierarchy, detail, sections, composer, and Limbo view.
+- `Views/Minds/`: Mind hierarchy, unified detail, filters, and composer.
 - `Views/Settings/`: Me, settings, theme, app icon, and advanced screens.
 - `Views/Onboarding/`: permission setup flow.
 - `Views/Shared/`: reusable components.

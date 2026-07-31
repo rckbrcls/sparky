@@ -91,6 +91,9 @@ struct ContentView: View {
                         onEditMind: { mind in
                             presentMindEdit(for: mind)
                         },
+                        onCreateMemory: { mind in
+                            prepareMemoryCreation(for: mind)
+                        },
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onMindContextChange: { mind in
                             currentMindContext = mind
