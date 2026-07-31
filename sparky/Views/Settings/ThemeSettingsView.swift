@@ -41,9 +41,7 @@ struct ThemeSettingsView: View {
 
     private func themeRow(_ theme: AppTheme) -> some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                themeManager.setTheme(theme)
-            }
+            themeManager.setTheme(theme)
         } label: {
             HStack(spacing: 16) {
                 Image(systemName: theme.icon)

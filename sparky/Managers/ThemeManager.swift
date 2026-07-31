@@ -7,6 +7,9 @@
 
 import SwiftUI
 import Combine
+#if os(macOS)
+import AppKit
+#endif
 
 // MARK: - App Theme Enum
 enum AppTheme: String, CaseIterable, Identifiable {
@@ -39,6 +42,16 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .dark: return .dark
         }
     }
+
+    #if os(macOS)
+    var macOSAppearance: NSAppearance? {
+        switch self {
+        case .system: return nil
+        case .light: return NSAppearance(named: .aqua)
+        case .dark: return NSAppearance(named: .darkAqua)
+        }
+    }
+    #endif
 }
 
 // MARK: - Theme Manager
@@ -69,6 +82,7 @@ final class ThemeManager: ObservableObject {
 
         let storedTheme = defaults.string(forKey: Keys.appTheme) ?? AppTheme.system.rawValue
         self.currentTheme = AppTheme(rawValue: storedTheme) ?? .system
+        updateAppearance()
     }
 
     // MARK: - Public Methods
@@ -83,10 +97,11 @@ final class ThemeManager: ObservableObject {
         currentTheme.colorScheme
     }
 
-    /// Updates the window appearance for scenes that need it
+    /// Updates the app appearance on platforms that manage it outside SwiftUI
     func updateAppearance() {
-        // This is handled automatically by SwiftUI's preferredColorScheme
-        // but can be extended for UIKit integration if needed
+        #if os(macOS)
+        NSApplication.shared.appearance = currentTheme.macOSAppearance
+        #endif
     }
 }
 
