@@ -39,16 +39,15 @@ struct FocusCanvasView: View {
                     .padding(.top, 40)
 
                 if timer.isSessionActive, showsEndButton {
-                    Button(role: .destructive) {
-                        onEnd()
-                    } label: {
+                    Button(role: .destructive, action: onEnd) {
                         Text("End session")
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.Theme.destructive)
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                     }
                     .buttonStyle(.plain)
+                    .foregroundStyle(Color.Theme.destructive)
+                    .glassEffect(.regular.interactive(), in: .capsule)
                     .padding(.top, 18)
                     .accessibilityLabel("End Focus session")
                 }
@@ -73,25 +72,33 @@ struct FocusCanvasView: View {
 
     @ViewBuilder
     private var primaryControl: some View {
-        Button(action: performPrimaryAction) {
-            primaryLabel
-                .foregroundStyle(primaryForeground)
-                .frame(minWidth: 154, minHeight: 54)
-                .padding(.horizontal, 28)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(primaryBackground)
-                )
-                .overlay {
-                    Capsule(style: .continuous)
-                        .stroke(
-                            Color.Theme.border.opacity(timer.isSessionActive ? 0.45 : 0),
-                            lineWidth: 1
-                        )
-                }
+        if usesProminentPrimaryControl {
+            Button(action: performPrimaryAction) {
+                primaryLabel
+                    .frame(minWidth: 154, minHeight: 22)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.Theme.accentForeground)
+            .glassEffect(.regular.interactive().tint(phaseColor), in: .capsule)
+            .accessibilityLabel(primaryAccessibilityLabel)
+        } else {
+            Button(action: performPrimaryAction) {
+                primaryLabel
+                    .frame(minWidth: 54, minHeight: 22)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.Theme.textPrimary)
+            .glassEffect(.regular.interactive(), in: .capsule)
+            .accessibilityLabel(primaryAccessibilityLabel)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(primaryAccessibilityLabel)
+    }
+
+    private var usesProminentPrimaryControl: Bool {
+        !timer.isSessionActive || timer.isWaitingForManualStart
     }
 
     @ViewBuilder
@@ -110,20 +117,6 @@ struct FocusCanvasView: View {
             Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
                 .font(.title3.weight(.semibold))
         }
-    }
-
-    private var primaryBackground: Color {
-        if !timer.isSessionActive || timer.isWaitingForManualStart {
-            return phaseColor
-        }
-        return Color.Theme.secondaryBackground
-    }
-
-    private var primaryForeground: Color {
-        if !timer.isSessionActive || timer.isWaitingForManualStart {
-            return Color.Theme.accentForeground
-        }
-        return Color.Theme.textPrimary
     }
 
     private var primaryAccessibilityLabel: String {

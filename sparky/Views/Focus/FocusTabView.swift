@@ -49,8 +49,9 @@ struct FocusTabView: View {
                                 hasLocalQuickOverrides = true
                             }
                         )
-                        .neutralToolbarItemStyle()
                     }
+                    // Avoid liquid-glass toolbar chrome under the button (glass-in-glass).
+                    .sharedBackgroundVisibility(.hidden)
                 }
             }
             .onAppear {

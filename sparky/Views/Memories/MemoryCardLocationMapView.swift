@@ -19,28 +19,10 @@ struct MemoryCardLocationMapView: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "location.fill")
-                .font(.caption)
-                .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                .frame(width: 20)
-
-            Text(locationName)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                .strikethrough(isCompletedForDisplay, color: .secondary)
-                .lineLimit(1)
-
-            Spacer(minLength: 0)
-
-            Text(location.event.displayName)
-                .font(.caption)
-                .foregroundStyle(Color.secondary.opacity(isCompletedForDisplay ? 0.7 : 1.0))
-                .strikethrough(isCompletedForDisplay, color: .secondary)
-        }
-        .padding(.leading, 12)
-        .padding(.trailing, 8)
-        .padding(.vertical, 10)
+        MemoryCardMetaBadge(
+            systemImage: "location.fill",
+            text: locationName,
+            isCompleted: isCompletedForDisplay
+        )
     }
 }

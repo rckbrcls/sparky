@@ -12,12 +12,18 @@ struct FocusConfigurationMenu: View {
     @State private var isPresented = false
 
     var body: some View {
+        // Single glass circle — toolbar shared glass is hidden at call site.
         Button {
             isPresented.toggle()
         } label: {
             Image(systemName: "slider.horizontal.3")
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.Theme.textPrimary)
+                .frame(width: 36, height: 36)
+                .contentShape(Circle())
         }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel("Quick Focus settings")
         .accessibilityHint("Opens settings for the next Quick Focus session")
         .popover(isPresented: $isPresented) {
@@ -40,14 +46,12 @@ struct FocusConfigurationMenu: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.Theme.textSecondary)
-                        .frame(width: 32, height: 32)
-                        .background(
-                            Circle()
-                                .fill(Color.Theme.tertiaryBackground)
-                        )
+                        .frame(width: 28, height: 28)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .foregroundStyle(Color.Theme.textSecondary)
+                .glassEffect(.regular.interactive(), in: .circle)
                 .accessibilityLabel("Close Quick Focus settings")
             }
             .padding(.bottom, 10)
@@ -139,15 +143,12 @@ struct FocusConfigurationMenu: View {
             } label: {
                 Text(label(value))
                     .font(.body)
-                    .foregroundStyle(Color.Theme.textPrimary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.Theme.elementBackground)
-                    )
             }
-            .tint(.primary)
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.Theme.textPrimary)
+            .glassEffect(.regular.interactive(), in: .capsule)
             .accessibilityLabel(title)
             .accessibilityValue(label(value))
         }

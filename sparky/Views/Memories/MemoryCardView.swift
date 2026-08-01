@@ -163,6 +163,11 @@ struct MemoryCardView: View {
         var parts = [title]
         if isCompletedForDisplay { parts.append("completed") }
         if let mind = mindForDisplay { parts.append("in \(mind.name)") }
+        if scheduledTrigger != nil { parts.append("scheduled") }
+        if let location = locationTrigger {
+            let name = location.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+            parts.append(name?.isEmpty == false ? name! : "location")
+        }
         if let bodyPreview { parts.append(bodyPreview) }
         if let progress = checklistProgressText { parts.append("checklist \(progress)") }
         return parts.joined(separator: ", ")
@@ -178,8 +183,8 @@ struct MemoryCardView: View {
         return memory.scheduleConfig?.isActive == true ? memory.scheduleConfig : nil
     }
 
-    private var hasFocus: Bool {
-        memory?.hasFocus == true
+    private var hasMetaBadges: Bool {
+        mindForDisplay != nil || scheduledTrigger != nil || locationTrigger != nil
     }
 
     var body: some View {
@@ -193,76 +198,47 @@ struct MemoryCardView: View {
     @ViewBuilder
     private func memoryContent(memory: Memory) -> some View {
         VStack(spacing: 0) {
-            // DateTime trigger (if has scheduled trigger)
-            if let scheduledTrigger = scheduledTrigger {
-                MemoryCardDateTimeView(
-                    trigger: scheduledTrigger,
-                    isCompletedForDisplay: isCompletedForDisplay,
-                    occurrenceDate: occurrenceDate
-                )
-
-                Divider()
-            }
-
-            // Location trigger
-            if let locationConfig = locationTrigger {
-                MemoryCardLocationMapView(
-                    location: locationConfig,
-                    isCompletedForDisplay: isCompletedForDisplay
-                )
-
-                Divider()
-            }
-
-            if hasFocus {
-                HStack(spacing: 6) {
-                    Image(systemName: "timer")
-                        .font(.caption)
-                        .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                        .frame(width: 20)
-                    Text("Focus")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                        .strikethrough(isCompletedForDisplay, color: .secondary)
-                    Spacer(minLength: 0)
-                }
-                .padding(.leading, 12)
-                .padding(.trailing, 8)
-                .padding(.vertical, 10)
-
-                Divider()
-            }
-
-            // Card content
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-
+            VStack(alignment: .leading, spacing: 8) {
+                // Floor 1: meta badges only
+                if hasMetaBadges {
+                    FlowLayout(spacing: 6) {
                         if let mind = mindForDisplay {
-                            HStack(spacing: 4) {
-                                Image(systemName: mind.iconName ?? "brain.head.profile")
-                                    .font(.system(size: 9))
-                                Text(mind.name)
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundStyle(isCompletedForDisplay ? .secondary : mindColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill((isCompletedForDisplay ? Color.secondary : mindColor).opacity(0.12))
+                            MemoryCardMetaBadge(
+                                systemImage: mind.iconName ?? "brain.head.profile",
+                                text: mind.name,
+                                color: mindColor,
+                                isCompleted: isCompletedForDisplay
                             )
-                            .lineLimit(1)
                         }
 
+                        if let scheduledTrigger {
+                            MemoryCardDateTimeView(
+                                trigger: scheduledTrigger,
+                                isCompletedForDisplay: isCompletedForDisplay,
+                                occurrenceDate: occurrenceDate,
+                                displayDate: displayDate
+                            )
+                        }
+
+                        if let locationConfig = locationTrigger {
+                            MemoryCardLocationMapView(
+                                location: locationConfig,
+                                isCompletedForDisplay: isCompletedForDisplay
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                // Floor 2: title (+ body) aligned with complete button
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(title)
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
                             .strikethrough(isCompletedForDisplay, color: .secondary)
                             .lineLimit(2)
-
 
                         if let bodyPreview {
                             Text(bodyPreview)
@@ -271,37 +247,34 @@ struct MemoryCardView: View {
                                 .strikethrough(isCompletedForDisplay, color: .secondary)
                                 .lineLimit(2)
                         }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-
-                }
-
-                Spacer()
-
-                Button {
-                    PlatformHaptics.impactMedium()
-                    if let onToggleCompletion {
-                        onToggleCompletion()
-                    } else {
-                        Task {
-                            if let occurrenceDate, memory.hasIntraDayRecurrence {
-                                try? await memoryService.toggleCompletionForDate(memoryID: memoryID, date: occurrenceDate)
-                            } else if let displayDate, memory.hasRecurringTriggers {
-                                try? await memoryService.toggleCompletionForDate(memoryID: memoryID, date: displayDate)
-                            } else if displayDate == nil && memory.hasRecurringTriggers && !memory.isCompleted {
-                                showRecurringCompletionAlert = true
-                            } else {
-                                try? await memoryService.toggleCompletion(memoryID: memoryID)
+                    Button {
+                        PlatformHaptics.impactMedium()
+                        if let onToggleCompletion {
+                            onToggleCompletion()
+                        } else {
+                            Task {
+                                if let occurrenceDate, memory.hasIntraDayRecurrence {
+                                    try? await memoryService.toggleCompletionForDate(memoryID: memoryID, date: occurrenceDate)
+                                } else if let displayDate, memory.hasRecurringTriggers {
+                                    try? await memoryService.toggleCompletionForDate(memoryID: memoryID, date: displayDate)
+                                } else if displayDate == nil && memory.hasRecurringTriggers && !memory.isCompleted {
+                                    showRecurringCompletionAlert = true
+                                } else {
+                                    try? await memoryService.toggleCompletion(memoryID: memoryID)
+                                }
                             }
                         }
+                    } label: {
+                        Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
+                            .font(.title2)
+                            .foregroundStyle(isCompletedForDisplay ? Color.accentColor : .secondary.opacity(0.5))
                     }
-                } label: {
-                    Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
-                        .font(.title2)
-                        .foregroundStyle(isCompletedForDisplay ? Color.accentColor : .secondary.opacity(0.5))
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 12)
 

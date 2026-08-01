@@ -12,16 +12,19 @@ struct SynapseView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
-                Button {
-                    PlatformHaptics.impactMedium()
-                    onToggle()
-                } label: {
-                    Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle(item.isCompleted ? Color.accentColor : .secondary)
+                // Completion control only in preview; edit mode focuses on text + delete.
+                if !isEditable {
+                    Button {
+                        PlatformHaptics.impactMedium()
+                        onToggle()
+                    } label: {
+                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(item.isCompleted ? Color.accentColor : .secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-                
+
                 TextField("Title", text: $item.title, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.callout)

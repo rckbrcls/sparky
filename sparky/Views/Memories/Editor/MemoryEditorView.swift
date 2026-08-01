@@ -626,12 +626,73 @@ struct MemoryEditorView: View {
                         Color.clear.frame(height: 20)
                     }
                     #else
-                    Color.clear.frame(height: 20)
+                    if showsPreviewBottomActions {
+                        previewBottomActionBar
+                    } else {
+                        Color.clear.frame(height: 20)
+                    }
                     #endif
                 }
 
         }
 
+    }
+
+    private var showsPreviewBottomActions: Bool {
+        guard !showsDesktopPopoverActionBar else { return false }
+        if case .edit = mode, !isEditingEnabled {
+            return true
+        }
+        return false
+    }
+
+    private var previewBottomActionBar: some View {
+        HStack(spacing: 12) {
+            if canStartFocusFromEditor {
+                Button {
+                    PlatformHaptics.impactMedium()
+                    if let memoryID = viewModel.editingMemoryID {
+                        environment.startFocus(for: memoryID)
+                    }
+                } label: {
+                    previewBottomBarLabel(
+                        title: "Start",
+                        systemImage: "timer"
+                    )
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.Theme.textPrimary)
+                .glassEffect(.regular.interactive(), in: .capsule)
+                .contentShape(Capsule())
+                .accessibilityLabel("Start Focus")
+            }
+
+            Spacer(minLength: 0)
+
+            Button(action: toggleStatusAndSave) {
+                previewBottomBarLabel(
+                    title: viewModel.status == .active ? "Complete" : "Reopen",
+                    systemImage: viewModel.status == .active ? "circle" : "checkmark.circle.fill"
+                )
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.Theme.textPrimary)
+            .glassEffect(.regular.interactive(), in: .capsule)
+            .contentShape(Capsule())
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+    }
+
+    private func previewBottomBarLabel(title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .labelStyle(.titleAndIcon)
+            .font(.body.weight(.semibold))
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(minHeight: 48)
+            .contentShape(Capsule())
     }
 
 
@@ -754,38 +815,12 @@ struct MemoryEditorView: View {
             ToolbarItem(placement: .cancellationAction) {
 
                 if !showsDesktopPopoverActionBar {
-                    Button(role: .cancel) {
-
+                    Button {
                         dismiss()
-
                     } label: {
-
                         Label("Cancel", systemImage: "xmark")
-
                     }
                     .neutralToolbarItemStyle()
-                }
-
-            }
-
-
-
-            ToolbarItem(placement: .confirmationAction) {
-
-                if case .create = mode, !showsDesktopPopoverActionBar {
-
-                    Button(role: .confirm) {
-                        saveCreatedMemoryAndDismiss()
-
-                    } label: {
-
-                        Label(saveButtonTitle, systemImage: "checkmark")
-
-                    }
-                    .confirmationToolbarItemStyle()
-
-                    .disabled(isSaveDisabled)
-
                 }
 
             }
@@ -794,67 +829,50 @@ struct MemoryEditorView: View {
 
             ToolbarItemGroup(placement: .primaryAction) {
 
-                if case .edit = mode, !showsDesktopPopoverActionBar {
-
-                    if isEditingEnabled {
-
-                    Button {
-
-                        PlatformHaptics.impactMedium()
-
-                        viewModel.isPinned.toggle()
-
-                    } label: {
-
-                        Label(viewModel.isPinned ? "Unpin" : "Pin",
-
-                              systemImage: viewModel.isPinned ? "pin.fill" : "pin")
-
-                    }
-                    .neutralToolbarItemStyle()
-
-                    .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
-
-
-
-                    // Checkmark button: Save and switch to View
-
-                    Button {
-                        saveEditedMemoryAndShowPreview()
-                    } label: {
-                        Label("Save", systemImage: "checkmark")
-                    }
-                    .confirmationToolbarItemStyle()
-                    .disabled(isSaveDisabled)
-
-                    } else {
-
-                        if canStartFocusFromEditor {
+                if !showsDesktopPopoverActionBar {
+                    if case .edit = mode {
+                        if isEditingEnabled {
                             Button {
                                 PlatformHaptics.impactMedium()
-                                if let memoryID = viewModel.editingMemoryID {
-                                    environment.startFocus(for: memoryID)
-                                }
+                                viewModel.isPinned.toggle()
                             } label: {
-                                Label("Focus", systemImage: "timer")
+                                Label(
+                                    viewModel.isPinned ? "Unpin" : "Pin",
+                                    systemImage: viewModel.isPinned ? "pin.fill" : "pin"
+                                )
                             }
                             .neutralToolbarItemStyle()
-                            .accessibilityLabel("Start Focus")
+                            .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
+                        } else {
+                            Button(action: startEditingMemory) {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .neutralToolbarItemStyle()
                         }
-
-                        // Pencil button: Switch to Edit
-
-                        Button(action: startEditingMemory) {
-
-                            Label("Edit", systemImage: "pencil")
-
-                        }
-                        .neutralToolbarItemStyle()
-
                     }
-
                 }
 
+            }
+
+            // Prominent save/create — system confirmation placement (filled check).
+            ToolbarItem(placement: .confirmationAction) {
+                if !showsDesktopPopoverActionBar {
+                    if case .create = mode {
+                        Button(role: .confirm) {
+                            saveCreatedMemoryAndDismiss()
+                        } label: {
+                            Label(saveButtonTitle, systemImage: "checkmark")
+                        }
+                        .disabled(isSaveDisabled)
+                    } else if case .edit = mode, isEditingEnabled {
+                        Button(role: .confirm) {
+                            saveEditedMemoryAndShowPreview()
+                        } label: {
+                            Label("Save", systemImage: "checkmark")
+                        }
+                        .disabled(isSaveDisabled)
+                    }
+                }
             }
 
 
@@ -879,40 +897,6 @@ struct MemoryEditorView: View {
                     .neutralToolbarItemStyle()
 
                     Spacer()
-
-                    Button {
-
-                        PlatformHaptics.impactMedium()
-
-                        viewModel.toggleStatus()
-
-                    } label: {
-
-                        Label(viewModel.status.rawValue.capitalized, systemImage: viewModel.status == .active ? "circle" : "checkmark.circle.fill")
-
-                            .labelStyle(.titleAndIcon)
-
-                    }
-                    .neutralToolbarItemStyle()
-
-                }
-
-            }
-
-            if case .edit = mode, !isEditingEnabled, !showsDesktopPopoverActionBar {
-
-                ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
-
-                    Spacer()
-
-                    Button(action: toggleStatusAndSave) {
-
-                        Label(viewModel.status.rawValue.capitalized, systemImage: viewModel.status == .active ? "circle" : "checkmark.circle.fill")
-
-                            .labelStyle(.titleAndIcon)
-
-                    }
-                    .neutralToolbarItemStyle()
 
                 }
 
@@ -972,7 +956,7 @@ struct MemoryEditorView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(.bottom, 20)
+        .padding(.bottom, showsPreviewBottomActions ? 72 : 20)
     }
 
 

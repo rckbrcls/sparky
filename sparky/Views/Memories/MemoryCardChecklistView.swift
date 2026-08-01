@@ -30,24 +30,13 @@ struct MemoryCardChecklistView: View {
 
                 ForEach(checkItems) { item in
                     HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(item.title)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                                .strikethrough(item.isCompleted, color: .secondary)
-                                .lineLimit(2)
-
-                            if let detail = item.detail {
-                                Text(detail)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .strikethrough(item.isCompleted, color: .secondary)
-                                    .lineLimit(2)
-                            }
-                        }
-
-                        Spacer()
+                        Text(item.title)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                            .strikethrough(item.isCompleted, color: .secondary)
+                            .lineLimit(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                         Button {
                             PlatformHaptics.impactMedium()

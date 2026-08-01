@@ -11,91 +11,68 @@ struct MemoryCardDateTimeView: View {
     let trigger: ScheduleConfig
     let isCompletedForDisplay: Bool
     var occurrenceDate: Date?
+    /// When set (e.g. calendar day list), omit the calendar date from the badge.
+    var displayDate: Date? = nil
 
     private var effectiveDate: Date? {
         occurrenceDate ?? trigger.fireDate
     }
 
-    private var dateString: String {
+    private var badgeText: String {
         guard let date = effectiveDate else { return "" }
-        return date.formatted(date: .abbreviated, time: .omitted)
+
+        var parts: [String] = []
+
+        if trigger.isAllDay {
+            if displayDate == nil {
+                parts.append(date.formatted(date: .abbreviated, time: .omitted))
+            } else {
+                parts.append("All day")
+            }
+        } else {
+            parts.append(date.formatted(date: .omitted, time: .shortened))
+            if displayDate == nil {
+                parts.append(date.formatted(date: .abbreviated, time: .omitted))
+            }
+        }
+
+        if let recurrence = recurrenceString {
+            parts.append(recurrence)
+        }
+
+        return parts.joined(separator: " · ")
     }
 
-    private var timeString: String? {
-        guard let date = effectiveDate, !trigger.isAllDay else { return nil }
-        return date.formatted(date: .omitted, time: .shortened)
-    }
-    
     private var recurrenceString: String? {
-        // Priorize weekdayMask se existir
         if trigger.weekdayMask != 0 {
             return weekdayMaskSummary(mask: trigger.weekdayMask)
         }
-        
-        // Caso contrário, use recurrenceRule
+
         guard let recurrence = trigger.recurrenceRule else {
             return nil
         }
-        
-        let frequencyText: String
+
         switch recurrence.frequency {
         case .daily:
-            frequencyText = "Daily"
+            return recurrence.interval > 1 ? "Every \(recurrence.interval) days" : "Daily"
         case .weekly:
-            frequencyText = recurrence.interval > 1 ? "Every \(recurrence.interval) weeks" : "Weekly"
+            return recurrence.interval > 1 ? "Every \(recurrence.interval) weeks" : "Weekly"
         case .monthly:
-            frequencyText = recurrence.interval > 1 ? "Every \(recurrence.interval) months" : "Monthly"
+            return recurrence.interval > 1 ? "Every \(recurrence.interval) months" : "Monthly"
         case .yearly:
-            frequencyText = recurrence.interval > 1 ? "Every \(recurrence.interval) years" : "Yearly"
+            return recurrence.interval > 1 ? "Every \(recurrence.interval) years" : "Yearly"
         case .hourly:
-            frequencyText = recurrence.interval > 1 ? "Every \(recurrence.interval) hours" : "Hourly"
+            return recurrence.interval > 1 ? "Every \(recurrence.interval) hours" : "Hourly"
         case .minutely:
-            frequencyText = recurrence.interval > 1 ? "Every \(recurrence.interval) minutes" : "Minutely"
+            return recurrence.interval > 1 ? "Every \(recurrence.interval) min" : "Minutely"
         }
-        
-        return frequencyText
     }
-    
+
     var body: some View {
-        HStack(spacing: 6) {
-            // Calendar icon
-            Image(systemName: "calendar")
-                .font(.caption)
-                .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                .frame(width: 20)
-            
-            HStack(spacing: 8) {
-                if let timeString = timeString {
-                    Text(timeString)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                        .strikethrough(isCompletedForDisplay, color: .secondary)
-                    
-                    Circle()
-                        .fill(isCompletedForDisplay ? Color.secondary.opacity(0.7) : Color.secondary)
-                        .frame(width: 4, height: 4)
-                }
-                
-                Text(dateString)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(isCompletedForDisplay ? .secondary : .primary)
-                    .strikethrough(isCompletedForDisplay, color: .secondary)
-                
-                Spacer(minLength: 0)
-                
-                // Recurrence
-                if let recurrenceString = recurrenceString {
-                    Text(recurrenceString)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary.opacity(isCompletedForDisplay ? 0.7 : 1.0))
-                        .strikethrough(isCompletedForDisplay, color: .secondary)
-                }
-            }
-        }
-        .padding(.leading, 12)
-        .padding(.trailing, 8)
-        .padding(.vertical, 10)
+        MemoryCardMetaBadge(
+            systemImage: "calendar",
+            text: badgeText,
+            isCompleted: isCompletedForDisplay
+        )
     }
 }
