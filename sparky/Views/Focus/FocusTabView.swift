@@ -50,8 +50,6 @@ struct FocusTabView: View {
                             }
                         )
                     }
-                    // Avoid liquid-glass toolbar chrome under the button (glass-in-glass).
-                    .sharedBackgroundVisibility(.hidden)
                 }
             }
             .onAppear {

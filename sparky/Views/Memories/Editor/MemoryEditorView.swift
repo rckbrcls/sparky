@@ -886,15 +886,12 @@ struct MemoryEditorView: View {
                 ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
 
                     Button(role: .destructive) {
-
                         showDeleteConfirmation = true
-
                     } label: {
-
                         Image(systemName: "trash")
-
                     }
-                    .neutralToolbarItemStyle()
+                    .foregroundStyle(Color.Theme.destructive)
+                    .tint(Color.Theme.destructive)
 
                     Spacer()
 

@@ -35,7 +35,7 @@ struct CalendarEmptyPeriodButton: View {
             .padding(.horizontal, 16)
             .frame(maxWidth: .infinity, minHeight: 56)
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 24)
                     .stroke(
                         Color.Theme.border.opacity(isHovering ? 0.9 : 0.7),
                         style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])

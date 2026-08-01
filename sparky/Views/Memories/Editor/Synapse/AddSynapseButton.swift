@@ -10,11 +10,14 @@ struct AddSynapseButton: View {
             action()
         }) {
             Image(systemName: "plus")
-                .font(.caption.bold())
-                .neutralButtonStyle()
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Color.Theme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 }
 

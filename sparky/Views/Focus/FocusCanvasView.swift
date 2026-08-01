@@ -72,33 +72,30 @@ struct FocusCanvasView: View {
 
     @ViewBuilder
     private var primaryControl: some View {
-        if usesProminentPrimaryControl {
-            Button(action: performPrimaryAction) {
-                primaryLabel
-                    .frame(minWidth: 154, minHeight: 22)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 16)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.Theme.accentForeground)
-            .glassEffect(.regular.interactive().tint(phaseColor), in: .capsule)
-            .accessibilityLabel(primaryAccessibilityLabel)
-        } else {
-            Button(action: performPrimaryAction) {
-                primaryLabel
-                    .frame(minWidth: 54, minHeight: 22)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 16)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.Theme.textPrimary)
-            .glassEffect(.regular.interactive(), in: .capsule)
-            .accessibilityLabel(primaryAccessibilityLabel)
+        Button(action: performPrimaryAction) {
+            primaryLabel
+                .frame(minWidth: 154, minHeight: 22)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 16)
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(
+            usesProminentPrimaryControl
+                ? Color.Theme.accentForeground
+                : Color.Theme.textPrimary
+        )
+        .glassEffect(
+            usesProminentPrimaryControl
+                ? .regular.interactive().tint(phaseColor)
+                : .regular.interactive(),
+            in: .capsule
+        )
+        .accessibilityLabel(primaryAccessibilityLabel)
     }
 
+    /// Start, next-phase, and resume use the accent tint; pause stays neutral.
     private var usesProminentPrimaryControl: Bool {
-        !timer.isSessionActive || timer.isWaitingForManualStart
+        !timer.isSessionActive || timer.isWaitingForManualStart || !timer.isRunning
     }
 
     @ViewBuilder
@@ -113,9 +110,20 @@ struct FocusCanvasView: View {
         } else if timer.isWaitingForManualStart {
             Label(nextPhaseLabel, systemImage: nextPhaseIcon)
                 .font(.headline)
+        } else if timer.isRunning {
+            HStack(spacing: 10) {
+                Text("Pause")
+                    .font(.headline)
+                Image(systemName: "pause.fill")
+                    .font(.subheadline.weight(.semibold))
+            }
         } else {
-            Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
-                .font(.title3.weight(.semibold))
+            HStack(spacing: 10) {
+                Text("Resume")
+                    .font(.headline)
+                Image(systemName: "play.fill")
+                    .font(.subheadline.weight(.semibold))
+            }
         }
     }
 

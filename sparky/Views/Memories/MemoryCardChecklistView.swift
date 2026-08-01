@@ -57,44 +57,41 @@ struct MemoryCardChecklistView: View {
                 .padding(.bottom, 6)
             }
 
-            // Collapsed header
+            // Collapsed header: [short bar] [count] ........ [chevron]
             Button {
                 isExpanded.toggle()
                 PlatformHaptics.impactMedium()
             } label: {
-                HStack(spacing: 12) {
-                    // Chevron icon
-                    Image(systemName: "chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                HStack(spacing: 8) {
+                    // Compact progress bar (not full card width)
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.secondary.opacity(0.22))
+                        if totalCount > 0, completedCount > 0 {
+                            Capsule()
+                                .fill(Color.secondary.opacity(0.55))
+                                .frame(
+                                    width: 56 * CGFloat(completedCount) / CGFloat(totalCount)
+                                )
+                        }
+                    }
+                    .frame(width: 56, height: 3)
 
-                    // Progress text
                     Text("\(completedCount)/\(totalCount)")
                         .font(.caption2)
                         .fontWeight(.medium)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
 
-                    // Progress bar
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.secondary.opacity(0.2))
+                    Spacer(minLength: 0)
 
-                            if totalCount > 0 {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.accentColor)
-                                    .frame(width: geometry.size.width * CGFloat(completedCount) / CGFloat(totalCount))
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: 4)
-
-                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
                 .padding(.horizontal, 12)
-                .padding(.top, 6)
-                .padding(.bottom, 6)
+                .padding(.vertical, 8)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

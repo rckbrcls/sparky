@@ -99,8 +99,12 @@ struct MemoryEditorAttachmentsCard: View {
                 .padding(.horizontal, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .neutralButtonStyle(cornerRadius: 16, verticalPadding: 0)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color.Theme.textSecondary)
+        .glassEffect(
+            .regular.interactive(),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     @ViewBuilder

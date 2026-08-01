@@ -12,18 +12,13 @@ struct FocusConfigurationMenu: View {
     @State private var isPresented = false
 
     var body: some View {
-        // Single glass circle — toolbar shared glass is hidden at call site.
+        // Standard toolbar control — system sizes and liquid-glass chrome.
         Button {
             isPresented.toggle()
         } label: {
-            Image(systemName: "slider.horizontal.3")
-                .font(.body.weight(.medium))
-                .foregroundStyle(Color.Theme.textPrimary)
-                .frame(width: 36, height: 36)
-                .contentShape(Circle())
+            Label("Settings", systemImage: "slider.horizontal.3")
         }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .neutralToolbarItemStyle()
         .accessibilityLabel("Quick Focus settings")
         .accessibilityHint("Opens settings for the next Quick Focus session")
         .popover(isPresented: $isPresented) {
