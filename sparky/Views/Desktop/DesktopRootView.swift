@@ -255,12 +255,35 @@ struct DesktopRootView: View {
     private func handlePendingFocusOpen(_ request: PendingFocusOpenRequest?) {
         guard let request, environment.hasBootstrapped else { return }
         environment.pendingFocusOpenRequest = nil
-        nav.selectedSection = .focus
 
-        if let memory = environment.memoryService.memory(id: request.memoryID),
-           memory.hasFocus {
-            environment.startFocus(for: memory.id)
+        // Match iOS: surface Focus and dismiss covering UI (do not re-enter startFocus,
+        // which would re-publish the pending request and loop).
+        nav.selectedSection = .focus
+        nav.editorRoute = nil
+        nav.mindComposerRequest = nil
+        nav.isSearchPresented = false
+        createMemoryRoute = nil
+        createMindRequest = nil
+
+        guard let memory = environment.memoryService.memory(id: request.memoryID),
+              memory.hasFocus,
+              let recipe = memory.focusRecipe() else {
+            return
         }
+
+        let alreadyActive =
+            environment.focusTimer.activeMemoryID == memory.id
+            && environment.focusTimer.isSessionActive
+        guard !alreadyActive else { return }
+
+        if environment.focusTimer.wouldReplaceSession(withMemoryID: memory.id) {
+            environment.focusTimer.discardSessionForReplacement()
+        }
+        environment.focusTimer.beginSession(
+            memoryID: memory.id,
+            memoryTitle: memory.title,
+            recipe: recipe
+        )
     }
 }
 

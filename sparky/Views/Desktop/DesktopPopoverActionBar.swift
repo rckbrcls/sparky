@@ -7,12 +7,16 @@ struct DesktopPopoverActionBar: View {
     var confirmationSystemImage = "checkmark"
     var isConfirmationDisabled = false
     var destructiveAccessibilityLabel: String?
+    /// Optional action on the leading side (after cancel/destructive), e.g. Start Focus.
+    var leadingAccessibilityLabel: String?
+    var leadingSystemImage: String?
     var secondaryAccessibilityLabel: String?
     var secondarySystemImage: String?
     var cancellationAccessibilityLabel = "Cancel"
     let onCancel: () -> Void
     let onConfirm: () -> Void
     var onDestructive: (() -> Void)?
+    var onLeading: (() -> Void)?
     var onSecondary: (() -> Void)?
 
     var body: some View {
@@ -38,6 +42,20 @@ struct DesktopPopoverActionBar: View {
                     .contentShape(Circle())
                     .accessibilityLabel(destructiveAccessibilityLabel)
                     .help(destructiveAccessibilityLabel)
+                }
+
+                if let leadingAccessibilityLabel,
+                   let leadingSystemImage,
+                   let onLeading {
+                    Button(action: onLeading) {
+                        actionLabel(systemImage: leadingSystemImage)
+                    }
+                    .buttonStyle(.plain)
+                    .neutralToolbarItemStyle()
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .contentShape(Circle())
+                    .accessibilityLabel(leadingAccessibilityLabel)
+                    .help(leadingAccessibilityLabel)
                 }
 
                 Spacer()

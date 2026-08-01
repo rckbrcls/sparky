@@ -757,11 +757,14 @@ struct MemoryEditorView: View {
                 confirmationAccessibilityLabel: desktopStatusActionLabel,
                 confirmationSystemImage: desktopStatusActionSystemImage,
                 isConfirmationDisabled: viewModel.isSaving,
+                leadingAccessibilityLabel: desktopStartFocusAccessibilityLabel,
+                leadingSystemImage: desktopStartFocusSystemImage,
                 secondaryAccessibilityLabel: "Edit Memory",
                 secondarySystemImage: "pencil",
                 cancellationAccessibilityLabel: "Close",
                 onCancel: dismiss.callAsFunction,
                 onConfirm: toggleStatusAndSave,
+                onLeading: desktopStartFocusAction,
                 onSecondary: startEditingMemory
             )
         } else {
@@ -774,6 +777,22 @@ struct MemoryEditorView: View {
                 onConfirm: confirmMemoryChanges,
                 onDestructive: desktopDeleteAction
             )
+        }
+    }
+
+    private var desktopStartFocusAccessibilityLabel: String? {
+        canStartFocusFromEditor ? "Start Focus" : nil
+    }
+
+    private var desktopStartFocusSystemImage: String? {
+        canStartFocusFromEditor ? "timer" : nil
+    }
+
+    private var desktopStartFocusAction: (() -> Void)? {
+        guard canStartFocusFromEditor else { return nil }
+        return {
+            guard let memoryID = viewModel.editingMemoryID else { return }
+            environment.startFocus(for: memoryID)
         }
     }
 
