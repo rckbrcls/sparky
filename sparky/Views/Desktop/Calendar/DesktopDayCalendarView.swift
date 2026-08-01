@@ -79,6 +79,12 @@ struct DesktopDayCalendarView: View {
     private func weekdayButton(for day: Date) -> some View {
         let isSelected = calendar.isDate(day, inSameDayAs: anchorDate)
         let isToday = calendar.isDateInToday(day)
+        let labelColor: Color = isSelected
+            ? Color.Theme.accentForeground
+            : Color.Theme.textPrimary
+        let weekdayColor: Color = isSelected
+            ? Color.Theme.accentForeground
+            : Color.Theme.textSecondary
 
         return Button {
             anchorDate = day
@@ -86,26 +92,23 @@ struct DesktopDayCalendarView: View {
             HStack(spacing: 5) {
                 Text(day.formatted(.dateTime.weekday(.abbreviated)))
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.Theme.textSecondary)
+                    .foregroundStyle(weekdayColor)
 
                 Text(day.formatted(.dateTime.day()))
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(
-                        isSelected
-                            ? Color.Theme.accentForeground
-                            : Color.Theme.textPrimary
-                    )
-                    .frame(width: 32, height: 32)
-                    .background {
-                        if isSelected {
-                            Circle().fill(Color.accentColor)
-                        } else if isToday {
-                            Circle()
-                                .stroke(Color.accentColor, lineWidth: 1.5)
-                        }
-                    }
+                    .foregroundStyle(labelColor)
             }
-            .contentShape(Rectangle())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background {
+                if isSelected {
+                    Capsule().fill(Color.accentColor)
+                } else if isToday {
+                    Capsule()
+                        .stroke(Color.accentColor, lineWidth: 1.5)
+                }
+            }
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .help(

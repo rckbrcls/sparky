@@ -132,6 +132,7 @@ struct FocusCanvasView: View {
                 .frame(minWidth: 154, minHeight: 22)
                 .padding(.horizontal, 28)
                 .padding(.vertical, 16)
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .foregroundStyle(
