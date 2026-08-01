@@ -13,17 +13,18 @@ struct FocusCanvasView: View {
     let onStartQuick: () -> Void
     let onEnd: () -> Void
     var showsEndButton: Bool = true
+    /// Mind bound to the active memory session (icon next to the title).
+    var activeMind: Mind? = nil
 
     @ScaledMetric(relativeTo: .largeTitle) private var titleFontSize: CGFloat = 44
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-                Text(phaseLabel)
-                    .font(.system(size: titleFontSize, weight: .regular, design: .serif))
-                    .foregroundStyle(Color.Theme.textPrimary)
+                sessionHeader
                     .padding(.top, 72)
-                    .accessibilityLabel("Phase \(phaseLabel)")
+                    .padding(.horizontal, 28)
+                    .accessibilityLabel(headerAccessibilityLabel)
 
                 FocusTimerRing(
                     selectedMinutes: $selectedWorkMinutes,
@@ -62,8 +63,62 @@ struct FocusCanvasView: View {
         }
     }
 
-    private var phaseLabel: String {
-        timer.isSessionActive && timer.phase == .break ? "Break" : "Focus"
+    private var isMemorySession: Bool {
+        timer.isSessionActive && timer.activeMemoryID != nil
+    }
+
+    private var headerTitle: String {
+        if timer.isSessionActive && timer.phase == .break {
+            return "Break"
+        }
+        if isMemorySession {
+            let title = (timer.activeMemoryTitle ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return title.isEmpty ? "Focus" : title
+        }
+        return "Focus"
+    }
+
+    private var headerAccessibilityLabel: String {
+        if isMemorySession, timer.phase != .break {
+            return "Memory \(headerTitle)"
+        }
+        return "Phase \(headerTitle)"
+    }
+
+    private var mindIconName: String {
+        activeMind?.iconName ?? "brain.head.profile"
+    }
+
+    private var mindColor: Color {
+        if let hex = activeMind?.colorHex, let color = Color(hex: hex) {
+            return color
+        }
+        return Color.Theme.textSecondary
+    }
+
+    @ViewBuilder
+    private var sessionHeader: some View {
+        HStack(spacing: 12) {
+            if isMemorySession, timer.phase != .break {
+                Image(systemName: mindIconName)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(mindColor)
+                    .frame(width: 36, height: 36)
+                    .glassEffect(
+                        .regular.tint(mindColor.opacity(0.15)),
+                        in: .circle
+                    )
+                    .accessibilityHidden(true)
+            }
+
+            Text(headerTitle)
+                .font(.system(size: titleFontSize, weight: .regular, design: .serif))
+                .foregroundStyle(Color.Theme.textPrimary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.55)
+        }
     }
 
     private var phaseColor: Color {

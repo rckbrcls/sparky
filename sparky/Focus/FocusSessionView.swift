@@ -7,6 +7,8 @@ import SwiftUI
 
 struct FocusSessionView: View {
     @ObservedObject var timer: FocusTimer
+    /// Mind for the active memory session header (optional).
+    var activeMind: Mind? = nil
     /// Dismisses presentation without ending the session.
     let onClose: () -> Void
 
@@ -21,7 +23,8 @@ struct FocusSessionView: View {
                 onEnd: {
                     timer.endSession()
                     onClose()
-                }
+                },
+                activeMind: activeMind
             )
             .background(Color.Theme.secondaryBackground.ignoresSafeArea())
             .toolbar {

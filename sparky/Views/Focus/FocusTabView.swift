@@ -34,7 +34,8 @@ struct FocusTabView: View {
                 },
                 onEnd: {
                     timer.endSession()
-                }
+                },
+                activeMind: activeSessionMind
             )
             .tabBarSpacer()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -65,6 +66,16 @@ struct FocusTabView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Active memory session
+
+    private var activeSessionMind: Mind? {
+        guard let memoryID = timer.activeMemoryID,
+              let memory = environment.memoryService.memory(id: memoryID) else {
+            return nil
+        }
+        return memory.mind
     }
 
     // MARK: - Quick Focus recipe

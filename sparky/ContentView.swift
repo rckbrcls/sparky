@@ -54,7 +54,6 @@ struct ContentView: View {
     @State private var longPressTimer: Timer?
     @State private var hasTriggeredLongPress = false
     @State private var unavailableMemoryAlertMessage: String?
-    @State private var focusSessionRoute: FocusSessionRoute?
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
     init(environment: AppEnvironment) {
@@ -198,18 +197,6 @@ struct ContentView: View {
                 environment.completeOnboarding()
                 showingOnboarding = false
             }
-        }
-        .fullScreenCover(item: $focusSessionRoute, onDismiss: {
-            focusSessionRoute = nil
-        }) { _ in
-            FocusSessionView(
-                timer: environment.focusTimer,
-                onClose: {
-                    // Dismiss only — session continues in Focus tab.
-                    focusSessionRoute = nil
-                    activeTab = .focus
-                }
-            )
         }
         .onAppear {
             UITabBar.appearance().isHidden = true
@@ -446,7 +433,6 @@ struct ContentView: View {
             || quickMemoryRequest != nil
             || pendingEditorRoute != nil
             || editorRoute != nil
-            || focusSessionRoute != nil
     }
 
     private func tryConsumePendingMemoryOpenRequest() {
@@ -482,7 +468,7 @@ struct ContentView: View {
 
         guard let request = environment.pendingFocusOpenRequest else { return }
         guard scenePhase == .active else { return }
-        // Focus can present over editor, but not onboarding.
+        // Focus tab must be visible — never present a sheet over the editor.
         guard !showingOnboarding else { return }
 
         if let memory = environment.memoryService.memory(id: request.memoryID),
@@ -500,11 +486,12 @@ struct ContentView: View {
                     )
                 }
             }
+            // Dismiss covering UI so the Focus tab is front and center.
+            editorRoute = nil
+            pendingEditorRoute = nil
+            quickMemoryRequest = nil
+            mindComposerRequest = nil
             activeTab = .focus
-            // Optional cover when coming from notification while another modal is up.
-            if editorRoute != nil {
-                focusSessionRoute = FocusSessionRoute()
-            }
             return
         }
 
