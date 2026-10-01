@@ -14,6 +14,7 @@ final class Mind: Identifiable {
     var iconName: String?
     var sortOrder: Int
     var isDefault: Bool
+    var updatedAt: Date = Date()
 
     @Relationship(deleteRule: .nullify, inverse: \Mind.parent)
     var children: [Mind]?
@@ -29,7 +30,8 @@ final class Mind: Identifiable {
         iconName: String? = nil,
         sortOrder: Int = 0,
         isDefault: Bool = false,
-        parent: Mind? = nil
+        parent: Mind? = nil,
+        updatedAt: Date = Date()
     ) {
         self.id = id
         self.name = name
@@ -38,6 +40,7 @@ final class Mind: Identifiable {
         self.sortOrder = sortOrder
         self.isDefault = isDefault
         self.parent = parent
+        self.updatedAt = updatedAt
     }
 }
 

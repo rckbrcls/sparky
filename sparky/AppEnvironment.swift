@@ -115,10 +115,9 @@ final class AppEnvironment: ObservableObject {
 
             // Perform a force refresh to ensure data is up-to-date
             async let mindsTask = mindService.refresh(force: true)
-            async let tagsTask = mindService.refreshTags(force: true)
             async let memoriesTask = memoryService.refresh(force: true)
 
-            _ = await (mindsTask, tagsTask, memoriesTask)
+            _ = await (mindsTask, memoriesTask)
 
             if hasCompletedOnboarding {
                 await triggerExecutorCoordinator.scheduled.requestAuthorizationIfNeeded()

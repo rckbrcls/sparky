@@ -221,7 +221,7 @@ final class DataImportService {
                 )
 
                 // Create memory
-                let newMemory = try await memoryService.createMemory(from: draft)
+                let newMemory = try await memoryService.createMemory(from: draft, updatedAt: exportedMemory.updatedAt)
                 memoryIDMap[exportedMemory.id] = newMemory.id
                 importedMemories += 1
 

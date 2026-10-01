@@ -36,7 +36,6 @@ struct sparkyApp: App {
                         // Refresh data when app becomes active
                         Task {
                             await appEnvironment.mindService.refresh(force: false)
-                            await appEnvironment.mindService.refreshTags(force: false)
                             await appEnvironment.memoryService.refresh(force: false)
                         }
                     }

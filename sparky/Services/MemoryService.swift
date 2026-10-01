@@ -203,7 +203,7 @@ final class MemoryService: ObservableObject {
 
     // MARK: - CRUD Operations
 
-    func createMemory(from draft: MemoryDraft) async throws -> Memory {
+    func createMemory(from draft: MemoryDraft, updatedAt: Date? = nil) async throws -> Memory {
         let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else {
             throw MemoryServiceError.validationFailed("Memory title is required")
@@ -223,8 +223,6 @@ final class MemoryService: ObservableObject {
             isPinned: draft.isPinned,
             priorityRaw: nil,
             dueDate: draft.dueDate,
-            createdAt: now,
-            updatedAt: now,
             completedAt: draft.status == .completed ? (draft.completedAt ?? now) : nil,
             autoCompleteOnChecklistCompletion: draft.autoCompleteOnChecklistCompletion,
             mind: mind
@@ -257,6 +255,8 @@ final class MemoryService: ObservableObject {
         memory.completionDateEntries = buildCompletionEntries(from: draft, memory: memory)
 
         context.insert(memory)
+        memory.createdAt = memory.createdAt ?? now
+        memory.updatedAt = updatedAt ?? Date()
         dataController.save()
 
         try await attachmentStore.replaceAttachments(for: memory.id, with: draft.attachments)
@@ -287,7 +287,6 @@ final class MemoryService: ObservableObject {
         memory.statusRaw = draft.status.rawValue
         memory.isPinned = draft.isPinned
         memory.dueDate = draft.dueDate
-        memory.updatedAt = now
         if draft.status == .active {
             memory.completedAt = nil
         } else if previousStatus != .completed {
@@ -352,6 +351,7 @@ final class MemoryService: ObservableObject {
         memory.attachmentReferences = buildAttachmentReferences(from: draft, memory: memory)
         memory.completionDateEntries = buildCompletionEntries(from: draft, memory: memory)
 
+        memory.updatedAt = Date()
         dataController.save()
 
         try await attachmentStore.replaceAttachments(for: memory.id, with: draft.attachments)
@@ -389,6 +389,7 @@ final class MemoryService: ObservableObject {
         }
 
         memory.mind = mind
+        memory.updatedAt = Date()
         dataController.save()
 
         _ = await refresh(force: true)
@@ -402,7 +403,6 @@ final class MemoryService: ObservableObject {
         let previousStatus = memory.status
         let now = Date()
         memory.status = status
-        memory.updatedAt = now
         if status == .active {
             memory.completedAt = nil
         } else if previousStatus != .completed {
@@ -425,6 +425,7 @@ final class MemoryService: ObservableObject {
             }
         }
 
+        memory.updatedAt = now
         dataController.save()
 
         if status == .completed, let coordinator = triggerExecutorCoordinator {
@@ -514,7 +515,8 @@ final class MemoryService: ObservableObject {
         item.isCompleted.toggle()
         item.completedAt = item.isCompleted ? now : nil
         item.updatedAt = now
-        memory.updatedAt = now
+
+        var shouldUnregisterTriggers = false
 
         // Auto-complete or reactivate memory based on checklist state
         let allCompleted = memory.checkItems.allSatisfy(\.isCompleted)
@@ -545,16 +547,19 @@ final class MemoryService: ObservableObject {
             if allCompleted && memory.status == .active {
                 memory.status = .completed
                 memory.completedAt = now
-                if let coordinator = triggerExecutorCoordinator {
-                    await coordinator.unregisterAll(for: memoryID)
-                }
+                shouldUnregisterTriggers = true
             } else if !allCompleted && memory.status == .completed {
                 memory.status = .active
                 memory.completedAt = nil
             }
         }
 
+        memory.updatedAt = now
         dataController.save()
+
+        if shouldUnregisterTriggers, let coordinator = triggerExecutorCoordinator {
+            await coordinator.unregisterAll(for: memoryID)
+        }
 
         _ = await refresh(force: true)
     }

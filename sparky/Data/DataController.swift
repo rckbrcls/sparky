@@ -28,7 +28,6 @@ final class DataController: Sendable {
         let schema = Schema([
             Mind.self,
             Memory.self,
-            Tag.self,
             CheckItemModel.self,
             ScheduleConfig.self,
             LocationConfig.self,
@@ -132,18 +131,6 @@ extension DataController {
             isDefault: false
         )
 
-        let swiftTag = Tag(
-            id: UUID(),
-            name: "SwiftUI",
-            colorHex: "#F97316"
-        )
-
-        let designTag = Tag(
-            id: UUID(),
-            name: "Design",
-            colorHex: "#EC4899"
-        )
-
         let noteMemory = Memory(
             id: UUID(),
             title: "Ideas for next release",
@@ -199,8 +186,6 @@ extension DataController {
 
         modelContext.insert(personalMind)
         modelContext.insert(workMind)
-        modelContext.insert(swiftTag)
-        modelContext.insert(designTag)
         modelContext.insert(noteMemory)
         modelContext.insert(reminderMemory)
         modelContext.insert(todoMemory)
