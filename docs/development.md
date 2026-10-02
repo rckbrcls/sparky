@@ -1,13 +1,13 @@
 # Development
 
-This guide documents conventions for Sparky's native Apple app family (iPhone + Mac), not backend, web, or package development.
+This guide documents conventions for Sparky's native Apple app family (Mac is released; iPhone is in the codebase but unreleased), not backend, web, or package development.
 
 ## Project Shape
 
 Sparky is a single Xcode project with two native app targets sharing source code and two test targets:
 
-- `sparky`: native iOS app (iOS 26).
-- `sparkyMac`: native macOS app (macOS 26).
+- `sparkyMac`: native macOS app (macOS 26), the released product.
+- `sparky`: native iOS app (iOS 26), unreleased and in development.
 - `sparkyTests`: unit tests using Swift Testing.
 - `sparkyUITests`: generated UI tests using XCTest.
 

@@ -1,12 +1,12 @@
 # Getting Started
 
-Sparky is a native iOS app managed by a single Xcode project at `sparky.xcodeproj`. There is no Swift Package Manager manifest, CocoaPods setup, Makefile, Docker configuration, or local script runner in the repository.
+Sparky is a native Apple app (Mac is the released product; an iPhone target exists but is unreleased) managed by a single Xcode project at `sparky.xcodeproj`. There is no Swift Package Manager manifest, CocoaPods setup, Makefile, Docker configuration, or local script runner in the repository.
 
 ## Requirements
 
 - macOS with Xcode installed.
 - Xcode/iOS SDK support for the configured iOS `26.0` deployment target.
-- An iOS simulator or physical iOS device.
+- For the Mac app: nothing else. For the unreleased iPhone target: an iOS simulator or physical iOS device.
 - Apple Developer signing setup only when archiving, installing on a physical device, using TestFlight, or submitting to App Store Connect.
 
 No project-specific environment variables were identified.
@@ -25,7 +25,8 @@ Use the `sparky` scheme for app development.
 
 | Target | Purpose | Test framework |
 | --- | --- | --- |
-| `sparky` | Main native iOS app | Not applicable |
+| `sparky` | iPhone app (unreleased, in development) | Not applicable |
+| `sparkyMac` | macOS app (released product) | Not applicable |
 | `sparkyTests` | Unit tests for domain and service behavior | Swift Testing |
 | `sparkyUITests` | Generated UI test target | XCTest |
 

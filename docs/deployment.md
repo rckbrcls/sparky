@@ -4,8 +4,8 @@ Sparky has **two** distribution tracks:
 
 | Track | Target | Channel |
 | --- | --- | --- |
-| iOS | `sparky` | App Store / TestFlight (manual Xcode) |
-| macOS | `sparkyMac` → product **`Sparky.app`** | GitHub Releases + Sparkle + curl install |
+| macOS | `sparkyMac` → product **`Sparky.app`** | GitHub Releases + Sparkle + curl install (released) |
+| iOS | `sparky` | Not released; no release date. Draft App Store / TestFlight checklist below |
 
 Shared macOS playbook (Converge + Sparky):
 
@@ -174,9 +174,9 @@ curl -fsSL https://rckbrcls.com/api/sparky/install | head
 
 ---
 
-## iOS App Store distribution (manual)
+## iOS App Store distribution (draft, unreleased)
 
-Still the App Store path for the `sparky` iPhone target. No App Store CI in this repo.
+> The iPhone app is **not released** and has no release date. This section is a draft checklist for a future release, not a description of a working pipeline. No App Store CI exists in this repo.
 
 ### Detected iOS settings
 

@@ -1,6 +1,6 @@
 # Security and Privacy
 
-Sparky is designed as a local-first native iOS app. The current repository does not contain a custom backend, account system, authentication flow, analytics SDK, advertising SDK, tracking SDK, or cloud sync implementation.
+Sparky is designed as a local-first native Apple app (the Mac app is released; the iPhone app is unreleased). The current repository does not contain a custom backend, account system, authentication flow, analytics SDK, advertising SDK, tracking SDK, or cloud sync implementation.
 
 This does not mean every feature is network-independent. The app uses Apple/system frameworks such as MapKit, CoreLocation, and LinkPresentation. Location search, map data, reverse geocoding, and link metadata previews may rely on Apple services or destination network access when the user invokes those features.
 

@@ -1,6 +1,6 @@
 # Sparky Documentation
 
-Sparky is a native Apple app (iPhone + Mac) with local-first SwiftData storage. macOS desktop distribution uses Sparkle + GitHub; iOS uses App Store tooling.
+Sparky is a native Apple app with local-first SwiftData storage. The **Mac app is the released product** (distributed with Sparkle + GitHub). An iPhone target exists in the codebase but is unreleased, with no release date.
 
 ## Start Here
 
@@ -17,9 +17,9 @@ Sparky is a native Apple app (iPhone + Mac) with local-first SwiftData storage. 
 
 ## Release
 
-- [Deployment](deployment.md): **macOS** Sparkle/GitHub/curl install **and** iOS App Store checklist.
+- [Deployment](deployment.md): **macOS** Sparkle/GitHub/curl install. The iOS section is a draft checklist for a future release.
 - Shared macOS playbook: [`/Users/erickpatrickbarcelos/codes/docs/macos-desktop-distribution.md`](/Users/erickpatrickbarcelos/codes/docs/macos-desktop-distribution.md)
-- [`../AppStoreMetadata.md`](../AppStoreMetadata.md): App Store Connect copy and review notes.
+- [`../AppStoreMetadata.md`](../AppStoreMetadata.md): draft App Store Connect copy for the unreleased iOS app.
 - [`../screenshots/README.md`](../screenshots/README.md): screenshot capture checklist tied to real app surfaces.
 
 ## Non-Goals

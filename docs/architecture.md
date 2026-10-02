@@ -1,6 +1,6 @@
 # Architecture
 
-Sparky is a local-first SwiftUI iOS app organized around MVVM, service objects, SwiftData persistence, and trigger executors. The project is intentionally app-local: no custom backend, API server, authentication service, or cloud sync layer was identified in the current codebase.
+Sparky is a local-first SwiftUI app (macOS is released; an iPhone target exists in the codebase but is unreleased) organized around MVVM, service objects, SwiftData persistence, and trigger executors. The project is intentionally app-local: no custom backend, API server, authentication service, or cloud sync layer was identified in the current codebase.
 
 ## High-Level Shape
 
@@ -140,5 +140,5 @@ These are not backend integrations owned by the app, but some may use network-ba
 ## Current Architectural Limitations
 
 - There is no documented cloud backup or sync implementation.
-- App Store release automation and CI/CD are not present in the repository.
+- The iPhone app is unreleased, and App Store release automation and CI/CD are not present in the repository.
 - Final release validation depends on Xcode, signing configuration, App Store Connect, screenshots, and physical-device/TestFlight checks outside the current codebase.

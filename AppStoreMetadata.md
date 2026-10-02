@@ -1,5 +1,7 @@
 # Sparky App Store Metadata
 
+> **Draft.** The iPhone app is not released and has no release date, and nothing here has been submitted to App Store Connect. The Mac app is distributed through GitHub Releases, not the App Store.
+
 Ready-to-paste English metadata and release notes for App Store Connect.
 
 ---

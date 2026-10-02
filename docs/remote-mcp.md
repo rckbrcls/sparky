@@ -22,16 +22,18 @@ Tags, Sequences, and Focus sessions are not exposed.
 
 ## Setup
 
-1. Run and expose the server by following the [sparky-mcp README](https://github.com/rckbrcls/sparky-mcp).
-2. In Sparky, open Settings > Advanced > Remote MCP.
-3. Enter the Server URL and API token, enable the toggle, and use Test connection.
+1. Install and run the server by following the [sparky-mcp guide](https://github.com/rckbrcls/sparky-mcp/blob/main/docs/GUIDE.md). `sparky-mcp setup` walks through it.
+2. On the server, run `sparky-mcp pair`. It prints a one-time code that expires in 5 minutes.
+3. In Sparky, open Settings > Advanced > Remote MCP, enter the Server URL and the code, and tap **Pair**. The app receives the API token and turns sync on.
+
+You can also enter the API token by hand under "Enter token manually" and use Test connection.
 
 The token is stored in the Keychain. The URL and enabled flag are stored in UserDefaults.
 
 ## Sync Behavior
 
-- macOS keeps syncing while the app is in the background.
-- iOS syncs only while the app is active.
+- macOS keeps syncing while the app is in the background. macOS is the supported platform.
+- iOS (unreleased) syncs only while the app is active.
 - Commands queued while the app is closed are applied the next time it syncs.
 
 ## Source

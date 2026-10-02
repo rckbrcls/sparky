@@ -1,10 +1,12 @@
 # Sparky
 
-> A local-first memory and focus companion for iPhone and Mac.
+> A local-first memory and focus companion for Mac.
 
 Sparky is a native Apple app for capturing memories, notes, checklists, schedules, links, photos, audio, files, and place-based prompts. It turns those items into a private second brain organized by time, context, and hierarchical areas called Minds.
 
-The iOS and macOS apps share the same SwiftUI domain, persistence, and service layers while using platform-specific navigation and presentation. Sparky does not require an account or custom backend. Each installation keeps its own local library, and data does not sync automatically between iPhone and Mac.
+**Current focus: the Mac app.** It is the only released version. An iPhone app exists in this codebase and shares the same SwiftUI domain, persistence, and service layers, but it is unreleased and has no release date. Everything below that mentions iPhone describes code that exists in the repository, not a shipped product.
+
+Sparky does not require an account or custom backend. Each installation keeps its own local library, and data does not sync automatically between devices.
 
 ## Product Overview
 
@@ -19,36 +21,36 @@ Sparky is organized around four primary areas:
 
 ### Core Capabilities
 
-- Fast capture through Quick Memory on iPhone and a dedicated creation popover on Mac.
+- Fast capture through a dedicated creation popover on Mac (Quick Memory on the unreleased iPhone app).
 - Memory editing with a title, note, active/completed state, pinning, checklists, attachments, schedules, and completion history.
 - One-time and recurring schedules with hourly, daily, weekly, monthly, yearly, weekday, interval, end-date, and occurrence-count options.
-- Arrival and departure geofences on iPhone, with a maximum of 20 monitored location Memories.
+- Arrival and departure geofences, implemented in the unreleased iPhone app only, with a maximum of 20 monitored location Memories. Mac preserves location configuration but does not arm geofences.
 - Photos, links, audio, and files stored locally outside SwiftData in the app's Application Support directory.
 - Text search, status, Mind association, and trigger filters, pinned emphasis, duplication, and bulk move/status/delete actions.
 - Per-Memory and global Focus recipes with work, short-break, long-break, cycle, auto-continue, pause, reset, and extend controls.
 - Local JSON backup and restore through `SparkyExportFormat` version `2.0`, with optional attachment and active-only export modes.
-- System, light, and dark themes; iPhone also supports alternate app icons.
+- System, light, and dark themes; the unreleased iPhone app also supports alternate app icons.
 - Platform-aware onboarding for the permissions each app can actually use.
 - Optional remote access through a self-hosted [Sparky MCP](https://github.com/rckbrcls/sparky-mcp) server, so AI clients (Claude, ChatGPT, Claude Code, Codex) can read and manage Minds and Memories. Off by default; configured in Settings > Advanced > Remote MCP.
 
 ## Platform Capabilities
 
-The mobile and desktop apps share the core product, but they do not expose identical OS integrations.
+The Mac app is the released product. The iOS column describes the unreleased iPhone target in this repository and may change; there is no release date. The two share the core product but do not expose identical OS integrations.
 
-| Capability | iOS (iPhone-first) | macOS |
+| Capability | macOS (released) | iOS (in development, unreleased) |
 | --- | --- | --- |
-| Primary navigation | Custom bottom navigation for Calendar, Mind, Focus, and Me | Centered floating navigation for Calendar, Mind, Focus, and Me |
-| Calendar | Day and Month views with period-based quick capture | Day and Month views with a seven-date Day selector and popover capture |
-| Memory editor | Quick sheet and full-screen editor | Native popover-based editor |
+| Primary navigation | Centered floating navigation for Calendar, Mind, Focus, and Me | Custom bottom navigation for Calendar, Mind, Focus, and Me |
+| Calendar | Day and Month views with a seven-date Day selector and popover capture | Day and Month views with period-based quick capture |
+| Memory editor | Native popover-based editor | Quick sheet and full-screen editor |
 | Scheduled notifications | Supported | Supported |
-| Location geofences | Create, edit, and execute arrival/departure triggers | Imported configuration is preserved and disclosed as iPhone-only; Mac does not arm geofences |
-| Photos | Photo library and camera capture | Photo picker and file-based attachment |
-| Audio | Record and play audio | Play existing audio; microphone recording is not exposed |
+| Location geofences | Imported configuration is preserved and disclosed as iPhone-only; Mac does not arm geofences | Create, edit, and execute arrival/departure triggers |
+| Photos | Photo picker and file-based attachment | Photo library and camera capture |
+| Audio | Play existing audio; microphone recording is not exposed | Record and play audio |
 | Links and files | Supported | Supported |
 | Focus | Quick and Memory-bound sessions while the app is active | Quick and Memory-bound sessions while the app is active |
-| Alternate app icons | Supported | Not exposed |
-| Settings | Navigation from Me | Native Settings window |
-| Updates | Xcode, TestFlight, and App Store release path | GitHub Releases with Sparkle updates |
+| Alternate app icons | Not exposed | Supported |
+| Settings | Native Settings window | Navigation from Me |
+| Updates | GitHub Releases with Sparkle updates | Not released; no App Store or TestFlight release is planned yet |
 | Cross-device data | No automatic sync; transfer through JSON export/import | No automatic sync; transfer through JSON export/import |
 
 ## Install on Mac
@@ -138,7 +140,7 @@ The repository has no custom API server, authentication service, cloud-sync serv
 ├── screenshots/                   # Screenshot capture checklist; no product screenshots yet
 ├── .github/workflows/release.yml  # macOS release and GitHub Pages pipeline
 ├── appcast.xml                    # Sparkle update feed
-└── AppStoreMetadata.md            # iOS App Store metadata and review notes
+└── AppStoreMetadata.md            # Draft App Store metadata for the unreleased iOS app
 ```
 
 ## Local Development
@@ -146,7 +148,7 @@ The repository has no custom API server, authentication service, cloud-sync serv
 ### Requirements
 
 - macOS with Xcode 26.x and the iOS 26 and macOS 26 SDKs.
-- An iOS simulator or device for the mobile target.
+- An iOS simulator or device, only if you work on the unreleased iPhone target.
 - The `My Mac` destination for the desktop target.
 - Apple Developer signing only when running on a device, archiving, or distributing.
 
@@ -193,10 +195,10 @@ Unit tests cover Memory service behavior, recurrence completion, schedule/locati
 
 | Platform | Current path |
 | --- | --- |
-| iOS | Manual Xcode archive, App Store Connect, and TestFlight flow |
+| iOS | Not released. The target builds from source for development only; no App Store or TestFlight release is planned yet |
 | macOS | `.github/workflows/release.yml` builds a universal app, signs it ad hoc, creates a GitHub Release, updates `appcast.xml`, and publishes the appcast and installer through GitHub Pages |
 
-The Mac app checks the configured Sparkle feed and offers a manual update action. iOS release credentials, App Store Connect configuration, final screenshots, and TestFlight acceptance remain external to the repository.
+The Mac app checks the configured Sparkle feed and offers a manual update action. The iPhone app has no release path yet; any App Store Connect, screenshot, and TestFlight work is future work outside this repository.
 
 ## Data, Privacy, and Network Boundaries
 
@@ -204,7 +206,7 @@ The Mac app checks the configured Sparkle feed and offers a manual update action
 - Attachment payloads are stored under the app's Application Support directory.
 - Settings, theme, onboarding state, and Focus defaults use UserDefaults.
 - There is no iCloud, CloudKit, App Group, account, authentication, analytics, advertising, or tracking integration in this repository.
-- iPhone and Mac stores are independent. JSON export/import is the current continuity mechanism.
+- Each installation keeps an independent store. JSON export/import is the current continuity mechanism between devices.
 - A full JSON export can contain notes, places, photos, audio, links, and files, so exported backups should be treated as sensitive.
 - The optional Remote MCP integration is disabled by default. When enabled, the app sends a mirror of Minds and Memories to the self-hosted [sparky-mcp](https://github.com/rckbrcls/sparky-mcp) server at the URL you configure, and polls it for commands. The API token is stored in the Keychain. Nothing is hosted for you and no third-party service is involved.
 - Local-first does not mean zero network access. MapKit, location search, reverse geocoding, link previews, Sparkle, GitHub Releases, and the installer may use Apple, destination, GitHub, or configured update services.
@@ -220,7 +222,7 @@ See [`docs/security.md`](docs/security.md) for the Privacy Manifest, permission 
 - [`docs/database.md`](docs/database.md): SwiftData, attachments, and backup format.
 - [`docs/security.md`](docs/security.md): privacy, permissions, and local data.
 - [`docs/remote-mcp.md`](docs/remote-mcp.md): optional self-hosted MCP integration.
-- [`docs/deployment.md`](docs/deployment.md): iOS and macOS distribution.
+- [`docs/deployment.md`](docs/deployment.md): macOS distribution (iOS is unreleased).
 - [`docs/troubleshooting.md`](docs/troubleshooting.md): common development and runtime issues.
 
 ## Validation Status
