@@ -133,6 +133,10 @@ Sparky does not define a custom external API, but it uses Apple/system framework
 
 These are not backend integrations owned by the app, but some may use network-backed Apple or destination services when a user invokes those features.
 
+## Optional Remote MCP
+
+`sparky/Remote/` holds an optional integration with the self-hosted [sparky-mcp](https://github.com/rckbrcls/sparky-mcp) server. The app stays the owner of the data: `RemoteSyncService` pushes a debounced mirror of Minds and Memories, polls for queued commands, and `RemoteCommandExecutor` applies them through `MemoryService` with conflict checks and an idempotent receipts journal. See [`remote-mcp.md`](remote-mcp.md).
+
 ## Current Architectural Limitations
 
 - There is no documented cloud backup or sync implementation.

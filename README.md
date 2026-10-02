@@ -29,6 +29,7 @@ Sparky is organized around four primary areas:
 - Local JSON backup and restore through `SparkyExportFormat` version `2.0`, with optional attachment and active-only export modes.
 - System, light, and dark themes; iPhone also supports alternate app icons.
 - Platform-aware onboarding for the permissions each app can actually use.
+- Optional remote access through a self-hosted [Sparky MCP](https://github.com/rckbrcls/sparky-mcp) server, so AI clients (Claude, ChatGPT, Claude Code, Codex) can read and manage Minds and Memories. Off by default; configured in Settings > Advanced > Remote MCP.
 
 ## Platform Capabilities
 
@@ -205,6 +206,7 @@ The Mac app checks the configured Sparkle feed and offers a manual update action
 - There is no iCloud, CloudKit, App Group, account, authentication, analytics, advertising, or tracking integration in this repository.
 - iPhone and Mac stores are independent. JSON export/import is the current continuity mechanism.
 - A full JSON export can contain notes, places, photos, audio, links, and files, so exported backups should be treated as sensitive.
+- The optional Remote MCP integration is disabled by default. When enabled, the app sends a mirror of Minds and Memories to the self-hosted [sparky-mcp](https://github.com/rckbrcls/sparky-mcp) server at the URL you configure, and polls it for commands. The API token is stored in the Keychain. Nothing is hosted for you and no third-party service is involved.
 - Local-first does not mean zero network access. MapKit, location search, reverse geocoding, link previews, Sparkle, GitHub Releases, and the installer may use Apple, destination, GitHub, or configured update services.
 
 See [`docs/security.md`](docs/security.md) for the Privacy Manifest, permission model, and data-handling risks.
@@ -217,6 +219,7 @@ See [`docs/security.md`](docs/security.md) for the Privacy Manifest, permission 
 - [`docs/development.md`](docs/development.md): development conventions.
 - [`docs/database.md`](docs/database.md): SwiftData, attachments, and backup format.
 - [`docs/security.md`](docs/security.md): privacy, permissions, and local data.
+- [`docs/remote-mcp.md`](docs/remote-mcp.md): optional self-hosted MCP integration.
 - [`docs/deployment.md`](docs/deployment.md): iOS and macOS distribution.
 - [`docs/troubleshooting.md`](docs/troubleshooting.md): common development and runtime issues.
 

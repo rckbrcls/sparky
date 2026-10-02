@@ -13,7 +13,7 @@ User-created app data is stored locally:
 - Settings are stored in UserDefaults.
 - Exports are user-selected JSON files and may include inline attachment data.
 
-No repository code was identified that sends Sparky user content to a custom app server.
+No repository code sends Sparky user content to a server unless the optional Remote MCP integration is enabled (see below).
 
 ## Authentication and Authorization
 
@@ -68,6 +68,17 @@ The app has no custom backend integration, but these framework features can invo
 - Map display and location services through Apple frameworks.
 
 Documentation and App Store copy should say there is no custom backend, account, analytics, or tracking. Avoid claiming "zero network calls" unless that has been validated against platform behavior.
+
+## Optional Remote MCP
+
+Remote MCP (see [`remote-mcp.md`](remote-mcp.md)) is off by default. When the user enables it in Settings > Advanced:
+
+- The app pushes a mirror of Minds and Memories to the self-hosted server URL the user configured.
+- The app polls that server for queued commands (create, update, delete) and applies them locally.
+- The API token is stored in the Keychain; the URL and enabled flag are stored in UserDefaults.
+- The server is run and owned by the user. No data goes to any Sparky-operated service.
+
+Treat the server URL and token as secrets: anyone with the token can read and change the user's Minds and Memories through the server.
 
 ## Sensitive Data Risks
 

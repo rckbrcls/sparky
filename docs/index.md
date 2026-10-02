@@ -12,6 +12,7 @@ Sparky is a native Apple app (iPhone + Mac) with local-first SwiftData storage. 
 
 - [Data and Persistence](database.md): SwiftData schema, local attachment storage, JSON import/export, and iCalendar export.
 - [Security and Privacy](security.md): local-first design, permissions, Privacy Manifest, and sensitive data risks.
+- [Remote MCP](remote-mcp.md): optional self-hosted MCP server integration for AI clients.
 - [Troubleshooting](troubleshooting.md): focused checks for persistence, attachments, notifications, location triggers, import/export, maps, and metadata drift.
 
 ## Release
@@ -23,4 +24,4 @@ Sparky is a native Apple app (iPhone + Mac) with local-first SwiftData storage. 
 
 ## Non-Goals
 
-No custom backend/API product is documented here. macOS CI/CD for Sparkle releases **is** present (`.github/workflows/release.yml`).
+No hosted backend/API product is documented here. The only server integration is the optional, self-hosted [Sparky MCP](remote-mcp.md). macOS CI/CD for Sparkle releases **is** present (`.github/workflows/release.yml`).
