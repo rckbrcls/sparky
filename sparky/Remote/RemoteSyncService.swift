@@ -42,7 +42,8 @@ final class RemoteSyncService: ObservableObject {
         let activated = UIApplication.didBecomeActiveNotification
         let deactivated = UIApplication.willResignActiveNotification
         #else
-        active = NSApplication.shared.isActive
+        // macOS apps keep running in the background, so sync continues while the app is not frontmost.
+        active = true
         let activated = NSApplication.didBecomeActiveNotification
         let deactivated = NSApplication.willResignActiveNotification
         #endif
@@ -50,10 +51,12 @@ final class RemoteSyncService: ObservableObject {
             self?.active = true
             self?.restart()
         }.store(in: &cancellables)
+        #if os(iOS)
         NotificationCenter.default.publisher(for: deactivated).receive(on: DispatchQueue.main).sink { [weak self] _ in
             self?.active = false
             self?.cancelWork()
         }.store(in: &cancellables)
+        #endif
         Publishers.Merge(memories.$memories.map { _ in () }, minds.$minds.map { _ in () })
             .receive(on: DispatchQueue.main).sink { [weak self] in self?.schedulePush() }.store(in: &cancellables)
         settings.$isEnabled.dropFirst().map { _ in () }
