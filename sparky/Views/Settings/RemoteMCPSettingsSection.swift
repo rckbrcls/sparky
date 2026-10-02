@@ -7,12 +7,17 @@ struct RemoteMCPSettingsSection: View {
     @State private var token = ""
     @State private var hasSavedToken = false
     @State private var tokenError: String?
+    @State private var pairingCode = ""
+    @State private var isPairing = false
+    @State private var pairingMessage: String?
+    @State private var pairingSucceeded = false
+    @State private var pairingTask: Task<Void, Never>?
     @State private var isTesting = false
     @State private var connectionResult: Result<Void, Error>?
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
-        case serverURL, token
+        case serverURL, pairingCode, token
     }
 
     init(service: RemoteSyncService) {
@@ -40,6 +45,7 @@ struct RemoteMCPSettingsSection: View {
                     else { service.stop() }
                 }
             ))
+            .disabled(isPairing)
 
             Divider()
 
@@ -51,8 +57,37 @@ struct RemoteMCPSettingsSection: View {
                     .focused($focusedField, equals: .serverURL)
                     .onSubmit { saveServerURL() }
 
-                Text("API token")
+                Text("Pairing code")
                     .font(.subheadline)
+                HStack(spacing: 8) {
+                    pairingCodeField
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .pairingCode)
+                        .onSubmit { if canPair { pair() } }
+                    Button(action: pair) {
+                        HStack(spacing: 6) {
+                            if isPairing { ProgressView().controlSize(.small) }
+                            Text(isPairing ? "Pairing…" : "Pair")
+                        }
+                    }
+                    .disabled(!canPair)
+                }
+
+                Text("Run sparky-mcp pair on your server to get a code.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let pairingMessage {
+                    Text(pairingMessage)
+                        .font(.caption)
+                        .foregroundStyle(pairingSucceeded ? Color.Theme.success : Color.Theme.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text("Enter token manually")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 tokenField
                     .textFieldStyle(.roundedBorder)
                     .focused($focusedField, equals: .token)
@@ -72,7 +107,7 @@ struct RemoteMCPSettingsSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .disabled(isTesting)
+            .disabled(isTesting || isPairing)
 
             Divider()
 
@@ -134,11 +169,25 @@ struct RemoteMCPSettingsSection: View {
         .onChange(of: focusedField) { oldField, _ in
             if oldField == .serverURL { saveServerURL() }
         }
-        .onChange(of: serverURL) { _, _ in connectionResult = nil }
+        .onChange(of: serverURL) { _, _ in
+            connectionResult = nil
+            if !isPairing && !(pairingSucceeded && serverURL == settings.serverURL) {
+                pairingMessage = nil
+                pairingSucceeded = false
+            }
+        }
+        .onChange(of: pairingCode) { _, _ in
+            if !isPairing && !(pairingSucceeded && pairingCode.isEmpty) {
+                pairingMessage = nil
+                pairingSucceeded = false
+            }
+        }
         .onChange(of: token) { _, _ in connectionResult = nil }
         .onChange(of: settings.tokenRevision) { _, _ in refreshSavedToken() }
         .onDisappear {
+            pairingTask?.cancel()
             saveServerURL()
+            pairingCode = ""
             token = ""
         }
     }
@@ -150,6 +199,16 @@ struct RemoteMCPSettingsSection: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .keyboardType(.URL)
+            #endif
+    }
+
+    private var pairingCodeField: some View {
+        TextField("XXXX-XXXX", text: $pairingCode)
+            .accessibilityLabel("Pairing code")
+            .font(.body.monospaced())
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.characters)
             #endif
     }
 
@@ -195,18 +254,96 @@ struct RemoteMCPSettingsSection: View {
     }
 
     private var canPerformActions: Bool {
-        guard settings.isEnabled, service.client.isConfigured, !isTesting,
-              serverURL.trimmingCharacters(in: .whitespacesAndNewlines) == settings.serverURL,
+        guard settings.isEnabled, service.client.isConfigured, !isTesting, !isPairing,
+              (RemoteSyncSettings.normalizedServerURL(serverURL)?.absoluteString
+                ?? serverURL.trimmingCharacters(in: .whitespacesAndNewlines)) == settings.serverURL,
               token.isEmpty else { return false }
         if case .syncing = service.status { return false }
         return true
     }
 
     private func saveServerURL() {
-        let value = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = RemoteSyncSettings.normalizedServerURL(serverURL)?.absoluteString
+            ?? serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
         if settings.serverURL != value {
             settings.serverURL = value
             connectionResult = nil
+        }
+    }
+
+    private var canPair: Bool {
+        !isPairing && !isTesting
+            && !serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !RemotePairingClient.normalizeCode(pairingCode).isEmpty
+    }
+
+    private func pair() {
+        guard canPair else { return }
+        focusedField = nil
+        pairingMessage = nil
+        pairingSucceeded = false
+        connectionResult = nil
+        guard let url = RemoteSyncSettings.normalizedServerURL(serverURL) else {
+            pairingMessage = "Enter a valid HTTPS server URL. HTTP is only allowed for local development servers."
+            return
+        }
+        let code = pairingCode
+        isPairing = true
+        pairingTask = Task {
+            defer { isPairing = false; pairingTask = nil }
+            let redeemedToken: String
+            do {
+                redeemedToken = try await RemotePairingClient().redeemPairingCode(serverURL: url.absoluteString, code: code)
+                try Task.checkCancellation()
+            } catch is CancellationError {
+                return
+            } catch let error as RemotePairingError {
+                pairingMessage = pairingErrorMessage(error)
+                return
+            } catch {
+                pairingMessage = "Cannot reach the server. Check the URL."
+                return
+            }
+            do {
+                try settings.setToken(redeemedToken)
+            } catch {
+                pairingMessage = "Could not save the API token in Keychain. Please try again."
+                return
+            }
+            settings.serverURL = url.absoluteString
+            serverURL = url.absoluteString
+            settings.isEnabled = true
+            token = ""
+            tokenError = nil
+            pairingCode = ""
+            refreshSavedToken()
+            pairingSucceeded = true
+            pairingMessage = "Paired. Sync is on."
+            service.start()
+            isTesting = true
+            let result = await service.testConnection()
+            if !Task.isCancelled { connectionResult = settings.isEnabled ? result : nil }
+            isTesting = false
+        }
+    }
+
+    private func pairingErrorMessage(_ error: RemotePairingError) -> String {
+        switch error {
+        case .invalidCode:
+            return "That code is invalid or expired. Run sparky-mcp pair on your server for a new one."
+        case .tooManyAttempts(let retryAfter):
+            if let seconds = retryAfter {
+                let minutes = max(1, seconds / 60 + (seconds % 60 == 0 ? 0 : 1))
+                return "Too many attempts. Try again in \(minutes) \(minutes == 1 ? "minute" : "minutes")."
+            } else {
+                return "Too many attempts. Try again later."
+            }
+        case .invalidRequest:
+            return "The pairing request was rejected. Check the URL and code."
+        case .network:
+            return "Cannot reach the server. Check the URL."
+        case .unexpectedResponse:
+            return "The server returned an unexpected response. Check the URL and try again."
         }
     }
 
@@ -215,6 +352,7 @@ struct RemoteMCPSettingsSection: View {
             try settings.setToken(value)
             token = ""
             tokenError = nil
+            pairingMessage = nil
             connectionResult = nil
             refreshSavedToken()
         } catch {
