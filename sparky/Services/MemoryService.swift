@@ -360,6 +360,16 @@ final class MemoryService: ObservableObject {
         return memoryIndex[memory.id] ?? memory
     }
 
+    /// Applies remote-only metadata not represented by the editor draft.
+    func setRemoteMetadata(memoryID: UUID, priority: Int?, completedAt: Date? = nil, replaceCompletedAt: Bool = false) async throws {
+        guard let memory = memory(id: memoryID) else { throw MemoryServiceError.memoryNotFound }
+        memory.priorityRaw = priority
+        if replaceCompletedAt { memory.completedAt = completedAt }
+        memory.updatedAt = Date()
+        dataController.save()
+        _ = await refresh(force: true)
+    }
+
     func deleteMemory(id: UUID) async throws {
         guard let memory = memory(id: id) else {
             throw MemoryServiceError.memoryNotFound

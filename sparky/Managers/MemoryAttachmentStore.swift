@@ -31,6 +31,7 @@ actor MemoryAttachmentStore {
 
     private struct LinkAttachmentPayload: Codable {
         let url: URL
+        var filename: String? = nil
     }
 
     init(fileManager: FileManager = .default) {
@@ -91,7 +92,7 @@ actor MemoryAttachmentStore {
                     data: Data(),
                     url: payload.url,
                     createdAt: createdAt,
-                    filename: nil
+                    filename: payload.filename
                 )
             case _ where audioExtensions.contains(fileExtension):
                 guard let data = try? Data(contentsOf: url) else { return nil }
@@ -152,7 +153,7 @@ actor MemoryAttachmentStore {
                 guard let linkURL = attachment.url else { continue }
                 let filename = "\(attachment.id.uuidString).json"
                 let url = directory.appendingPathComponent(filename, isDirectory: false)
-                let payload = LinkAttachmentPayload(url: linkURL)
+                let payload = LinkAttachmentPayload(url: linkURL, filename: attachment.filename)
                 let data = try jsonEncoder.encode(payload)
                 try data.write(to: url, options: .atomic)
             } else if kindRawValue == audioKindRawValue {

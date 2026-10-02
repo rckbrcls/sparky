@@ -33,6 +33,7 @@ struct sparkyApp: App {
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
+                        Task { await appEnvironment.remoteSync.syncNow() }
                         // Refresh data when app becomes active
                         Task {
                             await appEnvironment.mindService.refresh(force: false)

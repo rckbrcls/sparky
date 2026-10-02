@@ -40,6 +40,14 @@ struct AdvancedSettingsView: View {
             .listRowInsets(.init(top: 6, leading: 20, bottom: 0, trailing: 20))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+
+            Section {
+                RemoteMCPSettingsSection(service: environment.remoteSync)
+                    .cardStyle()
+            }
+            .listRowInsets(.init(top: 6, leading: 20, bottom: 12, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
         .compactPhoneListSections()
         .contentMargins(.top, 0, for: .scrollContent)

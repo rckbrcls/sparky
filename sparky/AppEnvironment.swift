@@ -31,6 +31,7 @@ final class AppEnvironment: ObservableObject {
 
     let dataController: DataController
     let mindService: MindService
+    let remoteSync: RemoteSyncService
     let memoryService: MemoryService
     let triggerExecutorCoordinator: TriggerExecutorCoordinator
     let settings: SettingsStore
@@ -76,6 +77,7 @@ final class AppEnvironment: ObservableObject {
         self.memoryService = MemoryService(dataController: dataController,
                                            mindService: mindService,
                                            attachmentStore: attachmentStore)
+        self.remoteSync = RemoteSyncService(minds: mindService, memories: memoryService, attachments: attachmentStore)
         self.triggerExecutorCoordinator = TriggerExecutorCoordinator(settings: settings)
 
         self.hasCompletedOnboarding = settings.hasCompletedOnboarding
@@ -118,6 +120,7 @@ final class AppEnvironment: ObservableObject {
             async let memoriesTask = memoryService.refresh(force: true)
 
             _ = await (mindsTask, memoriesTask)
+            remoteSync.start()
 
             if hasCompletedOnboarding {
                 await triggerExecutorCoordinator.scheduled.requestAuthorizationIfNeeded()

@@ -43,6 +43,7 @@ struct sparkyMacApp: App {
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
+                        Task { await appEnvironment.remoteSync.syncNow() }
                         Task {
                             await appEnvironment.mindService.refresh(force: false)
                             await appEnvironment.memoryService.refresh(force: false)
