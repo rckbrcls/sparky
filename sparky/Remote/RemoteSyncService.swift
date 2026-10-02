@@ -216,6 +216,8 @@ final class RemoteSyncService: ObservableObject {
                 guard settings.isEnabled else { throw RemoteSyncError.notConfigured }
                 try await client.putMirror(mirror)
                 outcome = .success(())
+                pendingError = nil
+                if case .error = status { status = .idle(lastSync: lastSyncedAt) }
             } catch {
                 outcome = .failure(error)
                 if case RemoteSyncError.unauthorized = error {

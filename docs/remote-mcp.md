@@ -26,7 +26,7 @@ Tags, Sequences, and Focus sessions are not exposed.
 2. On the server, run `sparky-mcp pair`. It prints a one-time code that expires in 5 minutes.
 3. In Sparky, open Settings > Advanced > Remote MCP, enter the Server URL and the code, and tap **Pair**. The app receives the API token and turns sync on.
 
-You can also enter the API token by hand under "Enter token manually" and use Test connection.
+The app has a link to the sparky-mcp repository, and a **Disconnect** button that removes the saved token. Use Test connection to check the link at any time.
 
 The token is stored in the Keychain. The URL and enabled flag are stored in UserDefaults.
 

@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct RemoteMCPSettingsSection: View {
+    private static let repositoryURL = URL(string: "https://github.com/rckbrcls/sparky-mcp")!
+
     @ObservedObject private var service: RemoteSyncService
     @ObservedObject private var settings: RemoteSyncSettings
     @State private var serverURL = ""
-    @State private var token = ""
     @State private var hasSavedToken = false
     @State private var tokenError: String?
     @State private var pairingCode = ""
@@ -17,7 +18,7 @@ struct RemoteMCPSettingsSection: View {
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
-        case serverURL, pairingCode, token
+        case serverURL, pairingCode
     }
 
     init(service: RemoteSyncService) {
@@ -78,6 +79,11 @@ struct RemoteMCPSettingsSection: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
+                Link(destination: Self.repositoryURL) {
+                    Label("Get sparky-mcp on GitHub", systemImage: "arrow.up.right.square")
+                }
+                .font(.caption)
+
                 if let pairingMessage {
                     Text(pairingMessage)
                         .font(.caption)
@@ -85,19 +91,9 @@ struct RemoteMCPSettingsSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text("Enter token manually")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                tokenField
-                    .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .token)
-                    .onSubmit { if !token.isEmpty { saveToken(token) } }
-
-                HStack {
-                    Button("Save token") { saveToken(token) }
-                        .disabled(token.isEmpty || isTesting)
-                    Button("Clear token", role: .destructive) { saveToken(nil) }
-                        .disabled((!hasSavedToken && token.isEmpty) || isTesting)
+                if hasSavedToken {
+                    Button("Disconnect", role: .destructive) { saveToken(nil) }
+                        .disabled(isTesting)
                 }
 
                 if let tokenError {
@@ -182,13 +178,11 @@ struct RemoteMCPSettingsSection: View {
                 pairingSucceeded = false
             }
         }
-        .onChange(of: token) { _, _ in connectionResult = nil }
         .onChange(of: settings.tokenRevision) { _, _ in refreshSavedToken() }
         .onDisappear {
             pairingTask?.cancel()
             saveServerURL()
             pairingCode = ""
-            token = ""
         }
     }
 
@@ -209,15 +203,6 @@ struct RemoteMCPSettingsSection: View {
             .autocorrectionDisabled()
             #if os(iOS)
             .textInputAutocapitalization(.characters)
-            #endif
-    }
-
-    private var tokenField: some View {
-        SecureField(hasSavedToken ? "••••••••" : "API token", text: $token)
-            .accessibilityLabel(hasSavedToken ? "API token, saved. Enter a replacement." : "API token")
-            #if os(iOS)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
             #endif
     }
 
@@ -256,8 +241,7 @@ struct RemoteMCPSettingsSection: View {
     private var canPerformActions: Bool {
         guard settings.isEnabled, service.client.isConfigured, !isTesting, !isPairing,
               (RemoteSyncSettings.normalizedServerURL(serverURL)?.absoluteString
-                ?? serverURL.trimmingCharacters(in: .whitespacesAndNewlines)) == settings.serverURL,
-              token.isEmpty else { return false }
+                ?? serverURL.trimmingCharacters(in: .whitespacesAndNewlines)) == settings.serverURL else { return false }
         if case .syncing = service.status { return false }
         return true
     }
@@ -313,7 +297,6 @@ struct RemoteMCPSettingsSection: View {
             settings.serverURL = url.absoluteString
             serverURL = url.absoluteString
             settings.isEnabled = true
-            token = ""
             tokenError = nil
             pairingCode = ""
             refreshSavedToken()
@@ -350,7 +333,6 @@ struct RemoteMCPSettingsSection: View {
     private func saveToken(_ value: String?) {
         do {
             try settings.setToken(value)
-            token = ""
             tokenError = nil
             pairingMessage = nil
             connectionResult = nil
