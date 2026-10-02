@@ -18,42 +18,29 @@ struct AdvancedSettingsView: View {
     @State private var isClearingCache = false
 
     var body: some View {
-        List {
-            Section {
-                VStack(spacing: 0) {
-                    onboardingRow
+        SettingsPane {
+            VStack(spacing: 0) {
+                onboardingRow
 
-                    Divider()
-                        .padding(.leading, 52)
-                        .padding(.trailing, 12)
+                Divider()
+                    .padding(.leading, 52)
+                    .padding(.trailing, 12)
 
-                    cacheRow
+                cacheRow
 
-                    Divider()
-                        .padding(.leading, 52)
-                        .padding(.trailing, 12)
+                Divider()
+                    .padding(.leading, 52)
+                    .padding(.trailing, 12)
 
-                    debugInfoRow
-                }
+                debugInfoRow
+            }
+            .cardStyle()
+
+            #if os(iOS)
+            RemoteMCPSettingsSection(service: environment.remoteSync)
                 .cardStyle()
-            }
-            .listRowInsets(.init(top: 6, leading: 20, bottom: 0, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-
-            Section {
-                RemoteMCPSettingsSection(service: environment.remoteSync)
-                    .cardStyle()
-            }
-            .listRowInsets(.init(top: 6, leading: 20, bottom: 12, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+            #endif
         }
-        .compactPhoneListSections()
-        .contentMargins(.top, 0, for: .scrollContent)
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.Theme.secondaryBackground.ignoresSafeArea())
         .navigationTitle("Advanced")
         .inlinePhoneNavigationTitle()
         .alert("Clear Cache", isPresented: $showClearCacheConfirmation) {

@@ -10,111 +10,101 @@ struct FocusSettingsView: View {
     let feedback: FocusFeedbackHandling
 
     var body: some View {
-        List {
-            Section {
-                VStack(spacing: 12) {
-                    VStack(spacing: 0) {
-                        cardSectionLabel("Durations")
+        SettingsPane {
+            VStack(spacing: 12) {
+                VStack(spacing: 0) {
+                    cardSectionLabel("Durations")
 
-                        cardDivider
+                    cardDivider
 
-                        presetPicker(
-                            title: "Focus",
-                            value: $settings.workDurationMinutes,
-                            presets: FocusPresetOptions.workMinutes,
-                            label: FocusPresetOptions.durationLabel
-                        )
+                    presetPicker(
+                        title: "Focus",
+                        value: $settings.workDurationMinutes,
+                        presets: FocusPresetOptions.workMinutes,
+                        label: FocusPresetOptions.durationLabel
+                    )
 
-                        cardDivider
+                    cardDivider
 
-                        presetPicker(
-                            title: "Short break",
-                            value: $settings.shortBreakDurationMinutes,
-                            presets: FocusPresetOptions.shortBreakMinutes,
-                            label: FocusPresetOptions.durationLabel
-                        )
+                    presetPicker(
+                        title: "Short break",
+                        value: $settings.shortBreakDurationMinutes,
+                        presets: FocusPresetOptions.shortBreakMinutes,
+                        label: FocusPresetOptions.durationLabel
+                    )
 
-                        cardDivider
+                    cardDivider
 
-                        presetPicker(
-                            title: "Long break",
-                            value: $settings.longBreakDurationMinutes,
-                            presets: FocusPresetOptions.longBreakMinutes,
-                            label: FocusPresetOptions.durationLabel
-                        )
+                    presetPicker(
+                        title: "Long break",
+                        value: $settings.longBreakDurationMinutes,
+                        presets: FocusPresetOptions.longBreakMinutes,
+                        label: FocusPresetOptions.durationLabel
+                    )
 
-                        cardDivider
+                    cardDivider
 
-                        presetPicker(
-                            title: "Long break every",
-                            value: $settings.pomodorosUntilLongBreak,
-                            presets: FocusPresetOptions.pomodorosUntilLongBreak,
-                            label: FocusPresetOptions.sessionLabel
-                        )
-                    }
+                    presetPicker(
+                        title: "Long break every",
+                        value: $settings.pomodorosUntilLongBreak,
+                        presets: FocusPresetOptions.pomodorosUntilLongBreak,
+                        label: FocusPresetOptions.sessionLabel
+                    )
+                }
+                .cardStyle()
+
+                Toggle("Auto-continue phases", isOn: $settings.autoContinue)
+                    .tint(Color.accentColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
                     .cardStyle()
 
-                    Toggle("Auto-continue phases", isOn: $settings.autoContinue)
+                VStack(spacing: 0) {
+                    cardSectionLabel("Feedback")
+
+                    cardDivider
+
+                    Toggle("Notifications", isOn: $settings.notificationsEnabled)
                         .tint(Color.accentColor)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .cardStyle()
 
-                    VStack(spacing: 0) {
-                        cardSectionLabel("Feedback")
+                    cardDivider
 
-                        cardDivider
+                    Toggle("Sounds", isOn: $settings.soundsEnabled)
+                        .tint(Color.accentColor)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
 
-                        Toggle("Notifications", isOn: $settings.notificationsEnabled)
-                            .tint(Color.accentColor)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
+                    cardDivider
 
-                        cardDivider
+                    soundPicker(
+                        title: "Focus complete",
+                        selection: $settings.focusCompletionSound
+                    )
 
-                        Toggle("Sounds", isOn: $settings.soundsEnabled)
-                            .tint(Color.accentColor)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
+                    cardDivider
 
-                        cardDivider
-
-                        soundPicker(
-                            title: "Focus complete",
-                            selection: $settings.focusCompletionSound
-                        )
-
-                        cardDivider
-
-                        soundPicker(
-                            title: "Break complete",
-                            selection: $settings.breakCompletionSound
-                        )
-                    }
-                    .cardStyle()
-
-                    Button(role: .destructive) {
-                        settings.resetToDefaults()
-                    } label: {
-                        Text("Reset to defaults")
-                            .foregroundStyle(Color.Theme.destructive)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .cardStyle()
+                    soundPicker(
+                        title: "Break complete",
+                        selection: $settings.breakCompletionSound
+                    )
                 }
+                .cardStyle()
+
+                Button(role: .destructive) {
+                    settings.resetToDefaults()
+                } label: {
+                    Text("Reset to defaults")
+                        .foregroundStyle(Color.Theme.destructive)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .cardStyle()
             }
-            .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
         }
-        .compactPhoneListSections()
-        .contentMargins(.top, 0, for: .scrollContent)
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.Theme.secondaryBackground.ignoresSafeArea())
         .navigationTitle("Focus")
         .inlinePhoneNavigationTitle()
     }
@@ -139,14 +129,22 @@ struct FocusSettingsView: View {
         presets: [Int],
         label: @escaping (Int) -> String
     ) -> some View {
-        Picker(title, selection: value) {
-            ForEach(presets, id: \.self) { option in
-                Text(label(option))
-                    .tag(option)
+        HStack {
+            Text(title)
+
+            Spacer()
+
+            Picker(title, selection: value) {
+                ForEach(presets, id: \.self) { option in
+                    Text(label(option))
+                        .tag(option)
+                }
             }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .tint(Color.Theme.textPrimary)
+            .fixedSize()
         }
-        .pickerStyle(.menu)
-        .tint(Color.Theme.textPrimary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
     }
@@ -156,14 +154,20 @@ struct FocusSettingsView: View {
         selection: Binding<FocusSoundChoice>
     ) -> some View {
         HStack(spacing: 12) {
+            Text(title)
+
+            Spacer()
+
             Picker(title, selection: selection) {
                 ForEach(FocusSoundChoice.allCases) { sound in
                     Text(sound.title)
                         .tag(sound)
                 }
             }
+            .labelsHidden()
             .pickerStyle(.menu)
             .tint(Color.Theme.textPrimary)
+            .fixedSize()
 
             Button("Test") {
                 feedback.preview(selection.wrappedValue)

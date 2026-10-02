@@ -3,6 +3,7 @@ import SwiftUI
 struct RemoteMCPSettingsSection: View {
     private static let repositoryURL = URL(string: "https://github.com/rckbrcls/sparky-mcp")!
 
+    @Environment(\.openURL) private var openURL
     @ObservedObject private var service: RemoteSyncService
     @ObservedObject private var settings: RemoteSyncSettings
     @State private var serverURL = ""
@@ -28,27 +29,83 @@ struct RemoteMCPSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Remote MCP", systemImage: "server.rack")
-                .font(.headline)
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Remote MCP", systemImage: "server.rack")
+                        .font(.headline)
 
-            Text("Optional. Lets AI assistants read and edit your Minds and Memories through a server you host yourself.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Toggle("Enable", isOn: Binding(
-                get: { settings.isEnabled },
-                set: { enabled in
-                    saveServerURL()
-                    settings.isEnabled = enabled
-                    connectionResult = nil
-                    if enabled { service.start() }
-                    else { service.stop() }
+                    Text("Lets AI assistants read and edit your Minds and Memories through a server you host yourself.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-            ))
-            .disabled(isPairing)
 
+                Spacer(minLength: 0)
+
+                Toggle("Enable Remote MCP", isOn: Binding(
+                    get: { settings.isEnabled },
+                    set: { setEnabled($0) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .disabled(isPairing)
+            }
+
+            if settings.isEnabled {
+                configurationContent
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .clipped()
+        .animation(.easeInOut(duration: 0.3), value: settings.isEnabled)
+        .onAppear {
+            serverURL = settings.serverURL
+            refreshSavedToken()
+        }
+        .onChange(of: focusedField) { oldField, _ in
+            if oldField == .serverURL { saveServerURL() }
+        }
+        .onChange(of: serverURL) { _, _ in
+            connectionResult = nil
+            if !isPairing && !(pairingSucceeded && serverURL == settings.serverURL) {
+                pairingMessage = nil
+                pairingSucceeded = false
+            }
+        }
+        .onChange(of: pairingCode) { _, _ in
+            if !isPairing && !(pairingSucceeded && pairingCode.isEmpty) {
+                pairingMessage = nil
+                pairingSucceeded = false
+            }
+        }
+        .onChange(of: settings.tokenRevision) { _, _ in refreshSavedToken() }
+        .onDisappear {
+            pairingTask?.cancel()
+            saveServerURL()
+            pairingCode = ""
+        }
+    }
+
+    private func setEnabled(_ enabled: Bool) {
+        guard enabled != settings.isEnabled else { return }
+        saveServerURL()
+        settings.isEnabled = enabled
+        connectionResult = nil
+        if enabled { service.start() }
+        else { service.stop() }
+    }
+
+    private var configurationContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
             Divider()
+
+            Button {
+                openURL(Self.repositoryURL)
+            } label: {
+                Label("Get sparky-mcp on GitHub", systemImage: "arrow.up.right.square")
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Server URL")
@@ -74,26 +131,11 @@ struct RemoteMCPSettingsSection: View {
                     .disabled(!canPair)
                 }
 
-                Text("Run sparky-mcp pair on your server to get a code.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Link(destination: Self.repositoryURL) {
-                    Label("Get sparky-mcp on GitHub", systemImage: "arrow.up.right.square")
-                }
-                .font(.caption)
-
                 if let pairingMessage {
                     Text(pairingMessage)
                         .font(.caption)
                         .foregroundStyle(pairingSucceeded ? Color.Theme.success : Color.Theme.destructive)
                         .fixedSize(horizontal: false, vertical: true)
-                }
-
-                if hasSavedToken {
-                    Button("Disconnect", role: .destructive) { saveToken(nil) }
-                        .disabled(isTesting)
                 }
 
                 if let tokenError {
@@ -135,12 +177,22 @@ struct RemoteMCPSettingsSection: View {
                         Text("Test connection")
                     }
                 }
+                .disabled(!canPerformActions)
+
                 Button("Sync now") {
                     focusedField = nil
                     Task { await service.syncNow() }
                 }
+                .disabled(!canPerformActions)
+
+                Spacer()
+
+                if hasSavedToken {
+                    Button("Disconnect", role: .destructive) { saveToken(nil) }
+                        .foregroundStyle(Color.Theme.destructive)
+                        .disabled(isTesting || isPairing)
+                }
             }
-            .disabled(!canPerformActions)
 
             if let connectionResult {
                 switch connectionResult {
@@ -155,34 +207,6 @@ struct RemoteMCPSettingsSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .onAppear {
-            serverURL = settings.serverURL
-            refreshSavedToken()
-        }
-        .onChange(of: focusedField) { oldField, _ in
-            if oldField == .serverURL { saveServerURL() }
-        }
-        .onChange(of: serverURL) { _, _ in
-            connectionResult = nil
-            if !isPairing && !(pairingSucceeded && serverURL == settings.serverURL) {
-                pairingMessage = nil
-                pairingSucceeded = false
-            }
-        }
-        .onChange(of: pairingCode) { _, _ in
-            if !isPairing && !(pairingSucceeded && pairingCode.isEmpty) {
-                pairingMessage = nil
-                pairingSucceeded = false
-            }
-        }
-        .onChange(of: settings.tokenRevision) { _, _ in refreshSavedToken() }
-        .onDisappear {
-            pairingTask?.cancel()
-            saveServerURL()
-            pairingCode = ""
         }
     }
 

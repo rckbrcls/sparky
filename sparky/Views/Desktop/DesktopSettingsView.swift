@@ -5,32 +5,64 @@ import SwiftUI
 struct DesktopSettingsView: View {
     @ObservedObject var environment: AppEnvironment
 
-    var body: some View {
-        TabView {
-            ThemeSettingsView()
-                .tabItem {
-                    Label("Appearance", systemImage: "circle.lefthalf.filled")
-                }
+    private enum Pane: String, CaseIterable, Identifiable {
+        case appearance = "Appearance"
+        case focus = "Focus"
+        case mcp = "MCP"
+        case advanced = "Advanced"
 
+        var id: String { rawValue }
+
+        var symbol: String {
+            switch self {
+            case .appearance: "circle.lefthalf.filled"
+            case .focus: "timer"
+            case .mcp: "server.rack"
+            case .advanced: "gearshape.2"
+            }
+        }
+    }
+
+    @State private var selection: Pane = .appearance
+
+    var body: some View {
+        ZStack {
+            paneContent
+                .frame(width: 640, height: 520)
+
+            // Native toolbar tabs only. The panes live outside the TabView because scroll
+            // views hosted inside it stack an extra scroll-edge blur on every tab switch.
+            TabView(selection: $selection) {
+                ForEach(Pane.allCases) { pane in
+                    Color.clear
+                        .tabItem { Label(pane.rawValue, systemImage: pane.symbol) }
+                        .tag(pane)
+                }
+            }
+            .frame(width: 1, height: 1)
+            .opacity(0)
+            .allowsHitTesting(false)
+        }
+        .background(Color.Theme.secondaryBackground)
+        .containerBackground(Color.Theme.secondaryBackground, for: .window)
+        .environmentObject(environment)
+    }
+
+    @ViewBuilder
+    private var paneContent: some View {
+        switch selection {
+        case .appearance:
+            ThemeSettingsView()
+        case .focus:
             FocusSettingsView(
                 settings: environment.focusSettings,
                 feedback: environment.focusFeedbackService
             )
-                .tabItem {
-                    Label("Focus", systemImage: "timer")
-                }
-
+        case .mcp:
+            MCPSettingsView()
+        case .advanced:
             AdvancedSettingsView()
-                .tabItem {
-                    Label("Advanced", systemImage: "gearshape.2")
-                }
         }
-        .frame(width: 640, height: 520)
-        .background(Color.Theme.secondaryBackground)
-        .containerBackground(Color.Theme.secondaryBackground, for: .window)
-        .toolbarBackground(Color.Theme.secondaryBackground, for: .windowToolbar)
-        .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
-        .environmentObject(environment)
     }
 }
 

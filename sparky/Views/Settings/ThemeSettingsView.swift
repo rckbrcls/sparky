@@ -11,30 +11,20 @@ struct ThemeSettingsView: View {
     @EnvironmentObject private var themeManager: ThemeManager
 
     var body: some View {
-        List {
-            Section {
-                VStack(spacing: 0) {
-                    ForEach(AppTheme.allCases) { theme in
-                        themeRow(theme)
+        SettingsPane {
+            VStack(spacing: 0) {
+                ForEach(AppTheme.allCases) { theme in
+                    themeRow(theme)
 
-                        if theme != AppTheme.allCases.last {
-                            Divider()
-                                .padding(.leading, 52)
-                                .padding(.trailing, 12)
-                        }
+                    if theme != AppTheme.allCases.last {
+                        Divider()
+                            .padding(.leading, 52)
+                            .padding(.trailing, 12)
                     }
                 }
-                .cardStyle()
             }
-            .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+            .cardStyle()
         }
-        .compactPhoneListSections()
-        .contentMargins(.top, 0, for: .scrollContent)
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Color.Theme.secondaryBackground.ignoresSafeArea())
         .navigationTitle("Appearance")
         .inlinePhoneNavigationTitle()
     }
