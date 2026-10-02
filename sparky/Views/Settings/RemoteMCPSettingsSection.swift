@@ -207,6 +207,35 @@ struct RemoteMCPSettingsSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            Divider()
+
+            HStack {
+                Text("Logs")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Clear") { service.clearSyncLog() }
+                    .disabled(service.syncLog.isEmpty)
+            }
+            .font(.caption)
+
+            if service.syncLog.isEmpty {
+                Text("No sync errors yet.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(service.syncLog.reversed()) { entry in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(logTime(entry.date))  \(entry.method)  \(entry.path)")
+                            .foregroundStyle(.secondary)
+                        Text(safeMessage(entry.message))
+                            .foregroundStyle(Color.Theme.destructive)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.caption)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
         }
     }
 
@@ -379,6 +408,14 @@ struct RemoteMCPSettingsSection: View {
     private func safeMessage(_ message: String) -> String {
         guard let savedToken = try? settings.readToken(), !savedToken.isEmpty else { return message }
         return message.replacingOccurrences(of: savedToken, with: "••••••••")
+    }
+
+    private func logTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 
     private func relativeTime(_ date: Date, to now: Date) -> String {

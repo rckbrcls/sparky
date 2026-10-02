@@ -6,11 +6,21 @@ import UIKit
 import AppKit
 #endif
 
+struct RemoteSyncLogEntry: Codable, Identifiable, Equatable {
+    var id: UUID
+    var date: Date
+    var method: String
+    var path: String
+    var status: Int
+    var message: String
+}
+
 @MainActor
 final class RemoteSyncService: ObservableObject {
     enum Status {
         case disabled, notConfigured, idle(lastSync: Date?), syncing, error(String)
     }
+    static let syncLogLimit = 50
     let settings: RemoteSyncSettings
     let client: RemoteSyncClient
     let builder: RemoteMirrorBuilder
@@ -18,6 +28,7 @@ final class RemoteSyncService: ObservableObject {
     @Published private(set) var status: Status = .disabled
     @Published private(set) var lastSyncedAt: Date?
     @Published private(set) var pendingError: String?
+    @Published private(set) var syncLog: [RemoteSyncLogEntry] = []
     private var cancellables: Set<AnyCancellable> = []
     private var loop: Task<Void, Never>?
     private var debounce: Task<Void, Never>?
@@ -47,6 +58,7 @@ final class RemoteSyncService: ObservableObject {
         let activated = NSApplication.didBecomeActiveNotification
         let deactivated = NSApplication.willResignActiveNotification
         #endif
+        loadSyncLog()
         NotificationCenter.default.publisher(for: activated).receive(on: DispatchQueue.main).sink { [weak self] _ in
             self?.active = true
             self?.restart()
@@ -176,6 +188,7 @@ final class RemoteSyncService: ObservableObject {
                 guard !Task.isCancelled, self.generation == currentGeneration else { return }
                 self.failures += 1
                 if self.failures >= 3 { self.retryNotBefore = Date().addingTimeInterval(60) }
+                self.recordFailure(error)
                 self.pendingError = error.localizedDescription
                 self.status = .error(error.localizedDescription)
                 if case RemoteSyncError.unauthorized = error {
@@ -220,6 +233,7 @@ final class RemoteSyncService: ObservableObject {
                 if case .error = status { status = .idle(lastSync: lastSyncedAt) }
             } catch {
                 outcome = .failure(error)
+                recordFailure(error)
                 if case RemoteSyncError.unauthorized = error {
                     unauthorized = true
                     pendingError = error.localizedDescription
@@ -233,5 +247,36 @@ final class RemoteSyncService: ObservableObject {
         await task.value
         operation = nil
         return outcome
+    }
+
+    func clearSyncLog() {
+        syncLog = []
+        saveSyncLog()
+    }
+
+    private static var syncLogURL: URL {
+        (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory)
+            .appendingPathComponent("SparkyRemoteSync/sync-log.json")
+    }
+
+    private func recordFailure(_ error: Error) {
+        guard case RemoteSyncError.http(let status, let method, let path, _) = error else { return }
+        syncLog.append(RemoteSyncLogEntry(id: UUID(), date: Date(), method: method, path: path, status: status, message: error.localizedDescription))
+        if syncLog.count > Self.syncLogLimit { syncLog.removeFirst(syncLog.count - Self.syncLogLimit) }
+        saveSyncLog()
+    }
+
+    private func loadSyncLog() {
+        guard let data = try? Data(contentsOf: Self.syncLogURL),
+              let entries = try? JSONDecoder().decode([RemoteSyncLogEntry].self, from: data) else { return }
+        syncLog = Array(entries.suffix(Self.syncLogLimit))
+    }
+
+    private func saveSyncLog() {
+        let url = Self.syncLogURL
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(syncLog).write(to: url, options: .atomic)
+        } catch {}
     }
 }
