@@ -311,6 +311,7 @@ struct MonthDaySelectionView: View {
                             .frame(width: 36, height: 36)
                             .background(isSelected ? Color.accentColor : Color.Theme.elementBackground)
                             .clipShape(Circle())
+                        .buttonHitArea(Circle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Day \(day)")

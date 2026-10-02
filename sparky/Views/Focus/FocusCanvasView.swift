@@ -45,6 +45,7 @@ struct FocusCanvasView: View {
                             .font(.subheadline.weight(.medium))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
+                        .buttonHitArea(Capsule())
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.Theme.destructive)

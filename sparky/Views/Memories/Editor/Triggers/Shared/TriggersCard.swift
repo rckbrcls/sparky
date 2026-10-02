@@ -743,6 +743,7 @@ private struct LocationTriggerInlineForm: View {
                     }
                 }
                 .padding(.vertical, 10)
+                .buttonHitArea(Rectangle())
             }
             .buttonStyle(.plain)
 

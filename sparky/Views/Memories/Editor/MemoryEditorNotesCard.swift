@@ -20,6 +20,7 @@ struct MemoryEditorNotesCard: View {
                     .disabled(!isEditingEnabled)
             } else if !viewModel.note.isEmpty {
                 Text(viewModel.note)
+                    .textSelection(.enabled)
                     .foregroundStyle(.secondary)
             }
 

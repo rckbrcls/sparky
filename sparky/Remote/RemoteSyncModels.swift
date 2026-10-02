@@ -50,7 +50,9 @@ struct RecurrenceDTO: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(frequency, forKey: .frequency)
         try container.encode(interval, forKey: .interval)
-        try container.encode(weekdays, forKey: .weekdays)
+        if frequency == "weekly" {
+            try container.encode(weekdays, forKey: .weekdays)
+        }
         try container.encode(endDate, forKey: .endDate)
         try container.encode(occurrenceCount, forKey: .occurrenceCount)
     }

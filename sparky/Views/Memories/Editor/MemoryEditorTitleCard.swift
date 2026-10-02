@@ -92,6 +92,7 @@ struct MemoryEditorTitleCard: View {
                         }
                 } else {
                     Text(viewModel.title.isEmpty ? "Memory" : viewModel.title)
+                        .textSelection(.enabled)
                         .font(.custom("Baskerville", size: 20))
                         .multilineTextAlignment(.leading)
                         .foregroundStyle(.primary)

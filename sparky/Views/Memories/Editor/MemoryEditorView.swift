@@ -79,6 +79,12 @@ struct MemoryEditorView: View {
 
     @FocusState private var isTitleFocused: Bool
 
+    #if os(macOS)
+    @State private var desktopStatusOperation: MemoryStatus?
+    @State private var isDesktopStatusHovered = false
+    @FocusState private var isDesktopStatusFocused: Bool
+    #endif
+
     @State private var isEditingEnabled: Bool
 
     @State private var isNotesOpen: Bool
@@ -584,8 +590,19 @@ struct MemoryEditorView: View {
         guard !viewModel.isSaving else { return }
         PlatformHaptics.impactMedium()
 
+        #if os(macOS)
+        guard desktopStatusOperation == nil else { return }
+        if showsDesktopPopoverPreviewActions {
+            desktopStatusOperation = viewModel.status
+        }
+        #endif
         Task {
             _ = await viewModel.toggleStatusAndSave()
+            #if os(macOS)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                desktopStatusOperation = nil
+            }
+            #endif
         }
     }
 
@@ -615,7 +632,15 @@ struct MemoryEditorView: View {
 
 
             editorContent
-
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    #if os(macOS)
+                    if showsDesktopPopoverHeader {
+                        desktopPopoverHeader
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                    }
+                    #endif
+                }
                 .safeAreaInset(edge: .bottom) {
                     #if os(macOS)
                     if showsDesktopPopoverActionBar {
@@ -753,20 +778,25 @@ struct MemoryEditorView: View {
     @ViewBuilder
     private var desktopPopoverActionBar: some View {
         if case .edit = mode, !isEditingEnabled {
-            DesktopPopoverActionBar(
-                confirmationAccessibilityLabel: desktopStatusActionLabel,
-                confirmationSystemImage: desktopStatusActionSystemImage,
-                isConfirmationDisabled: viewModel.isSaving,
-                leadingAccessibilityLabel: desktopStartFocusAccessibilityLabel,
-                leadingSystemImage: desktopStartFocusSystemImage,
-                secondaryAccessibilityLabel: "Edit Memory",
-                secondarySystemImage: "pencil",
-                cancellationAccessibilityLabel: "Close",
-                onCancel: dismiss.callAsFunction,
-                onConfirm: toggleStatusAndSave,
-                onLeading: desktopStartFocusAction,
-                onSecondary: startEditingMemory
-            )
+            desktopPopoverPreviewFooter
+        } else if case .edit = mode {
+            HStack {
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    Image(systemName: "trash")
+                        .frame(width: 44, height: 44)
+                        .buttonHitArea(Circle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .glassEffect(.regular.interactive().tint(.red), in: .circle)
+                .contentShape(Circle())
+                .accessibilityLabel("Delete Memory")
+                .help("Delete Memory")
+                .disabled(viewModel.isSaving)
+                Spacer()
+            }
         } else {
             DesktopPopoverActionBar(
                 confirmationAccessibilityLabel: saveButtonTitle,
@@ -780,12 +810,118 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var desktopStartFocusAccessibilityLabel: String? {
-        canStartFocusFromEditor ? "Start Focus" : nil
+    private var showsDesktopPopoverPreviewActions: Bool {
+        if case .edit = mode {
+            return showsDesktopPopoverActionBar && !isEditingEnabled
+        }
+        return false
     }
 
-    private var desktopStartFocusSystemImage: String? {
-        canStartFocusFromEditor ? "timer" : nil
+    private var showsDesktopPopoverHeader: Bool {
+        if case .edit = mode {
+            return showsDesktopPopoverActionBar
+        }
+        return false
+    }
+
+    private var desktopPopoverHeader: some View {
+        HStack {
+            Button(role: .cancel, action: dismiss.callAsFunction) {
+                Image(systemName: "xmark")
+                    .frame(width: 44, height: 44)
+                    .buttonHitArea(Circle())
+            }
+            .neutralToolbarItemStyle()
+            .glassEffect(.regular.interactive(), in: .circle)
+            .contentShape(Circle())
+            .accessibilityLabel("Close")
+            .help("Close")
+
+            Spacer()
+
+            if isEditingEnabled {
+                Button(role: .confirm, action: confirmMemoryChanges) {
+                    Image(systemName: "checkmark")
+                        .frame(width: 44, height: 44)
+                        .buttonHitArea(Circle())
+                }
+                .foregroundStyle(Color.Theme.accentForeground)
+                .glassEffect(.regular.interactive().tint(Color.accentColor), in: .circle)
+                .contentShape(Circle())
+                .accessibilityLabel("Done")
+                .help("Done")
+                .disabled(isSaveDisabled)
+            } else {
+                Button(action: startEditingMemory) {
+                    Image(systemName: "pencil")
+                        .frame(width: 44, height: 44)
+                        .buttonHitArea(Circle())
+                }
+                .neutralToolbarItemStyle()
+                .glassEffect(.regular.interactive(), in: .circle)
+                .contentShape(Circle())
+                .accessibilityLabel("Edit Memory")
+                .help("Edit Memory")
+                .disabled(viewModel.isSaving || desktopStatusOperation != nil)
+            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.Theme.textPrimary)
+    }
+
+    private var desktopPopoverPreviewFooter: some View {
+        HStack(spacing: 12) {
+            if let action = desktopStartFocusAction {
+                Button(action: action) {
+                    Image(systemName: "timer")
+                        .frame(width: 44, height: 44)
+                        .buttonHitArea(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start Focus")
+                .help("Start Focus")
+            }
+
+            Spacer()
+
+            Button(action: toggleStatusAndSave) {
+                HStack(spacing: 8) {
+                    if desktopStatusOperation != nil {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: desktopStatusActionSystemImage)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    Text(desktopStatusButtonTitle)
+                        .contentTransition(.interpolate)
+                }
+                .font(.body.weight(.semibold))
+                .padding(.horizontal, 18)
+                .frame(minHeight: 44)
+                .background(Color.accentColor, in: Capsule())
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.Theme.accentForeground)
+            .disabled(viewModel.isSaving || desktopStatusOperation != nil)
+            .focused($isDesktopStatusFocused)
+            .onHover { isDesktopStatusHovered = $0 }
+            .animation(.easeInOut(duration: 0.2), value: isDesktopStatusHovered)
+            .animation(.easeInOut(duration: 0.2), value: isDesktopStatusFocused)
+            .accessibilityLabel(desktopStatusActionLabel)
+            .help(desktopStatusActionLabel)
+        }
+    }
+
+    private var desktopStatusButtonTitle: String {
+        if let operation = desktopStatusOperation {
+            return operation == .active ? "Completing…" : "Reopening…"
+        }
+        if viewModel.status == .active {
+            return "Complete"
+        }
+        return isDesktopStatusHovered || isDesktopStatusFocused ? "Reopen" : "Completed"
     }
 
     private var desktopStartFocusAction: (() -> Void)? {

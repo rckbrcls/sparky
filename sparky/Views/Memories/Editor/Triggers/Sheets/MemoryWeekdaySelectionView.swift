@@ -24,6 +24,7 @@ struct MemoryWeekdaySelectionView: View {
                                 .frame(width: diameter, height: diameter)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
+                        .buttonHitArea(Circle())
                     }
                     .aspectRatio(1, contentMode: .fit)
                     .buttonStyle(.plain)

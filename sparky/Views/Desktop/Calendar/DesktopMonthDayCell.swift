@@ -30,6 +30,7 @@ struct DesktopMonthDayCell: View {
                             Image(systemName: "plus")
                                 .font(.system(size: 10, weight: .bold))
                                 .frame(width: 22, height: 22)
+                            .buttonHitArea(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(Color.Theme.textSecondary)
@@ -52,6 +53,7 @@ struct DesktopMonthDayCell: View {
                                     Circle().fill(Color.accentColor)
                                 }
                             }
+                        .buttonHitArea(Circle())
                     }
                     .buttonStyle(.plain)
                     .help("Open day")

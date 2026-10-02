@@ -175,6 +175,7 @@ private struct StepActionsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16))
+                .buttonHitArea(RoundedRectangle(cornerRadius: 16))
             }
             .buttonStyle(.plain)
             .disabled(isProcessing)

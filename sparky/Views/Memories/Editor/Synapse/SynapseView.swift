@@ -21,6 +21,7 @@ struct SynapseView: View {
                         Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                             .font(.title3)
                             .foregroundStyle(item.isCompleted ? Color.accentColor : .secondary)
+                            .buttonHitArea(Circle())
                     }
                     .buttonStyle(.plain)
                 }

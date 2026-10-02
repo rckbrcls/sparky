@@ -45,6 +45,7 @@ struct MemoryCardChecklistView: View {
                             Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                                 .font(.title2)
                                 .foregroundStyle(item.isCompleted ? Color.accentColor : .secondary.opacity(0.5))
+                                .buttonHitArea(Circle())
                         }
                         .buttonStyle(.plain)
                     }

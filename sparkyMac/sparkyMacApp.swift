@@ -64,6 +64,13 @@ struct sparkyMacApp: App {
             }
         }
 
+        Window("Logs", id: "remote-sync-logs") {
+            RemoteSyncLogScreen(service: appEnvironment.remoteSync)
+                .environmentObject(themeManager)
+        }
+        .defaultSize(width: 640, height: 520)
+        .windowResizability(.contentMinSize)
+
         Settings {
             DesktopSettingsView(environment: appEnvironment)
                 .modelContainer(appEnvironment.dataController.container)

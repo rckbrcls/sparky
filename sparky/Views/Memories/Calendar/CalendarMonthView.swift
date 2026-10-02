@@ -283,6 +283,7 @@ private struct DayCell: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: cellHeight)
+            .buttonHitArea(Rectangle())
         }
         .buttonStyle(.plain)
     }

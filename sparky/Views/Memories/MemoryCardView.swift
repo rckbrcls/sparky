@@ -271,6 +271,7 @@ struct MemoryCardView: View {
                         Image(systemName: isCompletedForDisplay ? "checkmark.circle.fill" : "circle")
                             .font(.title2)
                             .foregroundStyle(isCompletedForDisplay ? Color.accentColor : .secondary.opacity(0.5))
+                            .buttonHitArea(Circle())
                     }
                     .buttonStyle(.plain)
                 }

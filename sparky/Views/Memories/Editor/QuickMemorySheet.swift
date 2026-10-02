@@ -77,6 +77,7 @@ struct QuickMemorySheet: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.primary)
                         .frame(width: 36, height: 36)
+                        .buttonHitArea(Circle())
                         .quickMemoryCircleControl(tint: Color.primary.opacity(0.1))
                 }
                 .buttonStyle(.plain)

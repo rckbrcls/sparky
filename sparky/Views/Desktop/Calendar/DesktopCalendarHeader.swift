@@ -36,16 +36,19 @@ struct DesktopCalendarHeader: View {
                     action: onPrevious
                 )
 
-                Button("Today", action: onToday)
-                    .buttonStyle(.plain)
-                    .font(.callout.weight(.semibold))
-                    .padding(.horizontal, 18)
-                    .frame(height: 34)
-                    .background(Color.Theme.elementBackground, in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .stroke(Color.Theme.elementBorder, lineWidth: 1)
-                    }
+                Button(action: onToday) {
+                    Text("Today")
+                        .font(.callout.weight(.semibold))
+                        .padding(.horizontal, 18)
+                        .frame(height: 34)
+                        .background(Color.Theme.elementBackground, in: Capsule())
+                        .overlay {
+                            Capsule()
+                                .stroke(Color.Theme.elementBorder, lineWidth: 1)
+                        }
+                        .buttonHitArea(Capsule())
+                }
+                .buttonStyle(.plain)
 
                 navigationButton(
                     title: "Next",
@@ -68,6 +71,7 @@ struct DesktopCalendarHeader: View {
             Image(systemName: systemImage)
                 .font(.system(size: 14, weight: .semibold))
                 .frame(width: 34, height: 34)
+                .buttonHitArea(Circle())
                 .background(Color.Theme.elementBackground, in: Circle())
                 .overlay {
                     Circle()

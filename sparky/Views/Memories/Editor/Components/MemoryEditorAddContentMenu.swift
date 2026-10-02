@@ -55,6 +55,7 @@ struct MemoryEditorAddContentMenu: View {
                     }
                     .padding(.vertical, 14)
                     .padding(.horizontal, 18)
+                    .buttonHitArea(RoundedRectangle(cornerRadius: 24))
                 }
                 .buttonStyle(.plain)
                 .disabled(option.isActive)

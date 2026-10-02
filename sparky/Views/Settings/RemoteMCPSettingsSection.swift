@@ -4,6 +4,7 @@ struct RemoteMCPSettingsSection: View {
     private static let repositoryURL = URL(string: "https://github.com/rckbrcls/sparky-mcp")!
 
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var service: RemoteSyncService
     @ObservedObject private var settings: RemoteSyncSettings
     @State private var serverURL = ""
@@ -16,6 +17,9 @@ struct RemoteMCPSettingsSection: View {
     @State private var pairingTask: Task<Void, Never>?
     @State private var isTesting = false
     @State private var connectionResult: Result<Void, Error>?
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #endif
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
@@ -53,13 +57,10 @@ struct RemoteMCPSettingsSection: View {
 
             if settings.isEnabled {
                 configurationContent
-                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .clipped()
-        .animation(.easeInOut(duration: 0.3), value: settings.isEnabled)
         .onAppear {
             serverURL = settings.serverURL
             refreshSavedToken()
@@ -90,8 +91,13 @@ struct RemoteMCPSettingsSection: View {
 
     private func setEnabled(_ enabled: Bool) {
         guard enabled != settings.isEnabled else { return }
+        if !enabled {
+            focusedField = nil
+        }
         saveServerURL()
-        settings.isEnabled = enabled
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
+            settings.isEnabled = enabled
+        }
         connectionResult = nil
         if enabled { service.start() }
         else { service.stop() }
@@ -209,25 +215,29 @@ struct RemoteMCPSettingsSection: View {
 
             Divider()
 
+            #if os(macOS)
+            Button {
+                openWindow(id: "remote-sync-logs")
+            } label: {
+                logsLabel
+            }
+            .accessibilityLabel("Open Logs")
+            #else
             NavigationLink {
                 RemoteSyncLogScreen(service: service)
             } label: {
-                HStack {
-                    Text("Logs")
-                    Spacer()
-                    if !service.syncLog.isEmpty {
-                        Text("\(service.syncLog.count)")
-                            .foregroundStyle(.secondary)
-                    }
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .font(.caption)
-                .contentShape(Rectangle())
+                logsLabel
             }
-            .buttonStyle(.plain)
+            .accessibilityLabel("Open Logs")
+            #endif
         }
+    }
+
+    private var logsLabel: some View {
+        Label(
+            service.syncLog.isEmpty ? "Logs" : "Logs (\(service.syncLog.count))",
+            systemImage: "doc.text.magnifyingglass"
+        )
     }
 
     private var serverURLField: some View {

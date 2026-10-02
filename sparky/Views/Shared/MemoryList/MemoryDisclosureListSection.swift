@@ -55,6 +55,7 @@ struct MemoryDisclosureListSection: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 12)
+            .buttonHitArea(Rectangle())
         }
         .buttonStyle(.plain)
         .listRowInsets(.init(top: 24, leading: 20, bottom: isExpanded && !memories.isEmpty ? 0 : 8, trailing: 20))

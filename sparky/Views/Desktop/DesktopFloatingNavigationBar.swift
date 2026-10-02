@@ -102,6 +102,7 @@ struct DesktopFloatingNavigationBar: View {
                         .stroke(Color.Theme.elementBorder, lineWidth: 1)
                 }
                 .scaleEffect(isCreateHovered ? 1.04 : 1)
+            .buttonHitArea(Circle())
         }
         .buttonStyle(.plain)
         .keyboardShortcut("n", modifiers: [.command])

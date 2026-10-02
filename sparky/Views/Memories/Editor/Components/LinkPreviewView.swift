@@ -57,6 +57,7 @@ struct LinkPreviewView: View {
             PlatformOpen.open(url)
         } label: {
             fallbackView(icon: "link", message: loader.metadata?.title ?? urlDisplayText)
+            .buttonHitArea(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
         #endif

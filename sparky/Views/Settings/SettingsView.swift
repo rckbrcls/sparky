@@ -196,6 +196,7 @@ private struct AppIconSettingsView: View {
                                     .font(.caption)
                                     .foregroundStyle(appIconManager.currentIcon == icon ? .primary : .secondary)
                             }
+                            .buttonHitArea(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(

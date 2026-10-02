@@ -125,6 +125,7 @@ struct MemoriesMapView: View {
                             .font(.subheadline.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
+                        .buttonHitArea(Capsule())
                     }
                     .glassEffect(.regular.interactive(), in: .capsule)
                 }

@@ -32,6 +32,7 @@ struct TriggerPickerRow: View {
                     .foregroundStyle(isActive ? Color.accentColor : Color.Theme.textTertiary)
             }
             .padding(.vertical, 6)
+            .buttonHitArea(Rectangle())
         }
         .buttonStyle(.plain)
     }

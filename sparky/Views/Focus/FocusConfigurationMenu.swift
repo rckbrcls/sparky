@@ -140,6 +140,7 @@ struct FocusConfigurationMenu: View {
                     .font(.body)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
+                    .buttonHitArea(Capsule())
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.Theme.textPrimary)
