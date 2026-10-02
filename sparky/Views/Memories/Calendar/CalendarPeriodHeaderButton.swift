@@ -42,6 +42,9 @@ struct CalendarPeriodHeaderButton: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        #if os(macOS)
+        .help(period.timeRangeDescription)
+        #endif
         .accessibilityLabel("\(period.title), \(accessibilityCount)")
         .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
         .accessibilityHint(isExpanded ? "Collapses this period" : "Expands this period")

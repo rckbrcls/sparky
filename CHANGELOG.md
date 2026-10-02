@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.0.21] - 2026-10-02
+
+### Added
+
+- Add an Early Morning calendar section for 00:00–05:59 before Morning on iOS and macOS, using the moon icon and existing Night color.
+- Add native macOS tooltips to calendar period badges showing their time ranges; All Day describes memories without a specific time. Preserve expand/collapse accessibility hints and use the system hover delay.
+- Suggest 01:00 on the selected date when creating a memory from the empty Early Morning section, with the prompt "Plan an early morning memory".
+
+### Fixed
+
+- Limit Night to 22:00–23:59 so early-morning memories appear at the beginning of their calendar date instead of after the evening section.
+- Keep the other periods unchanged: Morning 06:00–11:59, Afternoon 12:00–17:59, and Evening 18:00–21:59.
+
+### Preserved
+
+- Preserve existing dates, notifications, recurrence, GPT integration, and Me activity metrics; no data migration is required.
+
+### Validation
+
+- Local iOS Simulator and macOS Debug builds succeeded, and `git diff --check` passed.
+- Inspected period boundaries, chronological section order, and creation on the selected date.
+- Opened the updated local macOS app; tooltip hover behavior and timing have not been independently verified.
+- Automated tests and browser validation were not run.
+
 ## [0.0.20] - 2026-10-02
 
 ### Fixed
