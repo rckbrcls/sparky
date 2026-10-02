@@ -201,41 +201,32 @@ struct RemoteMCPSettingsSection: View {
                         .font(.caption)
                         .foregroundStyle(Color.Theme.success)
                 case .failure(let error):
-                    Text("Error: \(safeMessage(error.localizedDescription))")
+                    Text(connectionFailureText(error))
                         .font(.caption)
                         .foregroundStyle(Color.Theme.destructive)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
             Divider()
 
-            HStack {
-                Text("Logs")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Clear") { service.clearSyncLog() }
-                    .disabled(service.syncLog.isEmpty)
-            }
-            .font(.caption)
-
-            if service.syncLog.isEmpty {
-                Text("No sync errors yet.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(service.syncLog.reversed()) { entry in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(logTime(entry.date))  \(entry.method)  \(entry.path)")
+            NavigationLink {
+                RemoteSyncLogScreen(service: service)
+            } label: {
+                HStack {
+                    Text("Logs")
+                    Spacer()
+                    if !service.syncLog.isEmpty {
+                        Text("\(service.syncLog.count)")
                             .foregroundStyle(.secondary)
-                        Text(safeMessage(entry.message))
-                            .foregroundStyle(Color.Theme.destructive)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .font(.caption)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
+                .font(.caption)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
         }
     }
 
@@ -284,8 +275,8 @@ struct RemoteMCPSettingsSection: View {
                     ProgressView().controlSize(.small)
                     Text("Syncing…")
                 }
-            case .error(let message):
-                Text("Error: \(safeMessage(message))")
+            case .error:
+                Text("Sync failed")
                     .foregroundStyle(Color.Theme.destructive)
             }
         }
@@ -405,17 +396,14 @@ struct RemoteMCPSettingsSection: View {
         }
     }
 
+    private func connectionFailureText(_ error: Error) -> String {
+        if case RemoteSyncError.http = error { return "Connection failed" }
+        return "Error: \(safeMessage(error.localizedDescription))"
+    }
+
     private func safeMessage(_ message: String) -> String {
         guard let savedToken = try? settings.readToken(), !savedToken.isEmpty else { return message }
         return message.replacingOccurrences(of: savedToken, with: "••••••••")
-    }
-
-    private func logTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US")
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 
     private func relativeTime(_ date: Date, to now: Date) -> String {

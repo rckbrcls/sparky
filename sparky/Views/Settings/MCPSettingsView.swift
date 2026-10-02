@@ -9,11 +9,13 @@ struct MCPSettingsView: View {
     @EnvironmentObject private var environment: AppEnvironment
 
     var body: some View {
-        SettingsPane {
-            RemoteMCPSettingsSection(service: environment.remoteSync)
-                .cardStyle()
+        NavigationStack {
+            SettingsPane {
+                RemoteMCPSettingsSection(service: environment.remoteSync)
+                    .cardStyle()
+            }
+            .navigationTitle("MCP")
+            .inlinePhoneNavigationTitle()
         }
-        .navigationTitle("MCP")
-        .inlinePhoneNavigationTitle()
     }
 }
