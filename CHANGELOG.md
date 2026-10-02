@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.0.20] - 2026-10-02
+
+### Fixed
+
+- Replace the native macOS daily calendar list with a scroll view and lazy vertical stack to remove the rectangular context-menu outline around the entire row.
+- Draw a 24-point rounded accent outline directly on the memory card while its context menu is tracking, and remove the outline when the menu closes.
+- Match memory card and list-button interaction shapes to the card's 24-point corners, with rounded context-menu previews on iOS.
+
+### Preserved
+
+- Keep calendar period spacing, collapsible sections, empty-period actions, scroll indicators, and bottom content clearance.
+- Keep context-menu actions, completion controls, multi-selection, recurring occurrence context, and the native iOS calendar list.
+- Leave the shared card styling unchanged.
+
+### Validation
+
+- The local macOS Debug build succeeded, and `git diff --check` passed.
+- The updated local app was opened for inspection; the final visual behavior has not been independently verified.
+- Automated tests and browser validation were not run.
+
 ## [0.0.19] - 2026-10-02
 
 ### Improved

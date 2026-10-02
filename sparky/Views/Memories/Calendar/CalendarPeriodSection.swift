@@ -30,9 +30,14 @@ struct CalendarPeriodSection: View {
                 isExpanded: isExpanded,
                 onToggle: onToggleExpanded
             )
+            #if os(macOS)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
+            #else
             .listRowInsets(.init(top: 16, leading: 20, bottom: 4, trailing: 20))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+            #endif
 
             if isExpanded {
                 if occurrences.isEmpty && !isMultiSelecting {
@@ -41,9 +46,13 @@ struct CalendarPeriodSection: View {
                         target: creationTarget,
                         creationBehavior: creationBehavior
                     )
+                    #if os(macOS)
+                    .padding(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    #else
                     .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    #endif
                 }
 
                 ForEach(occurrences) { occurrence in
@@ -58,9 +67,13 @@ struct CalendarPeriodSection: View {
                         displayDate: date,
                         occurrenceDate: occurrence.occurrenceDate
                     )
+                    #if os(macOS)
+                    .padding(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    #else
                     .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    #endif
                 }
             }
         }

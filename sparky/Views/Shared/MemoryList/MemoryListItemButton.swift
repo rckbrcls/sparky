@@ -62,6 +62,12 @@ struct MemoryListItemButton: View {
             }
         }
         .buttonStyle(.plain)
+        .contentShape(.interaction, RoundedRectangle(cornerRadius: 24))
+        #if os(macOS)
+        .contentShape(.focusEffect, RoundedRectangle(cornerRadius: 24))
+        #else
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 24))
+        #endif
         .disabled(isDisabled)
         .alert("End Recurrence?", isPresented: $showRecurringCompletionAlert) {
             Button("Complete", role: .destructive) {

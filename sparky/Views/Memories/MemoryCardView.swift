@@ -302,7 +302,21 @@ struct MemoryCardView: View {
             }
         }
         .cardStyle()
-        .contentShape(Rectangle())
+        #if os(macOS)
+        .overlay {
+            if isContextMenuEnabled {
+                MemoryContextMenuHighlight()
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        #endif
+        .contentShape(.interaction, RoundedRectangle(cornerRadius: 24))
+        #if os(macOS)
+        .contentShape(.focusEffect, RoundedRectangle(cornerRadius: 24))
+        #else
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 24))
+        #endif
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription(for: memory))
         .alert("End Recurrence?", isPresented: $showRecurringCompletionAlert) {

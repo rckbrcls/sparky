@@ -26,34 +26,55 @@ struct CalendarDayContentView: View {
     private let calendar = Calendar.current
 
     var body: some View {
+        dayScrollContent
+            .scrollIndicators(scrollIndicatorVisibility)
+            .safeAreaInset(edge: .bottom) {
+                if bottomContentInset > 0 {
+                    Color.clear.frame(height: bottomContentInset)
+                }
+            }
+            .onAppear {
+                onEnsureMonthDataLoaded(day)
+            }
+    }
+    @ViewBuilder
+    private var dayScrollContent: some View {
+        #if os(macOS)
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                dayRows
+            }
+        }
+        #else
         List {
-            if showsDayHeader {
-                dayHeader
-                    .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            }
-
-            let memories = dataManager.memoriesForDate(day)
-            let allDayItems = allDayOccurrences(from: memories, date: day)
-
-            allDaySection(occurrences: allDayItems)
-
-            ForEach(CalendarTimePeriod.allCases.filter { $0 != .allDay }, id: \.self) { period in
-                periodSection(period: period, memories: memories)
-            }
+            dayRows
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .scrollIndicators(scrollIndicatorVisibility)
         .environment(\.defaultMinListRowHeight, 0)
-        .safeAreaInset(edge: .bottom) {
-            if bottomContentInset > 0 {
-                Color.clear.frame(height: bottomContentInset)
-            }
+        #endif
+    }
+
+    @ViewBuilder
+    private var dayRows: some View {
+        if showsDayHeader {
+            dayHeader
+                #if os(macOS)
+                .padding(.vertical, 24)
+                #else
+                .listRowInsets(.init(top: 24, leading: 0, bottom: 24, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                #endif
         }
-        .onAppear {
-            onEnsureMonthDataLoaded(day)
+
+        let memories = dataManager.memoriesForDate(day)
+        let allDayItems = allDayOccurrences(from: memories, date: day)
+
+        allDaySection(occurrences: allDayItems)
+
+        ForEach(CalendarTimePeriod.allCases.filter { $0 != .allDay }, id: \.self) { period in
+            periodSection(period: period, memories: memories)
         }
     }
 
