@@ -19,8 +19,9 @@ struct DesktopNavigationStateTests {
     func defaultsAndDeepLinkDestination() {
         let state = DesktopNavigationState()
 
-        #expect(DesktopCalendarMode.allCases == [.day, .month])
+        #expect(DesktopCalendarMode.allCases == [.day, .week, .month])
         #expect(DesktopCalendarMode.day.title == "Day")
+        #expect(DesktopCalendarMode.week.title == "Week")
         #expect(DesktopCalendarMode.month.title == "Month")
         #expect(state.calendarMode == .day)
         state.selectedSection = .focus

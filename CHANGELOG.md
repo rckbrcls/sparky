@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.0.27] - 2026-10-03
+
+### Added
+
+- Mac calendar Week, between Day and Month. The seven columns follow the system's first weekday. The day headers and the all-day band stay fixed, and the hours scroll.
+- Timed memories appear as compact cards on the hour grid, using the same surface as the day cards: tertiary background, border, a mind-color bar, the title, and the time. A card is at least one hour tall and starts at the fire minute, so 10:30 begins halfway through the 10:00 row. Schedules still have no end time.
+- Hourly or minutely repeats of the same memory on one day collapse into one card, from the first time to the last, instead of filling the column. Overlapping cards share the column width.
+- All-day memories stay in the top band, with the mind color and title. More than three in a day use the same overflow as the month.
+- Clicking an empty hour creates a memory at that exact hour. Clicking the day number opens Day. Previous and next move seven days. Today jumps to today and keeps the current mode.
+- A line marks the current time when the visible week contains today. Opening that week scrolls to about an hour before now. Any other week opens at 7:00.
+- When the week crosses two months, the header shows the range, such as July – August. A week that also crosses the year includes both years.
+
+### Preserved
+
+- The iPhone calendar is unchanged.
+- Day and Month keep their current layout. The week reuses the month editor popover and the same quick-create schedule draft.
+
+### Validation
+
+- The Mac target compiled.
+- Week layout, navigation, title, and exact-hour creation tests were added. The suite was not run.
+
 ## [0.0.26] - 2026-10-03
 
 ### Fixed

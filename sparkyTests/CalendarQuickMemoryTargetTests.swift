@@ -86,6 +86,21 @@ struct CalendarQuickMemoryTargetTests {
         #expect(draft.startDate == draft.fireDate)
     }
 
+    @Test("Exact hour keeps the selected time instead of the period suggestion")
+    func exactHourSchedule() {
+        let fireDate = makeDate(year: 2026, month: 7, day: 27, hour: 10)
+        let target = CalendarQuickMemoryTarget(exact: fireDate, calendar: calendar)
+        let draft = target.scheduleDraft(calendar: calendar)
+
+        #expect(!target.isAllDay)
+        #expect(target.period == .morning)
+        #expect(draft.isActive)
+        #expect(!draft.isAllDay)
+        #expect(draft.recurrenceRule == nil)
+        #expect(draft.fireDate == fireDate)
+        #expect(draft.startDate == fireDate)
+    }
+
     @Test("Month all-day target retains the selected day")
     func monthAllDayTarget() {
         let target = CalendarQuickMemoryTarget(

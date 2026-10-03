@@ -3,27 +3,24 @@
 import SwiftUI
 
 struct DesktopCalendarHeader: View {
-    let anchorDate: Date
+    let title: DesktopCalendarTitle
     let onPrevious: () -> Void
     let onToday: () -> Void
     let onNext: () -> Void
 
-    private var month: String {
-        anchorDate.formatted(.dateTime.month(.wide))
-    }
-
-    private var year: String {
-        anchorDate.formatted(.dateTime.year())
-    }
-
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(month)
+                Text(title.leading)
                     .font(.system(size: 40, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
-                Text(year)
-                    .font(.system(size: 40, weight: .light))
+                if !title.trailing.isEmpty {
+                    Text(title.trailing)
+                        .font(.system(size: 40, weight: .light))
+                        .lineLimit(1)
+                }
             }
             .accessibilityElement(children: .combine)
 

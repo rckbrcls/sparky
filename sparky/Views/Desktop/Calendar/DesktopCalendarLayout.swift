@@ -1,5 +1,10 @@
 import Foundation
 
+struct DesktopCalendarTitle: Equatable {
+    var leading: String
+    var trailing: String
+}
+
 struct DesktopCalendarLayout {
     nonisolated static let visibleMonthDayCount = 42
 
@@ -43,8 +48,71 @@ struct DesktopCalendarLayout {
         direction: Int,
         calendar: Calendar = .current
     ) -> Date {
-        let component: Calendar.Component = mode == .day ? .day : .month
-        return calendar.date(byAdding: component, value: direction, to: date) ?? date
+        switch mode {
+        case .day:
+            return calendar.date(byAdding: .day, value: direction, to: date) ?? date
+        case .week:
+            return calendar.date(byAdding: .day, value: direction * 7, to: date) ?? date
+        case .month:
+            return calendar.date(byAdding: .month, value: direction, to: date) ?? date
+        }
+    }
+
+    nonisolated static func title(
+        for anchorDate: Date,
+        mode: DesktopCalendarMode,
+        calendar: Calendar = .current
+    ) -> DesktopCalendarTitle {
+        switch mode {
+        case .day, .month:
+            return DesktopCalendarTitle(
+                leading: monthName(anchorDate, calendar: calendar),
+                trailing: yearName(anchorDate, calendar: calendar)
+            )
+        case .week:
+            let dates = weekDates(containing: anchorDate, calendar: calendar)
+            guard let first = dates.first, let last = dates.last else {
+                return DesktopCalendarTitle(
+                    leading: monthName(anchorDate, calendar: calendar),
+                    trailing: yearName(anchorDate, calendar: calendar)
+                )
+            }
+
+            if calendar.isDate(first, equalTo: last, toGranularity: .month) {
+                return DesktopCalendarTitle(
+                    leading: monthName(first, calendar: calendar),
+                    trailing: yearName(first, calendar: calendar)
+                )
+            }
+
+            if calendar.isDate(first, equalTo: last, toGranularity: .year) {
+                return DesktopCalendarTitle(
+                    leading: "\(monthName(first, calendar: calendar)) – \(monthName(last, calendar: calendar))",
+                    trailing: yearName(first, calendar: calendar)
+                )
+            }
+
+            return DesktopCalendarTitle(
+                leading: "\(monthName(first, calendar: calendar)) \(yearName(first, calendar: calendar)) – \(monthName(last, calendar: calendar)) \(yearName(last, calendar: calendar))",
+                trailing: ""
+            )
+        }
+    }
+
+    private nonisolated static func monthName(_ date: Date, calendar: Calendar) -> String {
+        date.formatted(
+            .dateTime
+                .month(.wide)
+                .locale(calendar.locale ?? .autoupdatingCurrent)
+        )
+    }
+
+    private nonisolated static func yearName(_ date: Date, calendar: Calendar) -> String {
+        date.formatted(
+            .dateTime
+                .year()
+                .locale(calendar.locale ?? .autoupdatingCurrent)
+        )
     }
 
     nonisolated static func monthsNeeded(
@@ -69,6 +137,8 @@ struct DesktopCalendarLayout {
         switch mode {
         case .day:
             visibleDates = [anchorDate]
+        case .week:
+            visibleDates = weekDates(containing: anchorDate, calendar: calendar)
         case .month:
             visibleDates = monthDates(containing: anchorDate, calendar: calendar)
         }

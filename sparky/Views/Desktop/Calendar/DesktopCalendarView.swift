@@ -28,7 +28,11 @@ struct DesktopCalendarView: View {
     var body: some View {
         VStack(spacing: 0) {
             DesktopCalendarHeader(
-                anchorDate: anchorDate,
+                title: DesktopCalendarLayout.title(
+                    for: anchorDate,
+                    mode: mode,
+                    calendar: calendar
+                ),
                 onPrevious: { move(by: -1) },
                 onToday: { anchorDate = Date() },
                 onNext: { move(by: 1) }
@@ -40,6 +44,12 @@ struct DesktopCalendarView: View {
                     dataManager: dataManager,
                     anchorDate: $anchorDate,
                     onSelect: onSelect
+                )
+            case .week:
+                DesktopWeekCalendarView(
+                    dataManager: dataManager,
+                    anchorDate: anchorDate,
+                    onOpenDay: openDay
                 )
             case .month:
                 DesktopMonthCalendarView(
