@@ -11,6 +11,8 @@ struct MemoryListItemButton: View {
     var displayDate: Date?
     /// Optional specific occurrence date for intra-day recurring memories (e.g. hourly)
     var occurrenceDate: Date?
+    /// End of a collapsed intra-day range shown in the schedule badge.
+    var occurrenceRangeEnd: Date?
 
     @EnvironmentObject private var environment: AppEnvironment
     @State private var showRecurringCompletionAlert = false
@@ -42,7 +44,7 @@ struct MemoryListItemButton: View {
         } label: {
             // Pass context menu callbacks only when not in multi-selecting or disabled mode
             if isMultiSelecting || isDisabled {
-                MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService, displayDate: displayDate, occurrenceDate: occurrenceDate)
+                MemoryCardView(memoryID: memory.id, memoryService: environment.memoryService, displayDate: displayDate, occurrenceDate: occurrenceDate, occurrenceRangeEnd: occurrenceRangeEnd)
                     .overlay(Color.white.opacity(0.001))
                     .overlay(selectionOverlay)
             } else {
@@ -51,6 +53,7 @@ struct MemoryListItemButton: View {
                     memoryService: environment.memoryService,
                     displayDate: displayDate,
                     occurrenceDate: occurrenceDate,
+                    occurrenceRangeEnd: occurrenceRangeEnd,
                     onTogglePin: { Task { await toggleMemoryPin() } },
                     onToggleCompletion: { Task { await toggleMemoryCompletion() } },
                     onDelete: { Task { await deleteMemory() } },

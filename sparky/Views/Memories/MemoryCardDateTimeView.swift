@@ -11,6 +11,8 @@ struct MemoryCardDateTimeView: View {
     let trigger: ScheduleConfig
     let isCompletedForDisplay: Bool
     var occurrenceDate: Date?
+    /// When set, the badge shows the span from `occurrenceDate` through this time.
+    var occurrenceRangeEnd: Date? = nil
     /// When set (e.g. calendar day list), omit the calendar date from the badge.
     var displayDate: Date? = nil
 
@@ -30,7 +32,7 @@ struct MemoryCardDateTimeView: View {
                 parts.append("All day")
             }
         } else {
-            parts.append(date.formatted(date: .omitted, time: .shortened))
+            parts.append(timeText(for: date))
             if displayDate == nil {
                 parts.append(date.formatted(date: .abbreviated, time: .omitted))
             }
@@ -41,6 +43,14 @@ struct MemoryCardDateTimeView: View {
         }
 
         return parts.joined(separator: " · ")
+    }
+
+    private func timeText(for date: Date) -> String {
+        let start = date.formatted(date: .omitted, time: .shortened)
+        guard let occurrenceRangeEnd else { return start }
+        let end = occurrenceRangeEnd.formatted(date: .omitted, time: .shortened)
+        guard end != start else { return start }
+        return "\(start)–\(end)"
     }
 
     private var recurrenceString: String? {

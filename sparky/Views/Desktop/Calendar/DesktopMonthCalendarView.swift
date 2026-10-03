@@ -36,7 +36,9 @@ struct DesktopMonthCalendarView: View {
                         DesktopMonthDayCell(
                             date: day,
                             isInDisplayedMonth: calendar.isDate(day, equalTo: anchorDate, toGranularity: .month),
-                            occurrences: dataManager.occurrencesForDate(day),
+                            occurrences: CalendarPeriodEntries.monthItems(
+                                from: dataManager.occurrencesForDate(day)
+                            ),
                             onOpenDay: onOpenDay
                         )
                         .frame(height: rowHeight)

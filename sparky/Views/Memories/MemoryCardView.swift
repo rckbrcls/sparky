@@ -17,6 +17,8 @@ struct MemoryCardView: View {
 
     /// Optional specific occurrence date for intra-day recurring memories (e.g. hourly)
     var occurrenceDate: Date?
+    /// End of a collapsed intra-day range shown in the schedule badge.
+    var occurrenceRangeEnd: Date?
 
     // Context menu action callbacks (optional - if nil, context menu is disabled)
     var onTogglePin: (() -> Void)?
@@ -36,6 +38,7 @@ struct MemoryCardView: View {
         memoryService: MemoryService,
         displayDate: Date? = nil,
         occurrenceDate: Date? = nil,
+        occurrenceRangeEnd: Date? = nil,
         onTogglePin: (() -> Void)? = nil,
         onToggleCompletion: (() -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
@@ -46,6 +49,7 @@ struct MemoryCardView: View {
         self._memoryService = ObservedObject(wrappedValue: memoryService)
         self.displayDate = displayDate
         self.occurrenceDate = occurrenceDate
+        self.occurrenceRangeEnd = occurrenceRangeEnd
         self.onTogglePin = onTogglePin
         self.onToggleCompletion = onToggleCompletion
         self.onDelete = onDelete
@@ -213,6 +217,7 @@ struct MemoryCardView: View {
                                 trigger: scheduledTrigger,
                                 isCompletedForDisplay: isCompletedForDisplay,
                                 occurrenceDate: occurrenceDate,
+                                occurrenceRangeEnd: occurrenceRangeEnd,
                                 displayDate: displayDate
                             )
                         }

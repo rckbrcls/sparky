@@ -21,11 +21,15 @@ struct CalendarPeriodSection: View {
     let creationTarget: CalendarQuickMemoryTarget
     let creationBehavior: CalendarMemoryCreationBehavior
 
+    private var entries: [CalendarPeriodEntry] {
+        CalendarPeriodEntries.make(from: occurrences)
+    }
+
     var body: some View {
         Section {
             CalendarPeriodHeaderButton(
                 period: period,
-                count: occurrences.count,
+                count: entries.count,
                 isExpanded: isExpanded,
                 onToggle: onToggleExpanded
             )
@@ -39,7 +43,7 @@ struct CalendarPeriodSection: View {
             #endif
 
             if isExpanded {
-                if occurrences.isEmpty && !isMultiSelecting {
+                if entries.isEmpty && !isMultiSelecting {
                     CalendarEmptyPeriodButton(
                         period: period,
                         target: creationTarget,
@@ -54,17 +58,8 @@ struct CalendarPeriodSection: View {
                     #endif
                 }
 
-                ForEach(occurrences) { occurrence in
-                    MemoryListItemButton(
-                        memory: occurrence.memory,
-                        isMultiSelecting: isMultiSelecting,
-                        isSelected: selectedMemoryIDs.contains(occurrence.memory.id),
-                        isDisabled: isPerformingBulkAction,
-                        onSelect: onSelectMemory,
-                        onToggleSelection: onToggleSelection,
-                        displayDate: date,
-                        occurrenceDate: occurrence.occurrenceDate
-                    )
+                ForEach(entries) { entry in
+                    periodEntry(entry)
                     #if os(macOS)
                     .padding(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                     #else
@@ -74,6 +69,35 @@ struct CalendarPeriodSection: View {
                     #endif
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func periodEntry(_ entry: CalendarPeriodEntry) -> some View {
+        switch entry {
+        case .single(let occurrence):
+            MemoryListItemButton(
+                memory: occurrence.memory,
+                isMultiSelecting: isMultiSelecting,
+                isSelected: selectedMemoryIDs.contains(occurrence.memory.id),
+                isDisabled: isPerformingBulkAction,
+                onSelect: onSelectMemory,
+                onToggleSelection: onToggleSelection,
+                displayDate: date,
+                occurrenceDate: occurrence.occurrenceDate
+            )
+        case .series(let series):
+            MemoryListItemButton(
+                memory: series.memory,
+                isMultiSelecting: isMultiSelecting,
+                isSelected: selectedMemoryIDs.contains(series.memory.id),
+                isDisabled: isPerformingBulkAction,
+                onSelect: onSelectMemory,
+                onToggleSelection: onToggleSelection,
+                displayDate: date,
+                occurrenceDate: series.rangeStart,
+                occurrenceRangeEnd: series.rangeEnd
+            )
         }
     }
 }
