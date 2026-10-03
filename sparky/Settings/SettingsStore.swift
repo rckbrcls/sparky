@@ -12,7 +12,8 @@ import Combine
 final class SettingsStore: ObservableObject {
     private enum Keys {
         static let timelineFilter = "settings.defaultTimelineFilter"
-        static let notificationSound = "settings.notificationSoundEnabled"
+        static let notificationSoundEnabled = "settings.notificationSoundEnabled"
+        static let notificationSoundName = "settings.notificationSoundName"
         static let onboardingCompleted = "settings.onboardingCompleted"
         static let userDisplayName = "settings.userDisplayName"
     }
@@ -25,9 +26,9 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    @Published var notificationSoundEnabled: Bool {
+    @Published var notificationSound: MemoryNotificationSound {
         didSet {
-            defaults.set(notificationSoundEnabled, forKey: Keys.notificationSound)
+            defaults.set(notificationSound.rawValue, forKey: Keys.notificationSoundName)
         }
     }
 
@@ -50,13 +51,26 @@ final class SettingsStore: ObservableObject {
         let filter = MemoryTimelineFilter(storageKey: storedFilter) ?? .today
         self.defaultTimelineFilter = filter
 
-        if defaults.object(forKey: Keys.notificationSound) == nil {
-            defaults.set(true, forKey: Keys.notificationSound)
-        }
-        self.notificationSoundEnabled = defaults.bool(forKey: Keys.notificationSound)
+        let sound = Self.resolvedNotificationSound(in: defaults)
+        self.notificationSound = sound
+        defaults.set(sound.rawValue, forKey: Keys.notificationSoundName)
 
         self.hasCompletedOnboarding = defaults.bool(forKey: Keys.onboardingCompleted)
 
         self.userDisplayName = defaults.string(forKey: Keys.userDisplayName) ?? ""
+    }
+
+    private static func resolvedNotificationSound(in defaults: UserDefaults) -> MemoryNotificationSound {
+        if let stored = defaults.string(forKey: Keys.notificationSoundName),
+           let choice = MemoryNotificationSound(rawValue: stored) {
+            return choice
+        }
+
+        if defaults.object(forKey: Keys.notificationSoundEnabled) != nil,
+           defaults.bool(forKey: Keys.notificationSoundEnabled) == false {
+            return .none
+        }
+
+        return .systemDefault
     }
 }

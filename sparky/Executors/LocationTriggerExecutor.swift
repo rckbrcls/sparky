@@ -154,7 +154,7 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
                     : "You are leaving the reminder area."
             }
 
-            content.sound = settings.notificationSoundEnabled ? .default : nil
+            content.sound = settings.notificationSound.notificationSound
             content.categoryIdentifier = NotificationCategoryID.reminderActions
             content.threadIdentifier = info.memoryID.uuidString
             content.userInfo = [NotificationUserInfoKey.memoryID: info.memoryID.uuidString]

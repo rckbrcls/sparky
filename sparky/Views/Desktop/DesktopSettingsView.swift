@@ -7,6 +7,7 @@ struct DesktopSettingsView: View {
 
     private enum Pane: String, CaseIterable, Identifiable {
         case appearance = "Appearance"
+        case notifications = "Notifications"
         case focus = "Focus"
         case mcp = "MCP"
         case advanced = "Advanced"
@@ -16,6 +17,7 @@ struct DesktopSettingsView: View {
         var symbol: String {
             switch self {
             case .appearance: "circle.lefthalf.filled"
+            case .notifications: "bell"
             case .focus: "timer"
             case .mcp: "server.rack"
             case .advanced: "gearshape.2"
@@ -53,6 +55,8 @@ struct DesktopSettingsView: View {
         switch selection {
         case .appearance:
             ThemeSettingsView()
+        case .notifications:
+            NotificationSettingsView(settings: environment.settings)
         case .focus:
             FocusSettingsView(
                 settings: environment.focusSettings,

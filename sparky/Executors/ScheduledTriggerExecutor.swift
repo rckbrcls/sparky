@@ -107,7 +107,7 @@ final class ScheduledTriggerExecutor: TriggerExecutorProtocol {
         if let body = memory.body, !body.isEmpty {
             content.body = body
         }
-        content.sound = settings.notificationSoundEnabled ? .default : nil
+        content.sound = settings.notificationSound.notificationSound
         content.categoryIdentifier = focusEnabled
             ? NotificationCategoryID.scheduleFocusActions
             : NotificationCategoryID.reminderActions
