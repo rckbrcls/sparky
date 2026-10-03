@@ -150,6 +150,13 @@ struct DesktopRootView: View {
         }
         .toolbar(removing: .title)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .background {
+            DesktopMainWindowMarker()
+        }
+        .onAppear {
+            handlePendingMemoryOpen(environment.pendingMemoryOpenRequest)
+            handlePendingFocusOpen(environment.pendingFocusOpenRequest)
+        }
         .onChange(of: nav.selectedSection) { _, section in
             if section != .calendar && section != .mind {
                 nav.isSearchPresented = false
@@ -235,15 +242,30 @@ struct DesktopRootView: View {
 
     private func handlePendingMemoryOpen(_ request: PendingMemoryOpenRequest?) {
         guard let request, environment.hasBootstrapped else { return }
-        environment.pendingMemoryOpenRequest = nil
 
-        guard let memory = environment.memoryService.memory(id: request.memoryID) else {
+        guard environment.memoryService.memory(id: request.memoryID) != nil else {
+            environment.pendingMemoryOpenRequest = nil
             nav.handleMissingMemory()
             return
         }
 
+        environment.pendingMemoryOpenRequest = nil
+        nav.isSearchPresented = false
+        nav.mindComposerRequest = nil
+        createMemoryRoute = nil
+        createMindRequest = nil
         nav.selectedSection = .calendar
-        nav.editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+
+        let memoryID = request.memoryID
+        let navigation = nav
+        let memoryService = environment.memoryService
+        Task { @MainActor in
+            guard let memory = memoryService.memory(id: memoryID) else {
+                navigation.handleMissingMemory()
+                return
+            }
+            navigation.editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
+        }
     }
 
     private func handlePendingFocusOpen(_ request: PendingFocusOpenRequest?) {

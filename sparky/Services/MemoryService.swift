@@ -34,7 +34,7 @@ final class MemoryService: ObservableObject {
     @Published private(set) var memories: [Memory] = []
     @Published private(set) var lastRefreshed: Date?
 
-    var triggerExecutorCoordinator: TriggerExecutorCoordinator?
+    var triggerExecutorCoordinator: (any TriggerSyncing)?
 
     private let dataController: DataController
     private let mindService: MindService

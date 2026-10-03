@@ -28,7 +28,7 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
     private var monitoredIdentifiers: Set<String> = []
     private var memoryLookup: [String: MonitoredMemoryInfo] = [:]
     @Published private(set) var activeGeofenceCount: Int = 0
-    static let maxGeofences = 20
+    static let maxGeofences = LocationGeofencePlanner.maxGeofences
 
     init(settings: SettingsStore) {
         self.settings = settings
@@ -48,7 +48,7 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
     }
 
     func unregister(triggerID: UUID, for memoryID: UUID) async {
-        let identifier = identifier(memoryID: memoryID, triggerID: triggerID)
+        let identifier = LocationGeofencePlanner.identifier(memoryID: memoryID, triggerID: triggerID)
         if let region = locationManager.monitoredRegions.first(where: { $0.identifier == identifier }) {
             locationManager.stopMonitoring(for: region)
         }
@@ -74,19 +74,8 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
 
     func sync(memories: [Memory]) async {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
-        let locationConfigs: [(Memory, LocationConfig)] = memories
-            .filter { $0.status == .active }
-            .compactMap { memory in
-                guard let config = memory.locationConfig, config.isActive, config.radius > 0 else { return nil }
-                return (memory, config)
-            }
-            .sorted { lhs, rhs in
-                (lhs.0.updatedAt ?? Date.distantPast) > (rhs.0.updatedAt ?? Date.distantPast)
-            }
-            .prefix(Self.maxGeofences)
-            .map { $0 }
-
-        let desiredIdentifiers = Set(locationConfigs.map { identifier(memoryID: $0.0.id, triggerID: $0.1.id) })
+        let regions = LocationGeofencePlanner.regions(for: memories)
+        let desiredIdentifiers = Set(regions.map(\.identifier))
 
         // Remove stale regions
         for identifier in monitoredIdentifiers.subtracting(desiredIdentifiers) {
@@ -98,38 +87,33 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
         }
 
         // Add new regions
-        for (memory, config) in locationConfigs {
-            let id = identifier(memoryID: memory.id, triggerID: config.id)
-
+        for plan in regions {
             // Always update memory info so notifications stay current
-            memoryLookup[id] = MonitoredMemoryInfo(
-                memoryID: memory.id,
-                title: memory.title,
-                body: memory.body,
-                locationName: config.name
+            memoryLookup[plan.identifier] = MonitoredMemoryInfo(
+                memoryID: plan.memoryID,
+                title: plan.title,
+                body: plan.body,
+                locationName: plan.locationName
             )
 
-            if monitoredIdentifiers.contains(id) { continue }
+            if monitoredIdentifiers.contains(plan.identifier) { continue }
 
-            let region = CLCircularRegion(center: CLLocationCoordinate2D(latitude: config.latitude,
-                                                                         longitude: config.longitude),
-                                          radius: min(config.radius, 1000),
-                                          identifier: id)
-            region.notifyOnEntry = config.event == .onEntry
-            region.notifyOnExit = config.event == .onExit
+            let region = CLCircularRegion(
+                center: CLLocationCoordinate2D(latitude: plan.latitude, longitude: plan.longitude),
+                radius: plan.radius,
+                identifier: plan.identifier
+            )
+            region.notifyOnEntry = plan.notifyOnEntry
+            region.notifyOnExit = plan.notifyOnExit
 
             locationManager.startMonitoring(for: region)
-            monitoredIdentifiers.insert(id)
+            monitoredIdentifiers.insert(plan.identifier)
         }
 
         activeGeofenceCount = monitoredIdentifiers.count
     }
 
     // MARK: - Private
-
-    private func identifier(memoryID: UUID, triggerID: UUID) -> String {
-        "memory-\(memoryID.uuidString)-location-\(triggerID.uuidString)"
-    }
 
     private func handle(region: CLRegion, didEnter: Bool) {
         guard let info = memoryLookup[region.identifier] else { return }
@@ -139,19 +123,16 @@ final class LocationTriggerExecutor: NSObject, ObservableObject, TriggerExecutor
             let content = UNMutableNotificationContent()
             content.title = info.title
 
-            let locationName = info.validLocationName
-            if let locationName {
-                content.subtitle = didEnter
-                    ? "Arriving at \(locationName)"
-                    : "Leaving \(locationName)"
+            let copy = LocationGeofencePlanner.reminderCopy(
+                didEnter: didEnter,
+                locationName: info.locationName,
+                body: info.body
+            )
+            if let subtitle = copy.subtitle {
+                content.subtitle = subtitle
             }
-
-            if let body = info.body, !body.isEmpty {
+            if let body = copy.body {
                 content.body = body
-            } else if locationName != nil {
-                content.body = didEnter
-                    ? "You have a reminder for this location."
-                    : "You are leaving the reminder area."
             }
 
             content.sound = settings.notificationSound.notificationSound
@@ -177,15 +158,6 @@ private extension LocationTriggerExecutor {
         let title: String
         let body: String?
         let locationName: String?
-
-        var validLocationName: String? {
-            guard let name = locationName,
-                  !name.isEmpty,
-                  name != "Select a location" else {
-                return nil
-            }
-            return name
-        }
     }
 }
 

@@ -7,6 +7,15 @@
 
 import Foundation
 
+/// Sync and unregister surface used by MemoryService.
+/// Tests can substitute a recorder without touching the system executors.
+@MainActor
+protocol TriggerSyncing: AnyObject {
+    func unregister(triggerID: UUID, for memoryID: UUID) async
+    func unregisterAll(for memoryID: UUID) async
+    func sync(memories: [Memory]) async
+}
+
 /// Protocol for trigger executors
 protocol TriggerExecutorProtocol {
     /// Remove a specific trigger

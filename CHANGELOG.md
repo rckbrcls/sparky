@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.0.24] - 2026-10-03
+
+### Fixed
+
+- Advance a weekday reminder to the next selected day when that day's time has already passed. A bounded weekday series was scheduling the same instant up to 48 times instead of stopping at the series end.
+
+### Added
+
+- Decide scheduled notifications and location geofences in planners, then let the executors apply that plan. The suites cover one-time and repeating schedules, weekday masks, focus notifications, geofence selection, arrival and departure copy, and the create, update, duplicate, complete, delete, and reactivate lifecycle.
+- Bring the main Mac window forward when a memory or Focus notification is waiting, including a cold launch. The main scene has a stable identifier so Settings and Logs stay out of the way.
+
+### Preserved
+
+- Notification permission, the notification center, and GPS monitoring stay in the executors. Mac still does not arm geofences.
+- Completing a memory still unregisters its triggers before the following sync. Reactivating a memory only syncs.
+
+### Validation
+
+- `ScheduleOccurrenceTests`, `ScheduledTriggerPlannerTests`, `LocationGeofencePlannerTests`, and `TriggerSyncLifecycleTests` passed on the iOS Simulator (iPhone 17).
+- The Mac window reveal was not exercised in this pass.
+
 ## [0.0.23] - 2026-10-02
 
 ### Fixed

@@ -10,7 +10,7 @@ import Foundation
 /// Coordinator that manages trigger executors.
 /// Location/geofence execution is optional (iOS only in v1 multiplatform).
 @MainActor
-final class TriggerExecutorCoordinator {
+final class TriggerExecutorCoordinator: TriggerSyncing {
     private let scheduledExecutor: ScheduledTriggerExecutor
     #if os(iOS)
     private let locationExecutor: LocationTriggerExecutor

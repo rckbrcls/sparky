@@ -116,13 +116,13 @@ extension ScheduleConfig {
 // MARK: - Date Calculations
 
 extension ScheduleConfig {
-    nonisolated func nextFireDate(after reference: Date = Date()) -> Date? {
-        return nextScheduledOccurrence(from: reference)
+    nonisolated func nextFireDate(after reference: Date = Date(), calendar: Calendar = .current) -> Date? {
+        return nextScheduledOccurrence(from: reference, calendar: calendar)
     }
 
-    nonisolated private func nextScheduledOccurrence(from reference: Date) -> Date? {
+    nonisolated private func nextScheduledOccurrence(from reference: Date, calendar: Calendar) -> Date? {
         if weekdayMask != 0 {
-            return nextWeekdayOccurrence(from: reference)
+            return nextWeekdayOccurrence(from: reference, calendar: calendar)
         }
 
         guard let fireDate = fireDate else {
@@ -130,15 +130,14 @@ extension ScheduleConfig {
         }
 
         if let recurrence = recurrenceRule {
-            return nextRecurrenceDate(from: reference, fireDate: fireDate, recurrence: recurrence)
+            return nextRecurrenceDate(from: reference, fireDate: fireDate, recurrence: recurrence, calendar: calendar)
         }
 
         return fireDate >= reference ? fireDate : nil
     }
 
-    nonisolated func effectiveEndDate(fireDate: Date, recurrence: RecurrenceRule) -> Date? {
+    nonisolated func effectiveEndDate(fireDate: Date, recurrence: RecurrenceRule, calendar: Calendar = .current) -> Date? {
         if let count = recurrence.occurrenceCount, count > 0 {
-            let calendar = Calendar.current
             let component = recurrence.frequency.calendarComponent
             let totalIntervals = (count - 1) * recurrence.interval
             return calendar.date(byAdding: component, value: totalIntervals, to: fireDate)
@@ -146,9 +145,8 @@ extension ScheduleConfig {
         return recurrence.endDate
     }
 
-    nonisolated private func nextRecurrenceDate(from reference: Date, fireDate: Date, recurrence: RecurrenceRule) -> Date? {
-        let calendar = Calendar.current
-        let endDate = effectiveEndDate(fireDate: fireDate, recurrence: recurrence) ?? recurrence.endDate
+    nonisolated private func nextRecurrenceDate(from reference: Date, fireDate: Date, recurrence: RecurrenceRule, calendar: Calendar) -> Date? {
+        let endDate = effectiveEndDate(fireDate: fireDate, recurrence: recurrence, calendar: calendar) ?? recurrence.endDate
 
         if let endDate, reference > endDate {
             return nil
@@ -221,9 +219,8 @@ extension ScheduleConfig {
         }
     }
 
-    nonisolated private func nextWeekdayOccurrence(from reference: Date) -> Date? {
+    nonisolated private func nextWeekdayOccurrence(from reference: Date, calendar: Calendar) -> Date? {
         guard weekdayMask != 0 else { return fireDate ?? startDate }
-        let calendar = Calendar.current
         let targetDays = (1...7).compactMap { day -> Int? in
             let bit = 1 << day
             return (weekdayMask & Int16(bit)) != 0 ? day : nil
@@ -231,7 +228,8 @@ extension ScheduleConfig {
 
         guard !targetDays.isEmpty else { return fireDate ?? startDate }
 
-        for dayOffset in 0..<7 {
+        // Include the same weekday next week when today's time is already behind the reference.
+        for dayOffset in 0...7 {
             let candidate = calendar.date(byAdding: .day, value: dayOffset, to: reference) ?? reference
             let weekday = calendar.component(.weekday, from: candidate)
             if targetDays.contains(weekday) {
@@ -242,21 +240,25 @@ extension ScheduleConfig {
                                                          second: timeComponents.second ?? 0,
                                                          of: candidate) {
                         let start = startDate ?? dateWithTime
-                        return dateWithTime < start ? start : dateWithTime
+                        let resolved = dateWithTime < start ? start : dateWithTime
+                        if resolved < reference { continue }
+                        return resolved
                     }
                 }
                 let start = startDate ?? candidate
-                return candidate < start ? start : candidate
+                let resolved = candidate < start ? start : candidate
+                if resolved < reference { continue }
+                return resolved
             }
         }
 
-        return fireDate ?? startDate
+        return nil
     }
 
     /// Returns all occurrence dates within the specified date range
-    nonisolated func dates(from startDate: Date, to endDate: Date) -> [Date] {
+    nonisolated func dates(from startDate: Date, to endDate: Date, calendar: Calendar = .current) -> [Date] {
         if weekdayMask != 0 {
-            return weekdayOccurrences(from: startDate, to: endDate)
+            return weekdayOccurrences(from: startDate, to: endDate, calendar: calendar)
         }
 
         guard let fireDate = fireDate else {
@@ -267,7 +269,7 @@ extension ScheduleConfig {
         }
 
         if let recurrence = recurrenceRule {
-            return recurrenceDates(from: startDate, to: endDate, fireDate: fireDate, recurrence: recurrence)
+            return recurrenceDates(from: startDate, to: endDate, fireDate: fireDate, recurrence: recurrence, calendar: calendar)
         }
 
         if fireDate >= startDate && fireDate < endDate {
@@ -277,11 +279,11 @@ extension ScheduleConfig {
         return []
     }
 
-    nonisolated func dates(within range: Range<Date>) -> [Date] {
-        return dates(from: range.lowerBound, to: range.upperBound)
+    nonisolated func dates(within range: Range<Date>, calendar: Calendar = .current) -> [Date] {
+        return dates(from: range.lowerBound, to: range.upperBound, calendar: calendar)
     }
 
-    nonisolated private func weekdayOccurrences(from startDate: Date, to endDate: Date) -> [Date] {
+    nonisolated private func weekdayOccurrences(from startDate: Date, to endDate: Date, calendar: Calendar) -> [Date] {
         guard weekdayMask != 0 else {
             if let fireDate = fireDate, fireDate >= startDate && fireDate < endDate {
                 return [fireDate]
@@ -289,7 +291,6 @@ extension ScheduleConfig {
             return []
         }
 
-        let calendar = Calendar.current
         let targetDays = (1...7).compactMap { day -> Int? in
             let bit = 1 << day
             return (weekdayMask & Int16(bit)) != 0 ? day : nil
@@ -338,10 +339,9 @@ extension ScheduleConfig {
         return occurrences
     }
 
-    nonisolated private func recurrenceDates(from startDate: Date, to endDate: Date, fireDate: Date, recurrence: RecurrenceRule) -> [Date] {
-        let calendar = Calendar.current
+    nonisolated private func recurrenceDates(from startDate: Date, to endDate: Date, fireDate: Date, recurrence: RecurrenceRule, calendar: Calendar) -> [Date] {
         var occurrences: [Date] = []
-        let effectiveEnd = effectiveEndDate(fireDate: fireDate, recurrence: recurrence)
+        let effectiveEnd = effectiveEndDate(fireDate: fireDate, recurrence: recurrence, calendar: calendar)
 
         if fireDate > endDate {
             return []

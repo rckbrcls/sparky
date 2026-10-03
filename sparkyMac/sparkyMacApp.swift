@@ -19,6 +19,7 @@ struct sparkyMacApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     private let updaterController: SPUStandardUpdaterController
+    private let notificationWindowReveal: AnyCancellable
 
     init() {
         UNUserNotificationCenter.current().delegate = AppEnvironment.notificationDelegate
@@ -29,10 +30,13 @@ struct sparkyMacApp: App {
         )
         // Daily automatic checks (matches Converge).
         updaterController.updater.updateCheckInterval = 86400
+        notificationWindowReveal = DesktopMainWindow.revealOnNotification(
+            _appEnvironment.wrappedValue
+        )
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: DesktopMainWindow.sceneID) {
             DesktopRootView(environment: appEnvironment)
                 .modelContainer(appEnvironment.dataController.container)
                 .environmentObject(appEnvironment)
