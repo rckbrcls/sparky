@@ -211,7 +211,6 @@ final class MemoryService: ObservableObject {
 
         let context = dataController.modelContext
         let now = Date()
-        let normalizedDraft = sanitizeDraft(draft)
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
@@ -244,10 +243,10 @@ final class MemoryService: ObservableObject {
 
         memory.checkItems = checkItems
 
-        if let scheduleDraft = normalizedDraft.scheduleConfig {
+        if let scheduleDraft = draft.scheduleConfig {
             memory.scheduleConfig = scheduleDraft.toModel(memory: memory)
         }
-        if let locationDraft = normalizedDraft.locationConfig {
+        if let locationDraft = draft.locationConfig {
             memory.locationConfig = locationDraft.toModel(memory: memory)
         }
 
@@ -278,7 +277,6 @@ final class MemoryService: ObservableObject {
         let context = dataController.modelContext
         let now = Date()
         let previousStatus = memory.status
-        let normalizedDraft = sanitizeDraft(draft)
 
         let mind = draft.mindID.flatMap { mindService.mind(id: $0) }
 
@@ -341,10 +339,10 @@ final class MemoryService: ObservableObject {
         }
 
         // Create new configs from draft
-        if let scheduleDraft = normalizedDraft.scheduleConfig {
+        if let scheduleDraft = draft.scheduleConfig {
             memory.scheduleConfig = scheduleDraft.toModel(memory: memory)
         }
-        if let locationDraft = normalizedDraft.locationConfig {
+        if let locationDraft = draft.locationConfig {
             memory.locationConfig = locationDraft.toModel(memory: memory)
         }
 
@@ -552,8 +550,8 @@ final class MemoryService: ObservableObject {
             } else if !allCompleted, let existing {
                 dataController.modelContext.delete(existing)
             }
-        } else if !memory.hasRecurringTriggers {
-            // Non-recurring memory: toggle global status
+        } else if !memory.hasRecurringTriggers, memory.autoCompleteOnChecklistCompletion {
+            // Non-recurring memory: toggle global status only when auto-completion is enabled
             if allCompleted && memory.status == .active {
                 memory.status = .completed
                 memory.completedAt = now
@@ -645,22 +643,9 @@ final class MemoryService: ObservableObject {
 
 }
 
-// MARK: - Draft normalization
+// MARK: - Attachment references
 
 private extension MemoryService {
-    func sanitizeDraft(_ draft: MemoryDraft) -> MemoryDraft {
-        var result = draft
-
-        if var schedule = result.scheduleConfig {
-            if !schedule.isActive {
-                schedule.focusEnabled = false
-            }
-            result.scheduleConfig = schedule
-        }
-
-        return result
-    }
-
     func buildAttachmentReferences(from draft: MemoryDraft, memory: Memory) -> [MemoryAttachmentReference] {
         let createdAtLookup = Dictionary(uniqueKeysWithValues: draft.attachments.map { ($0.id, $0.createdAt) })
 

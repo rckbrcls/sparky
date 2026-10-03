@@ -58,6 +58,17 @@ struct RecurrenceDTO: Codable {
     }
 }
 
+extension RecurrenceDTO {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        frequency = try container.decode(String.self, forKey: .frequency)
+        interval = try container.decode(Int.self, forKey: .interval)
+        weekdays = try container.decodeIfPresent([String].self, forKey: .weekdays) ?? []
+        endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
+        occurrenceCount = try container.decodeIfPresent(Int.self, forKey: .occurrenceCount)
+    }
+}
+
 struct FocusDTO: Codable {
     var enabled: Bool
     var workMinutes: Int

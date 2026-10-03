@@ -266,9 +266,9 @@ final class MemoryEditorViewModel: ObservableObject {
             ? (checkItems[index].completedAt ?? Date())
             : nil
 
-        // Sync memory status based on checklist state (non-recurring only)
+        // Sync memory status based on checklist state (non-recurring only, when enabled)
         let isRecurring = scheduleConfigDraft?.recurrenceRule != nil
-        if !isRecurring {
+        if !isRecurring, existingMemory?.autoCompleteOnChecklistCompletion == true {
             let allCompleted = checkItems.allSatisfy(\.isCompleted)
             if allCompleted && !checkItems.isEmpty && status == .active {
                 status = .completed

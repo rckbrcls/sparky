@@ -18,8 +18,8 @@ struct CalendarQuickMemoryTargetTests {
 
     @Test("Time periods retain their boundary hours")
     func timePeriodBoundaries() {
-        #expect(CalendarTimePeriod.period(containingHour: 0) == .night)
-        #expect(CalendarTimePeriod.period(containingHour: 5) == .night)
+        #expect(CalendarTimePeriod.period(containingHour: 0) == .earlyMorning)
+        #expect(CalendarTimePeriod.period(containingHour: 5) == .earlyMorning)
         #expect(CalendarTimePeriod.period(containingHour: 6) == .morning)
         #expect(CalendarTimePeriod.period(containingHour: 11) == .morning)
         #expect(CalendarTimePeriod.period(containingHour: 12) == .afternoon)

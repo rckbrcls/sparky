@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.0.22] - 2026-10-02
+
+### Fixed
+
+- Decode a remote recurrence when `weekdays` is omitted. Non-weekly schedules encode without that key, and the synthesized decoder required it, so mirror round-trips and remote updates failed for minutely, hourly, daily, monthly, and yearly. A missing `weekdays` key now decodes as an empty list. Weekly schedules still send their weekdays, and the memberwise initializer stays available because the decoder lives in an extension.
+- Complete a non-recurring memory from its checklist only when `autoCompleteOnChecklistCompletion` is on. Closing every item no longer marks the memory completed while that flag is off, in both the saved memory and the editor. Recurring occurrence completion is unchanged.
+- Keep a schedule's focus settings when the schedule is inactive. Saving a draft no longer forces `focusEnabled` off just because the schedule itself is off.
+
+### Changed
+
+- Expect hours 0 and 5 to fall in Early Morning in the calendar period test, matching the 00:00–05:59 range. Night stays 22:00–23:59. The app intervals are unchanged.
+
+### Preserved
+
+- The server still rejects `weekdays` on a non-weekly recurrence, so those payloads continue to omit the key.
+- Recurring memories still complete an occurrence when its checklist closes, including when auto-completion of the whole memory is off.
+- No data migration.
+
+### Validation
+
+- `RemoteMirrorBuilderTests`, `RemoteCommandExecutorTests`, and `CalendarQuickMemoryTargetTests` passed on the iOS Simulator (iPhone 17 Pro).
+- Browser validation was not run.
+
 ## [0.0.21] - 2026-10-02
 
 ### Added
