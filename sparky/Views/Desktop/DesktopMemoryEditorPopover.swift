@@ -19,18 +19,10 @@ struct DesktopMemoryEditorPopover: View {
                     initialScheduleConfig: route.initialScheduleConfig,
                     presentationStyle: .desktopPopover
                 )
-            case let .preview(memory):
-                MemoryEditorView(
-                    environment: environment,
-                    mode: .edit(memory: memory),
-                    startEditing: false,
-                    presentationStyle: .desktopPopover
-                )
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,
                     mode: .edit(memory: memory),
-                    startEditing: route.startEditing,
                     presentationStyle: .desktopPopover
                 )
             }

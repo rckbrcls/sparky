@@ -9,7 +9,6 @@ struct MemoryDisclosureListSection: View {
     let selectedMemoryIDs: Set<Memory.ID>
     let isDisabled: Bool
     let onSelect: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: ((Memory) -> Void)?
 
     @ViewBuilder
@@ -27,7 +26,6 @@ struct MemoryDisclosureListSection: View {
                             isDisabled: isDisabled,
                             onSelect: onSelect,
                             onToggleSelection: onToggleSelection,
-                            onEditMemory: onEditMemory,
                         )
                         .listRowInsets(.init(top: 8, leading: 20, bottom: 8, trailing: 20))
                         .listRowBackground(Color.clear)

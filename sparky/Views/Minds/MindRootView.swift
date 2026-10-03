@@ -11,7 +11,6 @@ struct MindRootView: View {
     @Binding var navigationPath: NavigationPath
 
     let onSelectMemory: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onCreateMind: () -> Void
     let onEditMind: ((Mind) -> Void)?
     let onCreateMemory: (Mind?) -> Void
@@ -52,7 +51,6 @@ struct MindRootView: View {
                     mindService: mindService,
                     memoryService: memoryService,
                     onSelectMemory: onSelectMemory,
-                    onEditMemory: onEditMemory,
                     onEditMind: onEditMind,
                     onCreateMemory: onCreateMemory,
                     onMultiSelectionChange: onMultiSelectionChange,
@@ -85,7 +83,6 @@ struct MindRootView: View {
         memoryService: environment.memoryService,
         navigationPath: .constant(NavigationPath()),
         onSelectMemory: { _ in },
-        onEditMemory: nil,
         onCreateMind: { },
         onEditMind: nil,
         onCreateMemory: { _ in },

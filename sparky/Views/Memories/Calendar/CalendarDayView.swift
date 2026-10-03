@@ -14,7 +14,6 @@ struct CalendarDayView: View {
     let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
     let onSelectMemory: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
     let onCreateMemory: (CalendarQuickMemoryTarget) -> Void
 
@@ -35,7 +34,6 @@ struct CalendarDayView: View {
         selectedMemoryIDs: Set<Memory.ID>,
         isPerformingBulkAction: Bool,
         onSelectMemory: @escaping (Memory) -> Void,
-        onEditMemory: ((Memory) -> Void)? = nil,
         onToggleSelection: @escaping (Memory) -> Void,
         onCreateMemory: @escaping (CalendarQuickMemoryTarget) -> Void
     ) {
@@ -45,7 +43,6 @@ struct CalendarDayView: View {
         self.selectedMemoryIDs = selectedMemoryIDs
         self.isPerformingBulkAction = isPerformingBulkAction
         self.onSelectMemory = onSelectMemory
-        self.onEditMemory = onEditMemory
         self.onToggleSelection = onToggleSelection
         self.onCreateMemory = onCreateMemory
 
@@ -65,7 +62,6 @@ struct CalendarDayView: View {
                         selectedMemoryIDs: selectedMemoryIDs,
                         isPerformingBulkAction: isPerformingBulkAction,
                         onSelectMemory: onSelectMemory,
-                        onEditMemory: onEditMemory,
                         onToggleSelection: onToggleSelection,
                         creationBehavior: .action(onCreateMemory),
                         expandedPeriods: $expandedPeriods,
@@ -134,7 +130,6 @@ struct CalendarDayView: View {
         selectedMemoryIDs: [],
         isPerformingBulkAction: false,
         onSelectMemory: { _ in },
-        onEditMemory: nil,
         onToggleSelection: { _ in },
         onCreateMemory: { _ in }
     )

@@ -11,7 +11,6 @@ struct MindPinnedSection: View {
     let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
     let onSelectMemory: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
 
     var body: some View {
@@ -40,7 +39,6 @@ struct MindPinnedSection: View {
                 selectedMemoryIDs: selectedMemoryIDs,
                 isPerformingBulkAction: isPerformingBulkAction,
                 onSelectMemory: onSelectMemory,
-                onEditMemory: onEditMemory,
                 onToggleSelection: onToggleSelection
             )
         }

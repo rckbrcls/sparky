@@ -8,7 +8,6 @@ struct DesktopCalendarView: View {
     @Binding private var anchorDate: Date
 
     let onSelect: (Memory) -> Void
-    let onEdit: (Memory) -> Void
 
     private let calendar = Calendar.current
 
@@ -16,8 +15,7 @@ struct DesktopCalendarView: View {
         memoryService: MemoryService,
         mode: Binding<DesktopCalendarMode>,
         anchorDate: Binding<Date>,
-        onSelect: @escaping (Memory) -> Void,
-        onEdit: @escaping (Memory) -> Void
+        onSelect: @escaping (Memory) -> Void
     ) {
         _dataManager = StateObject(
             wrappedValue: CalendarDataManager(memoryService: memoryService)
@@ -25,7 +23,6 @@ struct DesktopCalendarView: View {
         _mode = mode
         _anchorDate = anchorDate
         self.onSelect = onSelect
-        self.onEdit = onEdit
     }
 
     var body: some View {
@@ -42,8 +39,7 @@ struct DesktopCalendarView: View {
                 DesktopDayCalendarView(
                     dataManager: dataManager,
                     anchorDate: $anchorDate,
-                    onSelect: onSelect,
-                    onEdit: onEdit
+                    onSelect: onSelect
                 )
             case .month:
                 DesktopMonthCalendarView(

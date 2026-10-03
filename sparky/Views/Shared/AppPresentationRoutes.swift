@@ -10,7 +10,6 @@ import Foundation
 struct MemoryEditorRoute: Identifiable {
     enum Mode {
         case create(mind: Mind?, template: MemoryEditorTemplate)
-        case preview(memory: Memory)
         case edit(memory: Memory)
     }
 
@@ -18,7 +17,6 @@ struct MemoryEditorRoute: Identifiable {
     let mode: Mode
     var initialTitle: String = ""
     var initialScheduleConfig: ScheduleConfigDraft? = nil
-    var startEditing: Bool = false
 }
 
 struct MindComposerRequest: Identifiable {

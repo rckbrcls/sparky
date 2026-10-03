@@ -15,13 +15,6 @@ import UIKit
 import UniformTypeIdentifiers
 import QuickLook
 
-private var editorSecondaryToolbarPlacement: ToolbarItemPlacement {
-    #if os(iOS)
-    .bottomBar
-    #else
-    .automatic
-    #endif
-}
 import Combine
 
 enum MemoryEditorPresentationStyle {
@@ -85,8 +78,6 @@ struct MemoryEditorView: View {
     @FocusState private var isDesktopStatusFocused: Bool
     #endif
 
-    @State private var isEditingEnabled: Bool
-
     @State private var isNotesOpen: Bool
 
     @State private var isChecklistOpen: Bool
@@ -130,8 +121,6 @@ struct MemoryEditorView: View {
 
     private let initialScheduleConfig: ScheduleConfigDraft?
 
-    private let startEditing: Bool
-
     private let presentationStyle: MemoryEditorPresentationStyle
 
 
@@ -141,7 +130,6 @@ struct MemoryEditorView: View {
         mode: Mode,
         initialTitle: String = "",
         initialScheduleConfig: ScheduleConfigDraft? = nil,
-        startEditing: Bool = false,
         presentationStyle: MemoryEditorPresentationStyle = .standard
     ) {
 
@@ -152,8 +140,6 @@ struct MemoryEditorView: View {
         self.initialTitle = initialTitle
 
         self.initialScheduleConfig = initialScheduleConfig
-
-        self.startEditing = startEditing
 
         self.presentationStyle = presentationStyle
 
@@ -181,8 +167,6 @@ struct MemoryEditorView: View {
 
             _viewModel = StateObject(wrappedValue: vm)
 
-            _isEditingEnabled = State(initialValue: true)
-
             _isNotesOpen = State(initialValue: !vm.note.isEmpty)
 
             _isChecklistOpen = State(initialValue: !vm.checkItems.isEmpty)
@@ -206,8 +190,6 @@ struct MemoryEditorView: View {
             )
 
             _viewModel = StateObject(wrappedValue: vm)
-
-            _isEditingEnabled = State(initialValue: startEditing)
 
             _isNotesOpen = State(initialValue: !vm.note.isEmpty)
 
@@ -498,33 +480,9 @@ struct MemoryEditorView: View {
 
 
 
-        let metadataSaveConfigured = stateChangeConfigured
-
-            .onChange(of: viewModel.checkItems) { _, _ in
-
-                handleMetadataSaveIfNeeded()
-
-            }
+        return stateChangeConfigured
 
 
-
-        return metadataSaveConfigured
-
-
-
-    }
-
-
-
-    private func handleMetadataSaveIfNeeded() {
-
-        guard !isEditingEnabled else { return }
-
-        Task {
-
-            await viewModel.saveMetadataOnly()
-
-        }
 
     }
 
@@ -556,7 +514,7 @@ struct MemoryEditorView: View {
 
     }
 
-    private func saveCreatedMemoryAndDismiss() {
+    private func saveMemoryAndDismiss() {
         Task {
             let success = await viewModel.save()
             if success {
@@ -568,31 +526,13 @@ struct MemoryEditorView: View {
         }
     }
 
-    private func saveEditedMemoryAndShowPreview() {
-        resignEditorFocus()
-
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            isEditingEnabled = false
-        }
-
-        Task {
-            _ = await viewModel.save()
-        }
-    }
-
-    private func startEditingMemory() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            isEditingEnabled = true
-        }
-    }
-
     private func toggleStatusAndSave() {
         guard !viewModel.isSaving else { return }
         PlatformHaptics.impactMedium()
 
         #if os(macOS)
         guard desktopStatusOperation == nil else { return }
-        if showsDesktopPopoverPreviewActions {
+        if showsDesktopPopoverStatusActions {
             desktopStatusOperation = viewModel.status
         }
         #endif
@@ -607,12 +547,7 @@ struct MemoryEditorView: View {
     }
 
     private func confirmMemoryChanges() {
-        switch mode {
-        case .create:
-            saveCreatedMemoryAndDismiss()
-        case .edit:
-            saveEditedMemoryAndShowPreview()
-        }
+        saveMemoryAndDismiss()
     }
 
     private func resignEditorFocus() {
@@ -651,8 +586,8 @@ struct MemoryEditorView: View {
                         Color.clear.frame(height: 20)
                     }
                     #else
-                    if showsPreviewBottomActions {
-                        previewBottomActionBar
+                    if showsEditBottomActions {
+                        editBottomActionBar
                     } else {
                         Color.clear.frame(height: 20)
                     }
@@ -663,16 +598,32 @@ struct MemoryEditorView: View {
 
     }
 
-    private var showsPreviewBottomActions: Bool {
+    private var showsEditBottomActions: Bool {
         guard !showsDesktopPopoverActionBar else { return false }
-        if case .edit = mode, !isEditingEnabled {
+        if case .edit = mode {
             return true
         }
         return false
     }
 
-    private var previewBottomActionBar: some View {
+    private var editBottomActionBar: some View {
         HStack(spacing: 12) {
+            Button {
+                showDeleteConfirmation = true
+            } label: {
+                Image(systemName: "trash")
+                    .frame(width: 48, height: 48)
+                    .buttonHitArea(Circle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .glassEffect(.regular.interactive().tint(.red), in: .circle)
+            .contentShape(Circle())
+            .accessibilityLabel("Delete Memory")
+            .disabled(viewModel.isSaving)
+
+            Spacer(minLength: 0)
+
             if canStartFocusFromEditor {
                 Button {
                     PlatformHaptics.impactMedium()
@@ -680,22 +631,19 @@ struct MemoryEditorView: View {
                         environment.startFocus(for: memoryID)
                     }
                 } label: {
-                    previewBottomBarLabel(
-                        title: "Start",
-                        systemImage: "timer"
-                    )
+                    Image(systemName: "timer")
+                        .frame(width: 48, height: 48)
+                        .buttonHitArea(Circle())
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.Theme.textPrimary)
-                .glassEffect(.regular.interactive(), in: .capsule)
-                .contentShape(Capsule())
+                .glassEffect(.regular.interactive(), in: .circle)
+                .contentShape(Circle())
                 .accessibilityLabel("Start Focus")
             }
 
-            Spacer(minLength: 0)
-
             Button(action: toggleStatusAndSave) {
-                previewBottomBarLabel(
+                editBottomBarLabel(
                     title: viewModel.status == .active ? "Complete" : "Reopen",
                     systemImage: viewModel.status == .active ? "circle" : "checkmark.circle.fill"
                 )
@@ -710,7 +658,7 @@ struct MemoryEditorView: View {
         .padding(.bottom, 16)
     }
 
-    private func previewBottomBarLabel(title: String, systemImage: String) -> some View {
+    private func editBottomBarLabel(title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
             .labelStyle(.titleAndIcon)
             .font(.body.weight(.semibold))
@@ -777,26 +725,8 @@ struct MemoryEditorView: View {
     #if os(macOS)
     @ViewBuilder
     private var desktopPopoverActionBar: some View {
-        if case .edit = mode, !isEditingEnabled {
-            desktopPopoverPreviewFooter
-        } else if case .edit = mode {
-            HStack {
-                Button(role: .destructive) {
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .frame(width: 44, height: 44)
-                        .buttonHitArea(Circle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .glassEffect(.regular.interactive().tint(.red), in: .circle)
-                .contentShape(Circle())
-                .accessibilityLabel("Delete Memory")
-                .help("Delete Memory")
-                .disabled(viewModel.isSaving)
-                Spacer()
-            }
+        if case .edit = mode {
+            desktopPopoverEditFooter
         } else {
             DesktopPopoverActionBar(
                 confirmationAccessibilityLabel: saveButtonTitle,
@@ -810,9 +740,9 @@ struct MemoryEditorView: View {
         }
     }
 
-    private var showsDesktopPopoverPreviewActions: Bool {
+    private var showsDesktopPopoverStatusActions: Bool {
         if case .edit = mode {
-            return showsDesktopPopoverActionBar && !isEditingEnabled
+            return showsDesktopPopoverActionBar
         }
         return false
     }
@@ -839,38 +769,41 @@ struct MemoryEditorView: View {
 
             Spacer()
 
-            if isEditingEnabled {
-                Button(role: .confirm, action: confirmMemoryChanges) {
-                    Image(systemName: "checkmark")
-                        .frame(width: 44, height: 44)
-                        .buttonHitArea(Circle())
-                }
-                .foregroundStyle(Color.Theme.accentForeground)
-                .glassEffect(.regular.interactive().tint(Color.accentColor), in: .circle)
-                .contentShape(Circle())
-                .accessibilityLabel("Done")
-                .help("Done")
-                .disabled(isSaveDisabled)
-            } else {
-                Button(action: startEditingMemory) {
-                    Image(systemName: "pencil")
-                        .frame(width: 44, height: 44)
-                        .buttonHitArea(Circle())
-                }
-                .neutralToolbarItemStyle()
-                .glassEffect(.regular.interactive(), in: .circle)
-                .contentShape(Circle())
-                .accessibilityLabel("Edit Memory")
-                .help("Edit Memory")
-                .disabled(viewModel.isSaving || desktopStatusOperation != nil)
+            Button(role: .confirm, action: confirmMemoryChanges) {
+                Image(systemName: "checkmark")
+                    .frame(width: 44, height: 44)
+                    .buttonHitArea(Circle())
             }
+            .foregroundStyle(Color.Theme.accentForeground)
+            .glassEffect(.regular.interactive().tint(Color.accentColor), in: .circle)
+            .contentShape(Circle())
+            .accessibilityLabel("Done")
+            .help("Done")
+            .disabled(isSaveDisabled)
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.Theme.textPrimary)
     }
 
-    private var desktopPopoverPreviewFooter: some View {
+    private var desktopPopoverEditFooter: some View {
         HStack(spacing: 12) {
+            Button(role: .destructive) {
+                showDeleteConfirmation = true
+            } label: {
+                Image(systemName: "trash")
+                    .frame(width: 44, height: 44)
+                    .buttonHitArea(Circle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .glassEffect(.regular.interactive().tint(.red), in: .circle)
+            .contentShape(Circle())
+            .accessibilityLabel("Delete Memory")
+            .help("Delete Memory")
+            .disabled(viewModel.isSaving)
+
+            Spacer()
+
             if let action = desktopStartFocusAction {
                 Button(action: action) {
                     Image(systemName: "timer")
@@ -878,11 +811,12 @@ struct MemoryEditorView: View {
                         .buttonHitArea(Circle())
                 }
                 .buttonStyle(.plain)
+                .foregroundStyle(Color.Theme.textPrimary)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .contentShape(Circle())
                 .accessibilityLabel("Start Focus")
                 .help("Start Focus")
             }
-
-            Spacer()
 
             Button(action: toggleStatusAndSave) {
                 HStack(spacing: 8) {
@@ -986,24 +920,17 @@ struct MemoryEditorView: View {
 
                 if !showsDesktopPopoverActionBar {
                     if case .edit = mode {
-                        if isEditingEnabled {
-                            Button {
-                                PlatformHaptics.impactMedium()
-                                viewModel.isPinned.toggle()
-                            } label: {
-                                Label(
-                                    viewModel.isPinned ? "Unpin" : "Pin",
-                                    systemImage: viewModel.isPinned ? "pin.fill" : "pin"
-                                )
-                            }
-                            .neutralToolbarItemStyle()
-                            .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
-                        } else {
-                            Button(action: startEditingMemory) {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .neutralToolbarItemStyle()
+                        Button {
+                            PlatformHaptics.impactMedium()
+                            viewModel.isPinned.toggle()
+                        } label: {
+                            Label(
+                                viewModel.isPinned ? "Unpin" : "Pin",
+                                systemImage: viewModel.isPinned ? "pin.fill" : "pin"
+                            )
                         }
+                        .neutralToolbarItemStyle()
+                        .accessibilityLabel(viewModel.isPinned ? "Unpin memory" : "Pin memory")
                     }
                 }
 
@@ -1012,46 +939,13 @@ struct MemoryEditorView: View {
             // Prominent save/create — system confirmation placement (filled check).
             ToolbarItem(placement: .confirmationAction) {
                 if !showsDesktopPopoverActionBar {
-                    if case .create = mode {
-                        Button(role: .confirm) {
-                            saveCreatedMemoryAndDismiss()
-                        } label: {
-                            Label(saveButtonTitle, systemImage: "checkmark")
-                        }
-                        .disabled(isSaveDisabled)
-                    } else if case .edit = mode, isEditingEnabled {
-                        Button(role: .confirm) {
-                            saveEditedMemoryAndShowPreview()
-                        } label: {
-                            Label("Save", systemImage: "checkmark")
-                        }
-                        .disabled(isSaveDisabled)
-                    }
-                }
-            }
-
-
-
-
-
-
-
-            if case .edit = mode, isEditingEnabled, !showsDesktopPopoverActionBar {
-
-                ToolbarItemGroup(placement: editorSecondaryToolbarPlacement) {
-
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
+                    Button(role: .confirm) {
+                        confirmMemoryChanges()
                     } label: {
-                        Image(systemName: "trash")
+                        Label(saveButtonTitle, systemImage: "checkmark")
                     }
-                    .foregroundStyle(Color.Theme.destructive)
-                    .tint(Color.Theme.destructive)
-
-                    Spacer()
-
+                    .disabled(isSaveDisabled)
                 }
-
             }
 
         }
@@ -1108,7 +1002,7 @@ struct MemoryEditorView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(.bottom, showsPreviewBottomActions ? 72 : 20)
+        .padding(.bottom, showsEditBottomActions ? 72 : 20)
     }
 
 
@@ -1123,7 +1017,7 @@ struct MemoryEditorView: View {
 
             isTitleFocused: $isTitleFocused,
 
-            isEditingEnabled: isEditingEnabled
+            isEditingEnabled: true
 
         )
 
@@ -1135,35 +1029,13 @@ struct MemoryEditorView: View {
 
 
 
-    private var shouldShowNotesCard: Bool {
+    private var shouldShowNotesCard: Bool { true }
 
-        isEditingEnabled || !viewModel.note.isEmpty
+    private var shouldShowChecklistCard: Bool { true }
 
-    }
+    private var shouldShowMediaCard: Bool { true }
 
-
-
-    private var shouldShowChecklistCard: Bool {
-
-        isEditingEnabled || !viewModel.checkItems.isEmpty
-
-    }
-
-
-
-    private var shouldShowMediaCard: Bool {
-
-        isEditingEnabled || viewModel.hasAnyAttachment
-
-    }
-
-
-
-    private var shouldShowTriggersCard: Bool {
-
-        isEditingEnabled || viewModel.hasAnyTrigger
-
-    }
+    private var shouldShowTriggersCard: Bool { true }
 
     /// Secondary Focus entry: schedule Focus enabled and fire time is due/past.
     private var canStartFocusFromEditor: Bool {
@@ -1180,33 +1052,25 @@ struct MemoryEditorView: View {
 
         VStack(spacing: 0) {
 
-            if isEditingEnabled {
+            sectionToggleHeader(
 
-                sectionToggleHeader(
+                title: "Notes",
 
-                    title: "Notes",
+                icon: "note.text",
 
-                    icon: "note.text",
+                isOn: notesToggleBinding
 
-                    isOn: notesToggleBinding
+            )
 
-                )
+            if isNotesVisible {
 
-            }
-
-            if !isEditingEnabled || isNotesVisible {
-
-                if isEditingEnabled {
-
-                    Divider().padding(.horizontal, 16)
-
-                }
+                Divider().padding(.horizontal, 16)
 
                 MemoryEditorNotesCard(
 
                     viewModel: viewModel,
 
-                    isEditingEnabled: isEditingEnabled
+                    isEditingEnabled: true
 
                 )
 
@@ -1229,33 +1093,25 @@ struct MemoryEditorView: View {
 
         VStack(spacing: 0) {
 
-            if isEditingEnabled {
+            sectionToggleHeader(
 
-                sectionToggleHeader(
+                title: "Checklist",
 
-                    title: "Checklist",
+                icon: "checklist",
 
-                    icon: "checklist",
+                isOn: checklistToggleBinding
 
-                    isOn: checklistToggleBinding
+            )
 
-                )
+            if isChecklistVisible {
 
-            }
-
-            if !isEditingEnabled || isChecklistVisible {
-
-                if isEditingEnabled {
-
-                    Divider().padding(.horizontal, 16)
-
-                }
+                Divider().padding(.horizontal, 16)
 
                 MemoryEditorChecklistCard(
 
                     viewModel: viewModel,
 
-                    isEditingEnabled: isEditingEnabled,
+                    isEditingEnabled: true,
 
                     focusedDraftID: $focusedDraftID
 
@@ -1280,33 +1136,25 @@ struct MemoryEditorView: View {
 
         VStack(spacing: 0) {
 
-            if isEditingEnabled {
+            sectionToggleHeader(
 
-                sectionToggleHeader(
+                title: "Media",
 
-                    title: "Media",
+                icon: "photo",
 
-                    icon: "photo",
+                isOn: mediaToggleBinding
 
-                    isOn: mediaToggleBinding
+            )
 
-                )
+            if isMediaVisible {
 
-            }
-
-            if !isEditingEnabled || isMediaVisible {
-
-                if isEditingEnabled {
-
-                    Divider().padding(.horizontal, 16)
-
-                }
+                Divider().padding(.horizontal, 16)
 
                 MemoryEditorAttachmentsCard(
 
                     viewModel: viewModel,
 
-                    isEditable: isEditingEnabled,
+                    isEditable: true,
 
                     onAddPhoto: { addPhotosFromLibraryFixed() },
 
@@ -1403,7 +1251,7 @@ struct MemoryEditorView: View {
 
             viewModel: viewModel,
 
-            isEditable: isEditingEnabled,
+            isEditable: true,
 
             usesLiquidGlassSections: usesLiquidGlassSections
 
@@ -1610,8 +1458,6 @@ struct MemoryEditorView: View {
 
 
     private func beginFileImport(to contentID: UUID?) {
-
-        guard isEditingEnabled else { return }
 
         pendingFileContentID = contentID
 

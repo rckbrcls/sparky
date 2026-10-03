@@ -11,7 +11,6 @@ struct MindMemoryList: View {
     let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
     let onSelectMemory: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
 
     var body: some View {
@@ -23,8 +22,7 @@ struct MindMemoryList: View {
                     isSelected: selectedMemoryIDs.contains(memory.id),
                     isDisabled: isPerformingBulkAction,
                     onSelect: onSelectMemory,
-                    onToggleSelection: onToggleSelection,
-                    onEditMemory: onEditMemory
+                    onToggleSelection: onToggleSelection
                 )
                 .padding(.vertical, 8)
                 .padding(.horizontal, 20)

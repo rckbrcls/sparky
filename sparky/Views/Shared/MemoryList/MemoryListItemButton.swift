@@ -7,7 +7,6 @@ struct MemoryListItemButton: View {
     let isDisabled: Bool
     let onSelect: (Memory) -> Void
     let onToggleSelection: ((Memory) -> Void)?
-    let onEditMemory: ((Memory) -> Void)?
     /// Optional date context for date-aware completion (used in CalendarDayView)
     var displayDate: Date?
     /// Optional specific occurrence date for intra-day recurring memories (e.g. hourly)
@@ -56,8 +55,7 @@ struct MemoryListItemButton: View {
                     onToggleCompletion: { Task { await toggleMemoryCompletion() } },
                     onDelete: { Task { await deleteMemory() } },
                     onMoveToMind: { mindID in Task { await moveMemory(to: mindID) } },
-                    onUpdateStatus: { status in Task { await setMemoryStatus(status) } },
-                    onEdit: onEditMemory != nil ? { presentMemoryForEditing() } : nil
+                    onUpdateStatus: { status in Task { await setMemoryStatus(status) } }
                 )
             }
         }
@@ -89,20 +87,9 @@ struct MemoryListItemButton: View {
 
     private func presentMemory() {
         #if os(macOS)
-        editorRoute = MemoryEditorRoute(mode: .preview(memory: memory))
+        editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
         #else
         onSelect(memory)
-        #endif
-    }
-
-    private func presentMemoryForEditing() {
-        #if os(macOS)
-        editorRoute = MemoryEditorRoute(
-            mode: .edit(memory: memory),
-            startEditing: true
-        )
-        #else
-        onEditMemory?(memory)
         #endif
     }
 

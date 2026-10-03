@@ -24,12 +24,11 @@ struct MemoryCardView: View {
     var onDelete: (() -> Void)?
     var onMoveToMind: ((UUID?) -> Void)?
     var onUpdateStatus: ((MemoryStatus) -> Void)?
-    var onEdit: (() -> Void)?
 
     @State private var showRecurringCompletionAlert = false
 
     private var isContextMenuEnabled: Bool {
-        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToMind != nil || onEdit != nil
+        onTogglePin != nil || onToggleCompletion != nil || onDelete != nil || onMoveToMind != nil
     }
 
     init(
@@ -41,8 +40,7 @@ struct MemoryCardView: View {
         onToggleCompletion: (() -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
         onMoveToMind: ((UUID?) -> Void)? = nil,
-        onUpdateStatus: ((MemoryStatus) -> Void)? = nil,
-        onEdit: (() -> Void)? = nil
+        onUpdateStatus: ((MemoryStatus) -> Void)? = nil
     ) {
         self.memoryID = memoryID
         self._memoryService = ObservedObject(wrappedValue: memoryService)
@@ -53,7 +51,6 @@ struct MemoryCardView: View {
         self.onDelete = onDelete
         self.onMoveToMind = onMoveToMind
         self.onUpdateStatus = onUpdateStatus
-        self.onEdit = onEdit
     }
 
     private var memory: Memory? {
@@ -329,15 +326,6 @@ struct MemoryCardView: View {
         }
         .contextMenu {
             if isContextMenuEnabled {
-                if let onEdit = onEdit {
-                    Button {
-                        PlatformHaptics.impactMedium()
-                        onEdit()
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                }
-
                 if let onTogglePin = onTogglePin {
                     Button {
                         onTogglePin()

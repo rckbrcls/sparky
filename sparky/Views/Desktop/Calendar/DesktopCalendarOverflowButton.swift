@@ -28,7 +28,7 @@ struct DesktopCalendarOverflowButton: View {
                                 Task { @MainActor in
                                     await Task.yield()
                                     editorRoute = MemoryEditorRoute(
-                                        mode: .preview(memory: memory)
+                                        mode: .edit(memory: memory)
                                     )
                                 }
                             }

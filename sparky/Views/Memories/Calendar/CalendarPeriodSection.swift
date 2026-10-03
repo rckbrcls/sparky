@@ -16,7 +16,6 @@ struct CalendarPeriodSection: View {
     let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
     let onSelectMemory: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
     let onToggleExpanded: () -> Void
     let creationTarget: CalendarQuickMemoryTarget
@@ -63,7 +62,6 @@ struct CalendarPeriodSection: View {
                         isDisabled: isPerformingBulkAction,
                         onSelect: onSelectMemory,
                         onToggleSelection: onToggleSelection,
-                        onEditMemory: onEditMemory,
                         displayDate: date,
                         occurrenceDate: occurrence.occurrenceDate
                     )

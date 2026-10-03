@@ -14,7 +14,6 @@ struct CalendarDayContentView: View {
     let selectedMemoryIDs: Set<Memory.ID>
     let isPerformingBulkAction: Bool
     let onSelectMemory: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onToggleSelection: (Memory) -> Void
     let creationBehavior: CalendarMemoryCreationBehavior
     @Binding var expandedPeriods: Set<CalendarTimePeriod>
@@ -116,7 +115,6 @@ struct CalendarDayContentView: View {
             selectedMemoryIDs: selectedMemoryIDs,
             isPerformingBulkAction: isPerformingBulkAction,
             onSelectMemory: onSelectMemory,
-            onEditMemory: onEditMemory,
             onToggleSelection: onToggleSelection,
             onToggleExpanded: {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -146,7 +144,6 @@ struct CalendarDayContentView: View {
             selectedMemoryIDs: selectedMemoryIDs,
             isPerformingBulkAction: isPerformingBulkAction,
             onSelectMemory: onSelectMemory,
-            onEditMemory: onEditMemory,
             onToggleSelection: onToggleSelection,
             onToggleExpanded: {
                 withAnimation(.easeInOut(duration: 0.2)) {

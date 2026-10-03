@@ -14,7 +14,6 @@ struct MindDetailView: View {
     @ObservedObject var memoryService: MemoryService
 
     let onSelectMemory: (Memory) -> Void
-    let onEditMemory: ((Memory) -> Void)?
     let onEditMind: ((Mind) -> Void)?
     let onCreateMemory: (Mind?) -> Void
     let onMultiSelectionChange: (Bool) -> Void
@@ -137,7 +136,6 @@ struct MindDetailView: View {
         mindService: MindService,
         memoryService: MemoryService,
         onSelectMemory: @escaping (Memory) -> Void,
-        onEditMemory: ((Memory) -> Void)? = nil,
         onEditMind: ((Mind) -> Void)? = nil,
         onCreateMemory: @escaping (Mind?) -> Void,
         onMultiSelectionChange: @escaping (Bool) -> Void,
@@ -149,7 +147,6 @@ struct MindDetailView: View {
         self.mindService = mindService
         self.memoryService = memoryService
         self.onSelectMemory = onSelectMemory
-        self.onEditMemory = onEditMemory
         self.onEditMind = onEditMind
         self.onCreateMemory = onCreateMemory
         self.onMultiSelectionChange = onMultiSelectionChange
@@ -298,7 +295,6 @@ struct MindDetailView: View {
                                 selectedMemoryIDs: selectedMemoryIDs,
                                 isPerformingBulkAction: isPerformingBulkAction,
                                 onSelectMemory: onSelectMemory,
-                                onEditMemory: onEditMemory,
                                 onToggleSelection: toggleMemorySelection
                             )
                         }
@@ -309,7 +305,6 @@ struct MindDetailView: View {
                             selectedMemoryIDs: selectedMemoryIDs,
                             isPerformingBulkAction: isPerformingBulkAction,
                             onSelectMemory: onSelectMemory,
-                            onEditMemory: onEditMemory,
                             onToggleSelection: toggleMemorySelection
                         )
                     }

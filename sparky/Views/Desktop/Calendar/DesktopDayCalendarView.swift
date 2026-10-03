@@ -7,7 +7,6 @@ struct DesktopDayCalendarView: View {
     @Binding var anchorDate: Date
 
     let onSelect: (Memory) -> Void
-    let onEdit: (Memory) -> Void
 
     @State private var expandedPeriods = Set(CalendarTimePeriod.allCases)
 
@@ -38,7 +37,6 @@ struct DesktopDayCalendarView: View {
                     selectedMemoryIDs: [],
                     isPerformingBulkAction: false,
                     onSelectMemory: onSelect,
-                    onEditMemory: onEdit,
                     onToggleSelection: { _ in },
                     creationBehavior: .desktopPopover { target in
                         MemoryEditorRoute(

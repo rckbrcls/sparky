@@ -39,7 +39,7 @@ struct DesktopCalendarEventPill: View {
                 onSelect(occurrence.memory)
             } else {
                 editorRoute = MemoryEditorRoute(
-                    mode: .preview(memory: occurrence.memory)
+                    mode: .edit(memory: occurrence.memory)
                 )
             }
         } label: {

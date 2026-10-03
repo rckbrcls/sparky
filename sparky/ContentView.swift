@@ -68,7 +68,6 @@ struct ContentView: View {
                     MemoryTimelineView(
                         memoryService: environment.memoryService,
                         onSelectMemory: handleMemorySelection,
-                        onEditMemory: handleMemoryEdit,
                         onMultiSelectionChange: handleMultiSelectionChange,
                         onCreateMemory: presentCalendarQuickMemory,
                         navigationPath: $calendarNavigationPath,
@@ -83,7 +82,6 @@ struct ContentView: View {
                         memoryService: environment.memoryService,
                         navigationPath: $mindsNavigationPath,
                         onSelectMemory: handleMemorySelection,
-                        onEditMemory: handleMemoryEdit,
                         onCreateMind: {
                             presentMindCreation()
                         },
@@ -141,17 +139,10 @@ struct ContentView: View {
                     initialTitle: route.initialTitle,
                     initialScheduleConfig: route.initialScheduleConfig
                 )
-            case let .preview(memory):
-                MemoryEditorView(
-                    environment: environment,
-                    mode: .edit(memory: memory),
-                    startEditing: false
-                )
             case let .edit(memory):
                 MemoryEditorView(
                     environment: environment,
-                    mode: .edit(memory: memory),
-                    startEditing: route.startEditing
+                    mode: .edit(memory: memory)
                 )
             }
         }
@@ -332,12 +323,6 @@ struct ContentView: View {
         editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 
-    private func handleMemoryEdit(_ memory: Memory) {
-        var route = MemoryEditorRoute(mode: .edit(memory: memory))
-        route.startEditing = true
-        editorRoute = route
-    }
-
     private func presentMindCreation() {
         mindComposerRequest = MindComposerRequest(mindToEdit: nil)
     }
@@ -449,7 +434,7 @@ struct ContentView: View {
 
         if let memory = environment.memoryService.memory(id: request.memoryID) {
             environment.pendingMemoryOpenRequest = nil
-            editorRoute = MemoryEditorRoute(mode: .preview(memory: memory))
+            editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
             return
         }
 

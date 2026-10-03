@@ -181,8 +181,7 @@ struct DesktopRootView: View {
                 memoryService: environment.memoryService,
                 mode: $nav.calendarMode,
                 anchorDate: $nav.calendarAnchorDate,
-                onSelect: handleMemorySelection,
-                onEdit: handleMemoryEdit
+                onSelect: handleMemorySelection
             )
         case .mind:
             MindRootView(
@@ -190,7 +189,6 @@ struct DesktopRootView: View {
                 memoryService: environment.memoryService,
                 navigationPath: $nav.mindsPath,
                 onSelectMemory: handleMemorySelection,
-                onEditMemory: handleMemoryEdit,
                 onCreateMind: {
                     createMindRequest = MindComposerRequest(mindToEdit: nil)
                 },
@@ -226,11 +224,7 @@ struct DesktopRootView: View {
     }
 
     private func handleMemorySelection(_ memory: Memory) {
-        nav.editorRoute = MemoryEditorRoute(mode: .preview(memory: memory))
-    }
-
-    private func handleMemoryEdit(_ memory: Memory) {
-        nav.editorRoute = MemoryEditorRoute(mode: .edit(memory: memory), startEditing: true)
+        nav.editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 
     private func handleSearchSelection(_ memory: Memory) {
@@ -249,7 +243,7 @@ struct DesktopRootView: View {
         }
 
         nav.selectedSection = .calendar
-        nav.editorRoute = MemoryEditorRoute(mode: .preview(memory: memory))
+        nav.editorRoute = MemoryEditorRoute(mode: .edit(memory: memory))
     }
 
     private func handlePendingFocusOpen(_ request: PendingFocusOpenRequest?) {
