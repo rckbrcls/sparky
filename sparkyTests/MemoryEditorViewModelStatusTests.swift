@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import Testing
 @testable import sparky
 
@@ -18,20 +19,20 @@ struct MemoryEditorViewModelStatusTests {
 
         #expect(success)
         #expect(viewModel.status == .completed)
-        #expect(viewModel.checkItems.allSatisfy(\.isCompleted))
+        #expect(viewModel.checkItems.allSatisfy { $0.isCompleted })
 
         let persisted = try #require(
             fixture.environment.memoryService.memory(id: fixture.memory.id)
         )
         #expect(persisted.status == .completed)
-        #expect(persisted.checkItems.allSatisfy(\.isCompleted))
+        #expect(persisted.checkItems.allSatisfy { $0.isCompleted })
 
         let reopened = makeViewModel(
             environment: fixture.environment,
             memory: persisted
         )
         #expect(reopened.status == .completed)
-        #expect(reopened.checkItems.allSatisfy(\.isCompleted))
+        #expect(reopened.checkItems.allSatisfy { $0.isCompleted })
     }
 
     @Test func optimisticToggleBlocksRepeatedActivation() async throws {

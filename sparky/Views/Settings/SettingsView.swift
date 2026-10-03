@@ -18,6 +18,7 @@ struct SettingsView: View {
         case appIcon
         case advanced
         case focus
+        case mcp
     }
 
     @StateObject private var appIconManager = AppIconManager()
@@ -107,6 +108,21 @@ private extension SettingsView {
                 }
 
                 ZStack {
+                    NavigationLink(value: Route.mcp) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+
+                    SettingsRow(
+                        iconName: "server.rack",
+                        title: "Remote MCP"
+                    )
+                }
+                .listRowInsets(.init(top: 6, leading: 20, bottom: 6, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                ZStack {
                     NavigationLink(value: Route.advanced) {
                         EmptyView()
                     }
@@ -143,6 +159,8 @@ private extension SettingsView {
             AppIconSettingsView(appIconManager: appIconManager)
         case .advanced:
             AdvancedSettingsView()
+        case .mcp:
+            MCPSettingsView(embedsInNavigationStack: false)
         case .focus:
             if let focusSettings, let focusFeedback {
                 FocusSettingsView(

@@ -34,15 +34,20 @@ actor MemoryAttachmentStore {
         var filename: String? = nil
     }
 
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, rootDirectory: URL? = nil) {
         self.fileManager = fileManager
+        if let rootDirectory {
+            self.rootDirectory = rootDirectory
+            try? Self.ensureDirectoryExists(fileManager: fileManager, at: rootDirectory)
+            return
+        }
         let supportDirectory = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? {
             Self.logger.warning("Application support directory unavailable, falling back to temporary directory.")
             return fileManager.temporaryDirectory
         }()
 
         self.rootDirectory = supportDirectory.appendingPathComponent("MemoryAttachments", isDirectory: true)
-        try? Self.ensureDirectoryExists(fileManager: fileManager, at: rootDirectory)
+        try? Self.ensureDirectoryExists(fileManager: fileManager, at: self.rootDirectory)
     }
 
     func attachments(for memoryID: UUID) async -> [Memory.Attachment] {

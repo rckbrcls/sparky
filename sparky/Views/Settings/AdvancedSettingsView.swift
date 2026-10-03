@@ -35,11 +35,6 @@ struct AdvancedSettingsView: View {
                 debugInfoRow
             }
             .cardStyle()
-
-            #if os(iOS)
-            RemoteMCPSettingsSection(service: environment.remoteSync)
-                .cardStyle()
-            #endif
         }
         .navigationTitle("Advanced")
         .inlinePhoneNavigationTitle()

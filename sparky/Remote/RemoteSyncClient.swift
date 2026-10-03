@@ -48,9 +48,12 @@ enum RemoteSyncError: LocalizedError {
 final class RemoteSyncClient {
     private let settings: RemoteSyncSettings
     private let session: URLSession
-    init(settings: RemoteSyncSettings, session: URLSession = .shared) {
+    private let tokenProvider: (() throws -> String?)?
+    init(settings: RemoteSyncSettings, session: URLSession = .shared,
+         tokenProvider: (() throws -> String?)? = nil) {
         self.settings = settings
         self.session = session
+        self.tokenProvider = tokenProvider
     }
 
     var isConfigured: Bool { (try? configuration()) != nil }
@@ -58,8 +61,11 @@ final class RemoteSyncClient {
     private func configuration() throws -> (URL, String) {
         guard let url = URL(string: settings.serverURL), let scheme = url.scheme?.lowercased(),
               ["https", "http"].contains(scheme), url.host != nil,
-              url.user == nil, url.password == nil, url.query == nil, url.fragment == nil,
-              let token = try settings.readToken(), !token.isEmpty else { throw RemoteSyncError.notConfigured }
+              url.user == nil, url.password == nil, url.query == nil, url.fragment == nil else { throw RemoteSyncError.notConfigured }
+        let configuredToken: String?
+        if let tokenProvider { configuredToken = try tokenProvider() }
+        else { configuredToken = try settings.readToken() }
+        guard let token = configuredToken, !token.isEmpty else { throw RemoteSyncError.notConfigured }
         return (url, token)
     }
 
