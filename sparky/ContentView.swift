@@ -457,19 +457,18 @@ struct ContentView: View {
         guard !showingOnboarding else { return }
 
         if let memory = environment.memoryService.memory(id: request.memoryID),
-           memory.hasFocus {
+           memory.hasFocus,
+           let recipe = memory.focusRecipe() {
             environment.pendingFocusOpenRequest = nil
-            if let recipe = memory.focusRecipe() {
-                if environment.focusTimer.activeMemoryID != memory.id || !environment.focusTimer.isSessionActive {
-                    if environment.focusTimer.wouldReplaceSession(withMemoryID: memory.id) {
-                        environment.focusTimer.endSession()
-                    }
-                    environment.focusTimer.beginSession(
-                        memoryID: memory.id,
-                        memoryTitle: memory.title,
-                        recipe: recipe
-                    )
+            if environment.focusTimer.activeMemoryID != memory.id || !environment.focusTimer.isSessionActive {
+                if environment.focusTimer.wouldReplaceSession(withMemoryID: memory.id) {
+                    environment.focusTimer.endSession()
                 }
+                environment.focusTimer.beginSession(
+                    memoryID: memory.id,
+                    memoryTitle: memory.title,
+                    recipe: recipe
+                )
             }
             // Dismiss covering UI so the Focus tab is front and center.
             editorRoute = nil
@@ -481,7 +480,12 @@ struct ContentView: View {
         }
 
         guard environment.hasBootstrapped else { return }
+        let memoryID = request.memoryID
         environment.pendingFocusOpenRequest = nil
+        environment.pendingMemoryOpenRequest = PendingMemoryOpenRequest(
+            memoryID: memoryID,
+            source: .notification
+        )
     }
 
     private func targetMindForCreation() -> Mind? {

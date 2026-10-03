@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.25] - 2026-10-03
+
+### Added
+
+- Tapping a reminder notification that has Focus opens the Focus screen and starts that memory's session, on iPhone and Mac. The Start Focus action still does the same.
+
+### Fixed
+
+- If that memory no longer has a Focus recipe, the tap opens its editor instead of doing nothing.
+
+### Changed
+
+- The Focus session shows the mind icon above the title.
+
 ## [0.0.24] - 2026-10-03
 
 ### Fixed

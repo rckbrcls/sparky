@@ -13,7 +13,7 @@ struct FocusCanvasView: View {
     let onStartQuick: () -> Void
     let onEnd: () -> Void
     var showsEndButton: Bool = true
-    /// Mind bound to the active memory session (icon next to the title).
+    /// Mind bound to the active memory session (icon above the title).
     var activeMind: Mind? = nil
 
     @ScaledMetric(relativeTo: .largeTitle) private var titleFontSize: CGFloat = 44
@@ -100,7 +100,7 @@ struct FocusCanvasView: View {
 
     @ViewBuilder
     private var sessionHeader: some View {
-        HStack(spacing: 12) {
+        VStack(spacing: 12) {
             if isMemorySession, timer.phase != .break {
                 Image(systemName: mindIconName)
                     .font(.body.weight(.semibold))
@@ -120,6 +120,7 @@ struct FocusCanvasView: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.55)
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var phaseColor: Color {

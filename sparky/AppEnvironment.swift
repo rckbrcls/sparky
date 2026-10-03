@@ -213,12 +213,24 @@ final class ForegroundNotificationDelegate: NSObject, UNUserNotificationCenterDe
         guard let idString,
               let memoryID = UUID(uuidString: idString) else { return }
 
-        if response.actionIdentifier == NotificationActionID.startFocus {
+        if response.actionIdentifier == NotificationActionID.startFocus
+            || Self.focusEnabled(in: userInfo) {
             handleFocusOnMain(memoryID)
             return
         }
 
         handleMemoryTapOnMain(memoryID)
+    }
+
+    private static func focusEnabled(in userInfo: [AnyHashable: Any]) -> Bool {
+        let value = userInfo[NotificationUserInfoKey.focusEnabled]
+        if let enabled = value as? Bool {
+            return enabled
+        }
+        if let enabled = value as? NSNumber {
+            return enabled.boolValue
+        }
+        return false
     }
 
     private func handleMemoryTapOnMain(_ memoryID: UUID) {
