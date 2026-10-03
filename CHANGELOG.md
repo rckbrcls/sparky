@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.26] - 2026-10-03
+
+### Fixed
+
+- In the schedule Focus section, keep the Auto-continue phases title on the left and the switch on the right. The caption under that row stays left-aligned.
+
 ## [0.0.25] - 2026-10-03
 
 ### Added

@@ -514,16 +514,22 @@ private struct ScheduledTriggerInlineForm: View {
         ) { viewModel.setFocusPomodorosUntilLongBreak($0) }
 
         inlineRow {
+            Text("Auto-continue phases")
+                .foregroundStyle(Color.Theme.textPrimary)
+
+            Spacer()
+
             Toggle(
-                "Auto-continue phases",
+                "",
                 isOn: Binding(
                     get: { viewModel.focusRecipe?.autoContinue ?? true },
                     set: { viewModel.setFocusAutoContinue($0) }
                 )
             )
+            .labelsHidden()
             .toggleStyle(.switch)
+            .accessibilityLabel("Auto-continue Focus phases")
         }
-        .accessibilityLabel("Auto-continue Focus phases")
     }
 
     private func focusMenuRow(
