@@ -3,7 +3,8 @@
 //  DesktopNavigationState.swift
 //  sparky
 //
-//  Mac navigation and presentation state (ephemeral).
+//  Mac navigation and presentation state.
+//  Calendar mode is remembered between launches.
 //
 
 import SwiftUI
@@ -42,11 +43,27 @@ enum DesktopSection: String, CaseIterable, Identifiable, Hashable {
 
 @MainActor
 final class DesktopNavigationState: ObservableObject {
+    private enum Keys {
+        static let calendarMode = "desktop.calendarMode"
+    }
+
+    private let defaults: UserDefaults
+
     @Published var selectedSection: DesktopSection = .calendar
     @Published var mindsPath = NavigationPath()
     @Published var mePath = NavigationPath()
-    @Published var calendarMode: DesktopCalendarMode = .day
+    @Published var calendarMode: DesktopCalendarMode {
+        didSet {
+            defaults.set(calendarMode.rawValue, forKey: Keys.calendarMode)
+        }
+    }
     @Published var calendarAnchorDate = Date()
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let stored = defaults.string(forKey: Keys.calendarMode) ?? ""
+        self.calendarMode = DesktopCalendarMode(rawValue: stored) ?? .day
+    }
 
     @Published var editorRoute: MemoryEditorRoute?
     @Published var mindComposerRequest: MindComposerRequest?

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.28] - 2026-10-03
+
+### Added
+
+- The Mac calendar reopens in the last selected view: Day, Week, or Month. The choice is stored locally as `desktop.calendarMode`. Switching the picker, or opening a day from the week or month, saves the new mode.
+
+### Preserved
+
+- With no saved value, or an unknown one, the calendar still opens in Day.
+- The anchor date is not saved. Each launch still starts on today, in the remembered mode.
+- The iPhone calendar is unchanged.
+
+### Validation
+
+- The Mac target compiled.
+- Navigation tests cover a fresh Day default, restoring a saved Week, and writing the mode when it changes. They use an isolated `UserDefaults` suite. The suite was not run.
+
 ## [0.0.27] - 2026-10-03
 
 ### Added

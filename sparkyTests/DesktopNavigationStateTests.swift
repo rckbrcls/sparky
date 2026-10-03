@@ -1,5 +1,6 @@
 #if os(macOS)
 
+import Foundation
 import Testing
 @testable import sparky
 
@@ -17,7 +18,7 @@ struct DesktopNavigationStateTests {
 
     @Test("Calendar starts in Day and desktop destinations remain selectable")
     func defaultsAndDeepLinkDestination() {
-        let state = DesktopNavigationState()
+        let state = DesktopNavigationState(defaults: isolatedDefaults("defaults"))
 
         #expect(DesktopCalendarMode.allCases == [.day, .week, .month])
         #expect(DesktopCalendarMode.day.title == "Day")
@@ -33,7 +34,7 @@ struct DesktopNavigationStateTests {
 
     @Test("Changing mode preserves the anchor and Today restores it explicitly")
     func anchorNavigationState() {
-        let state = DesktopNavigationState()
+        let state = DesktopNavigationState(defaults: isolatedDefaults("anchor"))
         let anchor = Date(timeIntervalSince1970: 1_785_105_600)
         let now = Date(timeIntervalSince1970: 1_785_192_000)
         state.calendarAnchorDate = anchor
@@ -46,9 +47,25 @@ struct DesktopNavigationStateTests {
         #expect(state.calendarAnchorDate == now)
     }
 
+    @Test("Saved calendar mode is restored and later changes are stored")
+    func calendarModePersists() {
+        let defaults = isolatedDefaults("calendarMode")
+        defaults.set(DesktopCalendarMode.week.rawValue, forKey: "desktop.calendarMode")
+
+        let restored = DesktopNavigationState(defaults: defaults)
+        #expect(restored.calendarMode == .week)
+
+        restored.calendarMode = .month
+        #expect(defaults.string(forKey: "desktop.calendarMode") == DesktopCalendarMode.month.rawValue)
+
+        defaults.set("year", forKey: "desktop.calendarMode")
+        let fallback = DesktopNavigationState(defaults: defaults)
+        #expect(fallback.calendarMode == .day)
+    }
+
     @Test("Reselecting Mind and Me returns their navigation to the root")
     func reselectingNestedSectionsReturnsToRoot() {
-        let state = DesktopNavigationState()
+        let state = DesktopNavigationState(defaults: isolatedDefaults("roots"))
         state.mindsPath.append("parent mind")
         state.mindsPath.append("nested mind")
         state.currentMindContext = Mind(name: "Work")
@@ -71,7 +88,7 @@ struct DesktopNavigationStateTests {
 
     @Test("Reselecting Calendar and Focus preserves active state")
     func reselectingSessionSectionsIsANoOp() {
-        let state = DesktopNavigationState()
+        let state = DesktopNavigationState(defaults: isolatedDefaults("sessions"))
         let anchor = Date(timeIntervalSince1970: 1_785_105_600)
         state.calendarMode = .month
         state.calendarAnchorDate = anchor
@@ -83,6 +100,13 @@ struct DesktopNavigationStateTests {
         #expect(state.calendarMode == .month)
         #expect(state.calendarAnchorDate == anchor)
         #expect(state.isSearchPresented)
+    }
+
+    private func isolatedDefaults(_ name: String) -> UserDefaults {
+        let suite = "DesktopNavigationStateTests.\(name)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        return defaults
     }
 }
 
