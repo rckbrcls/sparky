@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.23] - 2026-10-02
+
+### Fixed
+
+- Report a remote command only after that sync cycle has uploaded the mirror. The app was marking the command done and then pushing the mirror, so a client that waited for `done` still read the previous memory and the next patch conflicted on a stale `baseVersion`.
+
+### Preserved
+
+- A failed mirror upload does not report the batch. The local receipt stays pending, and the next cycle uploads the mirror before reporting leftover results.
+- Failed and conflict results wait for the same upload. An unchanged mirror still skips the upload when its content matches the last push.
+
+### Validation
+
+- Reviewed the sync cycle order in `RemoteSyncService`. Tests and browser validation were not run.
+
 ## [0.0.22] - 2026-10-02
 
 ### Fixed

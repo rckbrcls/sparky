@@ -164,18 +164,24 @@ final class RemoteSyncService: ObservableObject {
                     }
                     try Task.checkCancellation()
                     let commands = try await self.client.commands()
+                    var executed: [(id: String, result: CommandResultDTO)] = []
                     for command in commands {
                         try Task.checkCancellation()
                         guard self.canSync else { throw CancellationError() }
                         let result = await self.executor.execute(command)
                         try Task.checkCancellation()
+                        executed.append((command.id, result))
+                    }
+                    // Report only after the mirror includes this batch, so done is not visible against a stale mirror.
+                    try await self.pushMirror()
+                    for (id, result) in executed {
+                        try Task.checkCancellation()
                         do {
-                            try await self.client.report(id: command.id, result: result)
-                            try self.executor.markReported(command.id.lowercased())
+                            try await self.client.report(id: id, result: result)
+                            try self.executor.markReported(id.lowercased())
                         } catch RemoteSyncError.unauthorized { throw RemoteSyncError.unauthorized }
                         catch { reportingError = error }
                     }
-                    try await self.pushMirror()
                     if let reportingError { throw reportingError }
                 }
                 try Task.checkCancellation()
